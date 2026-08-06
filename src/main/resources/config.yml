@@ -1,0 +1,33 @@
+# PracticeCore configuration
+
+world:
+  # Name of the ephemeral practice world. Its folder is DELETED and recreated
+  # on every server start / plugin load — never point this at a real world.
+  name: practice_world
+
+grid:
+  # Distance in blocks between arena slots on the square spiral grid.
+  spacing: 1000
+  # Y level at which schematic origins are pasted.
+  base-y: 100
+  # Largest allowed schematic dimension (X or Z). Must stay comfortably under
+  # grid spacing so neighboring arenas can never overlap.
+  max-schematic-size: 800
+
+timer:
+  # MOVE        — timer starts when the player first leaves their spawn block.
+  # FIRST_BLOCK — timer starts when the player places their first block.
+  start-mode: MOVE
+
+scoreboard:
+  # How often (in ticks) the sidebar refreshes. 2 ticks = 10 updates/second,
+  # enough for a smooth tenths-of-a-second timer display.
+  update-ticks: 2
+
+session:
+  # A run fails when the player's Y drops below (arena bottom + this offset).
+  fail-y-offset: 0
+  # Allow ender pearls to be thrown during runs (pearl-practice templates).
+  allow-pearls: false
+  # Allow bucket use during runs (water-clutch templates).
+  allow-buckets: false
