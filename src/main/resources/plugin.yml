@@ -1,0 +1,24 @@
+name: PracticeCore
+version: '${version}'
+main: me.beekrbonkr.practicecore.PracticeCorePlugin
+api-version: '1.21'
+description: Modular practice minigame core. Bridging is the first bundled mode.
+author: beekrbonkr
+depend: [WorldEdit]
+libraries:
+  - fr.mrmicky:fastboard:2.2.1
+commands:
+  practice:
+    description: PracticeCore main command
+    aliases: [prac, bridge]
+    usage: /practice help
+permissions:
+  practicecore.use:
+    description: Join and leave practice arenas
+    default: true
+  practicecore.admin:
+    description: Configure arena templates
+    default: op
+  practicecore.bypass:
+    description: Enter the practice world without a session (no confinement)
+    default: op
