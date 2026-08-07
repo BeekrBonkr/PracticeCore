@@ -1,7 +1,7 @@
 package me.beekrbonkr.practicecore.listener;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
-import me.beekrbonkr.practicecore.util.Msg;
+import me.beekrbonkr.practicecore.template.ArenaTemplate;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -24,18 +24,43 @@ public final class ConnectionListener implements Listener {
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         UUID id = player.getUniqueId();
+        // Keeps the name index current so admin commands can tab-complete and
+        // resolve this player long after they have gone offline.
+        plugin.stats().touch(player);
         // Orphaned snapshot = the server crashed (or cleanup was missed) while
         // this player was practicing. Restoring it covers every such path.
         if (plugin.snapshots().has(id)) {
             plugin.snapshots().load(id).ifPresent(snapshot -> snapshot.apply(player, true));
             plugin.snapshots().delete(id);
-            Msg.info(player, "Your pre-practice state was restored.");
+            plugin.messages().send(player, "session.state-restored");
             return;
         }
         if (plugin.worldService().isPracticeWorld(player.getWorld())) {
             // In the practice world with no session and no snapshot: evict.
-            player.teleport(Bukkit.getWorlds().get(0).getSpawnLocation());
+            player.teleport(plugin.leaveService().fallback());
         }
+        autoJoin(player);
+    }
+
+    /**
+     * Drops the player straight into the default arena when the server is set
+     * up for that. Deferred a tick so every other join handler — permissions,
+     * scoreboard, cosmetics — has finished with the player first.
+     */
+    private void autoJoin(Player player) {
+        if (!plugin.pcConfig().defaultArenaOnServerJoin()) {
+            return;
+        }
+        ArenaTemplate arena = plugin.templates().defaultArena();
+        if (arena == null || !player.hasPermission("practicecore.use")
+                || !plugin.templates().canUse(player, arena)) {
+            return;
+        }
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (player.isOnline() && plugin.sessions().get(player.getUniqueId()) == null) {
+                plugin.sessions().join(player, arena);
+            }
+        });
     }
 
     @EventHandler(priority = EventPriority.MONITOR)

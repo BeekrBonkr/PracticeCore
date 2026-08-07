@@ -2,7 +2,8 @@ package me.beekrbonkr.practicecore.listener;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.session.PracticeSession;
-import me.beekrbonkr.practicecore.util.Msg;
+import me.beekrbonkr.practicecore.template.ArenaTemplate;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -21,43 +22,74 @@ public final class TeleportListener implements Listener {
         this.plugin = plugin;
     }
 
+    /**
+     * Veto pass: the only teleports this cancels are ones that would break a
+     * run or smuggle a sessionless player into the practice world.
+     */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onTeleport(PlayerTeleportEvent event) {
+        Player player = event.getPlayer();
+        UUID id = player.getUniqueId();
+        if (plugin.sessions().isInternalTeleport(id) || plugin.setup().isAdmin(id)) {
+            return;
+        }
+        if (plugin.sessions().get(id) != null) {
+            switch (event.getCause()) {
+                case ENDER_PEARL, CHORUS_FRUIT -> event.setCancelled(true);
+                default -> {
+                }
+            }
+            return;
+        }
+        if (!plugin.worldService().isPracticeWorld(event.getTo().getWorld())
+                || player.hasPermission("practicecore.bypass")) {
+            return;
+        }
+        // Sessionless arrival in the practice world. Either drop them into the
+        // default arena or turn them away — never leave them in the void.
+        event.setCancelled(true);
+        ArenaTemplate fallback = plugin.templates().defaultArena();
+        if (plugin.pcConfig().defaultArenaOnWorldEnter()
+                && fallback != null
+                && player.hasPermission("practicecore.use")
+                && plugin.templates().canUse(player, fallback)) {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (player.isOnline() && plugin.sessions().get(id) == null) {
+                    plugin.sessions().join(player, fallback);
+                }
+            });
+            return;
+        }
+        plugin.messages().send(player, "world.entry-denied");
+    }
+
+    /**
+     * Outcome pass: a teleport that actually went through and left the arena
+     * behind ends the session. Running at MONITOR means a teleport some other
+     * plugin cancelled later can never end a run that never moved.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void afterTeleport(PlayerTeleportEvent event) {
+        if (event.isCancelled()) {
+            return;
+        }
         Player player = event.getPlayer();
         UUID id = player.getUniqueId();
         if (plugin.sessions().isInternalTeleport(id)) {
             return;
         }
         PracticeSession session = plugin.sessions().get(id);
+        if (session == null) {
+            return;
+        }
         Location to = event.getTo();
-        boolean toPractice = plugin.worldService().isPracticeWorld(to.getWorld());
-
-        if (session != null) {
-            switch (event.getCause()) {
-                case ENDER_PEARL, CHORUS_FRUIT -> {
-                    event.setCancelled(true);
-                    return;
-                }
-                default -> {
-                }
-            }
-            boolean insideArena = toPractice && session.bounds().contains(to.toVector());
-            if (!insideArena) {
-                // /spawn, /tpa, /home from another plugin: never fight the
-                // teleport (that causes loops) — end the session, restore
-                // everything except location, and let the destination win.
-                plugin.sessions().leave(player, false);
-            }
-            return;
-        }
-
-        if (plugin.setup().isAdmin(id)) {
-            return;
-        }
-        if (toPractice && !player.hasPermission("practicecore.bypass")) {
-            // Blocks /back into a freed arena and any other sessionless entry.
-            event.setCancelled(true);
-            Msg.error(player, "Use /practice join to enter the practice world.");
+        boolean insideArena = plugin.worldService().isPracticeWorld(to.getWorld())
+                && session.bounds().contains(to.toVector());
+        if (!insideArena) {
+            // /spawn, /tpa, /home, a warp out of the world — never fight the
+            // teleport (that causes loops). End the session, restore everything
+            // except location, and let the destination win.
+            plugin.sessions().leave(player, false);
         }
     }
 
@@ -65,8 +97,8 @@ public final class TeleportListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onWorldChange(PlayerChangedWorldEvent event) {
         Player player = event.getPlayer();
-        PracticeSession session = plugin.sessions().get(player.getUniqueId());
-        if (session != null && !plugin.worldService().isPracticeWorld(player.getWorld())) {
+        if (plugin.sessions().get(player.getUniqueId()) != null
+                && !plugin.worldService().isPracticeWorld(player.getWorld())) {
             plugin.sessions().leave(player, false);
         }
     }

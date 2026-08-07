@@ -13,12 +13,58 @@ commands:
     aliases: [prac, bridge]
     usage: /practice help
 permissions:
+  # The kit every normal player should hold. Granted to everyone by default;
+  # revoke practicecore.user to shut the whole plugin off for a group, or
+  # grant/revoke the individual children below for finer control.
+  practicecore.user:
+    description: Everything a normal player needs to use practice arenas
+    default: true
+    children:
+      practicecore.use: true
+      practicecore.menu: true
+      practicecore.leaderboard: true
   practicecore.use:
     description: Join and leave practice arenas
-    default: true
-  practicecore.admin:
-    description: Configure arena templates
+    default: false
+  practicecore.menu:
+    description: Open the practice GUI
+    default: false
+  practicecore.leaderboard:
+    description: View leaderboards
+    default: false
+  practicecore.stats.other:
+    description: View another player's practice stats
+    default: op
+  practicecore.setup:
+    description: Create and edit arena templates in-world
+    default: op
+  practicecore.arena:
+    description: Administer saved arenas (delete, permission, icon, …)
+    default: op
+  practicecore.pb.reset:
+    description: Wipe personal bests
+    default: op
+  practicecore.item:
+    description: Give yourself the hotbar menu item
+    default: op
+  practicecore.reload:
+    description: Reload config and templates
+    default: op
+  practicecore.world:
+    description: Inspect and regenerate the practice world
     default: op
   practicecore.bypass:
     description: Enter the practice world without a session (no confinement)
     default: op
+  practicecore.admin:
+    description: Full arena administration
+    default: op
+    children:
+      practicecore.setup: true
+      practicecore.arena: true
+      practicecore.pb.reset: true
+      practicecore.item: true
+      practicecore.reload: true
+      practicecore.world: true
+      practicecore.stats.other: true
+      practicecore.bypass: true

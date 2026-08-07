@@ -4,16 +4,19 @@ import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.extent.clipboard.Clipboard;
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.grid.Slot;
+import me.beekrbonkr.practicecore.message.Messages;
 import me.beekrbonkr.practicecore.snapshot.PlayerSnapshot;
+import me.beekrbonkr.practicecore.stats.LeaderboardService;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
-import me.beekrbonkr.practicecore.util.Msg;
 import me.beekrbonkr.practicecore.util.TimeFormat;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -23,7 +26,6 @@ import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -61,31 +63,78 @@ public final class SessionManager {
 
     // ------------------------------------------------------------------ join
 
+    /**
+     * Joins an arena, or switches to it from another one.
+     *
+     * Switching keeps the player's original snapshot: it is what they were
+     * before any of this started, and it is what must eventually be restored,
+     * so it is never re-captured from a player who is already standing in an
+     * arena wearing a kit.
+     *
+     * Every validation happens before the previous session is torn down, so
+     * "you can't join that" never costs someone the arena they were in.
+     */
     public void join(Player player, ArenaTemplate template) {
         UUID id = player.getUniqueId();
-        if (sessions.containsKey(id)) {
-            Msg.error(player, "You are already practicing. Use /practice leave first.");
-            return;
+        Messages msg = plugin.messages();
+        PracticeSession current = sessions.get(id);
+        if (current != null) {
+            if (current.state() == SessionState.PREPARING || current.state() == SessionState.ENDING) {
+                msg.send(player, "session.preparing");
+                return;
+            }
+            if (current.template().name().equals(template.name())) {
+                restart(player); // "switching" to where you already are is a restart
+                return;
+            }
         }
         if (plugin.setup().isAdmin(id)) {
-            Msg.error(player, "Finish or cancel arena setup first.");
+            msg.send(player, "session.setup-in-progress");
             return;
         }
         if (!template.isComplete()) {
-            Msg.error(player, "Template '" + template.name() + "' is not fully configured.");
+            msg.send(player, "arena.incomplete", "arena", template.name());
+            return;
+        }
+        if (!player.hasPermission("practicecore.use")) {
+            msg.send(player, "permission.use");
+            return;
+        }
+        if (!plugin.templates().canUse(player, template)) {
+            // The GUI hides or greys these out; the command path has to say so.
+            msg.send(player, "arena.locked", "arena", template.displayName());
+            return;
+        }
+        // Validate everything a hand-edited arena.yml could get wrong before a
+        // slot is taken — an aborted join must leave no arena behind.
+        if (template.spawnOffset() == null || template.triggerOffset() == null) {
+            msg.send(player, "arena.broken");
+            return;
+        }
+        BlockData triggerData;
+        try {
+            triggerData = Bukkit.createBlockData(template.triggerBlockData());
+        } catch (IllegalArgumentException e) {
+            msg.send(player, "arena.broken-trigger");
+            plugin.getLogger().severe("Invalid trigger block-data for '" + template.name()
+                    + "': " + template.triggerBlockData());
             return;
         }
         Clipboard clipboard;
         try {
             clipboard = plugin.schematics().load(template.schematicFile());
         } catch (IOException e) {
-            Msg.error(player, "Could not load the arena schematic — tell an admin.");
+            msg.send(player, "arena.schematic-failed");
             plugin.getLogger().severe("Failed to load schematic for '" + template.name() + "': " + e.getMessage());
+            return;
+        }
+        World world = plugin.worldService().world();
+        if (world == null) {
+            msg.send(player, "world.unavailable");
             return;
         }
 
         Slot slot = plugin.allocator().acquire(id);
-        World world = plugin.worldService().world();
         int spacing = plugin.pcConfig().gridSpacing();
         Location origin = new Location(world,
                 (long) slot.gridX() * spacing, plugin.pcConfig().baseY(), (long) slot.gridZ() * spacing);
@@ -95,7 +144,7 @@ public final class SessionManager {
             bounds = plugin.schematics().paste(clipboard, origin);
         } catch (WorldEditException e) {
             plugin.allocator().release(slot);
-            Msg.error(player, "Failed to build your arena — tell an admin.");
+            msg.send(player, "arena.paste-failed");
             plugin.getLogger().severe("Paste failed for '" + template.name() + "': " + e.getMessage());
             return;
         }
@@ -104,7 +153,7 @@ public final class SessionManager {
         // The finish trigger is not part of the schematic (it was placed
         // during setup, after the //copy) — the plugin stamps it in.
         Location trigger = template.triggerLocation(origin);
-        trigger.getBlock().setBlockData(Bukkit.createBlockData(template.triggerBlockData()), false);
+        trigger.getBlock().setBlockData(triggerData, false);
 
         addChunkTickets(world, bounds);
 
@@ -112,6 +161,7 @@ public final class SessionManager {
                 template.spawnLocation(origin), trigger);
         session.setBestTimeMs(plugin.stats().bestMs(id, template.name()));
         session.setLastTimeMs(plugin.stats().lastMs(id, template.name()));
+        // Replaces `current` in the map; `current` is still ours to clean up.
         sessions.put(id, session);
 
         internalTeleports.add(id);
@@ -119,22 +169,82 @@ public final class SessionManager {
             internalTeleports.remove(id);
             if (err != null || !Boolean.TRUE.equals(ok)
                     || !player.isOnline() || sessions.get(id) != session) {
-                // Teleport denied by another plugin, or the player vanished
-                // mid-prepare. Nothing about the player was touched yet.
-                sessions.remove(id, session);
-                cleanupArena(session, true);
-                if (player.isOnline()) {
-                    Msg.error(player, "Could not send you to the arena.");
-                }
+                abortJoin(player, session, current);
                 return;
             }
-            // Snapshot only after we know the player is actually inside.
-            plugin.snapshots().save(id, PlayerSnapshot.capture(player));
+            if (current != null) {
+                releaseArena(current);
+            }
+            // First join only: the snapshot already on disk is the truth for
+            // anyone switching, and overwriting it would save a kit as their
+            // "real" inventory.
+            if (!plugin.snapshots().has(id)) {
+                plugin.snapshots().save(id, PlayerSnapshot.capture(player));
+            }
             applyPracticeState(player, session);
             session.setState(SessionState.READY);
             plugin.boards().create(player);
-            Msg.success(player, "Arena ready — timer starts when you move. Good luck!");
+            if (current != null) {
+                msg.send(player, "session.switched", "arena", template.displayName());
+            } else {
+                msg.send(player, "session.ready", "arena", template.displayName());
+            }
         });
+    }
+
+    /**
+     * The new arena could not be entered. Tear it down, and put the player
+     * back — either into the session they were already in, or, if that is no
+     * longer possible, all the way back to their pre-practice state.
+     */
+    private void abortJoin(Player player, PracticeSession failed, PracticeSession previous) {
+        UUID id = player.getUniqueId();
+        boolean wasCurrent = sessions.remove(id, failed);
+        cleanupArena(failed, true);
+        if (previous != null && wasCurrent && player.isOnline()
+                && previous.state() != SessionState.ENDING && sessions.get(id) == null) {
+            // Their old arena was never touched — hand it straight back.
+            sessions.put(id, previous);
+            plugin.messages().send(player, "session.teleport-failed");
+            return;
+        }
+        if (previous != null) {
+            releaseArena(previous);
+        }
+        if (!player.isOnline()) {
+            return;
+        }
+        if (plugin.snapshots().has(id)) {
+            plugin.snapshots().load(id).ifPresent(snapshot -> snapshot.apply(player, true));
+            plugin.snapshots().delete(id);
+            plugin.messages().send(player, "session.restored-after-failure");
+        } else {
+            plugin.messages().send(player, "session.teleport-failed");
+        }
+    }
+
+    /** Frees a superseded session's arena without touching the player. */
+    private void releaseArena(PracticeSession session) {
+        session.setState(SessionState.ENDING);
+        cleanupArena(session, false);
+    }
+
+    /**
+     * Ends a session for the setup wizard: the arena is freed and the board
+     * removed, but the player is left exactly where they stand and their
+     * snapshot is deliberately kept, so the wizard restores them to their real
+     * pre-practice state when it closes rather than bouncing them twice.
+     *
+     * @return the arena they were in, or null if they were not practicing
+     */
+    public String handOffToSetup(Player player) {
+        PracticeSession session = sessions.remove(player.getUniqueId());
+        if (session == null) {
+            return null;
+        }
+        plugin.boards().remove(player);
+        releaseArena(session);
+        return session.template().displayName();
     }
 
     private void applyPracticeState(Player player, PracticeSession session) {
@@ -161,6 +271,11 @@ public final class SessionManager {
         for (Map.Entry<Integer, ItemStack> entry : template.kit().entrySet()) {
             player.getInventory().setItem(entry.getKey(), entry.getValue().clone());
         }
+        // Retro-fit for kits saved before the menu item existed.
+        if (plugin.pcConfig().menuItemEnabled() && plugin.pcConfig().menuItemForceInKit()
+                && !plugin.menuItems().kitContainsMenuItem(template.kit())) {
+            plugin.menuItems().forceIntoInventory(player);
+        }
     }
 
     // -------------------------------------------------------- finish / fail
@@ -173,16 +288,84 @@ public final class SessionManager {
         session.setState(SessionState.RESETTING);
         session.setLastTimeMs(millis);
 
+        String arena = session.template().name();
+        LeaderboardService.Entry previousRecord = plugin.leaderboards().record(arena);
         boolean pbEligible = !session.template().requireBlocksForPb() || session.tracker().count() > 0;
-        boolean pb = plugin.stats().record(player.getUniqueId(), session.template().name(), millis, pbEligible);
+        long previousBest = session.bestTimeMs();
+        boolean pb = plugin.stats().record(player.getUniqueId(), arena, millis, pbEligible);
+        Messages msg = plugin.messages();
         if (pb) {
             session.setBestTimeMs(millis);
-            Msg.success(player, "Finished in " + TimeFormat.precise(millis) + " — new personal best!");
+            msg.send(player, "run.finished-pb", "time", TimeFormat.precise(millis),
+                    "arena", session.template().displayName());
+        } else if (previousBest >= 0) {
+            msg.send(player, "run.finished", "time", TimeFormat.precise(millis),
+                    "best", TimeFormat.precise(previousBest),
+                    "arena", session.template().displayName());
         } else {
-            Msg.info(player, "Finished in " + TimeFormat.precise(millis)
-                    + (session.bestTimeMs() >= 0 ? " (best " + TimeFormat.precise(session.bestTimeMs()) + ")" : ""));
+            msg.send(player, "run.finished-first", "time", TimeFormat.precise(millis),
+                    "arena", session.template().displayName());
+        }
+        announceFinish(player, session, millis, pb, previousBest);
+        if (pb) {
+            announceRecord(player, session, millis, previousRecord);
         }
         resetArena(player, session);
+    }
+
+    /** Title, subtitle and sound on crossing the line. */
+    private void announceFinish(Player player, PracticeSession session, long millis,
+                                boolean pb, long previousBest) {
+        if (plugin.pcConfig().finishTitle()) {
+            String subtitleKey;
+            String delta = "";
+            if (pb) {
+                subtitleKey = "run.subtitle.pb";
+            } else if (previousBest >= 0) {
+                subtitleKey = "run.subtitle.behind";
+                delta = TimeFormat.precise(millis - previousBest);
+            } else {
+                subtitleKey = "run.subtitle.first";
+            }
+            plugin.messages().title(player,
+                    pb ? "run.title.pb" : "run.title.normal", subtitleKey,
+                    "time", TimeFormat.precise(millis),
+                    "delta", delta,
+                    "arena", session.template().displayName());
+        }
+        if (plugin.pcConfig().sounds()) {
+            player.playSound(player.getLocation(),
+                    pb ? Sound.ENTITY_PLAYER_LEVELUP : Sound.ENTITY_EXPERIENCE_ORB_PICKUP,
+                    0.8f, pb ? 1.4f : 1.8f);
+        }
+    }
+
+    /** Server-wide shout when someone takes the #1 spot on an arena. */
+    private void announceRecord(Player player, PracticeSession session, long millis,
+                                LeaderboardService.Entry previousRecord) {
+        if (!plugin.pcConfig().broadcastRecords()) {
+            return;
+        }
+        String arena = session.template().name();
+        if (plugin.leaderboards().rank(arena, player.getUniqueId()) != 1) {
+            return;
+        }
+        if (previousRecord != null && previousRecord.uuid().equals(player.getUniqueId())) {
+            return; // they already held it — beating yourself isn't news
+        }
+        if (previousRecord == null) {
+            plugin.messages().broadcast("run.record-broadcast",
+                    "player", player.getName(),
+                    "arena", session.template().displayName(),
+                    "time", TimeFormat.precise(millis));
+        } else {
+            plugin.messages().broadcast("run.record-broadcast-beaten",
+                    "player", player.getName(),
+                    "arena", session.template().displayName(),
+                    "time", TimeFormat.precise(millis),
+                    "previous-holder", previousRecord.displayName(),
+                    "delta", TimeFormat.precise(previousRecord.millis() - millis));
+        }
     }
 
     public void fail(Player player, PracticeSession session) {
@@ -190,8 +373,24 @@ public final class SessionManager {
             return;
         }
         session.setState(SessionState.RESETTING);
-        Msg.info(player, "You fell! Resetting…");
+        plugin.messages().send(player, "run.failed");
         resetArena(player, session);
+    }
+
+    /** Voluntary restart from the menu — same reset, no failure message. */
+    public void restart(Player player) {
+        PracticeSession session = sessions.get(player.getUniqueId());
+        if (session == null) {
+            plugin.messages().send(player, "session.not-practicing");
+            return;
+        }
+        if (session.state() != SessionState.ACTIVE && session.state() != SessionState.READY) {
+            return;
+        }
+        session.setState(SessionState.RESETTING);
+        resetArena(player, session);
+        plugin.messages().send(player, "run.restarted",
+                "arena", session.template().displayName());
     }
 
     private void resetArena(Player player, PracticeSession session) {
@@ -225,7 +424,8 @@ public final class SessionManager {
                 snapshot.apply(player, restoreLocation));
         plugin.snapshots().delete(player.getUniqueId());
         cleanupArena(session, false);
-        Msg.info(player, "Practice session ended.");
+        plugin.messages().send(player, "session.ended",
+                "arena", session.template().displayName());
     }
 
     public void handleQuit(Player player) {

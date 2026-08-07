@@ -36,11 +36,31 @@ public final class BoardService {
                 plugin.pcConfig().scoreboardTicks(), plugin.pcConfig().scoreboardTicks());
     }
 
+    /** Picks up a changed scoreboard.update-ticks after /practice reload. */
+    public void restartTask() {
+        if (task != null) {
+            task.cancel();
+        }
+        startTask();
+    }
+
     public void create(Player player) {
         remove(player);
+        if (!plugin.stats().scoreboardEnabled(player.getUniqueId())) {
+            return; // hidden by the player's own preference
+        }
         FastBoard board = new FastBoard(player);
         board.updateTitle(Component.text("Practice", NamedTextColor.GOLD, TextDecoration.BOLD));
         boards.put(player.getUniqueId(), board);
+    }
+
+    /** Re-evaluates the player's sidebar preference (menu toggle, /practice sidebar). */
+    public void applyPreference(Player player) {
+        if (plugin.sessions().get(player.getUniqueId()) == null) {
+            remove(player);
+            return;
+        }
+        create(player);
     }
 
     public void remove(Player player) {
@@ -68,6 +88,7 @@ public final class BoardService {
             if (session == null) {
                 continue;
             }
+            int rank = plugin.leaderboards().rank(session.template().name(), entry.getKey());
             entry.getValue().updateLines(
                     Component.empty(),
                     Component.text("Arena: ", NamedTextColor.GRAY)
@@ -78,6 +99,10 @@ public final class BoardService {
                             .append(time(session.lastTimeMs())),
                     Component.text("Best: ", NamedTextColor.GRAY)
                             .append(time(session.bestTimeMs())),
+                    Component.text("Rank: ", NamedTextColor.GRAY)
+                            .append(rank > 0
+                                    ? Component.text("#" + rank, NamedTextColor.WHITE)
+                                    : Component.text("—", NamedTextColor.DARK_GRAY)),
                     Component.empty(),
                     Component.text("Blocks: ", NamedTextColor.GRAY)
                             .append(Component.text(session.tracker().count(), NamedTextColor.WHITE)));

@@ -1,4 +1,12 @@
 # PracticeCore configuration
+#
+# Do not edit config-version by hand. PracticeCore uses it to migrate this file
+# across plugin upgrades: on start it adds any newly introduced keys (keeping
+# your values and comments) and applies any renames, taking a copy into
+# backups/ first whenever the version actually changes.
+#
+# Player-facing text lives in messages.yml, not here.
+config-version: 2
 
 world:
   # Name of the ephemeral practice world. Its folder is DELETED and recreated
@@ -31,3 +39,86 @@ session:
   allow-pearls: false
   # Allow bucket use during runs (water-clutch templates).
   allow-buckets: false
+
+# A ready-to-play bridging arena ships inside the jar so the plugin works with
+# no setup at all. It is unpacked to templates/<name>/ the first time the
+# plugin starts and never overwritten afterwards — edit or delete the folder
+# freely. Set enabled:false (or leave the marker file in place) to stop it
+# from being installed again.
+bundled-template:
+  enabled: true
+  name: turtle
+
+arenas:
+  # Every arena has a permission node: whatever `permission:` its arena.yml
+  # names, or <permission-prefix><arena name> otherwise.
+  #
+  # DENY  — arenas are open to everyone. A player is refused only where that
+  #         node is explicitly set to false for them, e.g.
+  #         `/lp user Steve permission set practicecore.arena.turtle false`.
+  #         This is the default: you hand out arenas by taking them away.
+  # ALLOW — arenas are closed. A player is admitted only where that node is
+  #         explicitly granted. Use this for a rank-gated server.
+  #
+  # Either way an explicit setting always wins; the mode only decides what
+  # happens for players who have no setting at all.
+  access-mode: DENY
+  permission-prefix: 'practicecore.arena.'
+  # Hide arenas the player may not join from /practice list and the arena GUI
+  # instead of showing them as locked.
+  hide-locked: false
+
+# The arena players end up in without asking for one.
+default-arena:
+  # Arena name (the folder under templates/). Empty = no default; commands and
+  # menus fall back to the first arena the player may use.
+  name: ''
+  # Put players into it as soon as they connect to the server. Suits a server
+  # whose whole purpose is practice; leave off for a lobby that has other
+  # things in it.
+  on-server-join: false
+  # Put players into it when they arrive in the practice world some other way
+  # — a warp, another plugin's teleport, /practice world entry. Without this
+  # they are simply turned away.
+  on-world-enter: true
+  # Also use it as the target of a bare /practice join.
+  on-bare-join: true
+
+leave:
+  # Non-empty = after their state is restored, players who leave are sent to
+  # this BungeeCord/Velocity server (e.g. 'lobby'). Empty = they simply return
+  # to wherever they were before joining practice.
+  server: ''
+  # Where to send someone who leaves with no saved return location (e.g. they
+  # used the menu item outside a session). Empty = main world spawn.
+  fallback-world: ''
+
+# The hotbar GUI item. Admins get one with /practice item, drop it into the
+# right hotbar slot, then run /practice setup kit so every player receives it.
+menu-item:
+  enabled: true
+  material: NETHER_STAR
+  name: '<gradient:#ffd966:#ffb300><bold>Practice Menu</bold></gradient>'
+  lore:
+    - '<gray>Right-click to open'
+    - '<gray>the practice menu.'
+  # Hotbar slot /practice item drops the item into (0-8).
+  slot: 8
+  # Put the item in that slot for every arena kit even when the template's
+  # saved kit does not contain it. Handy for retro-fitting arenas built before
+  # the item existed — note it overwrites whatever the kit had in that slot.
+  force-in-kit: false
+
+leaderboard:
+  # Entries shown per arena in the leaderboard GUI and /practice top.
+  size: 10
+  # Render entries as player heads. Turn off to use plain items instead if you
+  # would rather the server never touch profile lookups.
+  player-heads: true
+
+effects:
+  # Title + subtitle on finishing a run.
+  finish-title: true
+  sounds: true
+  # Announce server-wide when a player takes the #1 spot on an arena.
+  broadcast-records: true

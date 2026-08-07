@@ -31,4 +31,19 @@ public final class SlotAllocator {
     public void release(Slot slot) {
         slot.free();
     }
+
+    /**
+     * Discards the whole grid. Only valid once every session and the setup
+     * wizard have ended — the practice world is being rebuilt, so no pasted
+     * arena that a slot could describe still exists. Slots handed out before
+     * the reset simply become garbage; freeing one later is a no-op on an
+     * object nothing reads.
+     */
+    public void reset() {
+        slots.clear();
+    }
+
+    public int size() {
+        return slots.size();
+    }
 }

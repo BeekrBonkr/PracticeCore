@@ -1,11 +1,21 @@
 package me.beekrbonkr.practicecore;
 
+import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 
-/** Immutable snapshot of config.yml. */
+import java.util.List;
+import java.util.Locale;
+
+/** Immutable snapshot of config.yml. Replaced wholesale on /practice reload. */
 public final class PCConfig {
 
     public enum TimerStartMode { MOVE, FIRST_BLOCK }
+
+    /**
+     * What happens to a player with no explicit setting for an arena's node.
+     * An explicit grant or denial always wins over either.
+     */
+    public enum AccessMode { DENY, ALLOW }
 
     private final String worldName;
     private final int gridSpacing;
@@ -16,6 +26,35 @@ public final class PCConfig {
     private final int failYOffset;
     private final boolean allowPearls;
     private final boolean allowBuckets;
+
+    private final boolean bundledTemplateEnabled;
+    private final String bundledTemplateName;
+
+    private final AccessMode arenaAccessMode;
+    private final String arenaPermissionPrefix;
+    private final boolean hideLockedArenas;
+
+    private final String defaultArenaName;
+    private final boolean defaultArenaOnServerJoin;
+    private final boolean defaultArenaOnWorldEnter;
+    private final boolean defaultArenaOnBareJoin;
+
+    private final String leaveServer;
+    private final String leaveFallbackWorld;
+
+    private final boolean menuItemEnabled;
+    private final Material menuItemMaterial;
+    private final String menuItemName;
+    private final List<String> menuItemLore;
+    private final int menuItemSlot;
+    private final boolean menuItemForceInKit;
+
+    private final int leaderboardSize;
+    private final boolean leaderboardHeads;
+
+    private final boolean finishTitle;
+    private final boolean sounds;
+    private final boolean broadcastRecords;
 
     public PCConfig(FileConfiguration cfg) {
         this.worldName = cfg.getString("world.name", "practice_world");
@@ -33,6 +72,51 @@ public final class PCConfig {
         this.failYOffset = cfg.getInt("session.fail-y-offset", 0);
         this.allowPearls = cfg.getBoolean("session.allow-pearls", false);
         this.allowBuckets = cfg.getBoolean("session.allow-buckets", false);
+
+        this.bundledTemplateEnabled = cfg.getBoolean("bundled-template.enabled", true);
+        this.bundledTemplateName = cfg.getString("bundled-template.name", "turtle")
+                .toLowerCase(Locale.ROOT);
+
+        AccessMode access;
+        try {
+            access = AccessMode.valueOf(cfg.getString("arenas.access-mode", "DENY").toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            access = AccessMode.DENY;
+        }
+        this.arenaAccessMode = access;
+        this.arenaPermissionPrefix = cfg.getString("arenas.permission-prefix", "practicecore.arena.");
+        this.hideLockedArenas = cfg.getBoolean("arenas.hide-locked", false);
+
+        this.defaultArenaName = cfg.getString("default-arena.name", "").trim().toLowerCase(Locale.ROOT);
+        this.defaultArenaOnServerJoin = cfg.getBoolean("default-arena.on-server-join", false);
+        this.defaultArenaOnWorldEnter = cfg.getBoolean("default-arena.on-world-enter", true);
+        this.defaultArenaOnBareJoin = cfg.getBoolean("default-arena.on-bare-join", true);
+
+        this.leaveServer = cfg.getString("leave.server", "").trim();
+        this.leaveFallbackWorld = cfg.getString("leave.fallback-world", "").trim();
+
+        this.menuItemEnabled = cfg.getBoolean("menu-item.enabled", true);
+        this.menuItemMaterial = material(cfg.getString("menu-item.material"), Material.NETHER_STAR);
+        this.menuItemName = cfg.getString("menu-item.name", "<gold><bold>Practice Menu</bold></gold>");
+        List<String> lore = cfg.getStringList("menu-item.lore");
+        this.menuItemLore = lore.isEmpty() ? List.of("<gray>Right-click to open.") : List.copyOf(lore);
+        this.menuItemSlot = Math.clamp(cfg.getInt("menu-item.slot", 8), 0, 8);
+        this.menuItemForceInKit = cfg.getBoolean("menu-item.force-in-kit", false);
+
+        this.leaderboardSize = Math.clamp(cfg.getInt("leaderboard.size", 10), 1, 45);
+        this.leaderboardHeads = cfg.getBoolean("leaderboard.player-heads", true);
+
+        this.finishTitle = cfg.getBoolean("effects.finish-title", true);
+        this.sounds = cfg.getBoolean("effects.sounds", true);
+        this.broadcastRecords = cfg.getBoolean("effects.broadcast-records", true);
+    }
+
+    private static Material material(String name, Material fallback) {
+        if (name == null || name.isBlank()) {
+            return fallback;
+        }
+        Material parsed = Material.matchMaterial(name);
+        return parsed != null && parsed.isItem() ? parsed : fallback;
     }
 
     public String worldName() {
@@ -69,5 +153,95 @@ public final class PCConfig {
 
     public boolean allowBuckets() {
         return allowBuckets;
+    }
+
+    public boolean bundledTemplateEnabled() {
+        return bundledTemplateEnabled;
+    }
+
+    public String bundledTemplateName() {
+        return bundledTemplateName;
+    }
+
+    public AccessMode arenaAccessMode() {
+        return arenaAccessMode;
+    }
+
+    /** Empty when no default arena is configured. */
+    public String defaultArenaName() {
+        return defaultArenaName;
+    }
+
+    public boolean defaultArenaOnServerJoin() {
+        return defaultArenaOnServerJoin;
+    }
+
+    public boolean defaultArenaOnWorldEnter() {
+        return defaultArenaOnWorldEnter;
+    }
+
+    public boolean defaultArenaOnBareJoin() {
+        return defaultArenaOnBareJoin;
+    }
+
+    public String arenaPermissionPrefix() {
+        return arenaPermissionPrefix;
+    }
+
+    public boolean hideLockedArenas() {
+        return hideLockedArenas;
+    }
+
+    /** Empty when leaving should not hand the player to a proxy server. */
+    public String leaveServer() {
+        return leaveServer;
+    }
+
+    public String leaveFallbackWorld() {
+        return leaveFallbackWorld;
+    }
+
+    public boolean menuItemEnabled() {
+        return menuItemEnabled;
+    }
+
+    public Material menuItemMaterial() {
+        return menuItemMaterial;
+    }
+
+    public String menuItemName() {
+        return menuItemName;
+    }
+
+    public List<String> menuItemLore() {
+        return menuItemLore;
+    }
+
+    public int menuItemSlot() {
+        return menuItemSlot;
+    }
+
+    public boolean menuItemForceInKit() {
+        return menuItemForceInKit;
+    }
+
+    public int leaderboardSize() {
+        return leaderboardSize;
+    }
+
+    public boolean leaderboardHeads() {
+        return leaderboardHeads;
+    }
+
+    public boolean finishTitle() {
+        return finishTitle;
+    }
+
+    public boolean sounds() {
+        return sounds;
+    }
+
+    public boolean broadcastRecords() {
+        return broadcastRecords;
     }
 }

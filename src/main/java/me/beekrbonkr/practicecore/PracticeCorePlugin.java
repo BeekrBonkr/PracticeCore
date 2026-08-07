@@ -2,7 +2,15 @@ package me.beekrbonkr.practicecore;
 
 import me.beekrbonkr.practicecore.board.BoardService;
 import me.beekrbonkr.practicecore.command.PracticeCommand;
+import me.beekrbonkr.practicecore.config.ReloadResult;
+import me.beekrbonkr.practicecore.config.Versions;
+import me.beekrbonkr.practicecore.config.YamlMigrator;
 import me.beekrbonkr.practicecore.grid.SlotAllocator;
+import me.beekrbonkr.practicecore.gui.MenuListener;
+import me.beekrbonkr.practicecore.item.MenuItemListener;
+import me.beekrbonkr.practicecore.item.MenuItemService;
+import me.beekrbonkr.practicecore.leave.LeaveService;
+import me.beekrbonkr.practicecore.message.Messages;
 import me.beekrbonkr.practicecore.listener.BlockListener;
 import me.beekrbonkr.practicecore.listener.ConnectionListener;
 import me.beekrbonkr.practicecore.listener.InteractListener;
@@ -15,12 +23,21 @@ import me.beekrbonkr.practicecore.schematic.SchematicService;
 import me.beekrbonkr.practicecore.session.SessionManager;
 import me.beekrbonkr.practicecore.setup.SetupManager;
 import me.beekrbonkr.practicecore.snapshot.SnapshotStore;
+import me.beekrbonkr.practicecore.stats.LeaderboardService;
 import me.beekrbonkr.practicecore.stats.StatsStore;
 import me.beekrbonkr.practicecore.template.TemplateRegistry;
 import me.beekrbonkr.practicecore.world.PracticeWorldService;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public final class PracticeCorePlugin extends JavaPlugin {
 
@@ -31,15 +48,22 @@ public final class PracticeCorePlugin extends JavaPlugin {
     private SchematicService schematics;
     private TemplateRegistry templates;
     private SnapshotStore snapshots;
+    private LeaderboardService leaderboards;
     private StatsStore stats;
     private BoardService boards;
     private SessionManager sessions;
     private SetupManager setup;
+    private MenuItemService menuItems;
+    private LeaveService leaveService;
+    private Messages messages;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        migrateConfig().forEach(note -> getLogger().info(note));
         pcConfig = new PCConfig(getConfig());
+        messages = new Messages(this);
+        messages.load().forEach(note -> getLogger().info(note));
 
         modes = new ModeRegistry();
         modes.register(new BridgingMode());
@@ -52,10 +76,16 @@ public final class PracticeCorePlugin extends JavaPlugin {
         templates = new TemplateRegistry(this);
         templates.loadAll();
         snapshots = new SnapshotStore(this);
+        leaderboards = new LeaderboardService();
         stats = new StatsStore(this);
         boards = new BoardService(this);
         sessions = new SessionManager(this);
         setup = new SetupManager(this);
+        menuItems = new MenuItemService(this);
+        leaveService = new LeaveService(this);
+
+        // Builds the name index and every leaderboard from disk, off-thread.
+        stats.scanAsync();
 
         PluginManager pm = getServer().getPluginManager();
         pm.registerEvents(new ConnectionListener(this), this);
@@ -64,6 +94,11 @@ public final class PracticeCorePlugin extends JavaPlugin {
         pm.registerEvents(new InteractListener(this), this);
         pm.registerEvents(new TeleportListener(this), this);
         pm.registerEvents(new ProtectionListener(this), this);
+        pm.registerEvents(new MenuListener(), this);
+        pm.registerEvents(new MenuItemListener(this), this);
+
+        // Used by the leave button when leave.server points at a proxy backend.
+        getServer().getMessenger().registerOutgoingPluginChannel(this, LeaveService.channel());
 
         PracticeCommand command = new PracticeCommand(this);
         PluginCommand pluginCommand = getCommand("practice");
@@ -94,8 +129,126 @@ public final class PracticeCorePlugin extends JavaPlugin {
         }
     }
 
+    /**
+     * Re-reads config.yml and every arena folder.
+     *
+     * The whole point of the ceremony below is that a reload either fully
+     * succeeds or changes nothing:
+     * <ol>
+     *   <li>config.yml is parsed on a throwaway object first — Bukkit's own
+     *       {@code reloadConfig()} swallows a syntax error and hands back an
+     *       empty config, which would quietly reset every setting to its
+     *       default on a live server.</li>
+     *   <li>Live sessions are ended and restored before anything changes,
+     *       because grid spacing, base Y and arena definitions all describe
+     *       arenas that are already pasted. That needs {@code force}.</li>
+     *   <li>The previous {@link PCConfig} is kept until the new one has been
+     *       built without throwing.</li>
+     * </ol>
+     *
+     * @param force proceed even though it will end live sessions
+     */
+    private List<String> migrateConfig() {
+        return new YamlMigrator(this, "config", "config.yml",
+                new File(getDataFolder(), "config.yml"), Versions.CONFIG,
+                PracticeCorePlugin::configSteps).run(getConfig());
+    }
+
+    /** Reshapes an older config.yml. See {@link Versions#CONFIG}. */
+    private static void configSteps(FileConfiguration cfg, int from) {
+        if (from < 2) {
+            // v1 gated arenas with a boolean; v2 states the same thing as a
+            // mode, because "everyone unless denied" needed a name of its own.
+            boolean required = cfg.getBoolean("arenas.require-permission", false);
+            cfg.set("arenas.require-permission", null);
+            if (!cfg.contains("arenas.access-mode", true)) {
+                cfg.set("arenas.access-mode",
+                        required ? PCConfig.AccessMode.ALLOW.name() : PCConfig.AccessMode.DENY.name());
+            }
+        }
+    }
+
+    public ReloadResult reload(boolean force) {
+        List<String> notes = new ArrayList<>();
+        File file = new File(getDataFolder(), "config.yml");
+        if (!file.isFile()) {
+            saveDefaultConfig();
+            notes.add("config.yml was missing — a fresh one was written.");
+        }
+        try {
+            new YamlConfiguration().load(file);
+        } catch (IOException | InvalidConfigurationException e) {
+            notes.add("config.yml could not be parsed: " + e.getMessage());
+            notes.add("Nothing was changed; the running settings are untouched.");
+            return ReloadResult.failed(notes);
+        }
+
+        String wizard = setup.activeName();
+        int running = sessions.all().size();
+        if ((running > 0 || wizard != null) && !force) {
+            if (running > 0) {
+                notes.add(running + " player(s) are practicing.");
+            }
+            if (wizard != null) {
+                notes.add("The setup wizard is open on '" + wizard + "' (unsaved changes would be lost).");
+            }
+            notes.add("Reloading ends those first. Run /practice reload confirm to go ahead.");
+            return ReloadResult.confirm(notes);
+        }
+        if (wizard != null) {
+            setup.cancelAll();
+            notes.add("Cancelled the setup wizard on '" + wizard + "'.");
+        }
+        if (running > 0) {
+            sessions.endAllSync();
+            notes.add("Ended and restored " + running + " session(s).");
+        }
+
+        PCConfig previous = pcConfig;
+        try {
+            reloadConfig();
+            notes.addAll(migrateConfig());
+            pcConfig = new PCConfig(getConfig());
+            notes.addAll(messages.load());
+        } catch (RuntimeException e) {
+            pcConfig = previous;
+            notes.add("Config could not be applied (" + e + ").");
+            notes.add("The previous settings are still in effect.");
+            return ReloadResult.failed(notes);
+        }
+        try {
+            notes.addAll(templates.loadAll());
+        } catch (RuntimeException e) {
+            notes.add("Arenas could not be reloaded: " + e);
+            return ReloadResult.failed(notes);
+        }
+        boards.restartTask();
+
+        if (!pcConfig.worldName().equals(previous.worldName())) {
+            notes.add("world.name changed '" + previous.worldName() + "' → '" + pcConfig.worldName()
+                    + "'. Run /practice world regen to build it — the old world is still loaded.");
+        }
+        notes.add("Loaded " + templates.all().size() + " arena(s), "
+                + templates.completeTemplates().size() + " playable.");
+        return ReloadResult.ok(notes);
+    }
+
+    /**
+     * Writes a single config.yml value and reapplies it, so admin commands can
+     * change settings without anyone hand-editing the file and reloading.
+     */
+    public void setConfigValue(String path, Object value) {
+        getConfig().set(path, value);
+        saveConfig();
+        pcConfig = new PCConfig(getConfig());
+    }
+
     public PCConfig pcConfig() {
         return pcConfig;
+    }
+
+    public Messages messages() {
+        return messages;
     }
 
     public ModeRegistry modes() {
@@ -122,6 +275,10 @@ public final class PracticeCorePlugin extends JavaPlugin {
         return snapshots;
     }
 
+    public LeaderboardService leaderboards() {
+        return leaderboards;
+    }
+
     public StatsStore stats() {
         return stats;
     }
@@ -136,5 +293,13 @@ public final class PracticeCorePlugin extends JavaPlugin {
 
     public SetupManager setup() {
         return setup;
+    }
+
+    public MenuItemService menuItems() {
+        return menuItems;
+    }
+
+    public LeaveService leaveService() {
+        return leaveService;
     }
 }
