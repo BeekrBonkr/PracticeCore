@@ -1,0 +1,131 @@
+package me.beekrbonkr.practicecore.gui;
+
+import me.beekrbonkr.practicecore.PracticeCorePlugin;
+import me.beekrbonkr.practicecore.stats.LeaderboardService;
+import me.beekrbonkr.practicecore.template.ArenaTemplate;
+import me.beekrbonkr.practicecore.util.ItemBuilder;
+import me.beekrbonkr.practicecore.util.TimeFormat;
+import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.SkullMeta;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/** The ranked times for one arena, fastest first. */
+public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Entry> {
+
+    private static final Material[] MEDALS = {
+            Material.GOLD_INGOT, Material.IRON_INGOT, Material.COPPER_INGOT};
+
+    private final ArenaTemplate template;
+
+    public ArenaLeaderboardMenu(PracticeCorePlugin plugin, Player viewer, Menu parent, ArenaTemplate template) {
+        super(plugin, viewer, parent);
+        this.template = template;
+    }
+
+    @Override
+    protected Component title() {
+        return text("gui.board.title", "arena", template.displayName());
+    }
+
+    @Override
+    protected List<LeaderboardService.Entry> entries() {
+        return plugin.leaderboards().top(template.name(), plugin.pcConfig().leaderboardSize());
+    }
+
+    @Override
+    protected ItemStack emptyIcon() {
+        return ItemBuilder.of(Material.COBWEB)
+                .name(name("gui.board.empty.name"))
+                .lore(lore("gui.board.empty.lore"))
+                .build();
+    }
+
+    @Override
+    protected ItemStack icon(LeaderboardService.Entry entry) {
+        int rank = plugin.leaderboards().rank(template.name(), entry.uuid());
+        boolean self = entry.uuid().equals(viewer.getUniqueId());
+        LeaderboardService.Entry leader = plugin.leaderboards().record(template.name());
+
+        String nameKey = rank == 1 ? "gui.board.entry-name-first"
+                : self ? "gui.board.entry-name-self" : "gui.board.entry-name";
+        List<Component> lines = new ArrayList<>(lore("gui.board.entry-lore",
+                "rank", String.valueOf(rank),
+                "player", entry.displayName(),
+                "time", TimeFormat.precise(entry.millis()),
+                "behind", leader != null && rank > 1
+                        ? "+" + TimeFormat.precise(entry.millis() - leader.millis())
+                        : raw("gui.none")));
+        if (self) {
+            lines.addAll(lore("gui.board.entry-lore-self-suffix"));
+        }
+        return base(entry, rank)
+                .name(name(nameKey, "rank", String.valueOf(rank), "player", entry.displayName()))
+                .lore(lines)
+                .glow(self)
+                .build();
+    }
+
+    private ItemBuilder base(LeaderboardService.Entry entry, int rank) {
+        int amount = Math.clamp(rank, 1, 64);
+        if (plugin.pcConfig().leaderboardHeads()) {
+            return ItemBuilder.of(Material.PLAYER_HEAD, amount).edit(meta -> {
+                if (meta instanceof SkullMeta skull) {
+                    skull.setOwningPlayer(Bukkit.getOfflinePlayer(entry.uuid()));
+                }
+            });
+        }
+        return ItemBuilder.of(rank <= MEDALS.length ? MEDALS[rank - 1] : Material.PAPER, amount);
+    }
+
+    @Override
+    protected void onEntryClick(LeaderboardService.Entry entry, InventoryClickEvent event) {
+        click();
+    }
+
+    @Override
+    protected void renderFooter() {
+        int rank = plugin.leaderboards().rank(template.name(), viewer.getUniqueId());
+        long best = plugin.stats().bestMs(viewer.getUniqueId(), template.name());
+        LeaderboardService.Entry ahead = ahead(rank);
+        ItemBuilder standing = ItemBuilder.of(Material.NAME_TAG).name(name("gui.board.standing.name"));
+        if (rank > 0) {
+            standing.lore(lore("gui.board.standing.lore",
+                    "rank", "#" + rank,
+                    "players", String.valueOf(plugin.leaderboards().size(template.name())),
+                    "best", TimeFormat.precise(best),
+                    "next", ahead != null ? ahead.displayName() : raw("gui.none"),
+                    "gap", ahead != null ? TimeFormat.precise(best - ahead.millis()) : raw("gui.none")));
+        } else {
+            standing.lore(lore("gui.board.standing.lore-none"));
+        }
+        setFooter(47, standing.build());
+
+        if (plugin.templates().canUse(viewer, template)) {
+            set(51, ItemBuilder.of(template.effectiveIcon())
+                    .name(name("gui.board.play-name", "arena", template.displayName()))
+                    .lore(lore("gui.board.play-lore", "arena", template.displayName()))
+                    .build(), event -> {
+                click();
+                later(() -> {
+                    viewer.closeInventory();
+                    plugin.sessions().join(viewer, template);
+                });
+            });
+        }
+    }
+
+    private LeaderboardService.Entry ahead(int rank) {
+        if (rank <= 1) {
+            return null;
+        }
+        List<LeaderboardService.Entry> top = plugin.leaderboards().top(template.name(), rank);
+        return top.size() >= rank - 1 ? top.get(rank - 2) : null;
+    }
+}

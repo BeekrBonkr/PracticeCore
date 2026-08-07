@@ -4,8 +4,6 @@ import me.beekrbonkr.practicecore.PCConfig;
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.session.PracticeSession;
 import me.beekrbonkr.practicecore.session.SessionState;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.entity.FallingBlock;
 import org.bukkit.entity.Player;
@@ -48,7 +46,7 @@ public final class BlockListener implements Listener {
         Location loc = event.getBlock().getLocation();
         if (!session.containsBlock(loc) || loc.equals(session.trigger())) {
             event.setCancelled(true);
-            player.sendActionBar(Component.text("Out of bounds", NamedTextColor.RED));
+            plugin.messages().actionBar(player, "build.out-of-bounds");
             return;
         }
         session.tracker().recordPlace(event.getBlock(), event.getBlockReplacedState().getBlockData());
@@ -81,7 +79,7 @@ public final class BlockListener implements Listener {
         // finish trigger and its supporting block.
         if (!session.tracker().isTracked(event.getBlock().getLocation())) {
             event.setCancelled(true);
-            player.sendActionBar(Component.text("You can only break blocks you placed", NamedTextColor.RED));
+            plugin.messages().actionBar(player, "build.break-own-only");
         }
     }
 

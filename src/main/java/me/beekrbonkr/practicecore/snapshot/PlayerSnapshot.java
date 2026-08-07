@@ -1,5 +1,6 @@
 package me.beekrbonkr.practicecore.snapshot;
 
+import me.beekrbonkr.practicecore.config.Versions;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -116,6 +117,11 @@ public final class PlayerSnapshot {
         player.setFlying(allowFlight && flying);
     }
 
+    /** World the player came from — used for the GUI's leave-button lore. */
+    public String worldName() {
+        return worldName;
+    }
+
     private Location restoreLocation() {
         World world = Bukkit.getWorld(worldName);
         if (world == null) {
@@ -132,6 +138,7 @@ public final class PlayerSnapshot {
     }
 
     public void serialize(ConfigurationSection yml) {
+        yml.set(Versions.DATA_KEY, Versions.SNAPSHOT);
         for (int i = 0; i < inventory.length; i++) {
             if (inventory[i] != null) {
                 yml.set("inventory." + i, inventory[i]);

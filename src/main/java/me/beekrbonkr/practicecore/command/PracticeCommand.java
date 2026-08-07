@@ -1,140 +1,355 @@
 package me.beekrbonkr.practicecore.command;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
+import me.beekrbonkr.practicecore.gui.LeaderboardMenu;
+import me.beekrbonkr.practicecore.gui.MainMenu;
+import me.beekrbonkr.practicecore.gui.StatsMenu;
+import me.beekrbonkr.practicecore.message.Messages;
 import me.beekrbonkr.practicecore.session.PracticeSession;
+import me.beekrbonkr.practicecore.stats.LeaderboardService;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
-import me.beekrbonkr.practicecore.util.Msg;
+import me.beekrbonkr.practicecore.util.TimeFormat;
+import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 public final class PracticeCommand implements CommandExecutor, TabCompleter {
 
     private final PracticeCorePlugin plugin;
+    private final SetupCommands setup;
+    private final AdminCommands admin;
 
     public PracticeCommand(PracticeCorePlugin plugin) {
         this.plugin = plugin;
+        this.setup = new SetupCommands(plugin);
+        this.admin = new AdminCommands(plugin);
+    }
+
+    private Messages msg() {
+        return plugin.messages();
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) {
-            Msg.error(sender, "Players only.");
-            return true;
-        }
         String sub = args.length > 0 ? args[0].toLowerCase(Locale.ROOT) : "help";
         switch (sub) {
-            case "join" -> join(player, args);
-            case "leave" -> leave(player);
-            case "list" -> list(player);
-            case "setup" -> setup(player, args);
-            default -> help(player);
+            case "join" -> join(sender, args);
+            case "leave" -> leave(sender);
+            case "list", "arenas" -> list(sender);
+            case "menu", "gui" -> menu(sender);
+            case "top", "leaderboard" -> top(sender, args);
+            case "stats" -> stats(sender, args);
+            case "sidebar", "scoreboard" -> sidebar(sender);
+            case "setup" -> setup.setup(sender, args);
+            case "edit" -> setup.edit(sender, args);
+            case "arena" -> admin.arena(sender, args);
+            case "pb" -> admin.pb(sender, args);
+            case "item" -> admin.item(sender, args);
+            case "world" -> admin.world(sender, args);
+            case "reload" -> admin.reload(sender, args);
+            default -> sendHelp(plugin, sender);
         }
         return true;
     }
 
-    private void join(Player player, String[] args) {
+    // ------------------------------------------------------------ gameplay
+
+    private void join(CommandSender sender, String[] args) {
+        Player player = asPlayer(sender);
+        if (player == null) {
+            return;
+        }
         if (!player.hasPermission("practicecore.use")) {
-            Msg.error(player, "You may not use practice arenas.");
+            msg().send(player, "permission.use");
             return;
         }
         ArenaTemplate template;
         if (args.length >= 2) {
             template = plugin.templates().get(args[1]);
             if (template == null) {
-                Msg.error(player, "No template named '" + args[1] + "'. See /practice list.");
+                msg().send(player, "arena.unknown", "arena", args[1]);
                 return;
             }
         } else {
-            List<ArenaTemplate> complete = plugin.templates().completeTemplates();
-            if (complete.isEmpty()) {
-                Msg.error(player, "No arenas are configured yet.");
+            // A bare /practice join lands on the configured default when there
+            // is one and the player may use it, else their first option.
+            template = plugin.pcConfig().defaultArenaOnBareJoin()
+                    ? plugin.templates().defaultFor(player)
+                    : firstAvailable(player);
+            if (template == null) {
+                msg().send(player, "arena.none-available");
                 return;
             }
-            template = complete.get(0);
         }
         plugin.sessions().join(player, template);
     }
 
-    private void leave(Player player) {
+    private ArenaTemplate firstAvailable(Player player) {
+        List<ArenaTemplate> available = plugin.templates().availableTo(player);
+        return available.isEmpty() ? null : available.get(0);
+    }
+
+    private void leave(CommandSender sender) {
+        Player player = asPlayer(sender);
+        if (player == null) {
+            return;
+        }
         PracticeSession session = plugin.sessions().get(player.getUniqueId());
-        if (session == null) {
-            Msg.error(player, "You are not practicing.");
+        if (session == null && !plugin.worldService().isPracticeWorld(player.getWorld())) {
+            msg().send(player, "session.not-practicing");
             return;
         }
-        plugin.sessions().leave(player, true);
+        plugin.leaveService().leave(player);
     }
 
-    private void list(Player player) {
-        if (plugin.templates().all().isEmpty()) {
-            Msg.info(player, "No templates exist yet. Admins: /practice setup start <name>");
+    private void list(CommandSender sender) {
+        List<ArenaTemplate> templates = sender instanceof Player player
+                ? plugin.templates().visibleTo(player)
+                : List.copyOf(plugin.templates().completeTemplates());
+        if (templates.isEmpty()) {
+            msg().send(sender, "arena.list-empty");
             return;
         }
-        Msg.info(player, "Arena templates:");
-        for (ArenaTemplate template : plugin.templates().all()) {
-            Msg.info(player, "  " + template.name() + " [" + template.mode() + "]"
-                    + (template.isComplete() ? "" : " (incomplete)"));
+        msg().send(sender, "arena.list-header");
+        for (ArenaTemplate template : templates) {
+            boolean locked = sender instanceof Player player && !plugin.templates().canUse(player, template);
+            // The suffix is formatted text, so it goes in as a component —
+            // an unparsed placeholder would print its tags literally.
+            msg().send(sender, "arena.list-entry",
+                    locked ? msg().ref("locked", "arena.list-locked-suffix")
+                           : msg().ref("locked", Component.empty()),
+                    "arena", template.name(),
+                    "display", template.displayName(),
+                    "mode", template.mode());
         }
     }
 
-    private void setup(Player player, String[] args) {
-        if (!player.hasPermission("practicecore.admin")) {
-            Msg.error(player, "You may not configure arenas.");
+    private void menu(CommandSender sender) {
+        Player player = asPlayer(sender);
+        if (player == null) {
             return;
         }
-        String action = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "help";
-        switch (action) {
-            case "start" -> {
-                if (args.length < 3) {
-                    Msg.error(player, "Usage: /practice setup start <name>  (with your arena on the WorldEdit clipboard)");
-                    return;
-                }
-                plugin.setup().start(player, args[2].toLowerCase(Locale.ROOT));
+        if (!player.hasPermission("practicecore.menu")) {
+            msg().send(player, "permission.menu");
+            return;
+        }
+        new MainMenu(plugin, player).open();
+    }
+
+    private void sidebar(CommandSender sender) {
+        Player player = asPlayer(sender);
+        if (player == null) {
+            return;
+        }
+        boolean on = !plugin.stats().scoreboardEnabled(player.getUniqueId());
+        plugin.stats().setScoreboardEnabled(player.getUniqueId(), on);
+        plugin.boards().applyPreference(player);
+        msg().send(player, on ? "sidebar.shown" : "sidebar.hidden");
+    }
+
+    // ---------------------------------------------------------- leaderboard
+
+    private void top(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("practicecore.leaderboard")) {
+            msg().send(sender, "permission.leaderboard");
+            return;
+        }
+        if (args.length < 2) {
+            if (sender instanceof Player player) {
+                new LeaderboardMenu(plugin, player, null).open();
+            } else {
+                msg().send(sender, "general.usage", "usage", "/practice top <arena>");
             }
-            case "spawn" -> plugin.setup().setSpawn(player);
-            case "kit" -> plugin.setup().saveKit(player);
-            case "save" -> plugin.setup().save(player);
-            case "cancel" -> plugin.setup().cancel(player);
-            default -> {
-                Msg.info(player, "/practice setup start <name> — begin (needs //copy'd build)");
-                Msg.info(player, "/practice setup spawn — set the player spawn where you stand");
-                Msg.info(player, "/practice setup kit — save your current inventory as the kit");
-                Msg.info(player, "/practice setup save | cancel");
+            return;
+        }
+        ArenaTemplate template = plugin.templates().get(args[1]);
+        if (template == null) {
+            msg().send(sender, "arena.unknown", "arena", args[1]);
+            return;
+        }
+        List<LeaderboardService.Entry> top = plugin.leaderboards()
+                .top(template.name(), plugin.pcConfig().leaderboardSize());
+        if (top.isEmpty()) {
+            msg().send(sender, "leaderboard.empty", "arena", template.displayName());
+            return;
+        }
+        msg().send(sender, "leaderboard.header", "arena", template.displayName());
+        for (int i = 0; i < top.size(); i++) {
+            LeaderboardService.Entry entry = top.get(i);
+            msg().send(sender, "leaderboard.entry",
+                    "rank", String.valueOf(i + 1),
+                    "player", entry.displayName(),
+                    "time", TimeFormat.precise(entry.millis()));
+        }
+        if (sender instanceof Player player) {
+            int rank = plugin.leaderboards().rank(template.name(), player.getUniqueId());
+            if (rank > top.size()) {
+                msg().send(sender, "leaderboard.your-rank",
+                        "rank", String.valueOf(rank),
+                        "total", String.valueOf(plugin.leaderboards().size(template.name())));
             }
         }
     }
 
-    private void help(Player player) {
-        Msg.info(player, "/practice join [template] — start practicing");
-        Msg.info(player, "/practice leave — return to where you were");
-        Msg.info(player, "/practice list — available arenas");
-        if (player.hasPermission("practicecore.admin")) {
-            Msg.info(player, "/practice setup — configure arena templates");
+    private void stats(CommandSender sender, String[] args) {
+        UUID subject;
+        String name;
+        if (args.length >= 2) {
+            if (!sender.hasPermission("practicecore.stats.other")) {
+                msg().send(sender, "permission.stats-other");
+                return;
+            }
+            Optional<UUID> resolved = plugin.stats().uuidOf(args[1]);
+            if (resolved.isEmpty()) {
+                msg().send(sender, "stats.unknown-player", "player", args[1]);
+                return;
+            }
+            subject = resolved.get();
+            name = Optional.ofNullable(plugin.stats().nameOf(subject)).orElse(args[1]);
+        } else {
+            Player player = asPlayer(sender);
+            if (player == null) {
+                return;
+            }
+            subject = player.getUniqueId();
+            name = player.getName();
+        }
+        if (sender instanceof Player player && subject.equals(player.getUniqueId())) {
+            new StatsMenu(plugin, player, null).open();
+            return;
+        }
+        printStats(sender, subject, name);
+    }
+
+    private void printStats(CommandSender sender, UUID subject, String name) {
+        Map<String, Long> bests = plugin.stats().bests(subject);
+        if (bests.isEmpty()) {
+            msg().send(sender, "stats.empty", "player", name);
+        } else {
+            msg().send(sender, "stats.header", "player", name);
+            bests.forEach((arena, best) -> {
+                int rank = plugin.leaderboards().rank(arena, subject);
+                msg().send(sender, rank > 0 ? "stats.entry" : "stats.entry-unranked",
+                        "arena", arena,
+                        "time", TimeFormat.precise(best),
+                        "rank", String.valueOf(rank),
+                        "finishes", String.valueOf(plugin.stats().finishes(subject, arena)));
+            });
+        }
+        // Reading an offline player's file should not pin it in the cache.
+        plugin.stats().unloadIfOffline(subject);
+    }
+
+    // ---------------------------------------------------------------- help
+
+    public static void sendHelp(PracticeCorePlugin plugin, CommandSender sender) {
+        Messages msg = plugin.messages();
+        msg.send(sender, "help.player");
+        if (sender.hasPermission("practicecore.setup")) {
+            msg.send(sender, "help.setup");
+        }
+        if (sender.hasPermission("practicecore.arena")) {
+            msg.send(sender, "help.arena");
+        }
+        if (sender.hasPermission("practicecore.item")) {
+            msg.send(sender, "help.item");
+        }
+        if (sender.hasPermission("practicecore.pb.reset")) {
+            msg.send(sender, "help.pb");
+        }
+        if (sender.hasPermission("practicecore.world")) {
+            msg.send(sender, "help.world");
+        }
+        if (sender.hasPermission("practicecore.reload")) {
+            msg.send(sender, "help.reload");
         }
     }
+
+    private Player asPlayer(CommandSender sender) {
+        if (sender instanceof Player player) {
+            return player;
+        }
+        msg().send(sender, "general.players-only");
+        return null;
+    }
+
+    // ------------------------------------------------------ tab completion
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            return filter(List.of("join", "leave", "list", "setup"), args[0]);
+            List<String> subs = new ArrayList<>(List.of(
+                    "join", "leave", "list", "menu", "top", "stats", "sidebar", "help"));
+            if (sender.hasPermission("practicecore.setup")) {
+                subs.add("setup");
+                subs.add("edit");
+            }
+            if (sender.hasPermission("practicecore.arena")) {
+                subs.add("arena");
+            }
+            if (sender.hasPermission("practicecore.pb.reset")) {
+                subs.add("pb");
+            }
+            if (sender.hasPermission("practicecore.item")) {
+                subs.add("item");
+            }
+            if (sender.hasPermission("practicecore.world")) {
+                subs.add("world");
+            }
+            if (sender.hasPermission("practicecore.reload")) {
+                subs.add("reload");
+            }
+            return filter(subs, args[0]);
         }
-        if (args.length == 2 && args[0].equalsIgnoreCase("join")) {
-            return filter(plugin.templates().completeTemplates().stream()
-                    .map(ArenaTemplate::name).toList(), args[1]);
-        }
-        if (args.length == 2 && args[0].equalsIgnoreCase("setup")) {
-            return filter(List.of("start", "spawn", "kit", "save", "cancel"), args[1]);
-        }
-        return List.of();
+        String sub = args[0].toLowerCase(Locale.ROOT);
+        return switch (sub) {
+            case "join" -> args.length == 2
+                    ? filter(sender instanceof Player player
+                            ? plugin.templates().availableTo(player).stream().map(ArenaTemplate::name).toList()
+                            : plugin.templates().names(), args[1])
+                    : List.of();
+            case "top", "leaderboard" -> args.length == 2
+                    ? filter(completeNames(), args[1]) : List.of();
+            case "stats" -> args.length == 2 && sender.hasPermission("practicecore.stats.other")
+                    ? filter(plugin.stats().knownNames(), args[1]) : List.of();
+            case "edit" -> args.length == 2 && sender.hasPermission("practicecore.setup")
+                    ? filter(plugin.templates().names(), args[1]) : List.of();
+            case "setup" -> setup.complete(sender, args);
+            case "arena" -> admin.completeArena(sender, args);
+            case "pb" -> admin.completePb(sender, args);
+            case "item" -> args.length == 2 && sender.hasPermission("practicecore.item")
+                    ? filter(onlineNames(), args[1]) : List.of();
+            case "world" -> admin.completeWorld(sender, args);
+            case "reload" -> args.length == 2 && sender.hasPermission("practicecore.reload")
+                    ? filter(List.of("confirm"), args[1]) : List.of();
+            default -> List.of();
+        };
     }
 
-    private static List<String> filter(List<String> options, String prefix) {
+    private List<String> completeNames() {
+        return plugin.templates().completeTemplates().stream().map(ArenaTemplate::name).toList();
+    }
+
+    private static List<String> onlineNames() {
+        return Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
+    }
+
+    static List<String> filter(List<String> options, String prefix) {
         String lower = prefix.toLowerCase(Locale.ROOT);
-        return options.stream().filter(o -> o.startsWith(lower)).toList();
+        return options.stream()
+                .filter(option -> option.toLowerCase(Locale.ROOT).startsWith(lower))
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
     }
 }

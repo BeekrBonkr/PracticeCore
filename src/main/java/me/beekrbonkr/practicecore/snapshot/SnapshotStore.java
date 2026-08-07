@@ -1,6 +1,7 @@
 package me.beekrbonkr.practicecore.snapshot;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
+import me.beekrbonkr.practicecore.config.Versions;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
@@ -45,7 +46,16 @@ public final class SnapshotStore {
         if (!file.exists()) {
             return Optional.empty();
         }
-        return Optional.of(PlayerSnapshot.deserialize(YamlConfiguration.loadConfiguration(file)));
+        YamlConfiguration yml = YamlConfiguration.loadConfiguration(file);
+        int version = yml.getInt(Versions.DATA_KEY, 0);
+        if (version > Versions.SNAPSHOT) {
+            // Written by a newer build. Restoring is still far better than
+            // stranding the player, but the mismatch belongs in the log.
+            plugin.getLogger().warning("Snapshot for " + player + " is v" + version
+                    + ", newer than this build understands (v" + Versions.SNAPSHOT
+                    + ") — restoring it anyway; some fields may be ignored.");
+        }
+        return Optional.of(PlayerSnapshot.deserialize(yml));
     }
 
     public void delete(UUID player) {

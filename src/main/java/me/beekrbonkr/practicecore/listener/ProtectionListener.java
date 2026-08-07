@@ -2,7 +2,6 @@ package me.beekrbonkr.practicecore.listener;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.session.PracticeSession;
-import me.beekrbonkr.practicecore.util.Msg;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -91,7 +90,7 @@ public final class ProtectionListener implements Listener {
         }
         if (plugin.sessions().get(player.getUniqueId()) != null && !plugin.pcConfig().allowPearls()) {
             event.setCancelled(true);
-            Msg.error(player, "Ender pearls are disabled in practice.");
+            plugin.messages().send(player, "protect.pearls-disabled");
         }
     }
 
@@ -196,7 +195,7 @@ public final class ProtectionListener implements Listener {
         if (plugin.sessions().get(player.getUniqueId()) != null
                 && event.getNewGameMode() != GameMode.SURVIVAL) {
             event.setCancelled(true);
-            Msg.error(player, "Leave practice before changing gamemode (/practice leave).");
+            plugin.messages().send(player, "protect.gamemode-locked");
         }
     }
 

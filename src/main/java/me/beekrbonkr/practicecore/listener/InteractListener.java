@@ -1,11 +1,10 @@
 package me.beekrbonkr.practicecore.listener;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
+import me.beekrbonkr.practicecore.gui.MainMenu;
 import me.beekrbonkr.practicecore.session.PracticeSession;
 import me.beekrbonkr.practicecore.session.SessionState;
 import me.beekrbonkr.practicecore.template.TriggerType;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -28,22 +27,34 @@ public final class InteractListener implements Listener {
     public void onInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
         PracticeSession session = plugin.sessions().get(player.getUniqueId());
-        if (session == null) {
-            return;
-        }
+
         if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
             // Fires once per hand for a single click — only accept main hand.
             if (event.getHand() != EquipmentSlot.HAND) {
                 return;
             }
             Block block = event.getClickedBlock();
-            if (block != null
+            // The finish trigger wins over the menu item: right-clicking the
+            // button to end a run must never open a GUI instead.
+            if (session != null && block != null
                     && session.template().triggerType() == TriggerType.BUTTON
                     && block.getLocation().equals(session.trigger())) {
                 event.setCancelled(true); // no redstone pulse into the schematic
                 tryFinish(player, session, block);
+                return;
             }
+            if (openMenu(event, player)) {
+                return;
+            }
+        } else if (event.getAction() == Action.RIGHT_CLICK_AIR) {
+            if (event.getHand() != EquipmentSlot.HAND) {
+                return;
+            }
+            openMenu(event, player);
         } else if (event.getAction() == Action.PHYSICAL) {
+            if (session == null) {
+                return;
+            }
             Block block = event.getClickedBlock();
             if (block == null) {
                 return;
@@ -59,10 +70,24 @@ public final class InteractListener implements Listener {
         }
     }
 
+    /** @return true when the click was consumed by the menu item. */
+    private boolean openMenu(PlayerInteractEvent event, Player player) {
+        if (!plugin.pcConfig().menuItemEnabled() || !plugin.menuItems().isMenuItem(event.getItem())) {
+            return false;
+        }
+        event.setCancelled(true);
+        if (!player.hasPermission("practicecore.menu")) {
+            plugin.messages().send(player, "permission.menu");
+            return true;
+        }
+        new MainMenu(plugin, player).open();
+        return true;
+    }
+
     private void tryFinish(Player player, PracticeSession session, Block block) {
         if (session.state() != SessionState.ACTIVE) {
             if (session.state() == SessionState.READY) {
-                player.sendActionBar(Component.text("Timer hasn't started yet", NamedTextColor.YELLOW));
+                plugin.messages().actionBar(player, "run.timer-not-started");
             }
             return;
         }

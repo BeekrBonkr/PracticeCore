@@ -1,0 +1,33 @@
+config-version: 1
+mode: bridging
+display-name: turtle
+complete: true
+require-blocks-for-pb: true
+spawn:
+  x: 0.4992361721677267
+  y: 0.0
+  z: 0.48822935402245915
+  yaw: 89.682755
+  pitch: 0.31749505
+trigger:
+  x: -36
+  y: 0
+  z: 0
+  type: PLATE
+  block-data: minecraft:stone_pressure_plate[powered=false]
+kit:
+  '0':
+    ==: org.bukkit.inventory.ItemStack
+    v: 4189
+    type: LIGHT_BLUE_WOOL
+    amount: 64
+  '1':
+    ==: org.bukkit.inventory.ItemStack
+    v: 4189
+    type: LIGHT_BLUE_WOOL
+    amount: 64
+  '2':
+    ==: org.bukkit.inventory.ItemStack
+    v: 4189
+    type: LIGHT_BLUE_WOOL
+    amount: 64

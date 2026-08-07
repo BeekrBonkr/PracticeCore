@@ -1,0 +1,464 @@
+# PracticeCore messages
+#
+# Every piece of text the plugin shows a player lives here. Formatting is
+# MiniMessage (https://docs.advntr.dev/minimessage/format.html), so colours,
+# gradients, hover and click are all available.
+#
+# - <prefix> inserts the prefix defined below.
+# - Values in <angle.brackets> listed above each entry are its placeholders.
+#   Player-supplied text is inserted literally and can never inject formatting.
+# - Set a message to '' to silence it entirely.
+# - A message may be a single line or a list of lines.
+#
+# Do not edit config-version by hand; PracticeCore uses it to migrate this file
+# across upgrades (backups land in backups/).
+config-version: 1
+
+prefix: '<gold>Practice <dark_gray>» '
+
+general:
+  players-only: '<prefix><red>That has to be run in-game.'
+  # <usage>
+  usage: '<prefix><red>Usage: <white><usage>'
+
+permission:
+  use: '<prefix><red>You may not use practice arenas.'
+  menu: '<prefix><red>You may not open the practice menu.'
+  leaderboard: '<prefix><red>You may not view leaderboards.'
+  stats-other: '<prefix><red>You may not view other players'' stats.'
+  setup: '<prefix><red>You may not configure arenas.'
+  arena-admin: '<prefix><red>You may not administer arenas.'
+  pb-reset: '<prefix><red>You may not wipe personal bests.'
+  item: '<prefix><red>You may not give out the practice menu item.'
+  reload: '<prefix><red>You may not reload PracticeCore.'
+  world: '<prefix><red>You may not manage the practice world.'
+
+session:
+  ready: '<prefix><green>Arena ready — the timer starts when you move. Good luck!'
+  # <arena>
+  switched: '<prefix><green>Switched to <white><arena><green>.'
+  ended: '<prefix><gray>Practice session ended.'
+  not-practicing: '<prefix><red>You are not practicing.'
+  preparing: '<prefix><red>Your arena is still being prepared — one moment.'
+  setup-in-progress: '<prefix><red>Finish or cancel arena setup first.'
+  teleport-failed: '<prefix><red>Could not send you to the arena.'
+  state-restored: '<prefix><gray>Your pre-practice state was restored.'
+  # Shown when a switch or join fails after the previous session already ended.
+  restored-after-failure: '<prefix><red>That arena could not be opened, so you were returned to where you started.'
+
+run:
+  # <time>
+  finished-pb: '<prefix><green>Finished in <white><time><green> — new personal best!'
+  # <time> <best>
+  finished: '<prefix><gray>Finished in <white><time><gray> (best <white><best><gray>)'
+  # <time>
+  finished-first: '<prefix><gray>Finished in <white><time>'
+  failed: '<prefix><gray>You fell! Resetting…'
+  restarted: '<prefix><gray>Run restarted.'
+  timer-not-started: '<yellow>The timer has not started yet'
+  title:
+    # <time>
+    pb: '<gold><time>'
+    normal: '<yellow><time>'
+  subtitle:
+    pb: '<green>New personal best!'
+    # <delta>
+    behind: '<gray>+<delta> off your best'
+    first: '<gray>Run complete'
+  # <player> <arena> <time> <previous-holder> <delta>
+  record-broadcast: '<prefix><gold><player> <gray>set a new record on <white><arena> <dark_gray>— <yellow><time>'
+  record-broadcast-beaten: '<prefix><gold><player> <gray>set a new record on <white><arena> <dark_gray>— <yellow><time> <dark_gray>(beat <previous-holder> by <delta>)'
+
+build:
+  out-of-bounds: '<red>Out of bounds'
+  break-own-only: '<red>You can only break blocks you placed'
+
+protect:
+  pearls-disabled: '<prefix><red>Ender pearls are disabled in practice.'
+  gamemode-locked: '<prefix><red>Leave practice before changing gamemode (/practice leave).'
+
+world:
+  unavailable: '<prefix><red>The practice world is unavailable — tell an admin.'
+  entry-denied: '<prefix><red>Use /practice join to enter the practice world.'
+
+leave:
+  # <server>
+  sending: '<prefix><gray>Sending you to <white><server><gray>…'
+
+menu:
+  item-locked: '<yellow>You need that to get back out'
+  # <slot>
+  item-given: '<prefix><green>Practice menu item added to hotbar slot <white><slot><green>.'
+  item-given-hint: '<prefix><gray>Arrange your kit and run <white>/practice setup kit<gray> to include it for players.'
+  # <player>
+  item-given-other: '<prefix><green>Gave the practice menu item to <white><player><green>.'
+  item-disabled: '<prefix><red>The menu item is disabled in config.yml (menu-item.enabled).'
+  # <player>
+  player-offline: '<prefix><red><player> is not online.'
+
+sidebar:
+  shown: '<prefix><green>Practice sidebar shown.'
+  hidden: '<prefix><green>Practice sidebar hidden.'
+
+arena:
+  # <arena>
+  unknown: '<prefix><red>No arena named ''<arena>''. See /practice list.'
+  # <arena>
+  incomplete: '<prefix><red>Arena ''<arena>'' is not fully configured.'
+  # <arena>
+  locked: '<prefix><red>You do not have access to the <white><arena><red> arena.'
+  none-available: '<prefix><red>There are no arenas you can join.'
+  broken: '<prefix><red>This arena is missing its spawn or finish trigger — tell an admin.'
+  broken-trigger: '<prefix><red>This arena''s finish trigger is misconfigured — tell an admin.'
+  schematic-failed: '<prefix><red>Could not load the arena schematic — tell an admin.'
+  paste-failed: '<prefix><red>Failed to build your arena — tell an admin.'
+  list-empty: '<prefix><gray>No arenas are available. Admins: <white>/practice setup start <name>'
+  list-header: '<prefix><gray>Arenas:'
+  # <arena> <display> <mode> <locked>
+  list-entry: '<dark_gray> • <white><arena> <dark_gray>— <gray><display> <dark_gray>[<mode>]<locked>'
+  list-locked-suffix: ' <red>(locked)'
+
+leaderboard:
+  # <arena>
+  empty: '<prefix><gray>Nobody has finished <white><arena><gray> yet.'
+  # <arena>
+  header: '<prefix><gray>Top times — <white><arena><gray>:'
+  # <rank> <player> <time>
+  entry: '<dark_gray> #<rank> <white><player> <dark_gray>— <yellow><time>'
+  # <rank> <total>
+  your-rank: '<dark_gray> … you are #<rank> of <total>'
+
+stats:
+  # <player>
+  unknown-player: '<prefix><red>No player named ''<player>'' in the plugin''s records.'
+  # <player>
+  empty: '<prefix><gray><player> has no recorded times.'
+  # <player>
+  header: '<prefix><gray>Personal bests — <white><player><gray>:'
+  # <arena> <time> <rank> <finishes>
+  entry: '<dark_gray> • <white><arena> <dark_gray>— <yellow><time> <dark_gray>(#<rank>, <finishes> run(s))'
+  # <arena> <time> <finishes>
+  entry-unranked: '<dark_gray> • <white><arena> <dark_gray>— <yellow><time> <dark_gray>(<finishes> run(s))'
+  # <player>
+  reset-notice: '<prefix><gray>An admin reset your practice personal bests.'
+
+help:
+  player:
+    - '<prefix><gray>Practice commands:'
+    - '<dark_gray> • <white>/practice join [arena] <dark_gray>— start practicing'
+    - '<dark_gray> • <white>/practice leave <dark_gray>— return to where you were'
+    - '<dark_gray> • <white>/practice menu <dark_gray>— open the practice GUI'
+    - '<dark_gray> • <white>/practice list <dark_gray>— available arenas'
+    - '<dark_gray> • <white>/practice stats [player] <dark_gray>— personal bests'
+    - '<dark_gray> • <white>/practice top [arena] <dark_gray>— leaderboards'
+    - '<dark_gray> • <white>/practice sidebar <dark_gray>— show or hide the live timer'
+  setup:
+    - '<dark_gray> • <white>/practice setup … <dark_gray>— create an arena'
+    - '<dark_gray> • <white>/practice edit <arena> <dark_gray>— reopen a saved arena'
+  setup-detail:
+    - '<prefix><gray>Creating an arena:'
+    - '<dark_gray> • <white>/practice setup start <name> <dark_gray>— begin (needs a //copy''d build)'
+    - '<dark_gray> • <white>/practice setup spawn <dark_gray>— set the player spawn where you stand'
+    - '<dark_gray> • <gray>place a button or plate <dark_gray>— sets the finish trigger'
+    - '<dark_gray> • <white>/practice setup kit [load] <dark_gray>— save your inventory as the kit'
+    - '<dark_gray> • <white>/practice setup save | cancel | info'
+    - '<prefix><gray>Editing an existing arena:'
+    - '<dark_gray> • <white>/practice edit <arena> <dark_gray>— reopen it with every setting pre-loaded'
+    - '<dark_gray> • <white>/practice setup capture <dark_gray>— save in-world changes into the schematic'
+    - '<dark_gray> • <white>/practice setup schematic <dark_gray>— replace it from your WorldEdit clipboard'
+    - '<dark_gray> • <white>/practice setup display <text> | icon [material] | permission <node|default>'
+    - '<dark_gray> • <white>/practice setup mode <id> | blocks <true|false>'
+  arena:
+    - '<dark_gray> • <white>/practice arena … <dark_gray>— administer saved arenas'
+  item:
+    - '<dark_gray> • <white>/practice item [player] <dark_gray>— get the hotbar menu item'
+  pb:
+    - '<dark_gray> • <white>/practice pb reset <player> [arena|all] <dark_gray>— wipe personal bests'
+  world:
+    - '<dark_gray> • <white>/practice world info|regen <dark_gray>— practice world management'
+  reload:
+    - '<dark_gray> • <white>/practice reload <dark_gray>— reload config, messages and arenas'
+
+# ---------------------------------------------------------------- admin text
+
+admin:
+  # <note>
+  note: '<prefix><gray><note>'
+  # <note>
+  problem: '<prefix><red><note>'
+  # <note>
+  done: '<prefix><green><note>'
+
+setup:
+  # <arena> <holder>
+  busy: '<prefix><red>Setup is already in progress by <white><holder><red> on ''<arena>''.'
+  clipboard-empty: '<prefix><red>Your WorldEdit clipboard is empty. Select your arena build and run //copy first.'
+  # <arena>
+  exists: '<prefix><red>Arena ''<arena>'' already exists. Use <white>/practice edit <arena><red> instead.'
+  bad-name: '<prefix><red>Arena names must match [a-z0-9_-], max 32 characters.'
+  # <width> <length> <max>
+  too-big: '<prefix><red>Schematic is <width>×<length> blocks; the limit is <max> so neighbouring arenas can never overlap.'
+  folder-failed: '<prefix><red>Could not create the arena folder.'
+  # <error>
+  schematic-save-failed: '<prefix><red>Could not save the schematic: <error>'
+  # <error>
+  paste-failed: '<prefix><red>Failed to paste the arena: <error>'
+  teleport-failed: '<prefix><red>Could not teleport you to the setup area.'
+  none-active: '<prefix><red>No setup in progress. Start with <white>/practice setup start <name><red> or <white>/practice edit <arena><red>.'
+  # <arena>
+  left-session: '<prefix><gray>Ended your practice session on <white><arena><gray> to open the editor.'
+  world-unavailable: '<prefix><red>The practice world is unavailable — run /practice world regen confirm.'
+  # <arena>
+  started: '<prefix><green>Configuring ''<arena>''. Steps:'
+  start-steps:
+    - '<dark_gray> 1. <gray>Stand at the player spawn and run <white>/practice setup spawn'
+    - '<dark_gray> 2. <gray>Place the given button or pressure plate at the finish'
+    - '<dark_gray> 3. <gray>Optional: arrange your inventory, then <white>/practice setup kit'
+    - '<dark_gray> 4. <white>/practice setup save <gray>(or <white>/practice setup cancel<gray>)'
+  # <arena>
+  editing: '<prefix><green>Editing ''<arena>''. Everything is pre-loaded — change what you like.'
+  edit-steps:
+    - '<dark_gray> • <gray>Reshape the arena in-world, then <white>/practice setup capture <gray>to bake it in'
+    - '<dark_gray> • <white>/practice setup info <gray>shows the current state'
+    - '<dark_gray> • <white>/practice setup save <gray>when you are done'
+  spawn-set: '<prefix><green>Spawn point set (facing preserved).'
+  spawn-outside: '<prefix><red>Stand inside the arena to set its spawn.'
+  out-of-bounds: '<prefix><red>Keep setup changes inside the arena bounds.'
+  # <type>
+  trigger-set: '<prefix><green>Finish trigger set to the <type> you just placed. Place another to move it.'
+  trigger-button: 'button'
+  trigger-plate: 'pressure plate'
+  # <data>
+  trigger-invalid: '<prefix><red>This arena''s saved trigger block is invalid (''<data>'') — place a new button or plate.'
+  not-captured-hint: '<yellow>Blocks placed during setup are only saved by /practice setup capture'
+  # <count>
+  kit-saved: '<prefix><green>Kit saved (<count> stack(s)).'
+  kit-saved-with-item: '<prefix><gray>The practice menu item is included.'
+  kit-empty: '<prefix><red>This arena has no kit saved yet.'
+  kit-loaded: '<prefix><green>Kit loaded into your inventory. Rearrange it, then <white>/practice setup kit<green>.'
+  # <item>
+  kit-warning: '<prefix><yellow>Warning: <item> in the kit can skip or break runs (kept anyway).'
+  # <name>
+  display-set: '<prefix><green>Display name set to ''<name>''.'
+  # <material>
+  icon-set: '<prefix><green>Menu icon set to <material>.'
+  icon-need-item: '<prefix><red>Hold the item you want as the menu icon, or name one: <white>/practice setup icon <material>'
+  # <material>
+  icon-invalid: '<prefix><red>''<material>'' is not an item material.'
+  # <node>
+  permission-set: '<prefix><green>Arena gated behind ''<node>''.'
+  permission-cleared: '<prefix><green>Permission reset to this arena''s default node.'
+  blocks-required: '<prefix><green>Personal bests now require at least one placed block.'
+  blocks-not-required: '<prefix><green>Personal bests no longer require placed blocks.'
+  # <mode> <modes>
+  mode-set: '<prefix><green>Mode set to ''<mode>''.'
+  mode-unknown: '<prefix><red>Unknown mode ''<mode>''. Known: <modes>'
+  captured: '<prefix><green>Arena captured — the schematic now matches what you see.'
+  # <error>
+  capture-failed: '<prefix><red>Could not capture the arena: <error>'
+  schematic-replaced: '<prefix><green>Schematic replaced from your clipboard.'
+  schematic-replaced-hint: '<prefix><gray>Check the spawn and finish trigger — their offsets may no longer line up.'
+  # <error>
+  schematic-replace-failed: '<prefix><red>Could not replace the schematic: <error>'
+  need-spawn: '<prefix><red>Set the spawn first: <white>/practice setup spawn'
+  need-trigger: '<prefix><red>Place the finish button or pressure plate first.'
+  # <error>
+  save-failed: '<prefix><red>Could not write arena.yml: <error>'
+  # <arena>
+  saved: '<prefix><green>Arena ''<arena>'' saved — <white>/practice join <arena>'
+  # <arena>
+  updated: '<prefix><green>Arena ''<arena>'' updated — <white>/practice join <arena>'
+  cancelled: '<prefix><gray>Setup cancelled; nothing was saved.'
+  edit-cancelled: '<prefix><gray>Edit cancelled; the saved arena is unchanged.'
+  # <arena> <editing>
+  info-header: '<prefix><gray><editing> arena ''<white><arena><gray>'''
+  # <key> <value>
+  info-line: '<dark_gray>   <key>: <white><value>'
+  info-ready: '<prefix><green>Ready to save.'
+  info-not-ready: '<prefix><red>Spawn and trigger are both required before saving.'
+
+# ------------------------------------------------------------ GUI menu text
+
+gui:
+  none: '—'
+  back: '<yellow>Back'
+  back-lore: '<gray>Return to the previous menu.'
+  close: '<red>Close'
+  previous-page: '<yellow>Previous page'
+  next-page: '<yellow>Next page'
+  # <page> <pages>
+  page: '<white>Page <page> <gray>of <pages>'
+
+  main:
+    title: '<dark_gray><bold>Practice'
+    play:
+      name: '<green><bold>Play'
+      # <count>
+      lore:
+        - '<gray>Pick an arena to practice in.'
+        - ''
+        - '<dark_gray><count> arena(s) available'
+        - '<yellow>Click to browse'
+    random:
+      name: '<light_purple><bold>Random Arena'
+      lore:
+        - '<gray>Drops you straight into one'
+        - '<gray>of the arenas you can play.'
+        - '<yellow>Click to join'
+    leaderboards:
+      name: '<gold><bold>Leaderboards'
+      lore:
+        - '<gray>The fastest times on every arena.'
+        - '<yellow>Click to view'
+    stats:
+      name: '<aqua><bold>My Stats'
+      lore:
+        - '<gray>Your bests, ranks and run counts.'
+        - '<yellow>Click to view'
+    restart:
+      name: '<yellow><bold>Restart Run'
+      # <arena>
+      lore:
+        - '<gray>Wipe your blocks and start over'
+        - '<gray>from the arena spawn.'
+        - ''
+        - '<gray>Arena: <white><arena>'
+        - '<yellow>Click to restart'
+      lore-idle:
+        - '<gray>Wipe your blocks and start over'
+        - '<gray>from the arena spawn.'
+        - ''
+        - '<red>You are not practicing.'
+    sidebar:
+      name: '<white><bold>Sidebar'
+      # <state>
+      lore:
+        - '<gray>The live timer scoreboard.'
+        - ''
+        - '<gray>Currently: <state>'
+        - '<yellow>Click to toggle'
+      state-shown: '<green>shown'
+      state-hidden: '<red>hidden'
+    help:
+      name: '<white><bold>Help'
+      lore:
+        - '<gray>How practice arenas work,'
+        - '<gray>and every command you can run.'
+        - '<yellow>Click for details'
+    leave:
+      name: '<red><bold>Leave'
+      # <destination>
+      lore:
+        - '<gray>Restores your inventory, location'
+        - '<gray>and everything else exactly as it was.'
+        - ''
+        - '<gray>Sends you to: <white><destination>'
+        - '<yellow>Click to leave'
+
+  arenas:
+    title: '<dark_gray><bold>Arenas'
+    empty:
+      name: '<red>No arenas available'
+      lore:
+        - '<gray>Nothing has been set up yet, or'
+        - '<gray>you lack permission for them all.'
+    # <arena>
+    entry-name: '<green><bold><arena>'
+    entry-name-locked: '<red><bold><arena>'
+    # <mode> <best> <rank> <players> <finishes> <record> <record-holder> <status>
+    entry-lore:
+      - '<gray>Mode: <white><mode>'
+      - ''
+      - '<gray>Your best: <white><best>'
+      - '<gray>Your rank: <white><rank> <dark_gray>of <players>'
+      - '<gray>Runs finished: <white><finishes>'
+      - '<gray>Record: <white><record> <dark_gray><record-holder>'
+      - ''
+      - '<status>'
+    status-open: '<yellow>Click to play'
+    status-locked: '<red>You do not have access to this arena.'
+    # <node>
+    status-locked-node: '<dark_gray>needs <node>'
+
+  leaderboards:
+    title: '<dark_gray><bold>Leaderboards'
+    empty:
+      name: '<red>No arenas yet'
+      lore:
+        - '<gray>Leaderboards appear once arenas exist.'
+    # <arena>
+    entry-name: '<gold><bold><arena>'
+    # <players> <record> <record-holder> <rank>
+    entry-lore:
+      - '<gray>Players ranked: <white><players>'
+      - '<gray>Record: <white><record>'
+      - '<gray>Held by: <white><record-holder>'
+      - ''
+      - '<gray>You are <white><rank>'
+      - '<yellow>Click for the full board'
+
+  board:
+    # <arena>
+    title: '<dark_gray><bold><arena> · top times'
+    empty:
+      name: '<red>No times yet'
+      lore:
+        - '<gray>Be the first to finish this arena.'
+    # <rank> <player>
+    entry-name: '<white><bold>#<rank> <player>'
+    entry-name-first: '<gold><bold>#<rank> <player>'
+    entry-name-self: '<aqua><bold>#<rank> <player>'
+    # <time> <behind>
+    entry-lore:
+      - '<gray>Time: <white><time>'
+      - '<gray>Behind #1 by: <white><behind>'
+    entry-lore-self-suffix:
+      - ''
+      - '<aqua>That''s you.'
+    standing:
+      name: '<aqua><bold>Your standing'
+      # <rank> <players> <best> <next> <gap>
+      lore:
+        - '<gray>Rank: <white><rank> <dark_gray>of <players>'
+        - '<gray>Best: <white><best>'
+        - ''
+        - '<gray>Next up: <white><next>'
+        - '<gray>Gap: <white><gap>'
+      lore-none:
+        - '<gray>You have not finished this arena yet.'
+    # <arena>
+    play-name: '<green><bold>Play <arena>'
+    play-lore:
+      - '<yellow>Click to join'
+
+  stats:
+    title-self: '<dark_gray><bold>Your stats'
+    # <player>
+    title-other: '<dark_gray><bold><player>''s stats'
+    empty-self:
+      name: '<red>No times recorded'
+      lore:
+        - '<gray>Finish a run and it shows up here.'
+    empty-other:
+      name: '<red>No times recorded'
+      lore:
+        - '<gray>This player has not finished a run yet.'
+    # <arena>
+    entry-name: '<white><bold><arena>'
+    # <best> <last> <finishes> <rank> <players> <behind>
+    entry-lore:
+      - '<gray>Best: <white><best>'
+      - '<gray>Last: <white><last>'
+      - '<gray>Runs finished: <white><finishes>'
+      - '<gray>Rank: <white><rank> <dark_gray>of <players>'
+      - '<gray>Off the record by: <white><behind>'
+    entry-lore-missing:
+      - ''
+      - '<dark_gray>This arena no longer exists.'
+    summary:
+      # <player> <arenas> <finishes> <records>
+      name: '<aqua><bold><player>'
+      lore:
+        - '<gray>Arenas completed: <white><arenas>'
+        - '<gray>Total runs finished: <white><finishes>'
+        - '<gray>Arena records held: <white><records>'

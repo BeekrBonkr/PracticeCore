@@ -6,12 +6,14 @@ import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
+import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard;
 import com.sk89q.worldedit.extent.clipboard.Clipboard;
 import com.sk89q.worldedit.extent.clipboard.io.BuiltInClipboardFormat;
 import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormat;
 import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats;
 import com.sk89q.worldedit.extent.clipboard.io.ClipboardReader;
 import com.sk89q.worldedit.extent.clipboard.io.ClipboardWriter;
+import com.sk89q.worldedit.function.operation.ForwardExtentCopy;
 import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.operation.Operations;
 import com.sk89q.worldedit.math.BlockVector3;
@@ -86,6 +88,29 @@ public final class SchematicService {
         BlockVector3 min = to.add(clipboard.getMinimumPoint().subtract(clipboard.getOrigin()));
         BlockVector3 max = min.add(clipboard.getDimensions()).subtract(BlockVector3.ONE);
         return new BoundingBox(min.x(), min.y(), min.z(), max.x() + 1, max.y() + 1, max.z() + 1);
+    }
+
+    /**
+     * Copies a region of the world back into a clipboard whose origin is
+     * {@code origin} — the inverse of {@link #paste}. This is what lets an
+     * admin reshape a live arena in-world and save the result over the
+     * template's schematic without ever leaving the practice world.
+     */
+    public Clipboard copyRegion(World world, BoundingBox box, Location origin) throws WorldEditException {
+        com.sk89q.worldedit.world.World weWorld = BukkitAdapter.adapt(world);
+        CuboidRegion region = new CuboidRegion(weWorld,
+                BlockVector3.at((int) box.getMinX(), (int) box.getMinY(), (int) box.getMinZ()),
+                BlockVector3.at((int) box.getMaxX() - 1, (int) box.getMaxY() - 1, (int) box.getMaxZ() - 1));
+        BlockArrayClipboard clipboard = new BlockArrayClipboard(region);
+        clipboard.setOrigin(BlockVector3.at(origin.getBlockX(), origin.getBlockY(), origin.getBlockZ()));
+        try (EditSession editSession = WorldEdit.getInstance().newEditSession(weWorld)) {
+            ForwardExtentCopy copy = new ForwardExtentCopy(
+                    editSession, region, clipboard, region.getMinimumPoint());
+            copy.setCopyingEntities(false);
+            copy.setCopyingBiomes(false);
+            Operations.complete(copy);
+        }
+        return clipboard;
     }
 
     /** Fills the region with air — a full reset in a void world. */
