@@ -53,6 +53,8 @@ final class SetupSession {
      */
     final Set<Location> triggerCandidates = new LinkedHashSet<>();
     final Map<Integer, ItemStack> kit = new HashMap<>();
+    /** Per-mode settings carried through an edit so saving never drops them. */
+    final Map<String, Object> settings = new java.util.LinkedHashMap<>();
 
     SetupSession(UUID admin, String name, File dir, Clipboard clipboard,
                  Slot slot, Location origin, BoundingBox bounds, boolean editing) {
@@ -84,6 +86,7 @@ final class SetupSession {
             triggerBlockData = template.triggerBlockData();
         }
         kit.putAll(template.kit());
+        settings.putAll(template.settings());
     }
 
     Location triggerLocation() {
@@ -96,7 +99,7 @@ final class SetupSession {
                 origin.getBlockZ() + triggerOffset.getBlockZ());
     }
 
-    boolean ready() {
-        return spawnOffset != null && triggerOffset != null;
+    boolean ready(boolean needsTrigger) {
+        return spawnOffset != null && (!needsTrigger || triggerOffset != null);
     }
 }

@@ -17,6 +17,7 @@ import me.beekrbonkr.practicecore.listener.InteractListener;
 import me.beekrbonkr.practicecore.listener.MovementListener;
 import me.beekrbonkr.practicecore.listener.ProtectionListener;
 import me.beekrbonkr.practicecore.listener.TeleportListener;
+import me.beekrbonkr.practicecore.mode.BedBreakMode;
 import me.beekrbonkr.practicecore.mode.BridgingMode;
 import me.beekrbonkr.practicecore.mode.ModeRegistry;
 import me.beekrbonkr.practicecore.schematic.SchematicService;
@@ -67,6 +68,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
 
         modes = new ModeRegistry();
         modes.register(new BridgingMode());
+        modes.register(new BedBreakMode());
 
         worldService = new PracticeWorldService(this);
         worldService.recreate();

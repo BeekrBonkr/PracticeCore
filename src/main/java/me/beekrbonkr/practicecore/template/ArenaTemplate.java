@@ -42,6 +42,12 @@ public final class ArenaTemplate {
     /** Menu icon, or null to derive one from the kit. */
     private Material icon;
     private final Map<Integer, ItemStack> kit = new HashMap<>();
+    /**
+     * Free-form per-mode configuration (the arena.yml {@code settings:}
+     * section). The template only carries it; each mode parses its own keys
+     * via {@link #settingsSection()}.
+     */
+    private final Map<String, Object> settings = new java.util.LinkedHashMap<>();
 
     public ArenaTemplate(String name, File dir) {
         this.name = name;
@@ -80,6 +86,9 @@ public final class ArenaTemplate {
                 template.triggerType = TriggerType.BUTTON;
             }
             template.triggerBlockData = t.getString("block-data", "minecraft:stone_button");
+        }
+        if (yml.isConfigurationSection("settings")) {
+            template.settings.putAll(deepMap(yml.getConfigurationSection("settings")));
         }
         if (yml.isConfigurationSection("kit")) {
             ConfigurationSection k = yml.getConfigurationSection("kit");
@@ -133,11 +142,24 @@ public final class ArenaTemplate {
             yml.set("trigger.type", triggerType.name());
             yml.set("trigger.block-data", triggerBlockData);
         }
+        if (!settings.isEmpty()) {
+            yml.createSection("settings", settings);
+        }
         // Sorted so a hand-edited arena.yml keeps a stable, readable order.
         for (Map.Entry<Integer, ItemStack> entry : new TreeMap<>(kit).entrySet()) {
             yml.set("kit." + entry.getKey(), entry.getValue());
         }
         yml.save(new File(dir, "arena.yml"));
+    }
+
+    /** Nested sections flattened to plain maps, so they round-trip through save(). */
+    private static Map<String, Object> deepMap(ConfigurationSection section) {
+        Map<String, Object> map = new java.util.LinkedHashMap<>();
+        for (String key : section.getKeys(false)) {
+            Object value = section.get(key);
+            map.put(key, value instanceof ConfigurationSection nested ? deepMap(nested) : value);
+        }
+        return map;
     }
 
     public Location spawnLocation(Location origin) {
@@ -283,5 +305,20 @@ public final class ArenaTemplate {
 
     public Map<Integer, ItemStack> kit() {
         return kit;
+    }
+
+    /** The raw per-mode settings; mutate then {@link #save()} to persist. */
+    public Map<String, Object> settings() {
+        return settings;
+    }
+
+    /**
+     * The settings as a readable ConfigurationSection, so modes can parse
+     * their keys with the familiar typed getters and defaults.
+     */
+    public ConfigurationSection settingsSection() {
+        org.bukkit.configuration.MemoryConfiguration holder =
+                new org.bukkit.configuration.MemoryConfiguration();
+        return holder.createSection("settings", settings);
     }
 }

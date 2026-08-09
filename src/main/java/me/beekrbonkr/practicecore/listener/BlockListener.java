@@ -51,6 +51,7 @@ public final class BlockListener implements Listener {
         }
         session.tracker().recordPlace(event.getBlock(), event.getBlockReplacedState().getBlockData());
         if (state == SessionState.READY
+                && session.mode().usesStandardTimerStart()
                 && plugin.pcConfig().timerStartMode() == PCConfig.TimerStartMode.FIRST_BLOCK) {
             session.setState(SessionState.ACTIVE);
             session.startTimer();
@@ -75,12 +76,14 @@ public final class BlockListener implements Listener {
             event.setCancelled(true);
             return;
         }
-        // Only blocks the player placed this run — which also protects the
-        // finish trigger and its supporting block.
-        if (!session.tracker().isTracked(event.getBlock().getLocation())) {
+        // What is breakable is the mode's call. The default (blocks the player
+        // placed this run) also protects the finish trigger and its support.
+        if (!session.mode().canBreak(session, event.getBlock())) {
             event.setCancelled(true);
             plugin.messages().actionBar(player, "build.break-own-only");
+            return;
         }
+        session.mode().onBlockBreak(plugin, player, session, event);
     }
 
     /** Gravel/sand landing outside the arena would survive every reset. */

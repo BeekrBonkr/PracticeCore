@@ -107,18 +107,22 @@ public final class SessionManager {
         }
         // Validate everything a hand-edited arena.yml could get wrong before a
         // slot is taken — an aborted join must leave no arena behind.
-        if (template.spawnOffset() == null || template.triggerOffset() == null) {
+        me.beekrbonkr.practicecore.mode.Mode mode = plugin.modes().of(template);
+        boolean needsTrigger = mode.requiresTrigger();
+        if (template.spawnOffset() == null || (needsTrigger && template.triggerOffset() == null)) {
             msg.send(player, "arena.broken");
             return;
         }
-        BlockData triggerData;
-        try {
-            triggerData = Bukkit.createBlockData(template.triggerBlockData());
-        } catch (IllegalArgumentException e) {
-            msg.send(player, "arena.broken-trigger");
-            plugin.getLogger().severe("Invalid trigger block-data for '" + template.name()
-                    + "': " + template.triggerBlockData());
-            return;
+        BlockData triggerData = null;
+        if (needsTrigger) {
+            try {
+                triggerData = Bukkit.createBlockData(template.triggerBlockData());
+            } catch (IllegalArgumentException e) {
+                msg.send(player, "arena.broken-trigger");
+                plugin.getLogger().severe("Invalid trigger block-data for '" + template.name()
+                        + "': " + template.triggerBlockData());
+                return;
+            }
         }
         Clipboard clipboard;
         try {
@@ -152,12 +156,15 @@ public final class SessionManager {
 
         // The finish trigger is not part of the schematic (it was placed
         // during setup, after the //copy) — the plugin stamps it in.
-        Location trigger = template.triggerLocation(origin);
-        trigger.getBlock().setBlockData(triggerData, false);
+        Location trigger = null;
+        if (needsTrigger) {
+            trigger = template.triggerLocation(origin);
+            trigger.getBlock().setBlockData(triggerData, false);
+        }
 
         addChunkTickets(world, bounds);
 
-        PracticeSession session = new PracticeSession(id, template, slot, origin, bounds,
+        PracticeSession session = new PracticeSession(id, template, mode, slot, origin, bounds,
                 template.spawnLocation(origin), trigger);
         session.setBestTimeMs(plugin.stats().bestMs(id, template.name()));
         session.setLastTimeMs(plugin.stats().lastMs(id, template.name()));
@@ -183,6 +190,7 @@ public final class SessionManager {
             }
             applyPracticeState(player, session);
             session.setState(SessionState.READY);
+            session.mode().onReady(plugin, player, session);
             plugin.boards().create(player);
             if (current != null) {
                 msg.send(player, "session.switched", "arena", template.displayName());
@@ -225,8 +233,22 @@ public final class SessionManager {
 
     /** Frees a superseded session's arena without touching the player. */
     private void releaseArena(PracticeSession session) {
+        notifyEnd(session);
         session.setState(SessionState.ENDING);
         cleanupArena(session, false);
+    }
+
+    /**
+     * One-shot end-of-session mode hook. Runs before the player's snapshot is
+     * restored on every path that ends a session, so a mode can still see the
+     * in-run inventory and cancel anything it scheduled.
+     */
+    private void notifyEnd(PracticeSession session) {
+        if (!session.markEndNotified()) {
+            return;
+        }
+        Player player = Bukkit.getPlayer(session.playerId());
+        session.mode().onSessionEnd(plugin, player, session);
     }
 
     /**
@@ -263,12 +285,14 @@ public final class SessionManager {
         player.setFireTicks(0);
         player.setFallDistance(0);
         player.setVelocity(new Vector(0, 0, 0));
-        giveKit(player, session.template());
+        giveKit(player, session);
     }
 
-    private void giveKit(Player player, ArenaTemplate template) {
+    private void giveKit(Player player, PracticeSession session) {
+        ArenaTemplate template = session.template();
         player.getInventory().clear();
-        for (Map.Entry<Integer, ItemStack> entry : template.kit().entrySet()) {
+        for (Map.Entry<Integer, ItemStack> entry
+                : session.mode().arrangeKit(plugin, player, template).entrySet()) {
             player.getInventory().setItem(entry.getKey(), entry.getValue().clone());
         }
         // Retro-fit for kits saved before the menu item existed.
@@ -394,16 +418,18 @@ public final class SessionManager {
     }
 
     private void resetArena(Player player, PracticeSession session) {
+        session.mode().onArenaReset(plugin, player, session);
         session.tracker().revertAll();
         clearNonPlayerEntities(session);
         session.resetTimer();
-        giveKit(player, session.template());
+        giveKit(player, session);
         internalTeleports.add(player.getUniqueId());
         player.teleport(session.spawn());
         internalTeleports.remove(player.getUniqueId());
         player.setFallDistance(0);
         player.setVelocity(new Vector(0, 0, 0));
         session.setState(SessionState.READY);
+        session.mode().onReady(plugin, player, session);
     }
 
     // ---------------------------------------------------------------- leave
@@ -418,6 +444,7 @@ public final class SessionManager {
         if (session == null) {
             return;
         }
+        notifyEnd(session);
         session.setState(SessionState.ENDING);
         plugin.boards().remove(player);
         plugin.snapshots().load(player.getUniqueId()).ifPresent(snapshot ->
@@ -431,6 +458,7 @@ public final class SessionManager {
     public void handleQuit(Player player) {
         PracticeSession session = sessions.remove(player.getUniqueId());
         if (session != null) {
+            notifyEnd(session);
             session.setState(SessionState.ENDING);
             plugin.boards().remove(player);
             // Mutations during PlayerQuitEvent persist to the player's data.
@@ -446,6 +474,7 @@ public final class SessionManager {
     public void endAllSync() {
         for (PracticeSession session : List.copyOf(sessions.values())) {
             sessions.remove(session.playerId());
+            notifyEnd(session);
             session.setState(SessionState.ENDING);
             Player player = Bukkit.getPlayer(session.playerId());
             if (player != null && player.isOnline()) {
@@ -461,6 +490,7 @@ public final class SessionManager {
     // -------------------------------------------------------------- cleanup
 
     private void cleanupArena(PracticeSession session, boolean immediateRelease) {
+        notifyEnd(session); // backstop — a no-op on every path that already ran it
         Slot slot = session.slot();
         slot.markDirty();
         World world = plugin.worldService().world();

@@ -48,6 +48,7 @@ public final class TemplateRegistry {
             return log(notes);
         }
         new BundledTemplate(plugin).installIfAbsent(templatesDir.toPath());
+        new GeneratedArenas(plugin).installMissing(templatesDir.toPath());
         File[] dirs = templatesDir.listFiles(File::isDirectory);
         Map<String, ArenaTemplate> loaded = new LinkedHashMap<>();
         if (dirs != null) {

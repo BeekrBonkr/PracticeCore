@@ -1,9 +1,25 @@
 package me.beekrbonkr.practicecore.mode;
 
+import me.beekrbonkr.practicecore.PracticeCorePlugin;
+import me.beekrbonkr.practicecore.session.PracticeSession;
+import me.beekrbonkr.practicecore.template.ArenaTemplate;
+import net.kyori.adventure.text.Component;
+import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.inventory.ItemStack;
+
+import java.util.List;
+import java.util.Map;
+
 /**
- * A practice mode. Templates declare the mode they belong to; future modes
- * (clutching, PvP warmups, …) register here and can hook their own rules
- * onto the shared session/arena machinery.
+ * A practice mode. Templates declare the mode they belong to; each mode hooks
+ * its own rules onto the shared session/arena machinery through the defaults
+ * below. Bridging is the baseline: every default implements exactly what
+ * bridging needs, so a mode overrides only what it does differently.
+ *
+ * All hooks run on the main thread. Hooks that fire on teardown paths may be
+ * called with a null (offline) player and must tolerate being called twice.
  */
 public interface Mode {
 
@@ -12,4 +28,61 @@ public interface Mode {
 
     /** Human-readable name for scoreboards and messages. */
     String displayName();
+
+    /** Whether templates of this mode finish runs on a button/plate trigger. */
+    default boolean requiresTrigger() {
+        return true;
+    }
+
+    /** Whether the configured timer start (MOVE / FIRST_BLOCK) applies. */
+    default boolean usesStandardTimerStart() {
+        return true;
+    }
+
+    /**
+     * The session reached READY: right after the join teleport, and again at
+     * the end of every arena reset. Regenerate mode-owned blocks and schedule
+     * mode-owned tasks here.
+     */
+    default void onReady(PracticeCorePlugin plugin, Player player, PracticeSession session) {
+    }
+
+    /**
+     * The arena is about to reset (finish, fail, restart) while the session
+     * continues. The player still holds their in-run inventory.
+     */
+    default void onArenaReset(PracticeCorePlugin plugin, Player player, PracticeSession session) {
+    }
+
+    /**
+     * The session is ending for good (leave, quit, switch, shutdown). Called
+     * before the player's snapshot is restored, so their in-run inventory is
+     * still visible. Cancel tasks and persist anything worth keeping.
+     */
+    default void onSessionEnd(PracticeCorePlugin plugin, Player player, PracticeSession session) {
+    }
+
+    /** May the player break this block? Default: only blocks they placed. */
+    default boolean canBreak(PracticeSession session, Block block) {
+        return session.tracker().isTracked(block.getLocation());
+    }
+
+    /** A permitted block break is about to happen. */
+    default void onBlockBreak(PracticeCorePlugin plugin, Player player, PracticeSession session,
+                              BlockBreakEvent event) {
+    }
+
+    /**
+     * The kit about to be handed to the player. Modes that remember per-player
+     * layouts remap slots here; the returned map is not retained.
+     */
+    default Map<Integer, ItemStack> arrangeKit(PracticeCorePlugin plugin, Player player,
+                                               ArenaTemplate template) {
+        return template.kit();
+    }
+
+    /** Custom sidebar lines, or null for the standard timer board. */
+    default List<Component> boardLines(PracticeCorePlugin plugin, PracticeSession session) {
+        return null;
+    }
 }

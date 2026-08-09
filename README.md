@@ -1,12 +1,13 @@
 # PracticeCore
 
-A modular practice minigame plugin for Paper 1.21+. The first bundled mode is
-**bridging**: every player gets their own ephemeral schematic-built arena in a
-self-cleaning void world, a millisecond-honest timer, and per-arena personal
-bests.
+A modular practice minigame plugin for Paper 1.21+. Two modes ship in the
+box — **bridging** and **bed breaking** — and every player gets their own
+ephemeral schematic-built arena in a self-cleaning void world, a
+millisecond-honest timer, and per-arena personal bests.
 
-Drop the jar in and it works — a ready-to-play bridging arena ships inside it
-and unpacks itself on first start.
+Drop the jar in and it works — a ready-to-play arena for both modes ships
+inside it: the bridging arena unpacks itself, and the bedbreak shaft is built
+block-by-block by the plugin on first start.
 
 Licensed **GPL-3.0** (see `LICENSE`) — chosen deliberately so architecture and
 code from the GPL ecosystem of reference plugins (SpeedBridge2, Infinite
@@ -46,6 +47,39 @@ Parkour) can be adapted where useful.
   win. That check runs at `MONITOR` on the teleport, so a teleport some other
   plugin cancels can never end a run that never moved.
 
+## The modes
+
+A template names its mode in `arena.yml` (`mode:`), set during creation with
+`/practice setup mode <id>`. Mode-specific tuning lives in the template's
+`settings:` section — every generated arena writes its defaults there, so the
+keys are always visible in a working example. All modes share the same
+machinery: bounds are enforced every tick (walls push back, falling below the
+arena fails and resets the run), and every reset reverts or regenerates the
+arena rather than re-pasting it.
+
+### bridging
+
+The original mode: run the course, hit the button or pressure plate at the
+end. Timer starts on first movement (or first block, per `timer.start-mode`).
+
+### bedbreak
+
+A tower of defense blocks stands on a bed inside a sealed barrier shaft. You
+spawn on top with a diamond sword, pickaxe, axe and shears, and dig straight
+down to the bed as fast as possible. The column is **reshuffled every run but
+its composition is fixed**, so times are comparable between players. Broken
+blocks never drop, only the tower and the bed are breakable, the timer starts
+on your first broken block, and breaking the bed finishes the run.
+
+Rearranging the tools in your inventory is remembered **per player**: however
+your hotbar was ordered when the run ended is how the kit is handed to you
+next time.
+
+`settings.bedbreak`: `bed-x/y/z` (bed head, relative to the paste origin),
+`bed-facing`, `bed-material`, and `blocks` — a `MATERIAL: count` map; the
+tower's height is the sum of the counts and rises from one block above the
+bed's head.
+
 ## Messages
 
 Every piece of text the plugin shows a player lives in `messages.yml` —
@@ -65,13 +99,20 @@ absent key back into your file. The two exceptions are the menu item's own
 name and lore, which stay in `config.yml` beside its material and slot — they
 define the item rather than being something the plugin says.
 
-## The bundled arena
+## The bundled arenas
 
-`bundled-template` in `config.yml` unpacks the arena that ships in the jar to
-`templates/<name>/` (default `turtle`) the **first** time the plugin starts.
-A marker file records that this happened, so deleting or renaming the arena
-does not bring it back on the next restart. Delete the marker
-(`plugins/PracticeCore/.bundled-installed`) to reinstall it.
+`bundled-template` in `config.yml` unpacks the bridging arena that ships in
+the jar to `templates/<name>/` (default `turtle`) the **first** time the
+plugin starts. A marker file records that this happened, so deleting or
+renaming the arena does not bring it back on the next restart. Delete the
+marker (`plugins/PracticeCore/.bundled-installed`) to reinstall it.
+
+`generated-arenas` works the same way for bedbreak, except nothing is
+unpacked: the plugin builds the arena block-by-block in code and writes it
+out as a normal template folder (default `bedbreak`) — fully editable,
+deletable, and guarded by its own marker file (`.generated-installed`; remove
+a line from it to regenerate that arena). Set the name to `''` or
+`generated-arenas.enabled: false` to skip it.
 
 ## The menu item and GUI
 
@@ -299,8 +340,9 @@ boolean with `arenas.access-mode`, mapping `true` to `ALLOW` and `false` to
 
 ## Roadmap
 
-- Additional modes via the `Mode` registry (clutch practice, pearl practice —
-  per-template item allow-lists are already half-way there)
+- More modes via the `Mode` registry (clutch practice, pearl practice,
+  fireball jumping — the mode hook surface now covers custom triggers, kits
+  and per-mode boards)
 - SQLite storage backend with full run history (the YAML store already backs
   in-memory leaderboards; history is what it lacks)
 - Warm-pool pre-pasted arenas for join bursts; staggered "dissolve" reset

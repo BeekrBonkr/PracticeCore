@@ -39,6 +39,7 @@ public final class MovementListener implements Listener {
             return;
         }
         if (state == SessionState.READY
+                && session.mode().usesStandardTimerStart()
                 && plugin.pcConfig().timerStartMode() == PCConfig.TimerStartMode.MOVE
                 && !sameBlock(to, session.spawn())) {
             session.setState(SessionState.ACTIVE);
