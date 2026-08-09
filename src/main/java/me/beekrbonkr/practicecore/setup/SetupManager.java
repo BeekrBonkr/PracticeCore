@@ -471,7 +471,16 @@ public final class SetupManager {
         line(admin, "icon", session.icon != null ? session.icon.name() : "auto");
         line(admin, "permission", session.permission != null ? session.permission : "arena default");
         line(admin, "pb requires blocks", String.valueOf(session.requireBlocksForPb));
-        msg().send(admin, session.ready() ? "setup.info-ready" : "setup.info-not-ready");
+        msg().send(admin, session.ready(needsTrigger(session))
+                ? "setup.info-ready" : "setup.info-not-ready");
+    }
+
+    /** Whether this arena's mode finishes runs on a placed button/plate. */
+    private boolean needsTrigger(SetupSession session) {
+        String mode = session.mode != null ? session.mode
+                : me.beekrbonkr.practicecore.mode.BridgingMode.ID;
+        return plugin.modes().get(mode)
+                .map(me.beekrbonkr.practicecore.mode.Mode::requiresTrigger).orElse(true);
     }
 
     private void line(Player admin, String key, String value) {
@@ -494,14 +503,17 @@ public final class SetupManager {
             msg().send(admin, "setup.need-spawn");
             return;
         }
-        if (session.triggerOffset == null) {
+        if (needsTrigger(session) && session.triggerOffset == null) {
             msg().send(admin, "setup.need-trigger");
             return;
         }
         ArenaTemplate template = new ArenaTemplate(session.name, session.dir);
         template.setSpawn(session.spawnOffset, session.spawnYaw, session.spawnPitch);
-        template.setTrigger(session.triggerOffset, session.triggerType, session.triggerBlockData);
+        if (session.triggerOffset != null) {
+            template.setTrigger(session.triggerOffset, session.triggerType, session.triggerBlockData);
+        }
         template.kit().putAll(session.kit);
+        template.settings().putAll(session.settings);
         if (session.mode != null) {
             template.setMode(session.mode);
         }

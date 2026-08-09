@@ -17,6 +17,16 @@ public final class ModeRegistry {
         return Optional.ofNullable(modes.get(id));
     }
 
+    /**
+     * The mode a template runs under. Templates with unknown modes are
+     * rejected at load, so this only falls back to bridging for defensive
+     * completeness (e.g. a mode unregistered mid-session by a reload).
+     */
+    public Mode of(me.beekrbonkr.practicecore.template.ArenaTemplate template) {
+        Mode mode = modes.get(template.mode());
+        return mode != null ? mode : modes.get(BridgingMode.ID);
+    }
+
     public Set<String> ids() {
         return modes.keySet();
     }

@@ -214,6 +214,34 @@ public final class StatsStore {
         saveAsync(player, yml);
     }
 
+    /**
+     * The player's remembered kit arrangement for one arena: slot → material
+     * name. Modes that let players rearrange their tools persist it here.
+     */
+    public Map<Integer, String> kitLayout(UUID player, String template) {
+        ConfigurationSection section =
+                data(player).getConfigurationSection("prefs.layout." + template);
+        if (section == null) {
+            return Map.of();
+        }
+        Map<Integer, String> layout = new LinkedHashMap<>();
+        for (String key : section.getKeys(false)) {
+            try {
+                layout.put(Integer.parseInt(key), section.getString(key));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return layout;
+    }
+
+    public void saveKitLayout(UUID player, String template, Map<Integer, String> layout) {
+        YamlConfiguration yml = data(player);
+        yml.set("prefs.layout." + template, null);
+        layout.forEach((slot, material) ->
+                yml.set("prefs.layout." + template + "." + slot, material));
+        saveAsync(player, yml);
+    }
+
     // -------------------------------------------------------- name index
 
     /**

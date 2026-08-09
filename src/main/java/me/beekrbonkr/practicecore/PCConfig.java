@@ -30,6 +30,9 @@ public final class PCConfig {
     private final boolean bundledTemplateEnabled;
     private final String bundledTemplateName;
 
+    private final boolean generatedArenasEnabled;
+    private final java.util.Map<String, String> generatedArenaNames;
+
     private final AccessMode arenaAccessMode;
     private final String arenaPermissionPrefix;
     private final boolean hideLockedArenas;
@@ -76,6 +79,11 @@ public final class PCConfig {
         this.bundledTemplateEnabled = cfg.getBoolean("bundled-template.enabled", true);
         this.bundledTemplateName = cfg.getString("bundled-template.name", "turtle")
                 .toLowerCase(Locale.ROOT);
+
+        this.generatedArenasEnabled = cfg.getBoolean("generated-arenas.enabled", true);
+        this.generatedArenaNames = java.util.Map.of(
+                "bedbreak", cfg.getString("generated-arenas.bedbreak", "bedbreak")
+                        .trim().toLowerCase(Locale.ROOT));
 
         AccessMode access;
         try {
@@ -161,6 +169,15 @@ public final class PCConfig {
 
     public String bundledTemplateName() {
         return bundledTemplateName;
+    }
+
+    public boolean generatedArenasEnabled() {
+        return generatedArenasEnabled;
+    }
+
+    /** Arena name to generate for a mode id, or empty to skip that one. */
+    public String generatedArenaName(String kind) {
+        return generatedArenaNames.getOrDefault(kind, "");
     }
 
     public AccessMode arenaAccessMode() {

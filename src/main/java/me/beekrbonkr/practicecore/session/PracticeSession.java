@@ -1,6 +1,7 @@
 package me.beekrbonkr.practicecore.session;
 
 import me.beekrbonkr.practicecore.grid.Slot;
+import me.beekrbonkr.practicecore.mode.Mode;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
 import org.bukkit.Location;
 
@@ -10,6 +11,7 @@ public final class PracticeSession {
 
     private final UUID playerId;
     private final ArenaTemplate template;
+    private final Mode mode;
     private final Slot slot;
     private final Location origin;
     private final org.bukkit.util.BoundingBox bounds;
@@ -19,14 +21,20 @@ public final class PracticeSession {
     private SessionState state = SessionState.PREPARING;
     private final BlockTracker tracker = new BlockTracker();
     private long startNanos = -1;
+    private long frozenMs = -1;
     private long lastTimeMs = -1;
     private long bestTimeMs = -1;
+    /** Guards the one-shot end-of-session mode hook. */
+    private boolean endNotified;
+    /** Per-mode scratch state; owned entirely by the session's mode. */
+    private Object modeState;
 
-    public PracticeSession(UUID playerId, ArenaTemplate template, Slot slot,
+    public PracticeSession(UUID playerId, ArenaTemplate template, Mode mode, Slot slot,
                            Location origin, org.bukkit.util.BoundingBox bounds,
                            Location spawn, Location trigger) {
         this.playerId = playerId;
         this.template = template;
+        this.mode = mode;
         this.slot = slot;
         this.origin = origin;
         this.bounds = bounds;
@@ -40,6 +48,10 @@ public final class PracticeSession {
 
     public ArenaTemplate template() {
         return template;
+    }
+
+    public Mode mode() {
+        return mode;
     }
 
     public Slot slot() {
@@ -58,7 +70,7 @@ public final class PracticeSession {
         return spawn;
     }
 
-    /** Block location of the finish button/plate. */
+    /** Block location of the finish button/plate, or null for modes without one. */
     public Location trigger() {
         return trigger;
     }
@@ -81,14 +93,31 @@ public final class PracticeSession {
 
     public void startTimer() {
         startNanos = System.nanoTime();
+        frozenMs = -1;
     }
 
     public void resetTimer() {
         startNanos = -1;
+        frozenMs = -1;
+    }
+
+    /**
+     * Pins the elapsed time at this instant. For finishes that must be
+     * processed a tick later (e.g. a pearl landing mid-teleport), so the
+     * recorded time is when the run actually ended, not when the scheduler
+     * got around to it.
+     */
+    public void freezeTimer() {
+        if (timerRunning() && frozenMs < 0) {
+            frozenMs = (System.nanoTime() - startNanos) / 1_000_000L;
+        }
     }
 
     /** Monotonic elapsed time — wall-clock honest, immune to server lag and clock jumps. */
     public long elapsedMs() {
+        if (frozenMs >= 0) {
+            return frozenMs;
+        }
         return timerRunning() ? (System.nanoTime() - startNanos) / 1_000_000L : 0L;
     }
 
@@ -106,6 +135,23 @@ public final class PracticeSession {
 
     public void setBestTimeMs(long bestTimeMs) {
         this.bestTimeMs = bestTimeMs;
+    }
+
+    /** True the first time only — makes the end-of-session mode hook one-shot. */
+    public boolean markEndNotified() {
+        if (endNotified) {
+            return false;
+        }
+        endNotified = true;
+        return true;
+    }
+
+    public Object modeState() {
+        return modeState;
+    }
+
+    public void setModeState(Object modeState) {
+        this.modeState = modeState;
     }
 
     /** True when the location is beyond the arena's walls or ceiling (not the floor — that's a fail). */

@@ -49,6 +49,15 @@ bundled-template:
   enabled: true
   name: turtle
 
+# Ready-to-play arenas for the other bundled modes, built by the plugin itself
+# the first time it starts (block by block — there is nothing to unpack). Each
+# becomes a normal folder under templates/ that you can edit or delete; the
+# marker file .generated-installed stops deleted ones from coming back. Set a
+# name to '' to skip generating that arena, or enabled: false to skip all.
+generated-arenas:
+  enabled: true
+  bedbreak: bedbreak
+
 arenas:
   # Every arena has a permission node: whatever `permission:` its arena.yml
   # names, or <permission-prefix><arena name> otherwise.

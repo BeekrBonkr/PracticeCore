@@ -88,6 +88,13 @@ public final class BoardService {
             if (session == null) {
                 continue;
             }
+            // Modes that rank something other than the plain timer draw their
+            // own board (streak counters, course progress, blocks left).
+            java.util.List<Component> custom = session.mode().boardLines(plugin, session);
+            if (custom != null) {
+                entry.getValue().updateLines(custom.toArray(Component[]::new));
+                continue;
+            }
             int rank = plugin.leaderboards().rank(session.template().name(), entry.getKey());
             entry.getValue().updateLines(
                     Component.empty(),
