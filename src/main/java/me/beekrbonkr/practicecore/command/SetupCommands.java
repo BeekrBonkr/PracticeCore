@@ -222,9 +222,11 @@ final class SetupCommands {
                 case "blocks" -> PracticeCommand.filter(List.of("true", "false"), args[2]);
                 case "mode" -> PracticeCommand.filter(List.copyOf(plugin.modes().ids()), args[2]);
                 case "category" -> {
+                    // Only real category folders: suggesting a mode id would
+                    // create a folder that duplicates the mode's own group.
                     java.util.LinkedHashSet<String> known = new java.util.LinkedHashSet<>();
                     known.add("default");
-                    plugin.templates().all().forEach(t -> known.add(t.effectiveCategory()));
+                    known.addAll(plugin.templates().categoryFolders());
                     yield PracticeCommand.filter(List.copyOf(known), args[2]);
                 }
                 case "permission" -> {

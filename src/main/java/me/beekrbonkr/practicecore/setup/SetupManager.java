@@ -521,7 +521,11 @@ public final class SetupManager {
         msg().send(admin, "setup.mode-set", "mode", mode);
     }
 
-    /** Null or "default" clears the override; the arena groups under its mode. */
+    /**
+     * The category is the folder the arena's folder sits in, so this is really
+     * a "move it there when we save" — null or "default" moves it back out to
+     * templates/, where it groups under its mode.
+     */
     public void setCategory(Player admin, String category) {
         SetupSession session = requireActive(admin);
         if (session == null) {
@@ -532,7 +536,12 @@ public final class SetupManager {
             msg().send(admin, "setup.category-cleared");
             return;
         }
-        session.category = category.trim().toLowerCase(java.util.Locale.ROOT);
+        String slug = category.trim().toLowerCase(Locale.ROOT);
+        if (!NAME.matcher(slug).matches()) {
+            msg().send(admin, "setup.category-bad-name");
+            return;
+        }
+        session.category = slug;
         msg().send(admin, "setup.category-set", "category", session.category);
     }
 
@@ -808,7 +817,7 @@ public final class SetupManager {
             msg().send(admin, "setup.rush-need-base");
             return;
         }
-        ArenaTemplate template = new ArenaTemplate(session.name, session.dir);
+        ArenaTemplate template = new ArenaTemplate(session.name, session.dir, session.folderCategory);
         template.setSpawn(session.spawnOffset, session.spawnYaw, session.spawnPitch);
         template.setTriggers(session.triggers);
         template.kit().putAll(session.kit);
@@ -816,7 +825,6 @@ public final class SetupManager {
         if (session.mode != null) {
             template.setMode(session.mode);
         }
-        template.setCategory(session.category);
         if (session.displayName != null) {
             template.setDisplayName(session.displayName);
         }
@@ -829,6 +837,16 @@ public final class SetupManager {
         } catch (IOException e) {
             msg().send(admin, "setup.save-failed", "error", String.valueOf(e.getMessage()));
             return;
+        }
+        // The category is the folder the arena lives in, so choosing one is a
+        // move. It comes after the write — a move that cannot happen then
+        // leaves a saved arena in its old category rather than losing it.
+        try {
+            plugin.templates().moveToCategory(template, session.category);
+        } catch (IOException e) {
+            msg().send(admin, "setup.category-move-failed",
+                    "category", session.category != null ? session.category : "default",
+                    "error", String.valueOf(e.getMessage()));
         }
         plugin.templates().register(template);
         boolean editing = session.editing;

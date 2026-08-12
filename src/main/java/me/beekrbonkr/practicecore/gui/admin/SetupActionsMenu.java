@@ -152,7 +152,8 @@ final class SetupActionsMenu extends Menu {
 
         set(20, SetupGui.button(Material.BOOKSHELF, "Category", NamedTextColor.AQUA,
                         "Which menu group this arena",
-                        "is listed under.",
+                        "is listed under — saving moves",
+                        "its folder into templates/<category>/.",
                         "Answer 'default' to group by mode.",
                         "", "Current: " + (wizard().activeCategory() != null
                                 ? wizard().activeCategory() : wizard().activeMode() + " (mode)")),

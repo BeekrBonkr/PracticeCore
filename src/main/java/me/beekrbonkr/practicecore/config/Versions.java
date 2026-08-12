@@ -19,8 +19,8 @@ public final class Versions {
     /** guis.yml — admin-editable menu layout. */
     public static final int GUIS = 1;
 
-    /** templates/&lt;name&gt;/arena.yml — admin-editable. */
-    public static final int ARENA = 2;
+    /** templates/[&lt;category&gt;/]&lt;name&gt;/arena.yml — admin-editable. */
+    public static final int ARENA = 3;
 
     /** playerdata/&lt;uuid&gt;.yml — plugin-owned, but hand-edited often enough. */
     public static final int PLAYERDATA = 1;

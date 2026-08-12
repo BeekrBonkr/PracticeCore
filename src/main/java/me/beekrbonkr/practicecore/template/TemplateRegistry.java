@@ -22,11 +22,27 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Stream;
 
+/**
+ * Every arena on disk, and the folder layout that defines the menu grouping:
+ *
+ * <pre>
+ *   templates/&lt;arena&gt;/              — grouped under the arena's mode
+ *   templates/&lt;category&gt;/&lt;arena&gt;/   — grouped under that folder's name
+ * </pre>
+ *
+ * Categories are exactly one folder deep, and a folder is an arena when it
+ * holds an arena.yml or arena.schem — so moving an arena between categories
+ * is a drag-and-drop plus a reload, with nothing to edit.
+ */
 public final class TemplateRegistry {
 
     private final PracticeCorePlugin plugin;
     private final File templatesDir;
     private final Map<String, ArenaTemplate> templates = new LinkedHashMap<>();
+
+    /** One arena folder on disk with the category folder it was found in. */
+    private record ArenaFolder(File dir, String category) {
+    }
 
     public TemplateRegistry(PracticeCorePlugin plugin) {
         this.plugin = plugin;
@@ -49,19 +65,25 @@ public final class TemplateRegistry {
         }
         new BundledTemplate(plugin).installIfAbsent(templatesDir.toPath());
         new GeneratedArenas(plugin).installMissing(templatesDir.toPath());
-        File[] dirs = templatesDir.listFiles(File::isDirectory);
         Map<String, ArenaTemplate> loaded = new LinkedHashMap<>();
-        if (dirs != null) {
-            // Alphabetical, so menu and list ordering is stable across restarts.
-            Arrays.sort(dirs, Comparator.comparing(File::getName));
-            for (File dir : dirs) {
-                ArenaTemplate template = read(dir, notes);
-                if (template != null) {
-                    // Lowercased like every lookup — a hand-made uppercase
-                    // folder must not load into an unreachable registry key.
-                    loaded.put(template.name().toLowerCase(Locale.ROOT), template);
-                }
+        for (ArenaFolder folder : arenaFolders(notes)) {
+            ArenaTemplate template = read(folder, notes);
+            if (template == null) {
+                continue;
             }
+            // Lowercased like every lookup — a hand-made uppercase folder must
+            // not load into an unreachable registry key.
+            String key = template.name().toLowerCase(Locale.ROOT);
+            ArenaTemplate clash = loaded.get(key);
+            if (clash != null) {
+                // Names are the join key, so two folders cannot share one:
+                // whichever is already in wins and the second is left alone.
+                notes.add("Arena '" + template.name() + "' exists in two places ("
+                        + relative(clash.dir()) + " and " + relative(template.dir())
+                        + ") — the second was skipped. Rename one of them.");
+                continue;
+            }
+            loaded.put(key, template);
         }
         templates.clear();
         templates.putAll(loaded);
@@ -75,10 +97,57 @@ public final class TemplateRegistry {
         return log(notes);
     }
 
-    private ArenaTemplate read(File dir, List<String> notes) {
+    /**
+     * Every arena folder on disk with the category it belongs to, walking one
+     * level into each category folder. Alphabetical throughout, so menu and
+     * list ordering is stable across restarts.
+     */
+    private List<ArenaFolder> arenaFolders(List<String> notes) {
+        List<ArenaFolder> found = new ArrayList<>();
+        for (File entry : childDirs(templatesDir)) {
+            if (isArenaFolder(entry)) {
+                found.add(new ArenaFolder(entry, null));
+                continue;
+            }
+            String category = entry.getName().toLowerCase(Locale.ROOT);
+            for (File dir : childDirs(entry)) {
+                if (isArenaFolder(dir)) {
+                    found.add(new ArenaFolder(dir, category));
+                } else {
+                    notes.add("Folder " + relative(dir) + " has no arena.yml or arena.schem, and "
+                            + "categories are only one folder deep — ignored.");
+                }
+            }
+        }
+        return found;
+    }
+
+    private static List<File> childDirs(File parent) {
+        File[] dirs = parent.listFiles(File::isDirectory);
+        if (dirs == null) {
+            return List.of();
+        }
+        Arrays.sort(dirs, Comparator.comparing(File::getName));
+        return Arrays.asList(dirs);
+    }
+
+    /** An arena folder holds its arena.yml or its schematic; a category folder does not. */
+    private static boolean isArenaFolder(File dir) {
+        return new File(dir, "arena.yml").isFile() || new File(dir, "arena.schem").isFile();
+    }
+
+    /** A path an admin can find on disk, e.g. {@code templates/rush/nova}. */
+    private String relative(File dir) {
+        Path path = templatesDir.toPath().toAbsolutePath()
+                .relativize(dir.toPath().toAbsolutePath());
+        return "templates/" + path.toString().replace(File.separatorChar, '/');
+    }
+
+    private ArenaTemplate read(ArenaFolder folder, List<String> notes) {
+        File dir = folder.dir();
         ArenaTemplate template;
         try {
-            template = ArenaTemplate.load(dir);
+            template = ArenaTemplate.load(dir, folder.category());
         } catch (RuntimeException e) {
             notes.add("Arena '" + dir.getName() + "' could not be read (" + e + ") — skipped.");
             return null;
@@ -97,10 +166,47 @@ public final class TemplateRegistry {
                     + ", newer than this build understands (v" + Versions.ARENA + ") — skipped.");
             return null;
         }
-        if (template.needsUpgrade()) {
+        boolean stuck = false;
+        if (template.legacyCategory() != null) {
+            if (template.category() == null) {
+                // A failed move must not be followed by the upgrade that drops
+                // the key, or the grouping is lost for good rather than
+                // retried on the next load.
+                stuck = !fileUnderLegacyCategory(template, notes);
+            } else if (!template.legacyCategory().equals(template.category())) {
+                notes.add("Arena '" + template.name() + "' says category '"
+                        + template.legacyCategory() + "' in its arena.yml but sits in "
+                        + relative(dir) + " — the folder decides now, so it is listed under '"
+                        + template.category() + "'.");
+            }
+        }
+        if (!stuck && template.needsUpgrade()) {
             upgrade(template, notes);
         }
         return template;
+    }
+
+    /**
+     * Pre-v3 arenas named their category in arena.yml. Move the folder into
+     * the matching category folder once, so the layout on disk now says what
+     * the file used to; the key itself goes with the upgrade that follows.
+     *
+     * @return true when the arena is where its old category says it should be
+     */
+    private boolean fileUnderLegacyCategory(ArenaTemplate template, List<String> notes) {
+        String category = template.legacyCategory();
+        try {
+            moveToCategory(template, category);
+        } catch (IOException e) {
+            notes.add("Arena '" + template.name() + "' still has category '" + category
+                    + "' in its arena.yml but could not be moved into templates/" + category
+                    + "/ (" + e.getMessage() + ") — it groups under its mode until you move it.");
+            return false;
+        }
+        notes.add("Arena '" + template.name() + "' had category '" + category
+                + "' in its arena.yml — moved to " + relative(template.dir())
+                + ", which is where the category now comes from.");
+        return true;
     }
 
     private void upgrade(ArenaTemplate template, List<String> notes) {
@@ -143,8 +249,81 @@ public final class TemplateRegistry {
         return List.copyOf(templates.keySet());
     }
 
+    /** Where a new uncategorised arena's folder goes. */
     public File dirFor(String name) {
-        return new File(templatesDir, name);
+        return dirFor(name, null);
+    }
+
+    /** Where a new arena's folder goes; a null category means straight in templates/. */
+    public File dirFor(String name, String category) {
+        String slug = ArenaTemplate.normalizeCategory(category);
+        return slug == null ? new File(templatesDir, name)
+                : new File(new File(templatesDir, slug), name);
+    }
+
+    /**
+     * Moves an arena's folder so its category becomes {@code category} (null
+     * files it back under its mode). The template follows the move, so this
+     * works on one that is not registered yet — a save or an import in
+     * flight. Nothing is left half-moved: on failure it stays where it was.
+     *
+     * @return the folder the arena now lives in
+     * @throws IOException when the target is taken or the move itself fails
+     */
+    public File moveToCategory(ArenaTemplate template, String category) throws IOException {
+        String slug = ArenaTemplate.normalizeCategory(category);
+        File from = template.dir();
+        if (java.util.Objects.equals(slug, template.category())) {
+            return from;
+        }
+        File to = dirFor(template.name(), slug);
+        if (to.exists()) {
+            throw new IOException(relative(to) + " already exists");
+        }
+        File parent = to.getParentFile();
+        if (parent != null && !parent.equals(templatesDir) && isArenaFolder(parent)) {
+            throw new IOException(relative(parent) + " is an arena, not a category folder");
+        }
+        Files.createDirectories(to.toPath().getParent());
+        Files.move(from.toPath(), to.toPath());
+        // The clipboard cache is keyed by absolute path; the old one is gone.
+        plugin.schematics().evict(new File(from, "arena.schem"));
+        template.relocate(to, slug);
+        pruneCategory(from.getParentFile());
+        return to;
+    }
+
+    /** Removes a category folder that the arena just moved out of emptied. */
+    private void pruneCategory(File dir) {
+        if (dir == null || dir.equals(templatesDir) || !dir.isDirectory()) {
+            return;
+        }
+        try (Stream<Path> entries = Files.list(dir.toPath())) {
+            if (entries.findAny().isEmpty()) {
+                Files.delete(dir.toPath());
+            }
+        } catch (IOException ignored) {
+            // An empty folder left behind only shows up as an empty category,
+            // which the menus already skip.
+        }
+    }
+
+    /**
+     * The folder holding this arena — categorised or not — or null when no
+     * such arena exists on disk. Used before the registry has been built.
+     */
+    static Path findArenaFolder(Path templatesDir, String name) {
+        Path direct = templatesDir.resolve(name);
+        if (Files.exists(direct)) {
+            return direct;
+        }
+        for (File category : childDirs(templatesDir.toFile())) {
+            Path nested = category.toPath().resolve(name);
+            if (Files.exists(nested) && !isArenaFolder(category)) {
+                return nested;
+            }
+        }
+        return null;
     }
 
     // ---------------------------------------------------------- permissions
@@ -203,6 +382,17 @@ public final class TemplateRegistry {
         return visibleTo(player).stream()
                 .filter(t -> t.effectiveCategory().equalsIgnoreCase(category))
                 .toList();
+    }
+
+    /** The category folders currently in use, in arena order. */
+    public List<String> categoryFolders() {
+        java.util.LinkedHashSet<String> found = new java.util.LinkedHashSet<>();
+        for (ArenaTemplate template : templates.values()) {
+            if (template.category() != null) {
+                found.add(template.category());
+            }
+        }
+        return List.copyOf(found);
     }
 
     /** The categories this player can see, in arena order. */
@@ -292,6 +482,7 @@ public final class TemplateRegistry {
         }
         plugin.schematics().evict(template.schematicFile());
         deleteRecursively(template.dir().toPath());
+        pruneCategory(template.dir().getParentFile());
         return true;
     }
 
@@ -304,7 +495,12 @@ public final class TemplateRegistry {
         if (templates.containsKey(name.toLowerCase(Locale.ROOT))) {
             return;
         }
-        deleteRecursively(dirFor(name).toPath());
+        Path dir = findArenaFolder(templatesDir.toPath(), name);
+        if (dir == null) {
+            return;
+        }
+        deleteRecursively(dir);
+        pruneCategory(dir.toFile().getParentFile());
     }
 
     private static void deleteRecursively(Path dir) {

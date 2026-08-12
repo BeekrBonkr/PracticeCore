@@ -376,8 +376,11 @@ setup:
   mode-set: '<prefix><green>Mode set to ''<mode>''.'
   mode-unknown: '<prefix><red>Unknown mode ''<mode>''. Known: <modes>'
   # <category>
-  category-set: '<prefix><green>Category set to ''<category>''.'
-  category-cleared: '<prefix><green>Category reset to this arena''s mode.'
+  category-set: '<prefix><green>Category set to ''<category>'' — saving moves the arena into templates/<category>/.'
+  category-cleared: '<prefix><green>Category reset to this arena''s mode — saving moves its folder back into templates/.'
+  category-bad-name: '<prefix><red>Categories are folder names: [a-z0-9_-], max 32 characters.'
+  # <category> <error>
+  category-move-failed: '<prefix><red>Saved, but the arena could not be moved into category ''<category>'': <error>'
   captured: '<prefix><green>Arena captured — the schematic now matches what you see.'
   # <error>
   capture-failed: '<prefix><red>Could not capture the arena: <error>'

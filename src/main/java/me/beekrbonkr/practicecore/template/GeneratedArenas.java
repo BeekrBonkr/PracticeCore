@@ -74,9 +74,9 @@ public final class GeneratedArenas {
             return false;
         }
         Path target = templatesDir.resolve(name);
-        if (Files.exists(target)) {
-            // An arena by this name already exists — never touch it, but stop
-            // re-checking every boot.
+        if (TemplateRegistry.findArenaFolder(templatesDir, name) != null) {
+            // An arena by this name already exists — in a category folder or
+            // not — so never touch it, but stop re-checking every boot.
             installed.add(kind);
             return true;
         }

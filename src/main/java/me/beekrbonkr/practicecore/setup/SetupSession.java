@@ -35,7 +35,10 @@ final class SetupSession {
     boolean cleaned;
 
     String mode;
+    /** The category folder the arena should end up in when it is saved. */
     String category;
+    /** The category folder it sits in right now, so save() knows what to move. */
+    String folderCategory;
     String displayName;
     String permission;
     Material icon;
@@ -74,6 +77,7 @@ final class SetupSession {
     void copyFrom(ArenaTemplate template) {
         mode = template.mode();
         category = template.category();
+        folderCategory = template.category();
         displayName = template.displayName();
         permission = template.permission();
         icon = template.icon();
