@@ -68,6 +68,7 @@ final class ArenaListMenu extends Menu {
             ArenaTemplate arena = arenas.get(index);
             set(CONTENT_SLOTS[i], arenaIcon(arena), event -> {
                 if (event.isRightClick()) {
+                    click();
                     later(() -> new ConfirmDeleteMenu(plugin, viewer, this, arena.name()).open());
                 } else {
                     click();

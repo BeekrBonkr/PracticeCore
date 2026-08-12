@@ -97,7 +97,7 @@ public final class BoardService {
             // own board (streak counters, course progress, blocks left).
             java.util.List<Component> custom = session.mode().boardLines(plugin, session);
             if (custom != null) {
-                entry.getValue().updateLines(custom.toArray(Component[]::new));
+                entry.getValue().updateLines(withFooter(custom).toArray(Component[]::new));
                 continue;
             }
             int rank = plugin.leaderboards().rank(session.template().name(), entry.getKey());
@@ -114,8 +114,23 @@ public final class BoardService {
                     "best", time(session.bestTimeMs(), none),
                     "rank", rank > 0 ? "#" + rank : none,
                     "blocks", String.valueOf(session.tracker().count()));
-            entry.getValue().updateLines(lines.toArray(Component[]::new));
+            entry.getValue().updateLines(withFooter(lines).toArray(Component[]::new));
         }
+    }
+
+    /**
+     * Appends the server-address footer (board.footer in messages.yml) to any
+     * board layout — every mode's sidebar signs off the same way once
+     * scoreboard.server-ip is set.
+     */
+    private java.util.List<Component> withFooter(java.util.List<Component> lines) {
+        String ip = plugin.pcConfig().serverIp();
+        if (ip.isEmpty()) {
+            return lines;
+        }
+        java.util.List<Component> out = new java.util.ArrayList<>(lines);
+        out.addAll(plugin.messages().lore("board.footer", "server_ip", ip));
+        return out;
     }
 
     private static String time(long millis, String none) {

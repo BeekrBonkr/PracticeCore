@@ -13,8 +13,14 @@ import java.util.Locale;
 final class SetupCommands {
 
     private static final List<String> ACTIONS = List.of(
-            "start", "gui", "spawn", "kit", "trigger", "capture", "schematic", "icon", "display",
-            "permission", "blocks", "mode", "category", "rush", "info", "save", "cancel");
+            "start", "edit", "gui", "spawn", "kit", "trigger", "capture", "schematic", "icon",
+            "display", "permission", "blocks", "mode", "category", "rush", "info", "save", "cancel");
+
+    /** Every item material name, computed once — the registry is large. */
+    private static final List<String> MATERIAL_NAMES = java.util.Arrays.stream(Material.values())
+            .filter(Material::isItem)
+            .map(material -> material.name().toLowerCase(Locale.ROOT))
+            .toList();
 
     private static final List<String> RUSH_ACTIONS = List.of(
             "team", "bed", "gen", "dealer", "clear");
@@ -73,7 +79,15 @@ final class SetupCommands {
                 wizard.setDisplayName(admin, String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length)));
             }
             case "permission" -> wizard.setPermission(admin, args.length > 2 ? args[2] : null);
-            case "blocks" -> wizard.setRequireBlocks(admin, args.length > 2 && Boolean.parseBoolean(args[2]));
+            case "blocks" -> {
+                // Boolean.parseBoolean would read any typo as false — insist
+                // on a real answer instead of confidently saving the wrong one.
+                if (args.length < 3 || !(args[2].equalsIgnoreCase("true") || args[2].equalsIgnoreCase("false"))) {
+                    plugin.messages().send(admin, "general.usage", "usage", "/practice setup blocks <true|false>");
+                    return;
+                }
+                wizard.setRequireBlocks(admin, args[2].equalsIgnoreCase("true"));
+            }
             case "mode" -> {
                 if (args.length < 3) {
                     plugin.messages().send(admin, "general.usage", "usage",
@@ -202,6 +216,7 @@ final class SetupCommands {
         }
         if (args.length == 3) {
             return switch (action) {
+                case "edit" -> PracticeCommand.filter(plugin.templates().names(), args[2]);
                 case "kit" -> PracticeCommand.filter(List.of("load"), args[2]);
                 case "trigger" -> PracticeCommand.filter(List.of("clear"), args[2]);
                 case "blocks" -> PracticeCommand.filter(List.of("true", "false"), args[2]);
@@ -218,17 +233,10 @@ final class SetupCommands {
                             ? List.of("default")
                             : List.of("default", plugin.pcConfig().arenaPermissionPrefix() + open), args[2]);
                 }
-                case "icon" -> PracticeCommand.filter(materialNames(), args[2]);
+                case "icon" -> PracticeCommand.filter(MATERIAL_NAMES, args[2]);
                 default -> List.of();
             };
         }
         return List.of();
-    }
-
-    private static List<String> materialNames() {
-        return java.util.Arrays.stream(Material.values())
-                .filter(Material::isItem)
-                .map(material -> material.name().toLowerCase(Locale.ROOT))
-                .toList();
     }
 }

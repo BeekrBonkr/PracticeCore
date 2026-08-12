@@ -39,8 +39,51 @@ public interface Mode {
         return true;
     }
 
+    /**
+     * Whether the timer starts when the player first leaves the spawn block.
+     * The default follows the configured start mode; a mode may pin one start
+     * regardless of config (rush always times from first movement).
+     */
+    default boolean startsTimerOnMove(me.beekrbonkr.practicecore.PCConfig config) {
+        return usesStandardTimerStart()
+                && config.timerStartMode() == me.beekrbonkr.practicecore.PCConfig.TimerStartMode.MOVE;
+    }
+
+    /** Whether the timer starts on the first placed block. See {@link #startsTimerOnMove}. */
+    default boolean startsTimerOnFirstBlock(me.beekrbonkr.practicecore.PCConfig config) {
+        return usesStandardTimerStart()
+                && config.timerStartMode() == me.beekrbonkr.practicecore.PCConfig.TimerStartMode.FIRST_BLOCK;
+    }
+
+    /**
+     * Whether this run may set a personal best and rank on the leaderboard.
+     * The default is the template's blocks-required rule; modes with
+     * advantage-granting modifiers tighten it.
+     */
+    default boolean pbEligible(PracticeCorePlugin plugin, PracticeSession session) {
+        return !session.template().requireBlocksForPb() || session.tracker().count() > 0;
+    }
+
+    /**
+     * Whether this finish is written to stats at all — last time, finish
+     * count, personal best. Rush casual runs record nothing; only
+     * competitive runs put times on the books.
+     */
+    default boolean recordsRun(PracticeCorePlugin plugin, PracticeSession session) {
+        return true;
+    }
+
     /** Whether the action-bar speedometer runs for sessions of this mode. */
     default boolean showsSpeedometer() {
+        return false;
+    }
+
+    /**
+     * Whether bucket emptying is allowed in sessions of this mode regardless
+     * of the {@code session.allow-buckets} config (modes whose whole point is
+     * the bucket).
+     */
+    default boolean allowsBuckets() {
         return false;
     }
 

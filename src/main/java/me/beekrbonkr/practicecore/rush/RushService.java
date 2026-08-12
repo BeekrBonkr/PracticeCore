@@ -51,16 +51,15 @@ public final class RushService {
     // ---------------------------------------------------------- selections
 
     /**
-     * The player's remembered rush choices, clamped to what this map actually
-     * supports (an objective without its generators or enemy beds is swapped
-     * for the first possible one).
+     * The player's remembered rush choices exactly as stored — what the
+     * config menu shows and edits. Gameplay must use {@link #selection}
+     * instead, which applies the competitive pins on top.
      */
-    public RushSelection selection(UUID player, ArenaTemplate template, RushMapData data) {
+    public RushSelection rawSelection(UUID player, ArenaTemplate template, RushMapData data) {
         var stats = plugin.stats();
         RushSelection defaults = RushSelection.defaults();
         RushSelection selection = new RushSelection(
                 stats.pref(player, "rush.team." + template.name(), null),
-                RushObjective.byId(stats.pref(player, "rush.objective", null), defaults.objective()),
                 RushSelection.enumOr(RushSelection.BlockTier.class,
                         stats.pref(player, "rush.blocks", null), defaults.blocks()),
                 RushSelection.enumOr(RushSelection.CurrencyTier.class,
@@ -70,12 +69,9 @@ public final class RushService {
                 RushSelection.enumOr(RushSelection.DefensePreset.class,
                         stats.pref(player, "rush.defense", null), defaults.defense()),
                 stats.prefBool(player, "rush.base-generators",
-                        plugin.pcConfig().rushBaseGeneratorsDefault()));
+                        plugin.pcConfig().rushBaseGeneratorsDefault()),
+                stats.prefBool(player, "rush.competitive", false));
 
-        List<RushObjective> supported = supportedObjectives(data);
-        if (!supported.isEmpty() && !supported.contains(selection.objective())) {
-            selection = selection.withObjective(supported.get(0));
-        }
         if (data.team(selection.team()) == null || !data.team(selection.team()).playable()) {
             List<RushMapData.TeamBase> playable = data.playableTeams();
             selection = selection.withTeam(playable.isEmpty() ? null : playable.get(0).name());
@@ -83,22 +79,45 @@ public final class RushService {
         return selection;
     }
 
-    /** Persists everything but the team, which is remembered per arena. */
+    /**
+     * The gameplay-effective selection: competitive mode pins the loadout
+     * everyone races under — no starting items, defenses at the configured
+     * preset, base generators running — so its leaderboards compare like with
+     * like. The player's stored casual modifiers survive untouched underneath.
+     */
+    public RushSelection selection(UUID player, ArenaTemplate template, RushMapData data) {
+        RushSelection selection = rawSelection(player, template, data);
+        if (!selection.competitive()) {
+            return selection;
+        }
+        return selection
+                .withBlocks(RushSelection.BlockTier.NONE)
+                .withCurrency(RushSelection.CurrencyTier.NONE)
+                .withPickaxe(RushSelection.PickaxeTier.NONE)
+                .withDefense(plugin.pcConfig().rushCompetitiveDefense())
+                .withBaseGenerators(true);
+    }
+
+    /** Whether the player's next rush run is competitive. Set by the menu buttons. */
+    public void setCompetitive(UUID player, boolean competitive) {
+        plugin.stats().setPref(player, "rush.competitive", competitive);
+    }
+
+    /** Persists everything but the team, which is remembered per arena. One write, not five. */
     public void saveSelection(UUID player, RushSelection selection) {
-        var stats = plugin.stats();
-        stats.setPref(player, "rush.objective", selection.objective().name());
-        stats.setPref(player, "rush.blocks", selection.blocks().name());
-        stats.setPref(player, "rush.currency", selection.currency().name());
-        stats.setPref(player, "rush.pickaxe", selection.pickaxe().name());
-        stats.setPref(player, "rush.defense", selection.defense().name());
-        stats.setPref(player, "rush.base-generators", selection.baseGenerators());
+        plugin.stats().setPrefs(player, java.util.Map.of(
+                "rush.blocks", selection.blocks().name(),
+                "rush.currency", selection.currency().name(),
+                "rush.pickaxe", selection.pickaxe().name(),
+                "rush.defense", selection.defense().name(),
+                "rush.base-generators", selection.baseGenerators()));
     }
 
     public void saveTeam(UUID player, ArenaTemplate template, String team) {
         plugin.stats().setPref(player, "rush.team." + template.name(), team);
     }
 
-    /** The objectives this map can actually offer, in menu order. */
+    /** The objectives this map can actually arm, in board order. */
     public List<RushObjective> supportedObjectives(RushMapData data) {
         List<RushObjective> supported = new ArrayList<>();
         if (data.playableTeams().size() >= 2) {
@@ -186,13 +205,28 @@ public final class RushService {
                 && villager.getPersistentDataContainer().has(dealerKey, PersistentDataType.BYTE);
     }
 
+    /** Snapshot of the MBedwars shop; its config is static at runtime, so one walk serves every open. */
+    private RushShopData shopCache;
+
     /** Opens the mirrored MBedwars shop, or explains why it can't. */
     public void openShop(Player player) {
-        if (!MBedwarsHook.available()) {
+        RushShopData shop;
+        try {
+            if (!MBedwarsHook.available()) {
+                plugin.messages().send(player, "rush.shop-unavailable");
+                return;
+            }
+            if (shopCache == null) {
+                shopCache = MBedwarsHook.shopSnapshot(player);
+            }
+            shop = shopCache;
+        } catch (LinkageError e) {
+            // available() only proves MBedwars is enabled, not that this build
+            // still has every class and method the hook links against.
             plugin.messages().send(player, "rush.shop-unavailable");
+            plugin.getLogger().severe("MBedwars shop hook failed — incompatible MBedwars version? " + e);
             return;
         }
-        RushShopData shop = MBedwarsHook.shopSnapshot(player);
         if (shop.pages().isEmpty()) {
             plugin.messages().send(player, "rush.shop-empty");
             return;
@@ -216,6 +250,7 @@ public final class RushService {
             task.cancel();
             task = null;
         }
+        shopCache = null; // /practice reload may follow an MBedwars shop edit
     }
 
     private void tickAll() {
@@ -224,8 +259,9 @@ public final class RushService {
                     || !(session.modeState() instanceof RushState state)) {
                 continue;
             }
-            SessionState sessionState = session.state();
-            if (sessionState != SessionState.READY && sessionState != SessionState.ACTIVE) {
+            // ACTIVE only: generators running at READY would let a competitive
+            // player farm resources and shop before the timer ever starts.
+            if (session.state() != SessionState.ACTIVE) {
                 continue;
             }
             for (RushState.ActiveGenerator generator : state.generators()) {

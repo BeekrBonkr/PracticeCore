@@ -53,6 +53,8 @@ public final class RushState {
     private RushMapData data;
     private RushSelection selection;
     private RushMapData.TeamBase base;
+    /** The objective that actually ended this run; null while it is live. */
+    private RushObjective completed;
     private final List<TargetBed> enemyBeds = new ArrayList<>();
     /** Every block position of every enemy bed, for O(1) break checks. */
     private final Set<Location> enemyBedBlocks = new HashSet<>();
@@ -72,6 +74,14 @@ public final class RushState {
         return base;
     }
 
+    public RushObjective completed() {
+        return completed;
+    }
+
+    public void setCompleted(RushObjective completed) {
+        this.completed = completed;
+    }
+
     public List<ActiveGenerator> generators() {
         return generators;
     }
@@ -82,6 +92,20 @@ public final class RushState {
 
     public boolean isDefenseBlock(Location loc) {
         return defenseBlocks.contains(loc);
+    }
+
+    /**
+     * Airs out every shell block this state generated. Runs before the next
+     * round's state takes over: shells are never block-tracked, so a changed
+     * defense preset would otherwise leave the old shell standing — and, no
+     * longer in the new state's set, unbreakable. Only ever built on air, so
+     * clearing to air restores exactly the schematic's state.
+     */
+    public void removeDefenses(World world) {
+        for (Location loc : defenseBlocks) {
+            world.getBlockAt(loc).setType(Material.AIR, false);
+        }
+        defenseBlocks.clear();
     }
 
     // ------------------------------------------------------------- building
@@ -127,7 +151,7 @@ public final class RushState {
 
         replaceBeds(world);
         if (selection.defense() != RushSelection.DefensePreset.NONE) {
-            generateDefenses(world);
+            generateDefenses(session, world);
         }
         for (RushMapData.Dealer dealer : data.dealers()) {
             Location loc = new Location(world,
@@ -167,7 +191,7 @@ public final class RushState {
      * Only air (or a previous run's identical shell) is written, never the
      * map's own blocks, and nothing below the bed's own Y so floors survive.
      */
-    private void generateDefenses(World world) {
+    private void generateDefenses(PracticeSession session, World world) {
         Material[] layers = selection.defense().layers();
         if (layers.length == 0) {
             return;
@@ -194,6 +218,11 @@ public final class RushState {
                         }
                         Material material = layers[distance - 1];
                         Location loc = new Location(world, x, y, z);
+                        if (!session.containsBlock(loc)) {
+                            // A bed against the map's edge must not shell
+                            // past the bounds — nothing out there is erased.
+                            continue;
+                        }
                         Material current = world.getBlockAt(loc).getType();
                         if (current.isAir() || current == material) {
                             world.getBlockAt(loc).setType(material, false);
@@ -205,21 +234,19 @@ public final class RushState {
         }
     }
 
-    /** The chosen objective's item sits waiting on each matching generator. */
+    /**
+     * Every objective is armed at once: an emerald and a diamond sit waiting
+     * on each of their generators (and the enemy beds are already standing) —
+     * whichever the player reaches first ends the run.
+     */
     private void placeObjectiveItems(PracticeCorePlugin plugin, Location origin) {
-        String type = switch (selection.objective()) {
-            case EMERALD -> "emerald";
-            case DIAMOND -> "diamond";
-            case BED -> null;
-        };
-        if (type == null) {
-            return;
-        }
-        Material material = selection.objective() == RushObjective.EMERALD
-                ? Material.EMERALD : Material.DIAMOND;
-        for (RushMapData.Generator generator : data.generatorsOf(type)) {
-            plugin.rush().dropTracked(dropSpot(origin, generator),
-                    new ItemStack(material), type, true);
+        for (RushObjective objective : List.of(RushObjective.EMERALD, RushObjective.DIAMOND)) {
+            Material material = objective == RushObjective.EMERALD
+                    ? Material.EMERALD : Material.DIAMOND;
+            for (RushMapData.Generator generator : data.generatorsOf(objective.id())) {
+                plugin.rush().dropTracked(dropSpot(origin, generator),
+                        new ItemStack(material), objective.id(), true);
+            }
         }
     }
 

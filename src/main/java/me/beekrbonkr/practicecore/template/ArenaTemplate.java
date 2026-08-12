@@ -58,7 +58,19 @@ public final class ArenaTemplate {
 
     public static ArenaTemplate load(File dir) {
         ArenaTemplate template = new ArenaTemplate(dir.getName(), dir);
-        YamlConfiguration yml = YamlConfiguration.loadConfiguration(new File(dir, "arena.yml"));
+        // Explicit load, not loadConfiguration: the latter swallows a YAML
+        // syntax error into an empty config, which would then be "upgraded"
+        // over the admin's recoverable file with near-empty defaults.
+        YamlConfiguration yml = new YamlConfiguration();
+        File file = new File(dir, "arena.yml");
+        if (file.exists()) {
+            try {
+                yml.load(file);
+            } catch (java.io.IOException
+                     | org.bukkit.configuration.InvalidConfigurationException e) {
+                throw new IllegalStateException("arena.yml is unreadable: " + e.getMessage(), e);
+            }
+        }
         template.loadedVersion = yml.getInt(Versions.KEY, 0);
         migrate(yml, template.loadedVersion);
         template.mode = yml.getString("mode", BridgingMode.ID);

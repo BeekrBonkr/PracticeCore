@@ -99,7 +99,7 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
 
     @Override
     protected void onEntryClick(LeaderboardService.Entry entry, InventoryClickEvent event) {
-        click();
+        // Entry rows do nothing — a click sound would promise otherwise.
     }
 
     @Override
@@ -126,12 +126,8 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
                     .lore(lore("gui.board.play-lore", "arena", boardName))
                     .build(), event -> {
                 click();
-                // A rush board's play button starts a run of that objective.
-                var parsed = me.beekrbonkr.practicecore.rush.RushObjective.parseStatsKey(boardKey);
-                if (parsed != null) {
-                    plugin.stats().setPref(viewer.getUniqueId(), "rush.objective",
-                            parsed.getValue().name());
-                }
+                // Rush runs arm every objective, so the play button of any of
+                // an arena's boards starts the same run.
                 later(() -> {
                     viewer.closeInventory();
                     plugin.sessions().join(viewer, template);

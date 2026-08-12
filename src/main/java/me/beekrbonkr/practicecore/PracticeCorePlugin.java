@@ -18,9 +18,11 @@ import me.beekrbonkr.practicecore.listener.InteractListener;
 import me.beekrbonkr.practicecore.listener.MovementListener;
 import me.beekrbonkr.practicecore.listener.ProtectionListener;
 import me.beekrbonkr.practicecore.listener.TeleportListener;
+import me.beekrbonkr.practicecore.listener.MlgListener;
 import me.beekrbonkr.practicecore.listener.RushListener;
 import me.beekrbonkr.practicecore.mode.BedBreakMode;
 import me.beekrbonkr.practicecore.mode.BridgingMode;
+import me.beekrbonkr.practicecore.mode.MlgMode;
 import me.beekrbonkr.practicecore.mode.ModeRegistry;
 import me.beekrbonkr.practicecore.mode.RushMode;
 import me.beekrbonkr.practicecore.rush.RushService;
@@ -86,6 +88,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         modes.register(new BridgingMode());
         modes.register(new BedBreakMode());
         modes.register(new RushMode());
+        modes.register(new MlgMode());
 
         worldService = new PracticeWorldService(this);
         worldService.recreate();
@@ -121,6 +124,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         pm.registerEvents(new MenuListener(), this);
         pm.registerEvents(new MenuItemListener(this), this);
         pm.registerEvents(new RushListener(this), this);
+        pm.registerEvents(new MlgListener(this), this);
         pm.registerEvents(prompts, this);
 
         // Used by the leave button when leave.server points at a proxy backend.
@@ -204,6 +208,8 @@ public final class PracticeCorePlugin extends JavaPlugin {
                         required ? PCConfig.AccessMode.ALLOW.name() : PCConfig.AccessMode.DENY.name());
             }
         }
+        // v3 added scoreboard.server-ip — purely additive, the migrator's
+        // top-up writes it (with its comments) into older files by itself.
     }
 
     public ReloadResult reload(boolean force) {
@@ -233,15 +239,9 @@ public final class PracticeCorePlugin extends JavaPlugin {
             notes.add("Reloading ends those first. Run /practice reload confirm to go ahead.");
             return ReloadResult.confirm(notes);
         }
-        if (wizard != null) {
-            setup.cancelAll();
-            notes.add("Cancelled the setup wizard on '" + wizard + "'.");
-        }
-        if (running > 0) {
-            sessions.endAllSync();
-            notes.add("Ended and restored " + running + " session(s).");
-        }
-
+        // Config and arenas are rebuilt BEFORE any session is ended: if either
+        // step fails, the reload reports failure with the old settings still
+        // running — and nobody's run was terminated for nothing.
         PCConfig previous = pcConfig;
         try {
             reloadConfig();
@@ -260,6 +260,14 @@ public final class PracticeCorePlugin extends JavaPlugin {
         } catch (RuntimeException e) {
             notes.add("Arenas could not be reloaded: " + e);
             return ReloadResult.failed(notes);
+        }
+        if (wizard != null) {
+            setup.cancelAll();
+            notes.add("Canceled the setup wizard on '" + wizard + "'.");
+        }
+        if (running > 0) {
+            sessions.endAllSync();
+            notes.add("Ended and restored " + running + " session(s).");
         }
         boards.restartTask();
         speedometer.restartTask();

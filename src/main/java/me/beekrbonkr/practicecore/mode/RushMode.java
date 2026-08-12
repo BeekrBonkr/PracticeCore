@@ -29,16 +29,23 @@ import java.util.TreeMap;
 
 /**
  * Rush practice: an empty bedwars map (imported from MBedwars or built by
- * hand) where the player spawns at a team base of their choice and races one
- * objective — break an enemy bed, or grab an emerald or diamond off its
- * generator. Times are kept per map+objective, so every pairing has its own
- * personal bests and leaderboard.
+ * hand) where the player spawns at a team base of their choice and races to
+ * an objective — break an enemy bed, or grab an emerald or diamond off its
+ * generator. Every objective the map supports is armed on every run;
+ * whichever the player completes first ends it, and the time lands on that
+ * objective's own board (kept per map+objective, so every pairing has its own
+ * personal bests and leaderboard).
+ *
+ * The timer always starts on the player's first movement off the spawn,
+ * regardless of the configured start mode. Runs that used any starting items
+ * (starter blocks, starting resources, a pickaxe) still record times but can
+ * never set personal bests or rank on a leaderboard.
  *
  * The map layout comes from arena.yml {@code settings.rush} (see
- * {@link RushMapData}); the player's team, objective and difficulty modifiers
- * come from the rush config menu and are persisted as prefs. Enemy beds and
- * their optional generated defenses are re-placed on every reset; dealer NPCs
- * and generator drops are entities, wiped by the arena reset and respawned in
+ * {@link RushMapData}); the player's team and difficulty modifiers come from
+ * the rush config menu and are persisted as prefs. Enemy beds and their
+ * optional generated defenses are re-placed on every reset; dealer NPCs and
+ * generator drops are entities, wiped by the arena reset and respawned in
  * {@link #onReady}.
  */
 public final class RushMode implements Mode {
@@ -63,6 +70,32 @@ public final class RushMode implements Mode {
     @Override
     public boolean validatesInventory() {
         return false; // shop purchases and generator pickups are open-ended
+    }
+
+    @Override
+    public boolean startsTimerOnMove(me.beekrbonkr.practicecore.PCConfig config) {
+        return true; // rush always times from the first movement off the spawn
+    }
+
+    @Override
+    public boolean startsTimerOnFirstBlock(me.beekrbonkr.practicecore.PCConfig config) {
+        return false;
+    }
+
+    /** Only competitive runs are written to stats and ranked. */
+    @Override
+    public boolean recordsRun(PracticeCorePlugin plugin, PracticeSession session) {
+        return isCompetitive(session);
+    }
+
+    @Override
+    public boolean pbEligible(PracticeCorePlugin plugin, PracticeSession session) {
+        return isCompetitive(session);
+    }
+
+    private static boolean isCompetitive(PracticeSession session) {
+        RushState state = state(session);
+        return state != null && state.selection() != null && state.selection().competitive();
     }
 
     // ------------------------------------------------------------ join-time
@@ -92,9 +125,14 @@ public final class RushMode implements Mode {
                 base.yaw(), base.pitch());
     }
 
+    /**
+     * The board of whichever objective ended the run. Before one has (join
+     * preloads, mid-run reads) it falls back to the bed board — those reads
+     * only seed session fields the rush sidebar no longer displays.
+     */
     @Override
     public String statsKey(PracticeCorePlugin plugin, PracticeSession session) {
-        return objectiveOf(plugin, session).statsKey(session.template().name());
+        return objectiveOf(session).statsKey(session.template().name());
     }
 
     @Override
@@ -108,16 +146,13 @@ public final class RushMode implements Mode {
 
     @Override
     public String runDisplayName(PracticeCorePlugin plugin, PracticeSession session) {
-        return plugin.rush().displayFor(session.template(), objectiveOf(plugin, session));
+        return plugin.rush().displayFor(session.template(), objectiveOf(session));
     }
 
-    private RushObjective objectiveOf(PracticeCorePlugin plugin, PracticeSession session) {
-        if (session.modeState() instanceof RushState state && state.selection() != null) {
-            return state.selection().objective();
-        }
-        ArenaTemplate template = session.template();
-        return plugin.rush().selection(session.playerId(), template,
-                RushMapData.parse(template)).objective();
+    private static RushObjective objectiveOf(PracticeSession session) {
+        RushState state = state(session);
+        return state != null && state.completed() != null
+                ? state.completed() : RushObjective.BED;
     }
 
     // --------------------------------------------------------------- rounds
@@ -128,6 +163,11 @@ public final class RushMode implements Mode {
 
     @Override
     public void onReady(PracticeCorePlugin plugin, Player player, PracticeSession session) {
+        // The previous round's defense shell must go before the new state
+        // rebuilds — the selection may have changed between runs.
+        if (session.modeState() instanceof RushState previous) {
+            previous.removeDefenses(session.origin().getWorld());
+        }
         RushState state = new RushState();
         session.setModeState(state);
         state.rebuild(plugin, session);
@@ -161,32 +201,43 @@ public final class RushMode implements Mode {
         }
         event.setDropItems(false);
         event.setExpToDrop(0);
-        if (state.selection().objective() != RushObjective.BED) {
-            return; // beds are breakable regardless, but only the bed run ends on one
-        }
-        // Reaching the bed without tripping the timer start is possible under
-        // FIRST_BLOCK with no placed blocks — count the run from here then.
+        // Reaching the bed without ever moving off the spawn block would leave
+        // the timer unstarted — count the run from here then.
         if (session.state() == SessionState.READY) {
             session.setState(SessionState.ACTIVE);
             session.startTimer();
         }
-        // Finish a tick later: the event's own block removal runs after this
-        // handler and must not eat the bed the reset re-places. The clock is
-        // pinned now, so the recorded time is the break.
-        session.freezeTimer();
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            if (player.isOnline() && plugin.sessions().get(session.playerId()) == session) {
-                plugin.sessions().finish(player, session);
-            }
-        });
+        finishAs(plugin, player, session, state, RushObjective.BED);
     }
 
     /** Objective item picked up (called by RushListener with a matching type). */
-    public void completePickup(PracticeCorePlugin plugin, Player player, PracticeSession session) {
-        if (session.state() != SessionState.ACTIVE) {
+    public void completePickup(PracticeCorePlugin plugin, Player player,
+                               PracticeSession session, RushObjective objective) {
+        RushState state = state(session);
+        if (state == null || session.state() != SessionState.ACTIVE) {
             return;
         }
+        finishAs(plugin, player, session, state, objective);
+    }
+
+    /**
+     * Ends the run on the objective that was actually completed. The finish
+     * happens a tick later — a bed break's own block removal runs after the
+     * event handler and must not eat the bed the reset re-places — but the
+     * clock is pinned now, so the recorded time is the completion.
+     */
+    private void finishAs(PracticeCorePlugin plugin, Player player, PracticeSession session,
+                          RushState state, RushObjective objective) {
+        if (state.completed() != null) {
+            // A second objective in the same tick (bed break + pickup) must
+            // not steal the run — the first one ended it.
+            return;
+        }
+        state.setCompleted(objective);
         session.freezeTimer();
+        if (!recordsRun(plugin, session)) {
+            plugin.messages().actionBar(player, "rush.records-disabled");
+        }
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (player.isOnline() && plugin.sessions().get(session.playerId()) == session) {
                 plugin.sessions().finish(player, session);
@@ -228,27 +279,42 @@ public final class RushMode implements Mode {
 
     // ---------------------------------------------------------------- board
 
+    /**
+     * The rush sidebar is assembled per session rather than being one fixed
+     * layout: the header shows the map, base, casual/competitive mode and
+     * timer, then one best-time line per objective <em>this map actually
+     * supports</em> — a map with no diamond generator never shows a diamond
+     * line — and casual runs get an unranked notice.
+     */
     @Override
     public List<Component> boardLines(PracticeCorePlugin plugin, PracticeSession session) {
         RushState state = state(session);
-        if (state == null) {
+        if (state == null || state.base() == null || state.selection() == null) {
             return null;
         }
         Messages msg = plugin.messages();
         String none = msg.raw("gui.none");
-        String statsKey = statsKey(plugin, session);
-        int rank = plugin.leaderboards().rank(statsKey, session.playerId());
+        String arena = session.template().name();
+        boolean competitive = state.selection().competitive();
         Component timer = session.state() == SessionState.ACTIVE
                 ? msg.component("board.timer-running", "time", TimeFormat.tenths(session.elapsedMs()))
                 : msg.component("board.timer-ready");
-        return msg.lore("board.rush-lines",
-                TagResolver.resolver(msg.ref("time", timer)),
+        Component mode = msg.component(competitive
+                ? "board.rush.mode-competitive" : "board.rush.mode-casual");
+        List<Component> lines = new ArrayList<>(msg.lore("board.rush.lines",
+                TagResolver.resolver(msg.ref("time", timer), msg.ref("mode", mode)),
                 "arena", session.template().displayName(),
-                "objective", plugin.rush().objectiveName(state.selection().objective()),
-                "team", prettyTeam(state.base().name()),
-                "last", value(session.lastTimeMs(), none),
-                "best", value(session.bestTimeMs(), none),
-                "rank", rank > 0 ? "#" + rank : none);
+                "team", prettyTeam(state.base().name())));
+        for (RushObjective objective : plugin.rush().supportedObjectives(state.data())) {
+            lines.add(msg.component("board.rush.objective-line",
+                    "objective", plugin.rush().objectiveName(objective),
+                    "best", value(plugin.stats().bestMs(session.playerId(),
+                            objective.statsKey(arena)), none)));
+        }
+        if (!competitive) {
+            lines.add(msg.component("board.rush.casual-line"));
+        }
+        return lines;
     }
 
     public static String prettyTeam(String name) {

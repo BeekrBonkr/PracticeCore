@@ -40,6 +40,21 @@ public final class StatsStore {
     /** uuid → last known name, and its lower-cased inverse. */
     private final Map<UUID, String> names = new HashMap<>();
     private final Map<String, UUID> byName = new HashMap<>();
+    /**
+     * Latest rendered-but-unwritten YAML per player. All disk writes go
+     * through one writer thread in submission order, so two rapid saves can
+     * never interleave in the file or land out of order — and a burst of
+     * saves (cycling a setting) collapses into a single write of the newest
+     * snapshot.
+     */
+    private final java.util.concurrent.ConcurrentHashMap<UUID, String> pendingWrites =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.ExecutorService writer =
+            java.util.concurrent.Executors.newSingleThreadExecutor(task -> {
+                Thread thread = new Thread(task, "PracticeCore-stats-writer");
+                thread.setDaemon(true);
+                return thread;
+            });
 
     public StatsStore(PracticeCorePlugin plugin) {
         this.plugin = plugin;
@@ -125,6 +140,29 @@ public final class StatsStore {
         if (best < 0 || avgMs < best) {
             yml.set(base + "reaction-best-ms", avgMs);
         }
+    }
+
+    // ------------------------------------------------------------- streaks
+
+    /** Current run of consecutive successes on this arena (MLG), or 0. */
+    public int streak(UUID player, String template) {
+        return data(player).getInt("templates." + template + ".streak", 0);
+    }
+
+    /** Highest streak ever reached on this arena, or 0. */
+    public int streakBest(UUID player, String template) {
+        return data(player).getInt("templates." + template + ".streak-best", 0);
+    }
+
+    /** Records the current streak, raising the stored best when it is passed. */
+    public void recordStreak(UUID player, String template, int streak) {
+        YamlConfiguration yml = data(player);
+        String base = "templates." + template + ".";
+        yml.set(base + "streak", streak);
+        if (streak > yml.getInt(base + "streak-best", 0)) {
+            yml.set(base + "streak-best", streak);
+        }
+        saveAsync(player, yml);
     }
 
     // ------------------------------------------------------------- wiping
@@ -253,6 +291,15 @@ public final class StatsStore {
     public void setPref(UUID player, String key, Object value) {
         YamlConfiguration yml = data(player);
         yml.set("prefs." + key, value);
+        saveAsync(player, yml);
+    }
+
+    /** Sets several prefs in one render and one file write. */
+    public void setPrefs(UUID player, Map<String, Object> values) {
+        YamlConfiguration yml = data(player);
+        for (Map.Entry<String, Object> entry : values.entrySet()) {
+            yml.set("prefs." + entry.getKey(), entry.getValue());
+        }
         saveAsync(player, yml);
     }
 
@@ -434,19 +481,48 @@ public final class StatsStore {
         }
     }
 
+    /**
+     * onDisable: stop the writer first so nothing races these final writes,
+     * then persist every cached player directly.
+     */
     public void flushSync() {
+        writer.shutdown();
+        try {
+            writer.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        pendingWrites.clear(); // superseded by the full cache flush below
         for (Map.Entry<UUID, YamlConfiguration> entry : cache.entrySet()) {
-            try {
-                entry.getValue().save(file(entry.getKey()));
-            } catch (IOException e) {
-                plugin.getLogger().severe("Failed to save stats for " + entry.getKey() + ": " + e.getMessage());
-            }
+            entry.getValue().set(Versions.DATA_KEY, Versions.PLAYERDATA);
+            writeQuietly(file(entry.getKey()), entry.getValue().saveToString(), entry.getKey());
         }
     }
 
     private YamlConfiguration data(UUID player) {
         return cache.computeIfAbsent(player, id -> {
-            YamlConfiguration yml = YamlConfiguration.loadConfiguration(file(id));
+            YamlConfiguration yml = new YamlConfiguration();
+            File file = file(id);
+            if (file.exists()) {
+                try {
+                    // Explicit load, not loadConfiguration: that one swallows
+                    // a parse error into an empty config, and the next save
+                    // would then persist the emptiness over a recoverable
+                    // file. A corrupt file is set aside instead, never lost.
+                    yml.load(file);
+                } catch (IOException
+                         | org.bukkit.configuration.InvalidConfigurationException e) {
+                    File aside = new File(dir, id + ".corrupt-" + System.currentTimeMillis());
+                    plugin.getLogger().severe("playerdata/" + file.getName() + " is corrupt ("
+                            + e.getMessage() + ") — preserved as " + aside.getName()
+                            + ", starting fresh for this player.");
+                    if (!file.renameTo(aside)) {
+                        plugin.getLogger().severe("Could not move the corrupt file aside; "
+                                + "it will be overwritten by the next save.");
+                    }
+                    yml = new YamlConfiguration();
+                }
+            }
             migrate(yml);
             String name = yml.getString("name");
             if (name != null && !names.containsKey(id)) {
@@ -476,17 +552,36 @@ public final class StatsStore {
         yml.set(Versions.DATA_KEY, Versions.PLAYERDATA);
         ensureName(player, yml);
         String rendered = yml.saveToString(); // snapshot on main thread; YamlConfiguration is not thread-safe
-        File target = file(player);
-        if (!plugin.isEnabled()) {
-            writeQuietly(target, rendered, player);
+        if (writer.isShutdown()) {
+            writeQuietly(file(player), rendered, player);
             return;
         }
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> writeQuietly(target, rendered, player));
+        // Latest wins: a still-queued older snapshot is simply replaced, and
+        // its already-scheduled drain writes this newer one instead.
+        if (pendingWrites.put(player, rendered) == null) {
+            writer.execute(() -> {
+                String contents = pendingWrites.remove(player);
+                if (contents != null) {
+                    writeQuietly(file(player), contents, player);
+                }
+            });
+        }
     }
 
+    /** Temp-file + atomic rename: a crash mid-write must never truncate the real file. */
     private void writeQuietly(File target, String contents, UUID player) {
+        java.nio.file.Path path = target.toPath();
+        java.nio.file.Path tmp = path.resolveSibling(path.getFileName() + ".tmp");
         try {
-            java.nio.file.Files.writeString(target.toPath(), contents);
+            java.nio.file.Files.writeString(tmp, contents);
+            try {
+                java.nio.file.Files.move(tmp, path,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+            } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                java.nio.file.Files.move(tmp, path,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (IOException e) {
             plugin.getLogger().severe("Failed to save stats for " + player + ": " + e.getMessage());
         }

@@ -97,6 +97,11 @@ public abstract class Menu implements InventoryHolder {
 
     protected void set(int slot, ItemStack item, Consumer<InventoryClickEvent> action) {
         if (slot < 0 || slot >= inventory.getSize()) {
+            // Almost always a slot typo in guis.yml — say so instead of
+            // silently vanishing the item.
+            plugin.getLogger().warning("Ignoring slot " + slot + " in "
+                    + getClass().getSimpleName() + " — this menu only has slots 0-"
+                    + (inventory.getSize() - 1) + ". Check guis.yml.");
             return;
         }
         inventory.setItem(slot, item);

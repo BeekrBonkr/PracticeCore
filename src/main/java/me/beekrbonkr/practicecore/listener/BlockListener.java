@@ -1,18 +1,20 @@
 package me.beekrbonkr.practicecore.listener;
 
-import me.beekrbonkr.practicecore.PCConfig;
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.session.PracticeSession;
 import me.beekrbonkr.practicecore.session.SessionState;
 import org.bukkit.Location;
+import org.bukkit.block.Block;
 import org.bukkit.entity.FallingBlock;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockFromToEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
+import org.bukkit.event.player.PlayerBucketEmptyEvent;
 
 public final class BlockListener implements Listener {
 
@@ -51,8 +53,7 @@ public final class BlockListener implements Listener {
         }
         session.tracker().recordPlace(event.getBlock(), event.getBlockReplacedState().getBlockData());
         if (state == SessionState.READY
-                && session.mode().usesStandardTimerStart()
-                && plugin.pcConfig().timerStartMode() == PCConfig.TimerStartMode.FIRST_BLOCK) {
+                && session.mode().startsTimerOnFirstBlock(plugin.pcConfig())) {
             session.setState(SessionState.ACTIVE);
             session.startTimer();
         }
@@ -86,6 +87,41 @@ public final class BlockListener implements Listener {
         session.mode().onBlockBreak(plugin, player, session, event);
     }
 
+    /**
+     * Bucket liquids bypass BlockPlaceEvent, so they are tracked here — at
+     * MONITOR, once nothing can cancel the empty anymore — or the water an
+     * MLG clutch (or an allow-buckets kit) leaves behind would survive every
+     * arena reset.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBucketEmpty(PlayerBucketEmptyEvent event) {
+        PracticeSession session = plugin.sessions().get(event.getPlayer().getUniqueId());
+        if (session == null) {
+            return;
+        }
+        Block block = event.getBlock();
+        if (session.containsBlock(block.getLocation())) {
+            // The liquid lands after the event completes, so the block still
+            // holds its pre-liquid state.
+            session.tracker().recordPlace(block, block.getBlockData());
+        }
+    }
+
+    /** Liquid spreading inside an arena is tracked so resets dry it back up. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onLiquidFlow(BlockFromToEvent event) {
+        if (!plugin.worldService().isPracticeWorld(event.getBlock().getWorld())) {
+            return;
+        }
+        PracticeSession session = plugin.sessions().sessionAtBlock(event.getBlock().getLocation());
+        if (session != null) {
+            Block to = event.getToBlock();
+            if (session.containsBlock(to.getLocation())) {
+                session.tracker().recordPlace(to, to.getBlockData());
+            }
+        }
+    }
+
     /** Gravel/sand landing outside the arena would survive every reset. */
     @EventHandler(ignoreCancelled = true)
     public void onFallingBlock(EntityChangeBlockEvent event) {
@@ -99,12 +135,14 @@ public final class BlockListener implements Listener {
             return; // block becoming an entity — the tracked source reverts fine
         }
         Location loc = event.getBlock().getLocation();
-        for (PracticeSession session : plugin.sessions().all()) {
-            if (session.containsBlock(loc)) {
-                // Landed inside an arena: track it so the reset cleans it up.
-                session.tracker().recordPlace(event.getBlock(), event.getBlock().getBlockData());
-                return;
-            }
+        PracticeSession session = plugin.sessions().sessionAtBlock(loc);
+        if (session != null) {
+            // Landed inside an arena: track it so the reset cleans it up.
+            session.tracker().recordPlace(event.getBlock(), event.getBlock().getBlockData());
+            return;
+        }
+        if (plugin.setup().containsBlock(loc)) {
+            return; // gravel/sand must land normally while an admin builds
         }
         event.setCancelled(true);
         fallingBlock.setDropItem(false);

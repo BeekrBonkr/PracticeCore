@@ -71,8 +71,15 @@ public final class PlayerSnapshot {
 
     public static PlayerSnapshot capture(Player player) {
         Location loc = player.getLocation();
+        // Deep-clone: getContents() hands out live CraftItemStack mirrors, and
+        // another plugin mutating one after capture would corrupt the snapshot.
+        ItemStack[] contents = player.getInventory().getContents();
+        ItemStack[] inventory = new ItemStack[contents.length];
+        for (int i = 0; i < contents.length; i++) {
+            inventory[i] = contents[i] != null ? contents[i].clone() : null;
+        }
         return new PlayerSnapshot(
-                player.getInventory().getContents().clone(),
+                inventory,
                 loc.getWorld().getName(),
                 loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch(),
                 player.getGameMode(),
@@ -133,8 +140,26 @@ public final class PlayerSnapshot {
     }
 
     private static double maxHealth(Player player) {
-        AttributeInstance attr = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        AttributeInstance attr = player.getAttribute(maxHealthAttribute());
         return attr != null ? attr.getValue() : 20.0;
+    }
+
+    /**
+     * The max-health attribute, resolved by registry key rather than constant:
+     * Paper 1.21.3 renamed {@code GENERIC_MAX_HEALTH} to {@code MAX_HEALTH},
+     * so the field reference would {@code NoSuchFieldError} on newer servers.
+     */
+    public static Attribute maxHealthAttribute() {
+        Attribute attr = org.bukkit.Registry.ATTRIBUTE
+                .get(org.bukkit.NamespacedKey.minecraft("generic.max_health"));
+        if (attr == null) {
+            attr = org.bukkit.Registry.ATTRIBUTE
+                    .get(org.bukkit.NamespacedKey.minecraft("max_health"));
+        }
+        if (attr == null) {
+            throw new IllegalStateException("Max-health attribute missing from the server registry");
+        }
+        return attr;
     }
 
     public void serialize(ConfigurationSection yml) {
@@ -165,7 +190,6 @@ public final class PlayerSnapshot {
         yml.set("effects", effects);
     }
 
-    @SuppressWarnings("unchecked")
     public static PlayerSnapshot deserialize(ConfigurationSection yml) {
         int size = yml.getInt("inventory-size", 41);
         ItemStack[] inventory = new ItemStack[size];
@@ -187,7 +211,15 @@ public final class PlayerSnapshot {
         } catch (IllegalArgumentException e) {
             gameMode = GameMode.SURVIVAL;
         }
-        List<PotionEffect> effects = (List<PotionEffect>) (List<?>) yml.getList("effects", List.of());
+        // Filter rather than cast: a hand-edited or corrupt file yields maps
+        // here, and a ClassCastException mid-apply() would leave the player
+        // half-restored.
+        List<PotionEffect> effects = new ArrayList<>();
+        for (Object entry : yml.getList("effects", List.of())) {
+            if (entry instanceof PotionEffect effect) {
+                effects.add(effect);
+            }
+        }
         return new PlayerSnapshot(
                 inventory,
                 yml.getString("world", Bukkit.getWorlds().get(0).getName()),
@@ -200,6 +232,6 @@ public final class PlayerSnapshot {
                 (float) yml.getDouble("exhaustion"),
                 yml.getInt("fire-ticks"), yml.getInt("remaining-air", 300),
                 yml.getBoolean("allow-flight"), yml.getBoolean("flying"),
-                new ArrayList<>(effects));
+                effects);
     }
 }

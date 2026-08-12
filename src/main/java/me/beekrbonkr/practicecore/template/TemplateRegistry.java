@@ -57,7 +57,9 @@ public final class TemplateRegistry {
             for (File dir : dirs) {
                 ArenaTemplate template = read(dir, notes);
                 if (template != null) {
-                    loaded.put(template.name(), template);
+                    // Lowercased like every lookup — a hand-made uppercase
+                    // folder must not load into an unreachable registry key.
+                    loaded.put(template.name().toLowerCase(Locale.ROOT), template);
                 }
             }
         }
@@ -126,7 +128,7 @@ public final class TemplateRegistry {
     }
 
     public void register(ArenaTemplate template) {
-        templates.put(template.name(), template);
+        templates.put(template.name().toLowerCase(Locale.ROOT), template);
     }
 
     public Collection<ArenaTemplate> all() {
@@ -288,8 +290,21 @@ public final class TemplateRegistry {
         if (template == null) {
             return false;
         }
+        plugin.schematics().evict(template.schematicFile());
         deleteRecursively(template.dir().toPath());
         return true;
+    }
+
+    /**
+     * Deletes an arena folder that never made it into the registry — a failed
+     * import that already captured its schematic. Registered arenas must go
+     * through {@link #delete} so the registry and clipboard cache stay honest.
+     */
+    public void deleteUnregistered(String name) {
+        if (templates.containsKey(name.toLowerCase(Locale.ROOT))) {
+            return;
+        }
+        deleteRecursively(dirFor(name).toPath());
     }
 
     private static void deleteRecursively(Path dir) {

@@ -7,6 +7,7 @@ import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.mode.BedBreakMode;
+import me.beekrbonkr.practicecore.mode.MlgMode;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -16,10 +17,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * Ready-to-play arenas for the non-bridging modes, built block by block in
@@ -52,6 +55,8 @@ public final class GeneratedArenas {
         changed |= install(installed, templatesDir, "bedbreak-horizontal",
                 plugin.pcConfig().generatedArenaName("bedbreak-horizontal"),
                 this::writeBedBreakHorizontal);
+        changed |= install(installed, templatesDir, MlgMode.ID,
+                plugin.pcConfig().generatedArenaName(MlgMode.ID), this::writeMlg);
         if (changed) {
             writeMarker(marker, installed);
         }
@@ -81,6 +86,18 @@ public final class GeneratedArenas {
         } catch (IOException | WorldEditException e) {
             plugin.getLogger().warning("Could not generate the default " + kind
                     + " arena: " + e.getMessage());
+            // Remove the partial folder, or the exists() check above would
+            // claim the kind next boot and the broken arena would stay broken
+            // forever.
+            try (Stream<Path> walk = Files.walk(target)) {
+                walk.sorted(Comparator.reverseOrder()).forEach(p -> {
+                    try {
+                        Files.delete(p);
+                    } catch (IOException ignored) {
+                    }
+                });
+            } catch (IOException ignored) {
+            }
             return false;
         }
         installed.add(kind);
@@ -167,6 +184,44 @@ public final class GeneratedArenas {
         blocks.put("OBSIDIAN", 1);
         bedbreak.put("blocks", blocks);
         return bedbreak;
+    }
+
+    // ------------------------------------------------------------------ mlg
+
+    /**
+     * An 11×11 shaft: a grass backstop floor, barrier walls running the full
+     * height of the arena, and open air inside — the glass start platform and
+     * the landing pad are built (and re-rolled) by the mode itself every
+     * reset, with the pad landing anywhere from 20 to 100 blocks down.
+     */
+    private void writeMlg(String name, File dir) throws IOException, WorldEditException {
+        Builder build = new Builder(11, 110, 11, BlockVector3.at(5, 1, 5));
+        build.fill(0, 0, 0, 10, 0, 10, Material.GRASS_BLOCK);       // backstop floor
+        build.fill(0, 1, 0, 10, 109, 0, Material.BARRIER);          // full-height walls: north…
+        build.fill(0, 1, 10, 10, 109, 10, Material.BARRIER);        // …south…
+        build.fill(0, 1, 0, 0, 109, 10, Material.BARRIER);          // …west…
+        build.fill(10, 1, 0, 10, 109, 10, Material.BARRIER);        // …and east
+        // The platform (relative y 104) and pad stay air — mode-built per round.
+        build.save(plugin, dir);
+
+        ArenaTemplate template = new ArenaTemplate(name, dir);
+        template.setMode(MlgMode.ID);
+        template.setDisplayName("MLG");
+        template.setIcon(Material.WATER_BUCKET);
+        // On the glass platform, looking out over the edge.
+        template.setSpawn(new Vector(0.5, 104.0, 0.5), 0f, 30f);
+        template.kit().put(0, new ItemStack(Material.WATER_BUCKET));
+        Map<String, Object> mlg = new LinkedHashMap<>();
+        mlg.put("platform-radius", 1);
+        mlg.put("pad-radius", 5);
+        mlg.put("pad-material", "GRASS_BLOCK");
+        mlg.put("min-drop", 20);
+        mlg.put("max-drop", 100);
+        mlg.put("fuse-min-ticks", 30);
+        mlg.put("fuse-max-ticks", 100);
+        template.settings().put("mlg", mlg);
+        template.setComplete(true);
+        template.save();
     }
 
     // -------------------------------------------------------------- marker

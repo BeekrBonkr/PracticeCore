@@ -85,13 +85,13 @@ public final class PracticeWorldService {
 
     /**
      * Full regeneration on demand: every session is ended and restored, the
-     * setup wizard is cancelled, the world is rebuilt from nothing and the
+     * setup wizard is canceled, the world is rebuilt from nothing and the
      * grid starts again at slot zero.
      *
      * @return how many players were practicing when it started
      */
     public int regenerate() {
-        int practising = plugin.sessions().all().size();
+        int practicing = plugin.sessions().all().size();
         // Order matters — both of these erase their regions in the world that
         // is about to be unloaded, and restore their players.
         plugin.setup().cancelAll();
@@ -99,7 +99,7 @@ public final class PracticeWorldService {
         recreate();
         plugin.allocator().reset();
         plugin.getLogger().info("Practice world '" + plugin.pcConfig().worldName() + "' regenerated");
-        return practising;
+        return practicing;
     }
 
     /** Moves anyone still standing in the doomed world somewhere real. */
@@ -138,16 +138,27 @@ public final class PracticeWorldService {
         return world != null && world.equals(other);
     }
 
-    private static void deleteRecursively(Path dir) {
+    private void deleteRecursively(Path dir) {
+        java.util.List<Path> failed = new java.util.ArrayList<>();
         try (Stream<Path> walk = Files.walk(dir)) {
             walk.sorted(Comparator.reverseOrder()).forEach(p -> {
                 try {
                     Files.delete(p);
-                } catch (IOException ignored) {
+                } catch (IOException e) {
+                    failed.add(p);
                 }
             });
         } catch (IOException e) {
             throw new UncheckedIOException("Could not delete practice world folder", e);
+        }
+        if (!failed.isEmpty()) {
+            // A surviving region file means createWorld reloads old chunks —
+            // stale arena blocks reappearing at reused grid slots. Say so
+            // loudly instead of silently breaking the "nothing persists" rule.
+            plugin.getLogger().severe("Could not fully delete the practice world folder — "
+                    + failed.size() + " file(s) survived (locked by a backup tool or AV?), "
+                    + "e.g. " + failed.get(0) + ". Old chunks may reappear; "
+                    + "run /practice world regen once the files are released.");
         }
     }
 }

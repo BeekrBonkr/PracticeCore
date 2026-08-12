@@ -3,7 +3,6 @@ package me.beekrbonkr.practicecore.gui;
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.mode.RushMode;
 import me.beekrbonkr.practicecore.rush.RushMapData;
-import me.beekrbonkr.practicecore.rush.RushObjective;
 import me.beekrbonkr.practicecore.rush.RushSelection;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
 import me.beekrbonkr.practicecore.util.ItemBuilder;
@@ -17,15 +16,19 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Pre-join setup for one rush map: pick the objective and team base, dial the
- * difficulty modifiers, hit start. Every change is persisted immediately, so
- * a plain /practice join later replays the same choices.
+ * Pre-join setup for one rush map: pick the team base, dial the difficulty
+ * modifiers, then start — casually with those modifiers, or <b>competitive</b>,
+ * the fixed ranked loadout (no starting items, defenses on, generators on)
+ * that is the only way onto the leaderboards. There is no objective to
+ * choose — every one the map supports is armed, and whichever is completed
+ * first ends the run. Every change is persisted immediately, so a plain
+ * /practice join later replays the same choices.
  */
 public final class RushConfigMenu extends Menu {
 
     private final ArenaTemplate template;
     private final RushMapData data;
-    private final List<RushObjective> supported;
+    /** The raw stored selection — competitive pins are applied at join, not here. */
     private RushSelection selection;
 
     public RushConfigMenu(PracticeCorePlugin plugin, Player viewer, Menu parent,
@@ -33,8 +36,7 @@ public final class RushConfigMenu extends Menu {
         super(plugin, viewer, parent);
         this.template = template;
         this.data = RushMapData.parse(template);
-        this.supported = plugin.rush().supportedObjectives(data);
-        this.selection = plugin.rush().selection(viewer.getUniqueId(), template, data);
+        this.selection = plugin.rush().rawSelection(viewer.getUniqueId(), template, data);
     }
 
     @Override
@@ -54,11 +56,9 @@ public final class RushConfigMenu extends Menu {
     @Override
     protected void render() {
         border();
-        objectiveButton(RushObjective.BED, slot("objective-bed", 10));
-        objectiveButton(RushObjective.EMERALD, slot("objective-emerald", 11));
-        objectiveButton(RushObjective.DIAMOND, slot("objective-diamond", 12));
-        teamButton(slot("team", 14));
-        startButton(slot("start", 16));
+        teamButton(slot("team", 11));
+        startButton(slot("start", 13));
+        competitiveButton(slot("competitive", 15));
         blocksButton(slot("blocks", 19));
         currencyButton(slot("currency", 20));
         pickaxeButton(slot("pickaxe", 21));
@@ -66,35 +66,6 @@ public final class RushConfigMenu extends Menu {
         generatorsButton(slot("generators", 23));
         backButton(plugin.guis().slot("rush.back", 27));
         closeButton(plugin.guis().slot("rush.close", 35));
-    }
-
-    // ------------------------------------------------------------ objective
-
-    private void objectiveButton(RushObjective objective, int slot) {
-        boolean available = supported.contains(objective);
-        boolean selected = selection.objective() == objective;
-        String label = plugin.rush().objectiveName(objective);
-        ItemBuilder icon = ItemBuilder.of(objective.icon())
-                .name(name(available ? "gui.rush.objective.entry-name"
-                        : "gui.rush.objective.entry-name-unavailable", "label", label))
-                .glow(selected);
-        if (!available) {
-            icon.lore(lore("gui.rush.objective.lore-unavailable"));
-        } else if (selected) {
-            icon.lore(lore("gui.rush.objective.lore-selected"));
-        } else {
-            icon.lore(lore("gui.rush.objective.lore", "label", label));
-        }
-        set(slot, icon.build(), event -> {
-            if (!available) {
-                deny();
-                return;
-            }
-            click();
-            selection = selection.withObjective(objective);
-            plugin.rush().saveSelection(viewer.getUniqueId(), selection);
-            refresh();
-        });
     }
 
     // ----------------------------------------------------------------- team
@@ -240,12 +211,35 @@ public final class RushConfigMenu extends Menu {
         set(slot, ItemBuilder.of(
                         plugin.guis().buttonMaterial("rush.buttons.start", Material.LIME_DYE))
                 .name(name("gui.rush.start.name"))
-                .lore(lore("gui.rush.start.lore",
-                        "objective", plugin.rush().objectiveName(selection.objective()),
-                        "arena", template.displayName()))
+                .lore(lore("gui.rush.start.lore", "arena", template.displayName()))
                 .build(), event -> {
             click();
+            plugin.rush().setCompetitive(viewer.getUniqueId(), false);
             plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+            if (selection.team() != null) {
+                plugin.rush().saveTeam(viewer.getUniqueId(), template, selection.team());
+            }
+            later(() -> {
+                viewer.closeInventory();
+                plugin.sessions().join(viewer, template);
+            });
+        });
+    }
+
+    /**
+     * Instant start under the fixed ranked loadout: generators on, no
+     * starting items, defenses on. The stored casual modifiers are left
+     * untouched underneath — competitive pins them only for the run.
+     */
+    private void competitiveButton(int slot) {
+        set(slot, ItemBuilder.of(
+                        plugin.guis().buttonMaterial("rush.buttons.competitive", Material.NETHER_STAR))
+                .name(name("gui.rush.competitive.name"))
+                .lore(lore("gui.rush.competitive.lore", "arena", template.displayName()))
+                .glow(true)
+                .build(), event -> {
+            click();
+            plugin.rush().setCompetitive(viewer.getUniqueId(), true);
             if (selection.team() != null) {
                 plugin.rush().saveTeam(viewer.getUniqueId(), template, selection.team());
             }

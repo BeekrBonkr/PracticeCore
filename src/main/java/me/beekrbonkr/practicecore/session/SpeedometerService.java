@@ -14,7 +14,7 @@ import java.util.UUID;
 
 /**
  * Action-bar speedometer shown above the hotbar for modes that ask for it
- * (bridging): current speed in metres per second plus blocks moved and placed
+ * (bridging): current speed in meters per second plus blocks moved and placed
  * this run. Positions are sampled on a fixed tick schedule and smoothed with a
  * short exponential average, so the reading is steady rather than jittering
  * with every knot in the player's path.
@@ -32,7 +32,7 @@ public final class SpeedometerService {
         Location last;
         long lastNanos;
         double speed;    // smoothed m/s
-        double travelled; // total horizontal metres this run
+        double traveled; // total horizontal meters this run
         boolean wasActive; // to spot ACTIVE → READY (an arena reset)
     }
 
@@ -79,6 +79,16 @@ public final class SpeedometerService {
         heldUntil.put(player, System.nanoTime() + HOLD_NANOS);
     }
 
+    /**
+     * Drops everything tracked for a player. Called on quit — the hold map is
+     * fed by every action-bar message, including ones to players who never
+     * enter a speedometer mode, so quit is the only reliable eviction point.
+     */
+    public void forget(UUID player) {
+        samples.remove(player);
+        heldUntil.remove(player);
+    }
+
     private void updateAll() {
         // Drop trackers whose session is gone (leave, quit, switch).
         for (Iterator<Map.Entry<UUID, Sample>> it = samples.entrySet().iterator(); it.hasNext(); ) {
@@ -110,7 +120,7 @@ public final class SpeedometerService {
                 sample.last = player.getLocation();
                 sample.lastNanos = System.nanoTime();
                 sample.speed = 0;
-                sample.travelled = 0;
+                sample.traveled = 0;
             } else {
                 long now = System.nanoTime();
                 Location loc = player.getLocation();
@@ -120,7 +130,7 @@ public final class SpeedometerService {
                     double dz = loc.getZ() - sample.last.getZ();
                     double distance = Math.sqrt(dx * dx + dz * dz);
                     if (distance < TELEPORT_DISTANCE) {
-                        sample.travelled += distance;
+                        sample.traveled += distance;
                         sample.speed = SMOOTHING * sample.speed
                                 + (1 - SMOOTHING) * (distance / seconds);
                     }
@@ -138,7 +148,7 @@ public final class SpeedometerService {
             }
             plugin.messages().actionBar(player, "speedometer.bar",
                     "speed", String.format(Locale.ROOT, "%.1f", sample.speed),
-                    "moved", String.valueOf(Math.round(sample.travelled)),
+                    "moved", String.valueOf(Math.round(sample.traveled)),
                     "placed", String.valueOf(session.tracker().count()));
         }
     }

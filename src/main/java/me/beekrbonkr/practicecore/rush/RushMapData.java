@@ -98,8 +98,14 @@ public final class RushMapData {
                 if (b != null) {
                     bedHead = new Vector(b.getInt("x"), b.getInt("y"), b.getInt("z"));
                     try {
-                        facing = BlockFace.valueOf(b.getString("facing", "NORTH")
+                        BlockFace parsed = BlockFace.valueOf(b.getString("facing", "NORTH")
                                 .toUpperCase(Locale.ROOT));
+                        // Cardinal faces only — a bed can't face NORTH_EAST,
+                        // and createBlockData would throw mid-rebuild on it.
+                        switch (parsed) {
+                            case NORTH, SOUTH, EAST, WEST -> facing = parsed;
+                            default -> { }
+                        }
                     } catch (IllegalArgumentException ignored) {
                     }
                     Material parsed = Material.matchMaterial(b.getString("material", "RED_BED"));

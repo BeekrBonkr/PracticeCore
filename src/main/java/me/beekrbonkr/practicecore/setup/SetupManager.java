@@ -72,6 +72,17 @@ public final class SetupManager {
         return active != null && active.admin.equals(player);
     }
 
+    /**
+     * True when the block lies inside the open wizard's pasted arena — the
+     * world listeners exempt this region the way they exempt the admin, so
+     * gravel falls, liquids flow and drops land while an arena is being built.
+     */
+    public boolean containsBlock(Location loc) {
+        return active != null && active.bounds != null
+                && active.bounds.contains(loc.getBlockX() + 0.5, loc.getBlockY() + 0.5,
+                        loc.getBlockZ() + 0.5);
+    }
+
     /** Name of the arena being configured, or null. */
     public String activeName() {
         return active == null ? null : active.name;
@@ -228,12 +239,59 @@ public final class SetupManager {
         int spacing = plugin.pcConfig().gridSpacing();
         Location origin = new Location(world,
                 (long) slot.gridX() * spacing, plugin.pcConfig().baseY(), (long) slot.gridZ() * spacing);
-        BoundingBox bounds;
-        try {
-            bounds = plugin.schematics().paste(clipboard, origin);
-        } catch (WorldEditException e) {
+        // Big maps take seconds to paste — with FAWE that runs off-thread, and
+        // either way the admin is told something is happening right now.
+        msg().actionBar(admin, "setup.pasting", "arena", name);
+        if (plugin.schematics().supportsAsyncEdits()) {
+            java.util.concurrent.CompletableFuture
+                    .supplyAsync(() -> {
+                        try {
+                            return plugin.schematics().paste(clipboard, origin);
+                        } catch (WorldEditException e) {
+                            throw new java.util.concurrent.CompletionException(e);
+                        }
+                    })
+                    .whenComplete((bounds, error) -> Bukkit.getScheduler().runTask(plugin, () ->
+                            finishOpen(admin, name, dir, clipboard, editing, existing,
+                                    slot, origin, bounds, error)));
+        } else {
+            BoundingBox bounds = null;
+            Throwable error = null;
+            try {
+                bounds = plugin.schematics().paste(clipboard, origin);
+            } catch (WorldEditException e) {
+                error = e;
+            }
+            finishOpen(admin, name, dir, clipboard, editing, existing, slot, origin, bounds, error);
+        }
+    }
+
+    /** Main-thread tail of {@link #open} — runs once the paste finished. */
+    private void finishOpen(Player admin, String name, File dir, Clipboard clipboard,
+                            boolean editing, ArenaTemplate existing, Slot slot, Location origin,
+                            BoundingBox bounds, Throwable error) {
+        World world = plugin.worldService().world();
+        if (error != null || bounds == null || world == null) {
             plugin.allocator().release(slot);
-            msg().send(admin, "setup.paste-failed", "error", String.valueOf(e.getMessage()));
+            if (admin.isOnline()) {
+                msg().send(admin, "setup.paste-failed",
+                        "error", String.valueOf(error != null ? error.getMessage() : "no result"));
+            }
+            return;
+        }
+        if (!admin.isOnline() || active != null) {
+            // The admin left, or someone else opened the wizard while the
+            // paste ran — tear the orphaned paste back down.
+            slot.markDirty();
+            eraseAsync(world, bounds);
+            Slot orphaned = slot;
+            Bukkit.getScheduler().runTaskLater(plugin,
+                    () -> plugin.allocator().release(orphaned), 60L);
+            if (admin.isOnline()) {
+                msg().send(admin, "setup.busy", "holder",
+                        String.valueOf(Bukkit.getOfflinePlayer(active.admin).getName()),
+                        "arena", active.name);
+            }
             return;
         }
         slot.occupy();
@@ -246,6 +304,13 @@ public final class SetupManager {
         }
         this.active = session;
 
+        // An admin who came straight out of a session already has one, and
+        // it holds their real pre-practice state — never overwrite it. For
+        // everyone else, capture BEFORE the teleport: captured after it, the
+        // "restore" location would be the wizard's own soon-erased arena.
+        if (!plugin.snapshots().has(admin.getUniqueId())) {
+            plugin.snapshots().save(admin.getUniqueId(), PlayerSnapshot.capture(admin));
+        }
         Location tp = new Location(world, bounds.getCenterX(), bounds.getMaxY() + 1, bounds.getCenterZ());
         admin.teleportAsync(tp).whenComplete((ok, err) -> {
             if (err != null || !Boolean.TRUE.equals(ok) || !admin.isOnline() || active != session) {
@@ -254,11 +319,6 @@ public final class SetupManager {
                     msg().send(admin, "setup.teleport-failed");
                 }
                 return;
-            }
-            // An admin who came straight out of a session already has one, and
-            // it holds their real pre-practice state — never overwrite it.
-            if (!plugin.snapshots().has(admin.getUniqueId())) {
-                plugin.snapshots().save(admin.getUniqueId(), PlayerSnapshot.capture(admin));
             }
             admin.setGameMode(GameMode.CREATIVE);
             admin.setAllowFlight(true);
@@ -626,13 +686,52 @@ public final class SetupManager {
             return;
         }
         World world = plugin.worldService().world();
-        plugin.schematics().erase(world, session.bounds);
-        BoundingBox bounds;
-        try {
-            bounds = plugin.schematics().paste(clipboard, session.origin);
-            plugin.schematics().save(clipboard, new File(session.dir, "arena.schem"));
-        } catch (WorldEditException | IOException e) {
-            msg().send(admin, "setup.schematic-replace-failed", "error", String.valueOf(e.getMessage()));
+        msg().actionBar(admin, "setup.pasting", "arena", session.name);
+        if (plugin.schematics().supportsAsyncEdits()) {
+            java.util.concurrent.CompletableFuture
+                    .supplyAsync(() -> {
+                        try {
+                            plugin.schematics().erase(world, session.bounds);
+                            BoundingBox pasted = plugin.schematics().paste(clipboard, session.origin);
+                            plugin.schematics().save(clipboard, new File(session.dir, "arena.schem"));
+                            return pasted;
+                        } catch (WorldEditException | IOException e) {
+                            throw new java.util.concurrent.CompletionException(e);
+                        }
+                    })
+                    .whenComplete((bounds, error) -> Bukkit.getScheduler().runTask(plugin, () ->
+                            finishReplace(admin, session, clipboard, bounds, error)));
+        } else {
+            BoundingBox bounds = null;
+            Throwable error = null;
+            try {
+                plugin.schematics().erase(world, session.bounds);
+                bounds = plugin.schematics().paste(clipboard, session.origin);
+                plugin.schematics().save(clipboard, new File(session.dir, "arena.schem"));
+            } catch (WorldEditException | IOException e) {
+                error = e;
+            }
+            finishReplace(admin, session, clipboard, bounds, error);
+        }
+    }
+
+    /** Main-thread tail of {@link #replaceSchematic}. */
+    private void finishReplace(Player admin, SetupSession session, Clipboard clipboard,
+                               BoundingBox bounds, Throwable error) {
+        if (error != null || bounds == null) {
+            if (admin.isOnline()) {
+                msg().send(admin, "setup.schematic-replace-failed",
+                        "error", String.valueOf(error != null ? error.getMessage() : "no result"));
+            }
+            return;
+        }
+        if (active != session) {
+            // Wizard closed while the paste ran — cleanup erased the old
+            // bounds, so the re-paste is orphaned and must go too.
+            World world = plugin.worldService().world();
+            if (world != null) {
+                eraseAsync(world, bounds);
+            }
             return;
         }
         session.clipboard = clipboard;
@@ -777,10 +876,17 @@ public final class SetupManager {
         if (active == session) {
             active = null;
         }
+        if (session.cleaned) {
+            // Quit during the open teleport runs cleanup from both the quit
+            // handler and the teleport callback — the second pass must not
+            // release the slot again under whoever holds it by then.
+            return;
+        }
+        session.cleaned = true;
         World world = plugin.worldService().world();
         session.slot.markDirty();
         if (world != null) {
-            plugin.schematics().erase(world, session.bounds);
+            eraseAsync(world, session.bounds);
             for (Entity entity : world.getNearbyEntities(session.bounds.clone().expand(4))) {
                 if (!(entity instanceof Player)) {
                     entity.remove();
@@ -799,6 +905,24 @@ public final class SetupManager {
         plugin.snapshots().delete(session.admin);
         if (discardTemplate) {
             deleteRecursively(session.dir.toPath());
+        }
+    }
+
+    /**
+     * Erases a region off-thread when the WorldEdit implementation allows it
+     * (FAWE) — a big rush map erase stalls the whole tick otherwise. The slot
+     * is only ever released 60 ticks later, so a new paste can't race it.
+     */
+    private void eraseAsync(World world, BoundingBox bounds) {
+        if (plugin.isEnabled() && plugin.schematics().supportsAsyncEdits()) {
+            java.util.concurrent.CompletableFuture
+                    .runAsync(() -> plugin.schematics().erase(world, bounds))
+                    .exceptionally(e -> {
+                        plugin.getLogger().severe("Async setup erase failed: " + e.getMessage());
+                        return null;
+                    });
+        } else {
+            plugin.schematics().erase(world, bounds);
         }
     }
 

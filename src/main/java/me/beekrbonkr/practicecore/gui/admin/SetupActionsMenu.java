@@ -204,6 +204,10 @@ final class SetupActionsMenu extends Menu {
                         ready ? "makes the arena playable."
                               : "for trigger modes) before saving."),
                 event -> {
+                    if (!ready) {
+                        deny(); // saving would only fail — keep the panel open
+                        return;
+                    }
                     click();
                     later(() -> {
                         viewer.closeInventory();

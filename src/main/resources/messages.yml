@@ -40,6 +40,11 @@ session:
   ended: '<prefix><gray>Practice session ended.'
   not-practicing: '<prefix><red>You are not practicing.'
   preparing: '<prefix><red>Your arena is still being prepared — one moment.'
+  # Action bar the moment a join starts — big maps take a second or two to
+  # paste, and silence after the command reads as lag. <arena>
+  building: '<gray>Building <white><arena></white><gray>…'
+  # Action bar when the arena is built and the teleport is on its way.
+  teleporting: '<gray>Arena ready — teleporting you in…'
   setup-in-progress: '<prefix><red>Finish or cancel arena setup first.'
   teleport-failed: '<prefix><red>Could not send you to the arena.'
   state-restored: '<prefix><gray>Your pre-practice state was restored.'
@@ -76,8 +81,18 @@ build:
   out-of-bounds: '<red>Out of bounds'
   break-own-only: '<red>You can only break blocks you placed'
 
+mlg:
+  # Shown when the bucket is used while still standing on the platform.
+  jump-first: '<red>Clutch on the way down, not before'
+  # <streak>
+  success: '<prefix><green>MLG! <gray>Streak: <white><streak>'
+  # <streak> — the clutch that beat your highest streak ever
+  success-best: '<prefix><green>MLG! <gray>Streak: <white><streak> <gold>— new best!'
+
 rush:
   not-configured: '<prefix><red>This rush arena has no playable team base — tell an admin.'
+  # Action bar on finishing a casual run.
+  records-disabled: '<yellow>Casual run — play competitive to set records'
   mbedwars-missing: '<prefix><red>MBedwars is not installed — there is nothing to import from.'
   shop-unavailable: '<prefix><red>The shop needs MBedwars installed on this server.'
   shop-empty: '<prefix><red>The MBedwars shop has nothing usable in practice.'
@@ -85,7 +100,7 @@ rush:
   shop-inventory-full: '<yellow>Your inventory is full — the rest was dropped at your feet'
 
 # Action-bar speedometer shown during bridging runs.
-# <speed> — current speed in m/s, <moved> — blocks travelled this run,
+# <speed> — current speed in m/s, <moved> — blocks traveled this run,
 # <placed> — blocks placed this run. Set to '' to disable the text entirely.
 speedometer:
   bar: '<gray>Speed <white><speed> m/s <dark_gray>• <gray>Moved <white><moved>m <dark_gray>• <gray>Placed <white><placed>'
@@ -100,6 +115,12 @@ board:
   timer-ready: '<dark_gray>ready'
   # <time>
   timer-running: '<yellow><time>'
+  # Appended to the bottom of every sidebar once scoreboard.server-ip is set
+  # in config.yml — every mode's board signs off the same way.
+  # <server_ip>
+  footer:
+    - ''
+    - '<gradient:#ffe08a:#ff9d2e><bold><server_ip>'
   # <arena> <time> <last> <best> <rank> <blocks>
   lines:
     - ''
@@ -123,17 +144,34 @@ board:
     - '<gray>Last: <white><last>'
     - '<gray>Best: <white><best>'
     - '<gray>Rank: <white><rank>'
-  # <arena> <objective> <team> <time> <last> <best> <rank>
-  rush-lines:
+  # <arena> <streak> <best> <drop>
+  # <streak> is consecutive successful clutches; <best> your highest ever;
+  # <drop> is this round's rolled fall distance in blocks.
+  mlg-lines:
     - ''
-    - '<gray>Map: <white><arena>'
-    - '<gray>Objective: <white><objective>'
-    - '<gray>Base: <white><team>'
+    - '<gray>Arena: <white><arena>'
     - ''
-    - '<gray>Time: <time>'
-    - '<gray>Last: <white><last>'
+    - '<gray>Drop: <white><drop> blocks'
+    - '<gray>Streak: <white><streak>'
     - '<gray>Best: <white><best>'
-    - '<gray>Rank: <white><rank>'
+  # The rush board is assembled per run: these header lines, then one
+  # objective-line per objective the map actually supports, then the
+  # casual-line on unranked runs.
+  rush:
+    # <arena> <team> <mode> <time>
+    lines:
+      - ''
+      - '<gray>Map: <white><arena>'
+      - '<gray>Base: <white><team>'
+      - '<gray>Mode: <mode>'
+      - ''
+      - '<gray>Time: <time>'
+      - ''
+    mode-competitive: '<gold>Competitive'
+    mode-casual: '<white>Casual'
+    # <objective> <best> — your best competitive time on that board
+    objective-line: '<gray><objective>: <white><best>'
+    casual-line: '<dark_gray>Not ranked — play competitive'
 
 protect:
   pearls-disabled: '<prefix><red>Ender pearls are disabled in practice.'
@@ -148,6 +186,8 @@ leave:
   sending: '<prefix><gray>Sending you to <white><server><gray>…'
 
 menu:
+  # <menu> <menus>
+  unknown: '<prefix><red>No menu named ''<menu>''. Menus: <white><menus>'
   item-locked: '<yellow>You need that to get back out'
   # <slot>
   item-given: '<prefix><green>Practice menu item added to hotbar slot <white><slot><green>.'
@@ -189,6 +229,8 @@ leaderboard:
   entry: '<dark_gray> #<rank> <white><player> <dark_gray>— <yellow><time>'
   # <rank> <total>
   your-rank: '<dark_gray> … you are #<rank> of <total>'
+  # <arena>
+  rush-pick-board: '<prefix><gray>''<arena>'' is a rush arena; pick a board: <white><arena>#bed<gray>, <white><arena>#emerald<gray> or <white><arena>#diamond<gray>.'
 
 stats:
   # <player>
@@ -203,13 +245,15 @@ stats:
   entry-unranked: '<dark_gray> • <white><arena> <dark_gray>— <yellow><time> <dark_gray>(<finishes> run(s))'
   # <player>
   reset-notice: '<prefix><gray>An admin reset your practice personal bests.'
+  # Clicking a stats entry whose arena has since been deleted.
+  arena-gone: '<prefix><red>That arena no longer exists.'
 
 help:
   player:
     - '<prefix><gray>Practice commands:'
     - '<dark_gray> • <white>/practice join [arena] <dark_gray>— start practicing'
     - '<dark_gray> • <white>/practice leave <dark_gray>— return to where you were'
-    - '<dark_gray> • <white>/practice menu <dark_gray>— open the practice GUI'
+    - '<dark_gray> • <white>/practice menu [menu] <dark_gray>— open the practice GUI (or one menu directly)'
     - '<dark_gray> • <white>/practice list <dark_gray>— available arenas'
     - '<dark_gray> • <white>/practice stats [player] <dark_gray>— personal bests'
     - '<dark_gray> • <white>/practice top [arena] <dark_gray>— leaderboards'
@@ -218,6 +262,7 @@ help:
     - '<dark_gray> • <white>/practice setup … <dark_gray>— create an arena'
     - '<dark_gray> • <white>/practice edit <arena> <dark_gray>— reopen a saved arena'
     - '<dark_gray> • <white>/practice rush import <map> <dark_gray>— pull a map from MBedwars'
+    - '<dark_gray> • <white>/practice rush importall teams:<n> size:<n> <dark_gray>— pull every matching map'
   setup-detail:
     - '<prefix><gray>Creating an arena:'
     - '<dark_gray> • <white>/practice setup start <name> <dark_gray>— begin (needs a //copy''d build)'
@@ -263,6 +308,9 @@ admin:
   done: '<prefix><green><note>'
 
 setup:
+  # Action bar while the wizard pastes an arena — big maps take a moment.
+  # <arena>
+  pasting: '<gray>Pasting <white><arena></white><gray>…'
   # <arena> <holder>
   busy: '<prefix><red>Setup is already in progress by <white><holder><red> on ''<arena>''.'
   clipboard-empty: '<prefix><red>Your WorldEdit clipboard is empty. Select your arena build and run //copy first.'
@@ -270,7 +318,7 @@ setup:
   exists: '<prefix><red>Arena ''<arena>'' already exists. Use <white>/practice edit <arena><red> instead.'
   bad-name: '<prefix><red>Arena names must match [a-z0-9_-], max 32 characters.'
   # <width> <length> <max>
-  too-big: '<prefix><red>Schematic is <width>×<length> blocks; the limit is <max> so neighbouring arenas can never overlap.'
+  too-big: '<prefix><red>Schematic is <width>×<length> blocks; the limit is <max> so neighboring arenas can never overlap.'
   folder-failed: '<prefix><red>Could not create the arena folder.'
   # <error>
   schematic-save-failed: '<prefix><red>Could not save the schematic: <error>'
@@ -345,8 +393,8 @@ setup:
   saved: '<prefix><green>Arena ''<arena>'' saved — <white>/practice join <arena>'
   # <arena>
   updated: '<prefix><green>Arena ''<arena>'' updated — <white>/practice join <arena>'
-  cancelled: '<prefix><gray>Setup cancelled; nothing was saved.'
-  edit-cancelled: '<prefix><gray>Edit cancelled; the saved arena is unchanged.'
+  cancelled: '<prefix><gray>Setup canceled; nothing was saved.'
+  edit-cancelled: '<prefix><gray>Edit canceled; the saved arena is unchanged.'
   # <arena> <editing>
   info-header: '<prefix><gray><editing> arena ''<white><arena><gray>'''
   # <key> <value>
@@ -620,25 +668,11 @@ gui:
     # <arena>
     title: '<dark_gray><bold>Rush — <arena>'
     objective:
-      # Plain labels — also used in boards, stats and broadcasts.
+      # Plain labels — used in boards, stats and broadcasts.
       option:
         bed: 'Bed Rush'
         emerald: 'Emerald Rush'
         diamond: 'Diamond Rush'
-      # <label>
-      entry-name: '<green><bold><label>'
-      entry-name-unavailable: '<red><bold><label>'
-      # <label>
-      lore:
-        - '<gray>Race to complete this objective.'
-        - '<yellow>Click to select'
-      lore-selected:
-        - '<gray>Race to complete this objective.'
-        - ''
-        - '<green>Selected'
-      lore-unavailable:
-        - '<gray>This map has nothing to'
-        - '<gray>support this objective.'
     team:
       name: '<white><bold>Team Base'
       # <team> <count>
@@ -655,6 +689,7 @@ gui:
         - '<gray>Free wool in your starter kit.'
         - ''
         - '<gray>Amount: <white><amount>'
+        - '<dark_gray>Casual runs only.'
         - '<yellow>Click to cycle'
     currency:
       name: '<gold><bold>Starting Resources'
@@ -664,6 +699,7 @@ gui:
         - '<gray>the shop right away.'
         - ''
         - '<gray>Iron: <white><iron> <dark_gray>• <gray>Gold: <white><gold>'
+        - '<dark_gray>Casual runs only.'
         - '<yellow>Click to cycle'
     pickaxe:
       name: '<aqua><bold>Pickaxe'
@@ -672,6 +708,7 @@ gui:
         - '<gray>The pickaxe in your starter kit.'
         - ''
         - '<gray>Tier: <white><tier>'
+        - '<dark_gray>Casual runs only.'
         - '<yellow>Click to cycle'
       option:
         none: 'none'
@@ -704,12 +741,30 @@ gui:
       state-on: '<green>running'
       state-off: '<red>off'
     start:
-      name: '<green><bold>Start'
-      # <objective> <arena>
+      name: '<green><bold>Start Casual'
+      # <arena>
       lore:
         - '<gray>Map: <white><arena>'
-        - '<gray>Objective: <white><objective>'
         - ''
+        - '<gray>Play with your modifiers below.'
+        - '<gray>Break a bed or grab an emerald'
+        - '<gray>or diamond — whichever you'
+        - '<gray>reach first ends the run.'
+        - ''
+        - '<red>Casual runs are not ranked.'
+        - '<yellow>Click to play'
+    competitive:
+      name: '<gold><bold>Start Competitive'
+      # <arena>
+      lore:
+        - '<gray>Map: <white><arena>'
+        - ''
+        - '<gray>The ranked loadout, same for'
+        - '<gray>everyone: <white>no starting items<gray>,'
+        - '<white>bed defenses on<gray>, <white>generators on<gray>.'
+        - ''
+        - '<gold>Only competitive times count'
+        - '<gold>for records and leaderboards.'
         - '<yellow>Click to play'
 
   rushshop:

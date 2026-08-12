@@ -13,6 +13,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockFromToEvent;
 import org.bukkit.event.block.BlockIgniteEvent;
+import org.bukkit.event.block.BlockPistonExtendEvent;
+import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
@@ -78,7 +80,10 @@ public final class ProtectionListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onItemSpawn(ItemSpawnEvent event) {
         if (plugin.worldService().isPracticeWorld(event.getEntity().getWorld())
-                && !plugin.rush().isRushDrop(event.getEntity())) {
+                && !plugin.rush().isRushDrop(event.getEntity())
+                // Without this, onDrop's admin exemption is dead code — the
+                // allowed drop's item entity would be destroyed right here.
+                && !plugin.setup().containsBlock(event.getLocation())) {
             event.setCancelled(true);
         }
     }
@@ -137,8 +142,9 @@ public final class ProtectionListener implements Listener {
         if (plugin.setup().isAdmin(player.getUniqueId())) {
             return;
         }
-        if (plugin.sessions().get(player.getUniqueId()) != null) {
-            if (!plugin.pcConfig().allowBuckets()) {
+        PracticeSession session = plugin.sessions().get(player.getUniqueId());
+        if (session != null) {
+            if (!plugin.pcConfig().allowBuckets() && !session.mode().allowsBuckets()) {
                 event.setCancelled(true);
             }
         } else if (plugin.worldService().isPracticeWorld(player.getWorld())
@@ -154,15 +160,41 @@ public final class ProtectionListener implements Listener {
         }
         Location from = event.getBlock().getLocation();
         Location to = event.getToBlock().getLocation();
-        for (PracticeSession session : plugin.sessions().all()) {
-            if (session.containsBlock(from)) {
-                if (!session.containsBlock(to)) {
-                    event.setCancelled(true); // liquid must not escape the resettable region
-                }
-                return;
+        PracticeSession session = plugin.sessions().sessionAtBlock(from);
+        if (session != null) {
+            if (!session.containsBlock(to)) {
+                event.setCancelled(true); // liquid must not escape the resettable region
             }
+            return;
+        }
+        if (plugin.setup().containsBlock(from)) {
+            // The wizard's arena behaves like the real world, or the admin
+            // would capture water that never flowed the way players see it.
+            if (!plugin.setup().containsBlock(to)) {
+                event.setCancelled(true);
+            }
+            return;
         }
         event.setCancelled(true);
+    }
+
+    /**
+     * Pistons could push blocks across an arena boundary, where neither the
+     * block revert nor the end-of-session erase reaches them — permanent
+     * litter in the shared world. The practice world has no moving parts.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onPistonExtend(BlockPistonExtendEvent event) {
+        if (plugin.worldService().isPracticeWorld(event.getBlock().getWorld())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPistonRetract(BlockPistonRetractEvent event) {
+        if (plugin.worldService().isPracticeWorld(event.getBlock().getWorld())) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler(ignoreCancelled = true)

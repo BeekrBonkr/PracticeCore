@@ -5,7 +5,8 @@ import org.bukkit.Material;
 import java.util.Locale;
 
 /**
- * What ends a rush run. The player picks exactly one before joining; each
+ * What ends a rush run. Every objective the map supports is armed on every
+ * run — whichever the player completes first finishes it — and each
  * map+objective pair keeps its own personal bests and leaderboard.
  */
 public enum RushObjective {

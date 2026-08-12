@@ -66,7 +66,7 @@ public final class TeleportListener implements Listener {
     /**
      * Outcome pass: a teleport that actually went through and left the arena
      * behind ends the session. Running at MONITOR means a teleport some other
-     * plugin cancelled later can never end a run that never moved.
+     * plugin canceled later can never end a run that never moved.
      */
     @EventHandler(priority = EventPriority.MONITOR)
     public void afterTeleport(PlayerTeleportEvent event) {
