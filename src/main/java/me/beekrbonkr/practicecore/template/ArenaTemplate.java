@@ -28,14 +28,15 @@ public final class ArenaTemplate {
     /** Format version this arena.yml was read at; see {@link Versions#ARENA}. */
     private int loadedVersion = Versions.ARENA;
     private String mode = BridgingMode.ID;
+    /** Menu grouping, or null to fall back to the mode id. */
+    private String category;
     private String displayName;
     private boolean complete;
     private Vector spawnOffset;
     private float spawnYaw;
     private float spawnPitch;
-    private Vector triggerOffset;
-    private TriggerType triggerType;
-    private String triggerBlockData;
+    /** Finish triggers; empty for modes that do not use one. */
+    private final java.util.List<ArenaTrigger> triggers = new java.util.ArrayList<>();
     private boolean requireBlocksForPb;
     /** Explicit permission node, or null to fall back to the config policy. */
     private String permission;
@@ -61,6 +62,9 @@ public final class ArenaTemplate {
         template.loadedVersion = yml.getInt(Versions.KEY, 0);
         migrate(yml, template.loadedVersion);
         template.mode = yml.getString("mode", BridgingMode.ID);
+        String category = yml.getString("category");
+        template.category = category == null || category.isBlank()
+                ? null : category.trim().toLowerCase(java.util.Locale.ROOT);
         template.displayName = yml.getString("display-name", template.name);
         template.complete = yml.getBoolean("complete", false);
         template.requireBlocksForPb = yml.getBoolean("require-blocks-for-pb", false);
@@ -77,15 +81,11 @@ public final class ArenaTemplate {
             template.spawnYaw = (float) s.getDouble("yaw");
             template.spawnPitch = (float) s.getDouble("pitch");
         }
-        if (yml.isConfigurationSection("trigger")) {
-            ConfigurationSection t = yml.getConfigurationSection("trigger");
-            template.triggerOffset = new Vector(t.getInt("x"), t.getInt("y"), t.getInt("z"));
-            try {
-                template.triggerType = TriggerType.valueOf(t.getString("type", "BUTTON"));
-            } catch (IllegalArgumentException e) {
-                template.triggerType = TriggerType.BUTTON;
+        for (Map<?, ?> entry : yml.getMapList("triggers")) {
+            ArenaTrigger trigger = readTrigger(entry);
+            if (trigger != null) {
+                template.triggers.add(trigger);
             }
-            template.triggerBlockData = t.getString("block-data", "minecraft:stone_button");
         }
         if (yml.isConfigurationSection("settings")) {
             template.settings.putAll(deepMap(yml.getConfigurationSection("settings")));
@@ -110,8 +110,37 @@ public final class ArenaTemplate {
      * step must be safe to apply to a file several versions behind.
      */
     private static void migrate(YamlConfiguration yml, int from) {
-        // v0 → v1 is the first versioned layout; nothing moved. Later steps:
-        //   if (from < 2) { yml.set("trigger.type", …); yml.set("old", null); }
+        // v0 → v1 was the first versioned layout; nothing moved.
+        if (from < 2 && yml.isConfigurationSection("trigger")) {
+            // v2: the single `trigger:` section became the `triggers:` list.
+            ConfigurationSection t = yml.getConfigurationSection("trigger");
+            Map<String, Object> entry = new java.util.LinkedHashMap<>();
+            entry.put("x", t.getInt("x"));
+            entry.put("y", t.getInt("y"));
+            entry.put("z", t.getInt("z"));
+            entry.put("type", t.getString("type", "BUTTON"));
+            entry.put("block-data", t.getString("block-data", "minecraft:stone_button"));
+            yml.set("triggers", java.util.List.of(entry));
+            yml.set("trigger", null);
+        }
+    }
+
+    private static ArenaTrigger readTrigger(Map<?, ?> entry) {
+        Object x = entry.get("x");
+        Object y = entry.get("y");
+        Object z = entry.get("z");
+        if (!(x instanceof Number nx) || !(y instanceof Number ny) || !(z instanceof Number nz)) {
+            return null;
+        }
+        TriggerType type;
+        try {
+            type = TriggerType.valueOf(String.valueOf(entry.get("type")));
+        } catch (IllegalArgumentException e) {
+            type = TriggerType.BUTTON;
+        }
+        Object data = entry.get("block-data");
+        return new ArenaTrigger(new Vector(nx.intValue(), ny.intValue(), nz.intValue()), type,
+                data != null ? String.valueOf(data) : "minecraft:stone_button");
     }
 
     public void save() throws IOException {
@@ -119,6 +148,9 @@ public final class ArenaTemplate {
         yml.set(Versions.KEY, Versions.ARENA);
         loadedVersion = Versions.ARENA;
         yml.set("mode", mode);
+        if (category != null) {
+            yml.set("category", category);
+        }
         yml.set("display-name", displayName);
         yml.set("complete", complete);
         yml.set("require-blocks-for-pb", requireBlocksForPb);
@@ -135,12 +167,18 @@ public final class ArenaTemplate {
             yml.set("spawn.yaw", spawnYaw);
             yml.set("spawn.pitch", spawnPitch);
         }
-        if (triggerOffset != null) {
-            yml.set("trigger.x", triggerOffset.getBlockX());
-            yml.set("trigger.y", triggerOffset.getBlockY());
-            yml.set("trigger.z", triggerOffset.getBlockZ());
-            yml.set("trigger.type", triggerType.name());
-            yml.set("trigger.block-data", triggerBlockData);
+        if (!triggers.isEmpty()) {
+            java.util.List<Map<String, Object>> list = new java.util.ArrayList<>();
+            for (ArenaTrigger trigger : triggers) {
+                Map<String, Object> entry = new java.util.LinkedHashMap<>();
+                entry.put("x", trigger.offset().getBlockX());
+                entry.put("y", trigger.offset().getBlockY());
+                entry.put("z", trigger.offset().getBlockZ());
+                entry.put("type", trigger.type().name());
+                entry.put("block-data", trigger.blockData());
+                list.add(entry);
+            }
+            yml.set("triggers", list);
         }
         if (!settings.isEmpty()) {
             yml.createSection("settings", settings);
@@ -170,12 +208,6 @@ public final class ArenaTemplate {
                 spawnYaw, spawnPitch);
     }
 
-    public Location triggerLocation(Location origin) {
-        return new Location(origin.getWorld(),
-                origin.getBlockX() + triggerOffset.getBlockX(),
-                origin.getBlockY() + triggerOffset.getBlockY(),
-                origin.getBlockZ() + triggerOffset.getBlockZ());
-    }
 
     public File schematicFile() {
         return new File(dir, "arena.schem");
@@ -209,6 +241,21 @@ public final class ArenaTemplate {
 
     public void setMode(String mode) {
         this.mode = mode;
+    }
+
+    /** The explicit category, or null when the arena groups under its mode. */
+    public String category() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category == null || category.isBlank()
+                ? null : category.trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    /** The category this arena is listed under — never null. */
+    public String effectiveCategory() {
+        return category != null ? category : mode;
     }
 
     public String displayName() {
@@ -245,22 +292,18 @@ public final class ArenaTemplate {
         return spawnPitch;
     }
 
-    public void setTrigger(Vector offset, TriggerType type, String blockData) {
-        this.triggerOffset = offset;
-        this.triggerType = type;
-        this.triggerBlockData = blockData;
+    public void setTriggers(java.util.List<ArenaTrigger> newTriggers) {
+        triggers.clear();
+        triggers.addAll(newTriggers);
     }
 
-    public Vector triggerOffset() {
-        return triggerOffset;
+    /** All finish triggers; touching any of them ends a run. */
+    public java.util.List<ArenaTrigger> triggers() {
+        return java.util.List.copyOf(triggers);
     }
 
-    public TriggerType triggerType() {
-        return triggerType;
-    }
-
-    public String triggerBlockData() {
-        return triggerBlockData;
+    public boolean hasTriggers() {
+        return !triggers.isEmpty();
     }
 
     public boolean requireBlocksForPb() {

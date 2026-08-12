@@ -2,6 +2,7 @@ package me.beekrbonkr.practicecore;
 
 import me.beekrbonkr.practicecore.board.BoardService;
 import me.beekrbonkr.practicecore.command.PracticeCommand;
+import me.beekrbonkr.practicecore.config.GuiConfig;
 import me.beekrbonkr.practicecore.config.ReloadResult;
 import me.beekrbonkr.practicecore.config.Versions;
 import me.beekrbonkr.practicecore.config.YamlMigrator;
@@ -17,11 +18,18 @@ import me.beekrbonkr.practicecore.listener.InteractListener;
 import me.beekrbonkr.practicecore.listener.MovementListener;
 import me.beekrbonkr.practicecore.listener.ProtectionListener;
 import me.beekrbonkr.practicecore.listener.TeleportListener;
+import me.beekrbonkr.practicecore.listener.RushListener;
 import me.beekrbonkr.practicecore.mode.BedBreakMode;
 import me.beekrbonkr.practicecore.mode.BridgingMode;
 import me.beekrbonkr.practicecore.mode.ModeRegistry;
+import me.beekrbonkr.practicecore.mode.RushMode;
+import me.beekrbonkr.practicecore.rush.RushService;
 import me.beekrbonkr.practicecore.schematic.SchematicService;
+import me.beekrbonkr.practicecore.session.InventoryValidator;
 import me.beekrbonkr.practicecore.session.SessionManager;
+import me.beekrbonkr.practicecore.session.SpeedometerService;
+import me.beekrbonkr.practicecore.settings.SettingsService;
+import me.beekrbonkr.practicecore.setup.ChatPrompts;
 import me.beekrbonkr.practicecore.setup.SetupManager;
 import me.beekrbonkr.practicecore.snapshot.SnapshotStore;
 import me.beekrbonkr.practicecore.stats.LeaderboardService;
@@ -57,6 +65,12 @@ public final class PracticeCorePlugin extends JavaPlugin {
     private MenuItemService menuItems;
     private LeaveService leaveService;
     private Messages messages;
+    private GuiConfig guis;
+    private SettingsService settings;
+    private SpeedometerService speedometer;
+    private InventoryValidator inventoryValidator;
+    private ChatPrompts prompts;
+    private RushService rush;
 
     @Override
     public void onEnable() {
@@ -65,10 +79,13 @@ public final class PracticeCorePlugin extends JavaPlugin {
         pcConfig = new PCConfig(getConfig());
         messages = new Messages(this);
         messages.load().forEach(note -> getLogger().info(note));
+        guis = new GuiConfig(this);
+        guis.load().forEach(note -> getLogger().info(note));
 
         modes = new ModeRegistry();
         modes.register(new BridgingMode());
         modes.register(new BedBreakMode());
+        modes.register(new RushMode());
 
         worldService = new PracticeWorldService(this);
         worldService.recreate();
@@ -85,6 +102,11 @@ public final class PracticeCorePlugin extends JavaPlugin {
         setup = new SetupManager(this);
         menuItems = new MenuItemService(this);
         leaveService = new LeaveService(this);
+        settings = new SettingsService(this);
+        speedometer = new SpeedometerService(this);
+        inventoryValidator = new InventoryValidator(this);
+        prompts = new ChatPrompts(this);
+        rush = new RushService(this);
 
         // Builds the name index and every leaderboard from disk, off-thread.
         stats.scanAsync();
@@ -98,6 +120,8 @@ public final class PracticeCorePlugin extends JavaPlugin {
         pm.registerEvents(new ProtectionListener(this), this);
         pm.registerEvents(new MenuListener(), this);
         pm.registerEvents(new MenuItemListener(this), this);
+        pm.registerEvents(new RushListener(this), this);
+        pm.registerEvents(prompts, this);
 
         // Used by the leave button when leave.server points at a proxy backend.
         getServer().getMessenger().registerOutgoingPluginChannel(this, LeaveService.channel());
@@ -110,6 +134,9 @@ public final class PracticeCorePlugin extends JavaPlugin {
         }
 
         boards.startTask();
+        speedometer.startTask();
+        inventoryValidator.startTask();
+        rush.startTask();
         getLogger().info("PracticeCore enabled — practice world '" + pcConfig.worldName() + "' ready.");
     }
 
@@ -125,6 +152,15 @@ public final class PracticeCorePlugin extends JavaPlugin {
         }
         if (boards != null) {
             boards.shutdown();
+        }
+        if (speedometer != null) {
+            speedometer.shutdown();
+        }
+        if (inventoryValidator != null) {
+            inventoryValidator.shutdown();
+        }
+        if (rush != null) {
+            rush.shutdown();
         }
         if (stats != null) {
             stats.flushSync();
@@ -212,6 +248,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
             notes.addAll(migrateConfig());
             pcConfig = new PCConfig(getConfig());
             notes.addAll(messages.load());
+            notes.addAll(guis.load());
         } catch (RuntimeException e) {
             pcConfig = previous;
             notes.add("Config could not be applied (" + e + ").");
@@ -225,6 +262,9 @@ public final class PracticeCorePlugin extends JavaPlugin {
             return ReloadResult.failed(notes);
         }
         boards.restartTask();
+        speedometer.restartTask();
+        inventoryValidator.restartTask();
+        rush.restartTask();
 
         if (!pcConfig.worldName().equals(previous.worldName())) {
             notes.add("world.name changed '" + previous.worldName() + "' → '" + pcConfig.worldName()
@@ -303,5 +343,25 @@ public final class PracticeCorePlugin extends JavaPlugin {
 
     public LeaveService leaveService() {
         return leaveService;
+    }
+
+    public GuiConfig guis() {
+        return guis;
+    }
+
+    public SpeedometerService speedometer() {
+        return speedometer;
+    }
+
+    public ChatPrompts prompts() {
+        return prompts;
+    }
+
+    public SettingsService settings() {
+        return settings;
+    }
+
+    public RushService rush() {
+        return rush;
     }
 }

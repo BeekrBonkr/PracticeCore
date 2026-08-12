@@ -3,8 +3,10 @@ package me.beekrbonkr.practicecore.session;
 import me.beekrbonkr.practicecore.grid.Slot;
 import me.beekrbonkr.practicecore.mode.Mode;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
+import me.beekrbonkr.practicecore.template.TriggerType;
 import org.bukkit.Location;
 
+import java.util.Map;
 import java.util.UUID;
 
 public final class PracticeSession {
@@ -16,7 +18,8 @@ public final class PracticeSession {
     private final Location origin;
     private final org.bukkit.util.BoundingBox bounds;
     private final Location spawn;
-    private final Location trigger;
+    /** Finish trigger block locations → their kind; empty for trigger-less modes. */
+    private final Map<Location, TriggerType> triggers;
 
     private SessionState state = SessionState.PREPARING;
     private final BlockTracker tracker = new BlockTracker();
@@ -31,7 +34,7 @@ public final class PracticeSession {
 
     public PracticeSession(UUID playerId, ArenaTemplate template, Mode mode, Slot slot,
                            Location origin, org.bukkit.util.BoundingBox bounds,
-                           Location spawn, Location trigger) {
+                           Location spawn, Map<Location, TriggerType> triggers) {
         this.playerId = playerId;
         this.template = template;
         this.mode = mode;
@@ -39,7 +42,7 @@ public final class PracticeSession {
         this.origin = origin;
         this.bounds = bounds;
         this.spawn = spawn;
-        this.trigger = trigger;
+        this.triggers = Map.copyOf(triggers);
     }
 
     public UUID playerId() {
@@ -70,9 +73,14 @@ public final class PracticeSession {
         return spawn;
     }
 
-    /** Block location of the finish button/plate, or null for modes without one. */
-    public Location trigger() {
-        return trigger;
+    /** True when this block location holds one of the finish buttons/plates. */
+    public boolean isTrigger(Location loc) {
+        return triggers.containsKey(loc);
+    }
+
+    /** The trigger kind at this block, or null when it is not a trigger. */
+    public TriggerType triggerTypeAt(Location loc) {
+        return triggers.get(loc);
     }
 
     public SessionState state() {

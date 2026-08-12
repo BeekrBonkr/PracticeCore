@@ -47,8 +47,12 @@ public final class GeneratedArenas {
         }
         Path marker = plugin.getDataFolder().toPath().resolve(MARKER);
         Set<String> installed = readMarker(marker);
-        if (install(installed, templatesDir, BedBreakMode.ID,
-                plugin.pcConfig().generatedArenaName(BedBreakMode.ID), this::writeBedBreak)) {
+        boolean changed = install(installed, templatesDir, BedBreakMode.ID,
+                plugin.pcConfig().generatedArenaName(BedBreakMode.ID), this::writeBedBreak);
+        changed |= install(installed, templatesDir, "bedbreak-horizontal",
+                plugin.pcConfig().generatedArenaName("bedbreak-horizontal"),
+                this::writeBedBreakHorizontal);
+        if (changed) {
             writeMarker(marker, installed);
         }
     }
@@ -109,11 +113,48 @@ public final class GeneratedArenas {
         template.setIcon(Material.RED_BED);
         // On top of the 17-block column, looking straight down.
         template.setSpawn(new Vector(0.5, 18.0, 0.5), 0f, 90f);
+        toolKit(template);
+        template.settings().put("bedbreak", bedbreakSettings("VERTICAL"));
+        template.setComplete(true);
+        template.save();
+    }
+
+    /**
+     * The horizontal variant: a sealed two-high corridor with the bed at the
+     * far end and the defense wall filling the passage. Each defense step is a
+     * two-high column, so the only way to the bed is straight through.
+     */
+    private void writeBedBreakHorizontal(String name, File dir) throws IOException, WorldEditException {
+        Builder build = new Builder(3, 4, 23, BlockVector3.at(1, 1, 20));
+        build.fill(0, 0, 0, 2, 3, 22, Material.BARRIER);            // solid shell…
+        build.fill(1, 1, 1, 1, 2, 21, Material.AIR);                // …hollowed corridor
+        build.set(1, 1, 20, Bukkit.createBlockData(Material.RED_BED, "[part=head,facing=north]"));
+        build.set(1, 1, 21, Bukkit.createBlockData(Material.RED_BED, "[part=foot,facing=north]"));
+        // The wall between z=3 and z=19 stays air — the mode rolls it every run.
+        build.save(plugin, dir);
+
+        ArenaTemplate template = new ArenaTemplate(name, dir);
+        template.setMode(BedBreakMode.ID);
+        template.setDisplayName("Bed Break Horizontal");
+        template.setIcon(Material.RED_BED);
+        // At the corridor's near end, facing the bed (+z is yaw 0).
+        template.setSpawn(new Vector(0.5, 0.0, -18.5), 0f, 0f);
+        toolKit(template);
+        template.settings().put("bedbreak", bedbreakSettings("HORIZONTAL"));
+        template.setComplete(true);
+        template.save();
+    }
+
+    private static void toolKit(ArenaTemplate template) {
         template.kit().put(0, new ItemStack(Material.DIAMOND_SWORD));
         template.kit().put(1, new ItemStack(Material.DIAMOND_PICKAXE));
         template.kit().put(2, new ItemStack(Material.DIAMOND_AXE));
         template.kit().put(3, new ItemStack(Material.SHEARS));
+    }
+
+    private static Map<String, Object> bedbreakSettings(String orientation) {
         Map<String, Object> bedbreak = new LinkedHashMap<>();
+        bedbreak.put("orientation", orientation);
         bedbreak.put("bed-x", 0);
         bedbreak.put("bed-y", 0);
         bedbreak.put("bed-z", 0);
@@ -125,9 +166,7 @@ public final class GeneratedArenas {
         blocks.put("END_STONE_BRICKS", 4);
         blocks.put("OBSIDIAN", 1);
         bedbreak.put("blocks", blocks);
-        template.settings().put("bedbreak", bedbreak);
-        template.setComplete(true);
-        template.save();
+        return bedbreak;
     }
 
     // -------------------------------------------------------------- marker

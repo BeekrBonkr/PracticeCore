@@ -196,6 +196,22 @@ public final class TemplateRegistry {
         return completeTemplates();
     }
 
+    /** Visible arenas belonging to one category. */
+    public List<ArenaTemplate> visibleTo(Player player, String category) {
+        return visibleTo(player).stream()
+                .filter(t -> t.effectiveCategory().equalsIgnoreCase(category))
+                .toList();
+    }
+
+    /** The categories this player can see, in arena order. */
+    public List<String> categoriesFor(Player player) {
+        java.util.LinkedHashSet<String> categories = new java.util.LinkedHashSet<>();
+        for (ArenaTemplate template : visibleTo(player)) {
+            categories.add(template.effectiveCategory());
+        }
+        return List.copyOf(categories);
+    }
+
     /**
      * The configured default arena, or null when none is set, it does not
      * exist, or it is not finished. Never returns something unplayable.
@@ -220,6 +236,51 @@ public final class TemplateRegistry {
     }
 
     // ------------------------------------------------------------- deletion
+
+    /**
+     * Deletes an arena everywhere: live sessions on it are ended and their
+     * players restored, the folder is removed, and the leaderboard is wiped
+     * from memory and from every playerdata file (or the startup scan would
+     * resurrect it). Shared by the admin command and the setup GUI.
+     *
+     * @param whenPurged called on the main thread with the player-record count
+     * @return false when no arena by that name existed or its folder resisted
+     */
+    public boolean deleteCompletely(String name, java.util.function.IntConsumer whenPurged) {
+        ArenaTemplate template = get(name);
+        if (template == null) {
+            return false;
+        }
+        for (var session : List.copyOf(plugin.sessions().all())) {
+            if (session.template().name().equals(template.name())) {
+                org.bukkit.entity.Player player = org.bukkit.Bukkit.getPlayer(session.playerId());
+                if (player != null) {
+                    plugin.messages().note(player, "This arena was removed by an admin.");
+                    plugin.sessions().leave(player, true);
+                }
+            }
+        }
+        if (!delete(template.name())) {
+            return false;
+        }
+        // Modes with several boards per arena (rush) record under composite
+        // keys — every one has to go, or the startup scan resurrects them.
+        java.util.LinkedHashSet<String> keys = new java.util.LinkedHashSet<>();
+        keys.add(template.name());
+        keys.addAll(plugin.modes().of(template).statsKeys(template));
+        java.util.concurrent.atomic.AtomicInteger total = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger pending = new java.util.concurrent.atomic.AtomicInteger(keys.size());
+        for (String key : keys) {
+            plugin.leaderboards().forget(key);
+            plugin.stats().purgeTemplate(key, purged -> {
+                total.addAndGet(purged);
+                if (pending.decrementAndGet() == 0) {
+                    whenPurged.accept(total.get());
+                }
+            });
+        }
+        return true;
+    }
 
     /** Removes the arena from the registry and deletes its folder. */
     public boolean delete(String name) {

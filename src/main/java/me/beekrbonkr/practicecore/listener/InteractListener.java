@@ -34,11 +34,10 @@ public final class InteractListener implements Listener {
                 return;
             }
             Block block = event.getClickedBlock();
-            // The finish trigger wins over the menu item: right-clicking the
+            // A finish trigger wins over the menu item: right-clicking a
             // button to end a run must never open a GUI instead.
             if (session != null && block != null
-                    && session.template().triggerType() == TriggerType.BUTTON
-                    && block.getLocation().equals(session.trigger())) {
+                    && session.triggerTypeAt(block.getLocation()) == TriggerType.BUTTON) {
                 event.setCancelled(true); // no redstone pulse into the schematic
                 tryFinish(player, session, block);
                 return;
@@ -59,8 +58,7 @@ public final class InteractListener implements Listener {
             if (block == null) {
                 return;
             }
-            if (session.template().triggerType() == TriggerType.PLATE
-                    && block.getLocation().equals(session.trigger())) {
+            if (session.triggerTypeAt(block.getLocation()) == TriggerType.PLATE) {
                 event.setCancelled(true);
                 tryFinish(player, session, block);
             } else {
@@ -68,6 +66,29 @@ public final class InteractListener implements Listener {
                 event.setCancelled(true);
             }
         }
+    }
+
+    /** Tool switches feed the modes that measure them (bedbreak reaction time). */
+    @org.bukkit.event.EventHandler(ignoreCancelled = true)
+    public void onHeldItemChange(org.bukkit.event.player.PlayerItemHeldEvent event) {
+        Player player = event.getPlayer();
+        PracticeSession session = plugin.sessions().get(player.getUniqueId());
+        if (session == null || session.state() != SessionState.ACTIVE) {
+            return;
+        }
+        session.mode().onHeldItemChange(plugin, player, session,
+                player.getInventory().getItem(event.getNewSlot()));
+    }
+
+    /** The F-key swap changes the held item without a PlayerItemHeldEvent. */
+    @org.bukkit.event.EventHandler(ignoreCancelled = true)
+    public void onSwapHands(org.bukkit.event.player.PlayerSwapHandItemsEvent event) {
+        Player player = event.getPlayer();
+        PracticeSession session = plugin.sessions().get(player.getUniqueId());
+        if (session == null || session.state() != SessionState.ACTIVE) {
+            return;
+        }
+        session.mode().onHeldItemChange(plugin, player, session, event.getMainHandItem());
     }
 
     /** @return true when the click was consumed by the menu item. */

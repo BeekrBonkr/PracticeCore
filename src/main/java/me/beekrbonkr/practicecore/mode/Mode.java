@@ -39,6 +39,67 @@ public interface Mode {
         return true;
     }
 
+    /** Whether the action-bar speedometer runs for sessions of this mode. */
+    default boolean showsSpeedometer() {
+        return false;
+    }
+
+    /**
+     * Whether the periodic inventory sweep applies. Modes with an open-ended
+     * economy (shop purchases, generator pickups) opt out.
+     */
+    default boolean validatesInventory() {
+        return true;
+    }
+
+    /**
+     * Last chance to refuse a join after the standard checks, e.g. a missing
+     * soft dependency or an unconfigured per-mode section.
+     *
+     * @return a messages.yml key to send the player, or null to proceed
+     */
+    default String validateJoin(PracticeCorePlugin plugin, Player player, ArenaTemplate template) {
+        return null;
+    }
+
+    /**
+     * Where the player spawns in a freshly pasted arena. Modes whose spawn
+     * depends on a pre-join choice (rush team bases) resolve it here.
+     */
+    default org.bukkit.Location spawnLocation(PracticeCorePlugin plugin, Player player,
+                                              ArenaTemplate template, org.bukkit.Location origin) {
+        return template.spawnLocation(origin);
+    }
+
+    /**
+     * The key this session's times are recorded and ranked under. The default
+     * is the arena name; modes with several boards per arena qualify it.
+     */
+    default String statsKey(PracticeCorePlugin plugin, PracticeSession session) {
+        return session.template().name();
+    }
+
+    /**
+     * Every stats key an arena of this mode can produce — what has to be
+     * purged when the arena is deleted.
+     */
+    default List<String> statsKeys(ArenaTemplate template) {
+        return List.of(template.name());
+    }
+
+    /** The arena name shown in finish messages and broadcasts for this run. */
+    default String runDisplayName(PracticeCorePlugin plugin, PracticeSession session) {
+        return session.template().displayName();
+    }
+
+    /**
+     * The player scrolled or swapped to another hotbar slot. {@code held} is
+     * the item now in hand, possibly null/air.
+     */
+    default void onHeldItemChange(PracticeCorePlugin plugin, Player player,
+                                  PracticeSession session, ItemStack held) {
+    }
+
     /**
      * The session reached READY: right after the join teleport, and again at
      * the end of every arena reset. Regenerate mode-owned blocks and schedule

@@ -3,17 +3,20 @@ plugins {
 }
 
 group = "me.beekrbonkr"
-version = "0.3.0"
+version = "0.4.0"
 
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://maven.enginehub.org/repo/")
+    maven("https://repo.marcely.de/repository/maven-public/")
 }
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
     compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.6")
+    // Soft dependency: rush practice pulls maps and the shop from MBedwars.
+    compileOnly("de.marcely.bedwars:API:5.5.5")
     // Loaded at runtime by the server via plugin.yml `libraries:` — no shading needed.
     compileOnly("fr.mrmicky:fastboard:2.2.1")
 }

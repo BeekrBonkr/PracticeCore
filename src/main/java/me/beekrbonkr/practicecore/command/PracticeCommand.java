@@ -29,11 +29,13 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
     private final PracticeCorePlugin plugin;
     private final SetupCommands setup;
     private final AdminCommands admin;
+    private final RushCommands rush;
 
     public PracticeCommand(PracticeCorePlugin plugin) {
         this.plugin = plugin;
         this.setup = new SetupCommands(plugin);
         this.admin = new AdminCommands(plugin);
+        this.rush = new RushCommands(plugin);
     }
 
     private Messages msg() {
@@ -53,6 +55,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
             case "sidebar", "scoreboard" -> sidebar(sender);
             case "setup" -> setup.setup(sender, args);
             case "edit" -> setup.edit(sender, args);
+            case "rush" -> rush.rush(sender, args);
             case "arena" -> admin.arena(sender, args);
             case "pb" -> admin.pb(sender, args);
             case "item" -> admin.item(sender, args);
@@ -173,18 +176,35 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
             }
             return;
         }
+        String key;
+        String display;
         ArenaTemplate template = plugin.templates().get(args[1]);
-        if (template == null) {
-            msg().send(sender, "arena.unknown", "arena", args[1]);
-            return;
+        if (template != null) {
+            if (template.mode().equals(me.beekrbonkr.practicecore.mode.RushMode.ID)) {
+                // A rush arena has one board per objective — point at one.
+                msg().note(sender, "'" + template.name() + "' is a rush arena; pick a board: "
+                        + template.name() + "#bed, " + template.name() + "#emerald or "
+                        + template.name() + "#diamond.");
+                return;
+            }
+            key = template.name();
+            display = template.displayName();
+        } else {
+            var rushBoard = plugin.rush().resolveStatsKey(args[1].toLowerCase(Locale.ROOT));
+            if (rushBoard == null) {
+                msg().send(sender, "arena.unknown", "arena", args[1]);
+                return;
+            }
+            key = args[1].toLowerCase(Locale.ROOT);
+            display = plugin.rush().displayFor(rushBoard.getKey(), rushBoard.getValue());
         }
         List<LeaderboardService.Entry> top = plugin.leaderboards()
-                .top(template.name(), plugin.pcConfig().leaderboardSize());
+                .top(key, plugin.pcConfig().leaderboardSize());
         if (top.isEmpty()) {
-            msg().send(sender, "leaderboard.empty", "arena", template.displayName());
+            msg().send(sender, "leaderboard.empty", "arena", display);
             return;
         }
-        msg().send(sender, "leaderboard.header", "arena", template.displayName());
+        msg().send(sender, "leaderboard.header", "arena", display);
         for (int i = 0; i < top.size(); i++) {
             LeaderboardService.Entry entry = top.get(i);
             msg().send(sender, "leaderboard.entry",
@@ -193,11 +213,11 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
                     "time", TimeFormat.precise(entry.millis()));
         }
         if (sender instanceof Player player) {
-            int rank = plugin.leaderboards().rank(template.name(), player.getUniqueId());
+            int rank = plugin.leaderboards().rank(key, player.getUniqueId());
             if (rank > top.size()) {
                 msg().send(sender, "leaderboard.your-rank",
                         "rank", String.valueOf(rank),
-                        "total", String.valueOf(plugin.leaderboards().size(template.name())));
+                        "total", String.valueOf(plugin.leaderboards().size(key)));
             }
         }
     }
@@ -294,6 +314,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
             if (sender.hasPermission("practicecore.setup")) {
                 subs.add("setup");
                 subs.add("edit");
+                subs.add("rush");
             }
             if (sender.hasPermission("practicecore.arena")) {
                 subs.add("arena");
@@ -326,6 +347,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
             case "edit" -> args.length == 2 && sender.hasPermission("practicecore.setup")
                     ? filter(plugin.templates().names(), args[1]) : List.of();
             case "setup" -> setup.complete(sender, args);
+            case "rush" -> rush.complete(sender, args);
             case "arena" -> admin.completeArena(sender, args);
             case "pb" -> admin.completePb(sender, args);
             case "item" -> args.length == 2 && sender.hasPermission("practicecore.item")

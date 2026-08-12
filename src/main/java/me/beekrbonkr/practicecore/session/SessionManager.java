@@ -109,19 +109,27 @@ public final class SessionManager {
         // slot is taken — an aborted join must leave no arena behind.
         me.beekrbonkr.practicecore.mode.Mode mode = plugin.modes().of(template);
         boolean needsTrigger = mode.requiresTrigger();
-        if (template.spawnOffset() == null || (needsTrigger && template.triggerOffset() == null)) {
+        if (template.spawnOffset() == null || (needsTrigger && !template.hasTriggers())) {
             msg.send(player, "arena.broken");
             return;
         }
-        BlockData triggerData = null;
+        String refusal = mode.validateJoin(plugin, player, template);
+        if (refusal != null) {
+            msg.send(player, refusal);
+            return;
+        }
+        Map<me.beekrbonkr.practicecore.template.ArenaTrigger, BlockData> triggerData =
+                new java.util.LinkedHashMap<>();
         if (needsTrigger) {
-            try {
-                triggerData = Bukkit.createBlockData(template.triggerBlockData());
-            } catch (IllegalArgumentException e) {
-                msg.send(player, "arena.broken-trigger");
-                plugin.getLogger().severe("Invalid trigger block-data for '" + template.name()
-                        + "': " + template.triggerBlockData());
-                return;
+            for (me.beekrbonkr.practicecore.template.ArenaTrigger arenaTrigger : template.triggers()) {
+                try {
+                    triggerData.put(arenaTrigger, Bukkit.createBlockData(arenaTrigger.blockData()));
+                } catch (IllegalArgumentException e) {
+                    msg.send(player, "arena.broken-trigger");
+                    plugin.getLogger().severe("Invalid trigger block-data for '" + template.name()
+                            + "': " + arenaTrigger.blockData());
+                    return;
+                }
             }
         }
         Clipboard clipboard;
@@ -154,20 +162,24 @@ public final class SessionManager {
         }
         slot.occupy();
 
-        // The finish trigger is not part of the schematic (it was placed
-        // during setup, after the //copy) — the plugin stamps it in.
-        Location trigger = null;
-        if (needsTrigger) {
-            trigger = template.triggerLocation(origin);
-            trigger.getBlock().setBlockData(triggerData, false);
+        // The finish triggers are not part of the schematic (they were placed
+        // during setup, after the //copy) — the plugin stamps them in.
+        Map<Location, me.beekrbonkr.practicecore.template.TriggerType> triggers =
+                new java.util.LinkedHashMap<>();
+        for (Map.Entry<me.beekrbonkr.practicecore.template.ArenaTrigger, BlockData> entry
+                : triggerData.entrySet()) {
+            Location loc = entry.getKey().location(origin);
+            loc.getBlock().setBlockData(entry.getValue(), false);
+            triggers.put(loc, entry.getKey().type());
         }
 
         addChunkTickets(world, bounds);
 
         PracticeSession session = new PracticeSession(id, template, mode, slot, origin, bounds,
-                template.spawnLocation(origin), trigger);
-        session.setBestTimeMs(plugin.stats().bestMs(id, template.name()));
-        session.setLastTimeMs(plugin.stats().lastMs(id, template.name()));
+                mode.spawnLocation(plugin, player, template, origin), triggers);
+        String statsKey = mode.statsKey(plugin, session);
+        session.setBestTimeMs(plugin.stats().bestMs(id, statsKey));
+        session.setLastTimeMs(plugin.stats().lastMs(id, statsKey));
         // Replaces `current` in the map; `current` is still ours to clean up.
         sessions.put(id, session);
 
@@ -223,6 +235,7 @@ public final class SessionManager {
             return;
         }
         if (plugin.snapshots().has(id)) {
+            plugin.settings().clearOnExit(player);
             plugin.snapshots().load(id).ifPresent(snapshot -> snapshot.apply(player, true));
             plugin.snapshots().delete(id);
             plugin.messages().send(player, "session.restored-after-failure");
@@ -285,6 +298,7 @@ public final class SessionManager {
         player.setFireTicks(0);
         player.setFallDistance(0);
         player.setVelocity(new Vector(0, 0, 0));
+        plugin.settings().applyToSession(player);
         giveKit(player, session);
     }
 
@@ -293,7 +307,8 @@ public final class SessionManager {
         player.getInventory().clear();
         for (Map.Entry<Integer, ItemStack> entry
                 : session.mode().arrangeKit(plugin, player, template).entrySet()) {
-            player.getInventory().setItem(entry.getKey(), entry.getValue().clone());
+            player.getInventory().setItem(entry.getKey(),
+                    plugin.settings().recolor(player.getUniqueId(), entry.getValue().clone()));
         }
         // Retro-fit for kits saved before the menu item existed.
         if (plugin.pcConfig().menuItemEnabled() && plugin.pcConfig().menuItemForceInKit()
@@ -312,7 +327,10 @@ public final class SessionManager {
         session.setState(SessionState.RESETTING);
         session.setLastTimeMs(millis);
 
-        String arena = session.template().name();
+        // Modes with several boards per arena qualify both of these (rush:
+        // "map#bed" / "Map (Bed)"); everything below keys off them.
+        String arena = session.mode().statsKey(plugin, session);
+        String displayName = session.mode().runDisplayName(plugin, session);
         LeaderboardService.Entry previousRecord = plugin.leaderboards().record(arena);
         boolean pbEligible = !session.template().requireBlocksForPb() || session.tracker().count() > 0;
         long previousBest = session.bestTimeMs();
@@ -321,25 +339,35 @@ public final class SessionManager {
         if (pb) {
             session.setBestTimeMs(millis);
             msg.send(player, "run.finished-pb", "time", TimeFormat.precise(millis),
-                    "arena", session.template().displayName());
+                    "arena", displayName);
         } else if (previousBest >= 0) {
             msg.send(player, "run.finished", "time", TimeFormat.precise(millis),
                     "best", TimeFormat.precise(previousBest),
-                    "arena", session.template().displayName());
+                    "arena", displayName);
         } else {
             msg.send(player, "run.finished-first", "time", TimeFormat.precise(millis),
-                    "arena", session.template().displayName());
+                    "arena", displayName);
         }
-        announceFinish(player, session, millis, pb, previousBest);
+        announceFinish(player, session, millis, pb, previousBest, displayName);
         if (pb) {
-            announceRecord(player, session, millis, previousRecord);
+            boolean recordAnnounced = announceRecord(player, session, millis, previousRecord,
+                    arena, displayName);
+            // A subtle server-wide note for an improved personal best — but
+            // never on top of the record fanfare, and not for first finishes.
+            if (!recordAnnounced && previousBest >= 0 && plugin.pcConfig().broadcastPbs()) {
+                plugin.messages().broadcast("run.pb-broadcast",
+                        "player", player.getName(),
+                        "arena", displayName,
+                        "time", TimeFormat.precise(millis),
+                        "improvement", TimeFormat.precise(previousBest - millis));
+            }
         }
         resetArena(player, session);
     }
 
     /** Title, subtitle and sound on crossing the line. */
     private void announceFinish(Player player, PracticeSession session, long millis,
-                                boolean pb, long previousBest) {
+                                boolean pb, long previousBest, String displayName) {
         if (plugin.pcConfig().finishTitle()) {
             String subtitleKey;
             String delta = "";
@@ -355,7 +383,7 @@ public final class SessionManager {
                     pb ? "run.title.pb" : "run.title.normal", subtitleKey,
                     "time", TimeFormat.precise(millis),
                     "delta", delta,
-                    "arena", session.template().displayName());
+                    "arena", displayName);
         }
         if (plugin.pcConfig().sounds()) {
             player.playSound(player.getLocation(),
@@ -364,32 +392,43 @@ public final class SessionManager {
         }
     }
 
-    /** Server-wide shout when someone takes the #1 spot on an arena. */
-    private void announceRecord(Player player, PracticeSession session, long millis,
-                                LeaderboardService.Entry previousRecord) {
+    /**
+     * Server-wide shout plus a small chime when someone takes the #1 spot on
+     * an arena.
+     *
+     * @return true when the record was actually announced
+     */
+    private boolean announceRecord(Player player, PracticeSession session, long millis,
+                                   LeaderboardService.Entry previousRecord,
+                                   String arena, String displayName) {
         if (!plugin.pcConfig().broadcastRecords()) {
-            return;
+            return false;
         }
-        String arena = session.template().name();
         if (plugin.leaderboards().rank(arena, player.getUniqueId()) != 1) {
-            return;
+            return false;
         }
         if (previousRecord != null && previousRecord.uuid().equals(player.getUniqueId())) {
-            return; // they already held it — beating yourself isn't news
+            return false; // they already held it — beating yourself isn't news
         }
         if (previousRecord == null) {
             plugin.messages().broadcast("run.record-broadcast",
                     "player", player.getName(),
-                    "arena", session.template().displayName(),
+                    "arena", displayName,
                     "time", TimeFormat.precise(millis));
         } else {
             plugin.messages().broadcast("run.record-broadcast-beaten",
                     "player", player.getName(),
-                    "arena", session.template().displayName(),
+                    "arena", displayName,
                     "time", TimeFormat.precise(millis),
                     "previous-holder", previousRecord.displayName(),
                     "delta", TimeFormat.precise(previousRecord.millis() - millis));
         }
+        if (plugin.pcConfig().sounds()) {
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                online.playSound(online.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 0.5f, 1.6f);
+            }
+        }
+        return true;
     }
 
     public void fail(Player player, PracticeSession session) {
@@ -430,6 +469,11 @@ public final class SessionManager {
         player.setVelocity(new Vector(0, 0, 0));
         session.setState(SessionState.READY);
         session.mode().onReady(plugin, player, session);
+        // The stats key can change between runs (rush objective switched via
+        // restart) — re-read the cached bests from whatever board is now live.
+        String statsKey = session.mode().statsKey(plugin, session);
+        session.setBestTimeMs(plugin.stats().bestMs(session.playerId(), statsKey));
+        session.setLastTimeMs(plugin.stats().lastMs(session.playerId(), statsKey));
     }
 
     // ---------------------------------------------------------------- leave
@@ -447,6 +491,7 @@ public final class SessionManager {
         notifyEnd(session);
         session.setState(SessionState.ENDING);
         plugin.boards().remove(player);
+        plugin.settings().clearOnExit(player);
         plugin.snapshots().load(player.getUniqueId()).ifPresent(snapshot ->
                 snapshot.apply(player, restoreLocation));
         plugin.snapshots().delete(player.getUniqueId());
@@ -461,6 +506,7 @@ public final class SessionManager {
             notifyEnd(session);
             session.setState(SessionState.ENDING);
             plugin.boards().remove(player);
+            plugin.settings().clearOnExit(player);
             // Mutations during PlayerQuitEvent persist to the player's data.
             plugin.snapshots().load(player.getUniqueId()).ifPresent(snapshot ->
                     snapshot.apply(player, true));
@@ -479,6 +525,7 @@ public final class SessionManager {
             Player player = Bukkit.getPlayer(session.playerId());
             if (player != null && player.isOnline()) {
                 plugin.boards().remove(player);
+                plugin.settings().clearOnExit(player);
                 plugin.snapshots().load(session.playerId()).ifPresent(snapshot ->
                         snapshot.apply(player, true));
                 plugin.snapshots().delete(session.playerId());

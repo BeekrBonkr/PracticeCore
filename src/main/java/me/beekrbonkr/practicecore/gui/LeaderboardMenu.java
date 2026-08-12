@@ -34,7 +34,7 @@ public final class LeaderboardMenu extends PagedMenu<ArenaTemplate> {
 
     @Override
     protected ItemStack emptyIcon() {
-        return ItemBuilder.of(Material.COBWEB)
+        return ItemBuilder.of(emptyMaterial())
                 .name(name("gui.leaderboards.empty.name"))
                 .lore(lore("gui.leaderboards.empty.lore"))
                 .build();
@@ -42,23 +42,42 @@ public final class LeaderboardMenu extends PagedMenu<ArenaTemplate> {
 
     @Override
     protected ItemStack icon(ArenaTemplate template) {
-        LeaderboardService.Entry record = plugin.leaderboards().record(template.name());
-        int rank = plugin.leaderboards().rank(template.name(), viewer.getUniqueId());
+        // Rush arenas keep one board per objective; the tile sums them and
+        // shows the fastest record of the three.
+        List<String> keys = plugin.modes().of(template).statsKeys(template);
+        LeaderboardService.Entry record = null;
+        int players = 0;
+        int bestRank = 0;
+        for (String key : keys) {
+            LeaderboardService.Entry keyRecord = plugin.leaderboards().record(key);
+            if (keyRecord != null && (record == null || keyRecord.millis() < record.millis())) {
+                record = keyRecord;
+            }
+            players += plugin.leaderboards().size(key);
+            int rank = plugin.leaderboards().rank(key, viewer.getUniqueId());
+            if (rank > 0 && (bestRank == 0 || rank < bestRank)) {
+                bestRank = rank;
+            }
+        }
         return ItemBuilder.of(template.effectiveIcon())
                 .name(name("gui.leaderboards.entry-name", "arena", template.displayName()))
                 .lore(lore("gui.leaderboards.entry-lore",
                         "arena", template.displayName(),
-                        "players", String.valueOf(plugin.leaderboards().size(template.name())),
+                        "players", String.valueOf(players),
                         "record", record != null ? TimeFormat.precise(record.millis()) : raw("gui.none"),
                         "record-holder", record != null ? record.displayName() : raw("gui.none"),
-                        "rank", rank > 0 ? "#" + rank : raw("gui.none")))
-                .glow(rank == 1)
+                        "rank", bestRank > 0 ? "#" + bestRank : raw("gui.none")))
+                .glow(bestRank == 1)
                 .build();
     }
 
     @Override
     protected void onEntryClick(ArenaTemplate template, InventoryClickEvent event) {
         click();
+        if (template.mode().equals(me.beekrbonkr.practicecore.mode.RushMode.ID)) {
+            later(() -> new RushBoardPickerMenu(plugin, viewer, this, template).open());
+            return;
+        }
         later(() -> new ArenaLeaderboardMenu(plugin, viewer, this, template).open());
     }
 }

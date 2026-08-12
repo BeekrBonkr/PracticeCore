@@ -21,23 +21,33 @@ import java.util.List;
  */
 public final class ArenaMenu extends PagedMenu<ArenaTemplate> {
 
-    public ArenaMenu(PracticeCorePlugin plugin, Player viewer, Menu parent) {
+    /** Null lists every visible arena; otherwise only that category's. */
+    private final String category;
+
+    public ArenaMenu(PracticeCorePlugin plugin, Player viewer, Menu parent, String category) {
         super(plugin, viewer, parent);
+        this.category = category;
     }
 
     @Override
     protected Component title() {
-        return text("gui.arenas.title");
+        if (category == null) {
+            return text("gui.arenas.title");
+        }
+        return text("gui.arenas.title-category",
+                "category", plugin.guis().categoryName(category));
     }
 
     @Override
     protected List<ArenaTemplate> entries() {
-        return plugin.templates().visibleTo(viewer);
+        return category == null
+                ? plugin.templates().visibleTo(viewer)
+                : plugin.templates().visibleTo(viewer, category);
     }
 
     @Override
     protected ItemStack emptyIcon() {
-        return ItemBuilder.of(Material.COBWEB)
+        return ItemBuilder.of(emptyMaterial())
                 .name(name("gui.arenas.empty.name"))
                 .lore(lore("gui.arenas.empty.lore"))
                 .build();
@@ -94,6 +104,11 @@ public final class ArenaMenu extends PagedMenu<ArenaTemplate> {
             return;
         }
         click();
+        if (template.mode().equals(me.beekrbonkr.practicecore.mode.RushMode.ID)) {
+            // Rush needs its objective/team/modifier choices before joining.
+            later(() -> new RushConfigMenu(plugin, viewer, this, template).open());
+            return;
+        }
         later(() -> {
             viewer.closeInventory();
             // Switching from another arena is handled inside join().

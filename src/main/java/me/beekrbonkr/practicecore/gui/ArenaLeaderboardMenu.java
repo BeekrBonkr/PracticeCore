@@ -16,32 +16,45 @@ import org.bukkit.inventory.meta.SkullMeta;
 import java.util.ArrayList;
 import java.util.List;
 
-/** The ranked times for one arena, fastest first. */
+/**
+ * The ranked times for one board, fastest first. Usually an arena's; rush
+ * arenas hand in a composite {@code boardKey} ("map#bed") with a matching
+ * display name, one board per objective.
+ */
 public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Entry> {
 
     private static final Material[] MEDALS = {
             Material.GOLD_INGOT, Material.IRON_INGOT, Material.COPPER_INGOT};
 
     private final ArenaTemplate template;
+    private final String boardKey;
+    private final String boardName;
 
     public ArenaLeaderboardMenu(PracticeCorePlugin plugin, Player viewer, Menu parent, ArenaTemplate template) {
+        this(plugin, viewer, parent, template, template.name(), template.displayName());
+    }
+
+    public ArenaLeaderboardMenu(PracticeCorePlugin plugin, Player viewer, Menu parent,
+                                ArenaTemplate template, String boardKey, String boardName) {
         super(plugin, viewer, parent);
         this.template = template;
+        this.boardKey = boardKey;
+        this.boardName = boardName;
     }
 
     @Override
     protected Component title() {
-        return text("gui.board.title", "arena", template.displayName());
+        return text("gui.board.title", "arena", boardName);
     }
 
     @Override
     protected List<LeaderboardService.Entry> entries() {
-        return plugin.leaderboards().top(template.name(), plugin.pcConfig().leaderboardSize());
+        return plugin.leaderboards().top(boardKey, plugin.pcConfig().leaderboardSize());
     }
 
     @Override
     protected ItemStack emptyIcon() {
-        return ItemBuilder.of(Material.COBWEB)
+        return ItemBuilder.of(emptyMaterial())
                 .name(name("gui.board.empty.name"))
                 .lore(lore("gui.board.empty.lore"))
                 .build();
@@ -49,9 +62,9 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
 
     @Override
     protected ItemStack icon(LeaderboardService.Entry entry) {
-        int rank = plugin.leaderboards().rank(template.name(), entry.uuid());
+        int rank = plugin.leaderboards().rank(boardKey, entry.uuid());
         boolean self = entry.uuid().equals(viewer.getUniqueId());
-        LeaderboardService.Entry leader = plugin.leaderboards().record(template.name());
+        LeaderboardService.Entry leader = plugin.leaderboards().record(boardKey);
 
         String nameKey = rank == 1 ? "gui.board.entry-name-first"
                 : self ? "gui.board.entry-name-self" : "gui.board.entry-name";
@@ -91,14 +104,14 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
 
     @Override
     protected void renderFooter() {
-        int rank = plugin.leaderboards().rank(template.name(), viewer.getUniqueId());
-        long best = plugin.stats().bestMs(viewer.getUniqueId(), template.name());
+        int rank = plugin.leaderboards().rank(boardKey, viewer.getUniqueId());
+        long best = plugin.stats().bestMs(viewer.getUniqueId(), boardKey);
         LeaderboardService.Entry ahead = ahead(rank);
         ItemBuilder standing = ItemBuilder.of(Material.NAME_TAG).name(name("gui.board.standing.name"));
         if (rank > 0) {
             standing.lore(lore("gui.board.standing.lore",
                     "rank", "#" + rank,
-                    "players", String.valueOf(plugin.leaderboards().size(template.name())),
+                    "players", String.valueOf(plugin.leaderboards().size(boardKey)),
                     "best", TimeFormat.precise(best),
                     "next", ahead != null ? ahead.displayName() : raw("gui.none"),
                     "gap", ahead != null ? TimeFormat.precise(best - ahead.millis()) : raw("gui.none")));
@@ -109,10 +122,16 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
 
         if (plugin.templates().canUse(viewer, template)) {
             set(51, ItemBuilder.of(template.effectiveIcon())
-                    .name(name("gui.board.play-name", "arena", template.displayName()))
-                    .lore(lore("gui.board.play-lore", "arena", template.displayName()))
+                    .name(name("gui.board.play-name", "arena", boardName))
+                    .lore(lore("gui.board.play-lore", "arena", boardName))
                     .build(), event -> {
                 click();
+                // A rush board's play button starts a run of that objective.
+                var parsed = me.beekrbonkr.practicecore.rush.RushObjective.parseStatsKey(boardKey);
+                if (parsed != null) {
+                    plugin.stats().setPref(viewer.getUniqueId(), "rush.objective",
+                            parsed.getValue().name());
+                }
                 later(() -> {
                     viewer.closeInventory();
                     plugin.sessions().join(viewer, template);
@@ -125,7 +144,7 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
         if (rank <= 1) {
             return null;
         }
-        List<LeaderboardService.Entry> top = plugin.leaderboards().top(template.name(), rank);
+        List<LeaderboardService.Entry> top = plugin.leaderboards().top(boardKey, rank);
         return top.size() >= rank - 1 ? top.get(rank - 2) : null;
     }
 }

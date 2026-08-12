@@ -39,6 +39,33 @@ session:
   allow-pearls: false
   # Allow bucket use during runs (water-clutch templates).
   allow-buckets: false
+  # Strip anything from a practicing player's inventory that is not exactly a
+  # kit item (other plugins' giveaways, /give, crafted items). The menu item
+  # is always allowed. Crafting is blocked during sessions either way.
+  validate-inventory: true
+  # How often (in ticks) inventories are checked.
+  validate-inventory-ticks: 20
+
+# Action-bar speedometer shown above the hotbar during bridging runs: current
+# speed in m/s plus blocks moved and placed. The text itself is configurable
+# in messages.yml (speedometer.bar).
+speedometer:
+  enabled: true
+  # How often (in ticks) the reading refreshes. 5 = twice a second.
+  update-ticks: 5
+
+# Rush practice: an empty bedwars map where the player races one objective
+# (enemy bed, emerald or diamond). Maps come from /practice rush import
+# (MBedwars) or the setup wizard's rush steps. The mirrored shop needs
+# MBedwars installed; everything else here works without it.
+rush:
+  # Ticks between drops at the player's base generators (20 ticks = 1s).
+  iron-interval-ticks: 25
+  gold-interval-ticks: 120
+  # Items lying on a generator before it pauses dropping more.
+  generator-item-cap: 48
+  # Whether base generators run for players who have not toggled them yet.
+  base-generators-default: true
 
 # A ready-to-play bridging arena ships inside the jar so the plugin works with
 # no setup at all. It is unpacked to templates/<name>/ the first time the
@@ -57,6 +84,7 @@ bundled-template:
 generated-arenas:
   enabled: true
   bedbreak: bedbreak
+  bedbreak-horizontal: bedbreak-horizontal
 
 arenas:
   # Every arena has a permission node: whatever `permission:` its arena.yml
@@ -129,5 +157,10 @@ effects:
   # Title + subtitle on finishing a run.
   finish-title: true
   sounds: true
-  # Announce server-wide when a player takes the #1 spot on an arena.
+  # Announce server-wide when a player takes the #1 spot on an arena, with a
+  # small chime for everyone online (chime obeys `sounds` above).
   broadcast-records: true
+  # Quietly announce server-wide when a player beats their own personal best.
+  # Suppressed when the record announcement already fired for the same run;
+  # first-ever finishes are not announced.
+  broadcast-pbs: true

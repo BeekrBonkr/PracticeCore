@@ -77,7 +77,17 @@ public final class ProtectionListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onItemSpawn(ItemSpawnEvent event) {
-        if (plugin.worldService().isPracticeWorld(event.getEntity().getWorld())) {
+        if (plugin.worldService().isPracticeWorld(event.getEntity().getWorld())
+                && !plugin.rush().isRushDrop(event.getEntity())) {
+            event.setCancelled(true);
+        }
+    }
+
+    /** Kits are exact: crafting could mint items no kit contains. */
+    @EventHandler(ignoreCancelled = true)
+    public void onCraft(org.bukkit.event.inventory.CraftItemEvent event) {
+        if (event.getWhoClicked() instanceof Player player
+                && plugin.sessions().get(player.getUniqueId()) != null) {
             event.setCancelled(true);
         }
     }

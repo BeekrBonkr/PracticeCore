@@ -79,7 +79,7 @@ public final class YamlMigrator {
                     + (backup != null ? " (backup: backups/" + backup.getFileName() + ")" : ""));
         }
         if (!missing.isEmpty()) {
-            notes.add("Added " + missing.size() + " missing " + resource + " key(s): " + summarise(missing));
+            notes.add("Added " + missing.size() + " missing " + resource + " key(s): " + summarize(missing));
         }
 
         cfg.setDefaults(defaults);
@@ -115,7 +115,7 @@ public final class YamlMigrator {
                 .toList();
     }
 
-    private static String summarise(List<String> keys) {
+    private static String summarize(List<String> keys) {
         if (keys.size() <= MAX_LISTED_KEYS) {
             return String.join(", ", keys);
         }

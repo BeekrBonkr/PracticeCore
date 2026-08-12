@@ -16,8 +16,11 @@ public final class Versions {
     /** messages.yml — admin-editable. */
     public static final int MESSAGES = 1;
 
+    /** guis.yml — admin-editable menu layout. */
+    public static final int GUIS = 1;
+
     /** templates/&lt;name&gt;/arena.yml — admin-editable. */
-    public static final int ARENA = 1;
+    public static final int ARENA = 2;
 
     /** playerdata/&lt;uuid&gt;.yml — plugin-owned, but hand-edited often enough. */
     public static final int PLAYERDATA = 1;
