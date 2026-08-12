@@ -75,9 +75,10 @@ rush:
 rushshop:
   close: {slot: 49}
 
-# Arena categories. Every arena belongs to a category (arena.yml `category:`,
-# defaulting to the arena's mode id); the Play button opens a category picker
-# and each category gets its own arena menu.
+# Arena categories. An arena's category is the folder its own folder sits in:
+# templates/<category>/<arena>/ is listed under <category>, and an arena
+# straight in templates/ is listed under its mode id. The Play button opens a
+# category picker and each category gets its own arena menu.
 categories:
   # false = skip the picker and list every arena in one menu, as before.
   enabled: true

@@ -306,7 +306,10 @@ final class RushCommands {
                 (int) imported.region().getMinX(),
                 (int) imported.region().getMinY(),
                 (int) imported.region().getMinZ());
-        File dir = plugin.templates().dirFor(name);
+        // A re-import keeps the arena in the folder it already lives in; a new
+        // one is created straight inside its category folder.
+        ArenaTemplate existing = plugin.templates().get(name);
+        File dir = existing != null ? existing.dir() : plugin.templates().dirFor(name, category);
         if (!dir.exists() && !dir.mkdirs()) {
             msg().send(sender, "setup.folder-failed");
             whenDone.accept(false);
@@ -328,7 +331,7 @@ final class RushCommands {
         if (plugin.schematics().supportsAsyncEdits()) {
             java.util.concurrent.CompletableFuture.runAsync(capture)
                     .whenComplete((v, error) -> Bukkit.getScheduler().runTask(plugin, () ->
-                            writeTemplate(sender, imported, name, category, origin,
+                            writeTemplate(sender, imported, name, category, dir, origin,
                                     width, length, error, whenDone)));
         } else {
             Throwable error = null;
@@ -337,13 +340,14 @@ final class RushCommands {
             } catch (RuntimeException e) {
                 error = e;
             }
-            writeTemplate(sender, imported, name, category, origin, width, length, error, whenDone);
+            writeTemplate(sender, imported, name, category, dir, origin, width, length,
+                    error, whenDone);
         }
     }
 
     /** Main-thread tail of {@link #importOne}: arena.yml, registry, feedback. */
     private void writeTemplate(CommandSender sender, MBedwarsHook.ImportedArena imported,
-                               String name, String category, Location origin,
+                               String name, String category, File dir, Location origin,
                                int width, int length, Throwable error, Consumer<Boolean> whenDone) {
         if (error != null) {
             Throwable cause = error.getCause() != null ? error.getCause() : error;
@@ -417,15 +421,11 @@ final class RushCommands {
             return;
         }
 
-        ArenaTemplate template = existing != null ? existing
-                : new ArenaTemplate(name, plugin.templates().dirFor(name));
+        ArenaTemplate template = existing != null ? existing : new ArenaTemplate(name, dir, category);
         template.setMode(RushMode.ID);
         if (existing == null) {
             template.setDisplayName(stripLegacy(imported.displayName()));
             template.setIcon(Material.RED_BED);
-        }
-        if (category != null && !category.isEmpty()) {
-            template.setCategory(category);
         }
         template.settings().put("rush", settings.get("rush"));
         // The plain spawn is only the fallback the join validation requires;
@@ -439,6 +439,16 @@ final class RushCommands {
             msg().send(sender, "setup.save-failed", "error", String.valueOf(e.getMessage()));
             whenDone.accept(false);
             return;
+        }
+        if (category != null && !category.isEmpty()) {
+            // The category is the folder: a re-imported arena moves into it,
+            // a new one was already created there and this does nothing.
+            try {
+                plugin.templates().moveToCategory(template, category);
+            } catch (IOException e) {
+                msg().problem(sender, "'" + name + "' could not be moved into templates/"
+                        + category + "/ (" + e.getMessage() + ") — it keeps its old category.");
+            }
         }
         plugin.templates().register(template);
         msg().done(sender, (existing != null ? "Re-imported" : "Imported") + " '" + imported.name()

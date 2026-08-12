@@ -38,9 +38,10 @@ public final class BundledTemplate {
         }
         String name = plugin.pcConfig().bundledTemplateName();
         Path target = templatesDir.resolve(name);
-        if (Files.exists(target)) {
-            // Someone already has an arena by this name — don't touch it, but
-            // don't keep re-checking every boot either.
+        if (TemplateRegistry.findArenaFolder(templatesDir, name) != null) {
+            // Someone already has an arena by this name — in a category folder
+            // or not — so don't touch it, but don't keep re-checking every
+            // boot either.
             writeMarker(marker, name);
             return false;
         }

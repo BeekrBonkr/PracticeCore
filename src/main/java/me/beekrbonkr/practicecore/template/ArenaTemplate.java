@@ -19,17 +19,26 @@ import java.util.TreeMap;
  * One configured arena: a schematic plus arena.yml in its own folder.
  * Spawn and finish-trigger positions are stored as offsets relative to the
  * paste origin, so the arena can be pasted anywhere on the grid.
+ *
+ * The menu grouping is not stored in arena.yml: it is the folder the arena
+ * folder sits in ({@code templates/<category>/<arena>/}), so re-categorising
+ * an arena is a drag-and-drop away. See {@link TemplateRegistry}.
  */
 public final class ArenaTemplate {
 
     private final String name;
-    private final File dir;
+    private File dir;
 
     /** Format version this arena.yml was read at; see {@link Versions#ARENA}. */
     private int loadedVersion = Versions.ARENA;
     private String mode = BridgingMode.ID;
-    /** Menu grouping, or null to fall back to the mode id. */
+    /** Folder-derived menu grouping, or null when it sits outside one. */
     private String category;
+    /**
+     * The {@code category:} key of an arena.yml written before v3, kept only
+     * so the registry can move the folder into place once and then drop it.
+     */
+    private String legacyCategory;
     private String displayName;
     private boolean complete;
     private Vector spawnOffset;
@@ -50,14 +59,24 @@ public final class ArenaTemplate {
      */
     private final Map<String, Object> settings = new java.util.LinkedHashMap<>();
 
+    /** An arena outside any category folder. */
     public ArenaTemplate(String name, File dir) {
+        this(name, dir, null);
+    }
+
+    public ArenaTemplate(String name, File dir, String category) {
         this.name = name;
         this.dir = dir;
+        this.category = normalizeCategory(category);
         this.displayName = name;
     }
 
-    public static ArenaTemplate load(File dir) {
-        ArenaTemplate template = new ArenaTemplate(dir.getName(), dir);
+    /**
+     * @param category the folder the arena folder sits in, or null when it
+     *                 sits directly in {@code templates/}
+     */
+    public static ArenaTemplate load(File dir, String category) {
+        ArenaTemplate template = new ArenaTemplate(dir.getName(), dir, category);
         // Explicit load, not loadConfiguration: the latter swallows a YAML
         // syntax error into an empty config, which would then be "upgraded"
         // over the admin's recoverable file with near-empty defaults.
@@ -72,11 +91,11 @@ public final class ArenaTemplate {
             }
         }
         template.loadedVersion = yml.getInt(Versions.KEY, 0);
+        // Read before migrate() strips it: the registry needs the old value to
+        // move the folder into the matching category folder exactly once.
+        template.legacyCategory = normalizeCategory(yml.getString("category"));
         migrate(yml, template.loadedVersion);
         template.mode = yml.getString("mode", BridgingMode.ID);
-        String category = yml.getString("category");
-        template.category = category == null || category.isBlank()
-                ? null : category.trim().toLowerCase(java.util.Locale.ROOT);
         template.displayName = yml.getString("display-name", template.name);
         template.complete = yml.getBoolean("complete", false);
         template.requireBlocksForPb = yml.getBoolean("require-blocks-for-pb", false);
@@ -135,6 +154,12 @@ public final class ArenaTemplate {
             yml.set("triggers", java.util.List.of(entry));
             yml.set("trigger", null);
         }
+        if (from < 3) {
+            // v3: the menu grouping became the arena's parent folder. The key
+            // is dropped here; TemplateRegistry has already read it and moves
+            // the folder to match.
+            yml.set("category", null);
+        }
     }
 
     private static ArenaTrigger readTrigger(Map<?, ?> entry) {
@@ -160,9 +185,6 @@ public final class ArenaTemplate {
         yml.set(Versions.KEY, Versions.ARENA);
         loadedVersion = Versions.ARENA;
         yml.set("mode", mode);
-        if (category != null) {
-            yml.set("category", category);
-        }
         yml.set("display-name", displayName);
         yml.set("complete", complete);
         yml.set("require-blocks-for-pb", requireBlocksForPb);
@@ -255,19 +277,38 @@ public final class ArenaTemplate {
         this.mode = mode;
     }
 
-    /** The explicit category, or null when the arena groups under its mode. */
+    /**
+     * The folder this arena is filed under, or null when its folder sits
+     * directly in {@code templates/} and it groups under its mode instead.
+     */
     public String category() {
         return category;
     }
 
-    public void setCategory(String category) {
-        this.category = category == null || category.isBlank()
-                ? null : category.trim().toLowerCase(java.util.Locale.ROOT);
+    /**
+     * The {@code category:} of a pre-v3 arena.yml, or null. Only the registry
+     * uses it, to move the folder into place on the first load after upgrade.
+     */
+    public String legacyCategory() {
+        return legacyCategory;
+    }
+
+    /** Points the template at the folder it was just moved to. */
+    void relocate(File newDir, String newCategory) {
+        this.dir = newDir;
+        this.category = normalizeCategory(newCategory);
+        this.legacyCategory = null;
     }
 
     /** The category this arena is listed under — never null. */
     public String effectiveCategory() {
         return category != null ? category : mode;
+    }
+
+    /** Category ids are lowercase, like folder lookups; blank means none. */
+    static String normalizeCategory(String category) {
+        return category == null || category.isBlank()
+                ? null : category.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     public String displayName() {

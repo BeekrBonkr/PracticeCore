@@ -139,10 +139,10 @@ Maps come from two places:
 
   **Mass import**: `/practice rush importall teams:<n> size:<n>` pulls every
   MBedwars arena matching that shape in one go — either filter alone or both
-  together (`teams:4 size:2` = four teams of two). The batch is filed under
-  one arena **category** so it groups in the menu, named after the filter
-  (`4x2`, `8-teams`, `solo`/`doubles`/`triples`/`quads`) or set explicitly
-  with `category:<name>`; give it an icon and display name in `guis.yml`
+  together (`teams:4 size:2` = four teams of two). The batch is filed into one
+  `templates/<category>/` folder so it groups in the menu, named after the
+  filter (`4x2`, `8-teams`, `solo`/`doubles`/`triples`/`quads`) or set
+  explicitly with `category:<name>`; give it an icon and display name in `guis.yml`
   (`categories.entries`). Existing arenas are skipped unless `overwrite` is
   appended. `/practice rush list` shows each arena's shape.
 - **By hand** — build or `//copy` a map, `/practice setup start <name>`,
@@ -271,9 +271,13 @@ before the item existed. Right-clicking it opens:
 - **Play** — a category picker (one tile per arena category, each with its
   own menu), then the arena picker: filtered by the same permission check the
   join command uses, showing your best, your rank and the arena record per
-  entry. An arena's category is `category:` in its `arena.yml` (set with
-  `/practice setup category <name>`), defaulting to its mode id; turn
-  `categories.enabled` off in `guis.yml` to go back to one flat list.
+  entry. An arena's category is **the folder its folder sits in**:
+  `templates/<category>/<arena>/` is listed under `<category>`, and an arena
+  straight in `templates/` is listed under its mode id. Re-categorising is a
+  drag-and-drop plus `/practice reload` — or `/practice setup category
+  <name|default>` during the wizard, which moves the folder for you. Give a
+  category an icon and display name under `categories.entries` in `guis.yml`;
+  turn `categories.enabled` off there to go back to one flat list.
 - **Random Arena** — straight into one of the arenas you can play
 - **Leaderboards** — per-arena top times, your standing, and the gap to the
   player one place ahead
@@ -421,7 +425,9 @@ use to fix it.
 7. `/practice setup save` — the template goes live immediately.
 
 Templates live in `plugins/PracticeCore/templates/<name>/` as `arena.schem` +
-`arena.yml`; they can be copied between servers as folders.
+`arena.yml`; they can be copied between servers as folders. Put an arena
+folder inside another folder — `templates/<category>/<name>/` — and that
+folder's name becomes its menu category (see below).
 
 Optional polish, either mid-wizard or on a saved arena:
 
@@ -432,6 +438,7 @@ Optional polish, either mid-wizard or on a saved arena:
 | `/practice setup permission <node\|none>` | `/practice arena permission <arena> <node\|none>` | Gate the arena |
 | `/practice setup blocks <true\|false>` | `/practice arena blocks <arena> <true\|false>` | Require a placed block for a PB |
 | `/practice setup mode <id>` | — | Which `Mode` the arena belongs to |
+| `/practice setup category <name\|default>` | move the folder | Which menu group it is listed under |
 
 ## Editing a saved arena
 
@@ -500,7 +507,7 @@ plugin owns carries a `data-version` (see `config/Versions.java`):
 | `config.yml` | `config-version` | `PracticeCorePlugin.configSteps` |
 | `messages.yml` | `config-version` | `Messages.steps` |
 | `guis.yml` | `config-version` | `GuiConfig.steps` |
-| `templates/<name>/arena.yml` | `config-version` | `ArenaTemplate.migrate` |
+| `templates/[<category>/]<name>/arena.yml` | `config-version` | `ArenaTemplate.migrate` |
 | `playerdata/<uuid>.yml` | `data-version` | `StatsStore.migrate` |
 | `snapshots/<uuid>.yml` | `data-version` | version-checked on restore |
 
