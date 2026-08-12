@@ -26,6 +26,12 @@ final class AdminCommands {
     private static final List<String> ARENA_ACTIONS = List.of(
             "list", "info", "default", "delete", "permission", "display", "icon", "blocks");
 
+    /** Every item material name, computed once — the registry is large. */
+    private static final List<String> ITEM_MATERIALS = Arrays.stream(Material.values())
+            .filter(Material::isItem)
+            .map(material -> material.name().toLowerCase(Locale.ROOT))
+            .toList();
+
     private final PracticeCorePlugin plugin;
 
     AdminCommands(PracticeCorePlugin plugin) {
@@ -75,7 +81,7 @@ final class AdminCommands {
             case "delete" -> deleteArena(sender, template, args);
             case "permission" -> {
                 if (args.length < 4) {
-                    msg().send(sender, "general.usage", "usage", "/practice arena permission <arena> <node|default>");
+                    msg().send(sender, "general.usage", "usage", "/practice arena permission <arena> <node|default|none>");
                     return;
                 }
                 String node = args[3];
@@ -112,7 +118,13 @@ final class AdminCommands {
                 persist(sender, template, "Icon for '" + template.name() + "' set to " + material + ".");
             }
             case "blocks" -> {
-                boolean require = args.length > 3 && Boolean.parseBoolean(args[3]);
+                // Boolean.parseBoolean would read any typo as false — insist
+                // on a real answer instead of confidently saving the wrong one.
+                if (args.length < 4 || !(args[3].equalsIgnoreCase("true") || args[3].equalsIgnoreCase("false"))) {
+                    msg().send(sender, "general.usage", "usage", "/practice arena blocks <arena> <true|false>");
+                    return;
+                }
+                boolean require = args[3].equalsIgnoreCase("true");
                 template.setRequireBlocksForPb(require);
                 persist(sender, template, require
                         ? "Personal bests on '" + template.name() + "' now require a placed block."
@@ -228,7 +240,7 @@ final class AdminCommands {
         msg().note(sender, "/practice arena default [arena|none]");
         msg().note(sender, "/practice arena display <arena> <text…>");
         msg().note(sender, "/practice arena icon <arena> <material|auto>");
-        msg().note(sender, "/practice arena permission <arena> <node|none>");
+        msg().note(sender, "/practice arena permission <arena> <node|default|none>");
         msg().note(sender, "/practice arena blocks <arena> <true|false>");
         msg().note(sender, "/practice arena delete <arena> confirm");
     }
@@ -398,13 +410,15 @@ final class AdminCommands {
             }
             if (wizard != null) {
                 msg().note(sender, "The setup wizard on '" + wizard
-                        + "' will be cancelled; unsaved changes to it are lost.");
+                        + "' will be canceled; unsaved changes to it are lost.");
             }
             msg().note(sender, "Arenas, kits and leaderboards are untouched — only the world is rebuilt.");
             msg().note(sender, "Run /practice world regen confirm to go ahead.");
             return;
         }
         try {
+            msg().note(sender, "Regenerating the practice world — sessions are being"
+                    + " restored and the world rebuilt…");
             int ended = plugin.worldService().regenerate();
             msg().done(sender, "Practice world regenerated; the grid starts again at slot 0."
                     + (ended > 0 ? " " + ended + " session(s) were ended and restored." : ""));
@@ -438,7 +452,7 @@ final class AdminCommands {
                 case "blocks" -> PracticeCommand.filter(List.of("true", "false"), args[3]);
                 case "permission" -> PracticeCommand.filter(
                         List.of("default", plugin.pcConfig().arenaPermissionPrefix() + args[2]), args[3]);
-                case "icon" -> PracticeCommand.filter(itemMaterials(), args[3]);
+                case "icon" -> PracticeCommand.filter(ITEM_MATERIALS, args[3]);
                 default -> List.of();
             };
         }
@@ -475,12 +489,5 @@ final class AdminCommands {
             return PracticeCommand.filter(scopes, args[3]);
         }
         return List.of();
-    }
-
-    private static List<String> itemMaterials() {
-        return Arrays.stream(Material.values())
-                .filter(Material::isItem)
-                .map(material -> material.name().toLowerCase(Locale.ROOT))
-                .toList();
     }
 }

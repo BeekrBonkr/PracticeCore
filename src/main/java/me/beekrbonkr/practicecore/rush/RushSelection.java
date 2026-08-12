@@ -6,12 +6,16 @@ import java.util.Locale;
 
 /**
  * Everything a player chose in the rush config menu: which base they start
- * from, what ends the run, and the difficulty modifiers. Immutable; the
- * "with" methods hand back an adjusted copy.
+ * from, the difficulty modifiers, and whether the run is <b>competitive</b> —
+ * the fixed loadout (no starting items, defenses on, generators on) that is
+ * the only way times are recorded and ranked. Immutable; the "with" methods
+ * hand back an adjusted copy. Every objective is armed on every run — there
+ * is nothing to pick about how it ends.
  */
-public record RushSelection(String team, RushObjective objective, BlockTier blocks,
+public record RushSelection(String team, BlockTier blocks,
                             CurrencyTier currency, PickaxeTier pickaxe,
-                            DefensePreset defense, boolean baseGenerators) {
+                            DefensePreset defense, boolean baseGenerators,
+                            boolean competitive) {
 
     /** Free building blocks in the starter kit. */
     public enum BlockTier {
@@ -102,36 +106,36 @@ public record RushSelection(String team, RushObjective objective, BlockTier bloc
     }
 
     public static RushSelection defaults() {
-        return new RushSelection(null, RushObjective.BED, BlockTier.NONE,
-                CurrencyTier.NONE, PickaxeTier.NONE, DefensePreset.NONE, true);
+        return new RushSelection(null, BlockTier.NONE,
+                CurrencyTier.NONE, PickaxeTier.NONE, DefensePreset.NONE, true, false);
     }
 
     public RushSelection withTeam(String team) {
-        return new RushSelection(team, objective, blocks, currency, pickaxe, defense, baseGenerators);
-    }
-
-    public RushSelection withObjective(RushObjective objective) {
-        return new RushSelection(team, objective, blocks, currency, pickaxe, defense, baseGenerators);
+        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators, competitive);
     }
 
     public RushSelection withBlocks(BlockTier blocks) {
-        return new RushSelection(team, objective, blocks, currency, pickaxe, defense, baseGenerators);
+        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators, competitive);
     }
 
     public RushSelection withCurrency(CurrencyTier currency) {
-        return new RushSelection(team, objective, blocks, currency, pickaxe, defense, baseGenerators);
+        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators, competitive);
     }
 
     public RushSelection withPickaxe(PickaxeTier pickaxe) {
-        return new RushSelection(team, objective, blocks, currency, pickaxe, defense, baseGenerators);
+        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators, competitive);
     }
 
     public RushSelection withDefense(DefensePreset defense) {
-        return new RushSelection(team, objective, blocks, currency, pickaxe, defense, baseGenerators);
+        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators, competitive);
     }
 
     public RushSelection withBaseGenerators(boolean baseGenerators) {
-        return new RushSelection(team, objective, blocks, currency, pickaxe, defense, baseGenerators);
+        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators, competitive);
+    }
+
+    public RushSelection withCompetitive(boolean competitive) {
+        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators, competitive);
     }
 
     static <E extends Enum<E>> E enumOr(Class<E> type, String name, E def) {

@@ -32,9 +32,36 @@ import java.io.IOException;
 
 /**
  * Thin wrapper over the WorldEdit 7 API. Compiled against vanilla WorldEdit;
- * with FAWE installed the same calls are internally accelerated.
+ * with FAWE installed the same calls are internally accelerated — and, unlike
+ * vanilla WorldEdit, may be made from off the main thread, which callers
+ * check via {@link #supportsAsyncEdits()} to keep multi-second copies and
+ * pastes from stalling the tick loop.
  */
 public final class SchematicService {
+
+    /** FAWE supports EditSession work from any thread; vanilla WE does not. */
+    private static final boolean ASYNC_EDITS = detectFawe();
+
+    private static boolean detectFawe() {
+        try {
+            Class.forName("com.fastasyncworldedit.core.Fawe");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
+
+    /** Whether world-touching operations here may run off the main thread. */
+    public boolean supportsAsyncEdits() {
+        return ASYNC_EDITS;
+    }
+
+    /** Parsed clipboards by file path, so joins stop re-reading .schem files. */
+    private final java.util.concurrent.ConcurrentHashMap<String, CachedClipboard> cache =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    private record CachedClipboard(long lastModified, long length, Clipboard clipboard) {
+    }
 
     public Clipboard load(File file) throws IOException {
         ClipboardFormat format = ClipboardFormats.findByFile(file);
@@ -46,11 +73,34 @@ public final class SchematicService {
         }
     }
 
+    /**
+     * {@link #load} through a cache keyed by file path and invalidated by the
+     * file's timestamp/size, so repeated joins of the same arena parse its
+     * schematic once instead of on every paste.
+     */
+    public Clipboard loadCached(File file) throws IOException {
+        String key = file.getAbsolutePath();
+        CachedClipboard cached = cache.get(key);
+        if (cached != null && cached.lastModified == file.lastModified()
+                && cached.length == file.length()) {
+            return cached.clipboard;
+        }
+        Clipboard clipboard = load(file);
+        cache.put(key, new CachedClipboard(file.lastModified(), file.length(), clipboard));
+        return clipboard;
+    }
+
     public void save(Clipboard clipboard, File file) throws IOException {
         try (ClipboardWriter writer = BuiltInClipboardFormat.SPONGE_V3_SCHEMATIC
                 .getWriter(new FileOutputStream(file))) {
             writer.write(clipboard);
         }
+        cache.remove(file.getAbsolutePath());
+    }
+
+    /** Drops a deleted arena's parsed clipboard — multi-MB block arrays must not outlive their template. */
+    public void evict(File file) {
+        cache.remove(file.getAbsolutePath());
     }
 
     /** The clipboard the player last //copy'd, or null if empty. */

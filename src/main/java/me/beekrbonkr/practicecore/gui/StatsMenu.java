@@ -1,6 +1,8 @@
 package me.beekrbonkr.practicecore.gui;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
+import me.beekrbonkr.practicecore.mode.RushMode;
+import me.beekrbonkr.practicecore.rush.RushObjective;
 import me.beekrbonkr.practicecore.stats.LeaderboardService;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
 import me.beekrbonkr.practicecore.util.ItemBuilder;
@@ -14,6 +16,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -47,7 +50,37 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
 
     @Override
     protected List<Map.Entry<String, Long>> entries() {
-        return List.copyOf(plugin.stats().bests(subject).entrySet());
+        return List.copyOf(arenas().entrySet());
+    }
+
+    /**
+     * Every arena the player has data on: their bests, fastest first, then
+     * arenas they finished without ever setting a best (value -1) — a run can
+     * count without being PB-eligible, and those must not disappear here.
+     */
+    private Map<String, Long> arenas() {
+        Map<String, Long> found = new LinkedHashMap<>(plugin.stats().bests(subject));
+        for (String key : allStatsKeys()) {
+            if (!found.containsKey(key) && plugin.stats().finishes(subject, key) > 0) {
+                found.put(key, -1L);
+            }
+        }
+        return found;
+    }
+
+    /** Every key that can hold times — plain arena names and rush boards. */
+    private List<String> allStatsKeys() {
+        List<String> keys = new ArrayList<>();
+        for (ArenaTemplate template : plugin.templates().all()) {
+            if (template.mode().equals(RushMode.ID)) {
+                for (RushObjective objective : RushObjective.values()) {
+                    keys.add(objective.statsKey(template.name()));
+                }
+            } else {
+                keys.add(template.name());
+            }
+        }
+        return keys;
     }
 
     @Override
@@ -71,7 +104,7 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
 
         List<Component> lines = new ArrayList<>(lore("gui.stats.entry-lore",
                 "arena", display,
-                "best", TimeFormat.precise(best),
+                "best", best >= 0 ? TimeFormat.precise(best) : raw("gui.none"),
                 "last", last >= 0 ? TimeFormat.precise(last) : raw("gui.none"),
                 "finishes", String.valueOf(plugin.stats().finishes(subject, arena)),
                 "rank", rank > 0 ? "#" + rank : raw("gui.none"),
@@ -111,8 +144,14 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
     @Override
     protected void onEntryClick(Map.Entry<String, Long> entry, InventoryClickEvent event) {
         ArenaTemplate template = templateFor(entry.getKey());
-        if (template == null || !viewer.hasPermission("practicecore.leaderboard")) {
+        if (template == null) {
             deny();
+            plugin.messages().send(viewer, "stats.arena-gone");
+            return;
+        }
+        if (!viewer.hasPermission("practicecore.leaderboard")) {
+            deny();
+            plugin.messages().send(viewer, "permission.leaderboard");
             return;
         }
         click();
@@ -127,11 +166,11 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
 
     @Override
     protected void renderFooter() {
-        Map<String, Long> bests = plugin.stats().bests(subject);
-        int records = (int) bests.keySet().stream()
+        Map<String, Long> arenas = arenas();
+        int records = (int) arenas.keySet().stream()
                 .filter(arena -> plugin.leaderboards().rank(arena, subject) == 1)
                 .count();
-        int finishes = bests.keySet().stream()
+        int finishes = arenas.keySet().stream()
                 .mapToInt(arena -> plugin.stats().finishes(subject, arena))
                 .sum();
         setFooter(47, ItemBuilder.of(Material.PLAYER_HEAD)
@@ -143,7 +182,7 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
                 .name(name("gui.stats.summary.name", "player", subjectName))
                 .lore(lore("gui.stats.summary.lore",
                         "player", subjectName,
-                        "arenas", String.valueOf(bests.size()),
+                        "arenas", String.valueOf(arenas.size()),
                         "finishes", String.valueOf(finishes),
                         "records", String.valueOf(records)))
                 .build());

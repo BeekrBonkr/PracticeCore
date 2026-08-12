@@ -6,7 +6,7 @@
 # backups/ first whenever the version actually changes.
 #
 # Player-facing text lives in messages.yml, not here.
-config-version: 2
+config-version: 3
 
 world:
   # Name of the ephemeral practice world. Its folder is DELETED and recreated
@@ -31,13 +31,17 @@ scoreboard:
   # How often (in ticks) the sidebar refreshes. 2 ticks = 10 updates/second,
   # enough for a smooth tenths-of-a-second timer display.
   update-ticks: 2
+  # Your server's address, shown as the sidebar's bottom line on every board
+  # (the board.footer lines in messages.yml style it). '' hides the footer.
+  server-ip: ''
 
 session:
   # A run fails when the player's Y drops below (arena bottom + this offset).
   fail-y-offset: 0
   # Allow ender pearls to be thrown during runs (pearl-practice templates).
   allow-pearls: false
-  # Allow bucket use during runs (water-clutch templates).
+  # Allow bucket use during runs (water-clutch templates). MLG arenas always
+  # allow buckets regardless of this setting — the bucket is the mode.
   allow-buckets: false
   # Strip anything from a practicing player's inventory that is not exactly a
   # kit item (other plugins' giveaways, /give, crafted items). The menu item
@@ -66,6 +70,10 @@ rush:
   generator-item-cap: 48
   # Whether base generators run for players who have not toggled them yet.
   base-generators-default: true
+  # Bed defense preset every competitive run races under: NONE, WOOL,
+  # ENDSTONE (wool + end stone) or OBSIDIAN (end stone + obsidian). Fixed so
+  # competitive times stay comparable between players.
+  competitive-defense: ENDSTONE
 
 # A ready-to-play bridging arena ships inside the jar so the plugin works with
 # no setup at all. It is unpacked to templates/<name>/ the first time the
@@ -85,6 +93,7 @@ generated-arenas:
   enabled: true
   bedbreak: bedbreak
   bedbreak-horizontal: bedbreak-horizontal
+  mlg: mlg
 
 arenas:
   # Every arena has a permission node: whatever `permission:` its arena.yml

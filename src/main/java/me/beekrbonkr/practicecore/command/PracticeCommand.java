@@ -1,8 +1,11 @@
 package me.beekrbonkr.practicecore.command;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
+import me.beekrbonkr.practicecore.gui.ArenaMenu;
+import me.beekrbonkr.practicecore.gui.CategoryMenu;
 import me.beekrbonkr.practicecore.gui.LeaderboardMenu;
 import me.beekrbonkr.practicecore.gui.MainMenu;
+import me.beekrbonkr.practicecore.gui.SettingsMenu;
 import me.beekrbonkr.practicecore.gui.StatsMenu;
 import me.beekrbonkr.practicecore.message.Messages;
 import me.beekrbonkr.practicecore.session.PracticeSession;
@@ -25,6 +28,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 public final class PracticeCommand implements CommandExecutor, TabCompleter {
+
+    /** Every menu a player can open directly with /practice menu <menu>. */
+    private static final List<String> MENUS = List.of(
+            "main", "arenas", "categories", "leaderboards", "stats", "settings");
 
     private final PracticeCorePlugin plugin;
     private final SetupCommands setup;
@@ -49,7 +56,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
             case "join" -> join(sender, args);
             case "leave" -> leave(sender);
             case "list", "arenas" -> list(sender);
-            case "menu", "gui" -> menu(sender);
+            case "menu", "gui" -> menu(sender, args);
             case "top", "leaderboard" -> top(sender, args);
             case "stats" -> stats(sender, args);
             case "sidebar", "scoreboard" -> sidebar(sender);
@@ -138,7 +145,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
         }
     }
 
-    private void menu(CommandSender sender) {
+    private void menu(CommandSender sender, String[] args) {
         Player player = asPlayer(sender);
         if (player == null) {
             return;
@@ -147,7 +154,32 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
             msg().send(player, "permission.menu");
             return;
         }
-        new MainMenu(plugin, player).open();
+        String which = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "main";
+        switch (which) {
+            case "main" -> new MainMenu(plugin, player).open();
+            case "arenas" -> new ArenaMenu(plugin, player, null, null).open();
+            case "categories" -> {
+                // With the picker disabled every arena lives in one flat menu,
+                // exactly like the Play button.
+                if (plugin.guis().categoriesEnabled()) {
+                    new CategoryMenu(plugin, player, null).open();
+                } else {
+                    new ArenaMenu(plugin, player, null, null).open();
+                }
+            }
+            case "leaderboards" -> {
+                if (!player.hasPermission("practicecore.leaderboard")) {
+                    msg().send(player, "permission.leaderboard");
+                    return;
+                }
+                new LeaderboardMenu(plugin, player, null).open();
+            }
+            case "stats" -> new StatsMenu(plugin, player, null).open();
+            case "settings" -> new SettingsMenu(plugin, player, null).open();
+            default -> msg().send(player, "menu.unknown",
+                    "menu", args[1],
+                    "menus", String.join(", ", MENUS));
+        }
     }
 
     private void sidebar(CommandSender sender) {
@@ -182,9 +214,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
         if (template != null) {
             if (template.mode().equals(me.beekrbonkr.practicecore.mode.RushMode.ID)) {
                 // A rush arena has one board per objective — point at one.
-                msg().note(sender, "'" + template.name() + "' is a rush arena; pick a board: "
-                        + template.name() + "#bed, " + template.name() + "#emerald or "
-                        + template.name() + "#diamond.");
+                msg().send(sender, "leaderboard.rush-pick-board", "arena", template.name());
                 return;
             }
             key = template.name();
@@ -226,7 +256,9 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
         UUID subject;
         String name;
         if (args.length >= 2) {
-            if (!sender.hasPermission("practicecore.stats.other")) {
+            // Naming yourself is still a self-lookup — no extra permission.
+            boolean self = sender instanceof Player player && args[1].equalsIgnoreCase(player.getName());
+            if (!self && !sender.hasPermission("practicecore.stats.other")) {
                 msg().send(sender, "permission.stats-other");
                 return;
             }
@@ -340,6 +372,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
                             ? plugin.templates().availableTo(player).stream().map(ArenaTemplate::name).toList()
                             : plugin.templates().names(), args[1])
                     : List.of();
+            case "menu", "gui" -> args.length == 2 ? filter(MENUS, args[1]) : List.of();
             case "top", "leaderboard" -> args.length == 2
                     ? filter(completeNames(), args[1]) : List.of();
             case "stats" -> args.length == 2 && sender.hasPermission("practicecore.stats.other")
@@ -360,7 +393,19 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
     }
 
     private List<String> completeNames() {
-        return plugin.templates().completeTemplates().stream().map(ArenaTemplate::name).toList();
+        List<String> names = new ArrayList<>();
+        for (ArenaTemplate template : plugin.templates().completeTemplates()) {
+            if (template.mode().equals(me.beekrbonkr.practicecore.mode.RushMode.ID)) {
+                // /practice top rejects the bare name — offer the boards.
+                for (me.beekrbonkr.practicecore.rush.RushObjective objective
+                        : me.beekrbonkr.practicecore.rush.RushObjective.values()) {
+                    names.add(objective.statsKey(template.name()));
+                }
+            } else {
+                names.add(template.name());
+            }
+        }
+        return names;
     }
 
     private static List<String> onlineNames() {

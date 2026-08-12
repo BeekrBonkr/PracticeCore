@@ -17,6 +17,9 @@ import java.util.concurrent.ThreadLocalRandom;
 /** The hub every other menu hangs off. */
 public final class MainMenu extends Menu {
 
+    /** Cached per open — computing it loads the snapshot file. */
+    private String destination;
+
     public MainMenu(PracticeCorePlugin plugin, Player viewer) {
         super(plugin, viewer, null);
     }
@@ -182,13 +185,15 @@ public final class MainMenu extends Menu {
 
     /** Where the leave button will actually put them, spelled out up front. */
     private String destination() {
-        String server = plugin.pcConfig().leaveServer();
-        if (!server.isEmpty()) {
-            return server;
+        if (destination != null) {
+            return destination;
         }
-        return plugin.snapshots().load(viewer.getUniqueId())
-                .map(snapshot -> snapshot.worldName())
-                .orElseGet(() -> plugin.leaveService().fallback().getWorld().getName());
+        String server = plugin.pcConfig().leaveServer();
+        destination = !server.isEmpty() ? server
+                : plugin.snapshots().load(viewer.getUniqueId())
+                        .map(snapshot -> snapshot.worldName())
+                        .orElseGet(() -> plugin.leaveService().fallback().getWorld().getName());
+        return destination;
     }
 
     // -------------------------------------------------------------- actions

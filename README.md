@@ -1,13 +1,13 @@
 # PracticeCore
 
-A modular practice minigame plugin for Paper 1.21+. Two modes ship in the
-box — **bridging** and **bed breaking** — and every player gets their own
-ephemeral schematic-built arena in a self-cleaning void world, a
-millisecond-honest timer, and per-arena personal bests.
+A modular practice minigame plugin for Paper 1.21+. Four modes ship in the
+box — **bridging**, **bed breaking**, **rush** and **MLG clutching** — and
+every player gets their own ephemeral schematic-built arena in a self-cleaning
+void world, a millisecond-honest timer, and per-arena personal bests.
 
-Drop the jar in and it works — a ready-to-play arena for both modes ships
-inside it: the bridging arena unpacks itself, and the bedbreak shaft is built
-block-by-block by the plugin on first start.
+Drop the jar in and it works — ready-to-play arenas ship inside it: the
+bridging arena unpacks itself, and the bedbreak shafts and the MLG tower are
+built block-by-block by the plugin on first start.
 
 Licensed **GPL-3.0** (see `LICENSE`) — chosen deliberately so architecture and
 code from the GPL ecosystem of reference plugins (SpeedBridge2, Infinite
@@ -63,7 +63,7 @@ The original mode: run the course, hit the button or pressure plate at the
 end. Timer starts on first movement (or first block, per `timer.start-mode`).
 
 A **speedometer** sits above the hotbar during bridging sessions: your current
-speed in m/s (smoothed over the last few samples), the distance travelled this
+speed in m/s (smoothed over the last few samples), the distance traveled this
 run and the blocks placed. Tune it with `speedometer.enabled` /
 `speedometer.update-ticks` in `config.yml`; the text itself is
 `speedometer.bar` in `messages.yml` (set to `''` to silence it).
@@ -105,11 +105,29 @@ extending from the head (horizontal).
 ### rush
 
 An empty bedwars map with reset conditions: you spawn at a team base of your
-choice and race exactly one objective — **break an enemy bed**, or **pick the
-waiting emerald or diamond off its generator**. Each map+objective pair keeps
-its own personal bests and leaderboard (stored under `map#bed`, `map#emerald`,
-`map#diamond`), so a 6-second diamond grab never shares a board with a
-40-second bed rush.
+choice and race to an objective. **Every objective the map supports is armed
+on every run** — enemy beds are standing, and an emerald and a diamond sit
+waiting on their generators; whichever you complete first ends the run, no
+choosing beforehand. Each map+objective pair still keeps its own personal
+bests and leaderboard (stored under `map#bed`, `map#emerald`, `map#diamond`),
+so a 6-second diamond grab never shares a board with a 40-second bed rush,
+and the sidebar shows your best on all three at once.
+
+The timer always starts the moment you first move off the spawn —
+`timer.start-mode` does not apply to rush. Runs come in two flavors:
+
+- **Competitive** — one button in the rush menu, instant start, and the only
+  way times are recorded and ranked. The loadout is pinned so every entry on
+  a board raced the same conditions: no starting items, bed defenses on (the
+  preset in `rush.competitive-defense`, default wool + end stone), base
+  generators running.
+- **Casual** — your own mix of the difficulty modifiers below. Nothing is
+  written to stats: no time, no finish count, no personal best; the finish
+  message still shows your time and the action bar reminds you it was
+  unranked.
+
+Either way each map keeps its three leaderboards — bed rush, emerald rush
+and diamond rush — fed only by competitive runs.
 
 Maps come from two places:
 
@@ -118,6 +136,15 @@ Maps come from two places:
   data: team spawns, bed positions, every item generator and the shop dealer
   spots. The map is playable immediately, under the Rush category. Re-import
   with `overwrite` after map changes; times and settings survive.
+
+  **Mass import**: `/practice rush importall teams:<n> size:<n>` pulls every
+  MBedwars arena matching that shape in one go — either filter alone or both
+  together (`teams:4 size:2` = four teams of two). The batch is filed under
+  one arena **category** so it groups in the menu, named after the filter
+  (`4x2`, `8-teams`, `solo`/`doubles`/`triples`/`quads`) or set explicitly
+  with `category:<name>`; give it an icon and display name in `guis.yml`
+  (`categories.entries`). Existing arenas are skipped unless `overwrite` is
+  appended. `/practice rush list` shows each arena's shape.
 - **By hand** — build or `//copy` a map, `/practice setup start <name>`,
   `/practice setup mode rush`, then walk the map placing markers:
   `rush team <color>` (stand at that base's spawn), `rush bed <color>` (look at
@@ -126,14 +153,15 @@ Maps come from two places:
   At least one team needs both a spawn and a bed to save.
 
 Clicking a rush arena in the GUI opens the **rush setup menu** instead of
-joining straight away: pick the objective (only ones the map supports light
-up), cycle the team base, then the difficulty modifiers — **starter blocks**
+joining straight away: cycle the team base, hit **Start Competitive** for the
+ranked loadout, or dial the casual difficulty modifiers — **starter blocks**
 (none/16/32/64 wool), **starting resources** (iron/gold to spend
 immediately), **pickaxe tier** (none → diamond), **bed defenses**
 (auto-generated shells over every enemy bed: wool, wool + end stone, or end
 stone + obsidian, reusing nothing from the map itself), and whether your
-base's **iron/gold generators** run. Every choice is remembered per player —
-a plain `/practice join <map>` replays your last setup.
+base's **iron/gold generators** run — and **Start Casual**. Every choice
+(including which mode you last played) is remembered per player — a plain
+`/practice join <map>` replays your last setup.
 
 During a run the **mirrored MBedwars shop** is open for business: villager
 NPCs stand at the map's dealer spots and sell the real MBedwars item shop —
@@ -150,11 +178,44 @@ shop is unavailable). Generator pacing is configurable under `rush:` in
 `config.yml` (`iron-interval-ticks`, `gold-interval-ticks`,
 `generator-item-cap`, `base-generators-default`).
 
+### mlg
+
+Water bucket clutch practice: you spawn on a **glass platform that crumbles
+from under you after a random delay**, fall a **random distance** to the
+landing pad below, and have to place your water before impact. Touching the
+water is an instant win and resets the arena; hitting the pad without it
+fails. Both the platform's fuse and the drop height are re-rolled on every
+reset, so neither the moment the fall starts nor its length can be learned by
+muscle memory.
+
+There is no timer — the score is the **streak**: consecutive successful
+clutches, shown on the sidebar next to your highest ever. It is persisted per
+arena in playerdata (`streak` / `streak-best`) and survives arena resets and
+relogs; a failed run resets it to zero, and so does bailing out mid-air
+(restarting, switching arenas or logging off between jump and splash), so a
+fall can never be abandoned to dodge the loss.
+
+The bucket only works **mid-fall**: emptying it while still standing on the
+platform is refused, so a pre-placed pool can never count. The clutch water
+(and anywhere it flows) is dried back up on every reset.
+
+MLG arenas always allow buckets regardless of `session.allow-buckets`, and
+the shaft below the spawn is mode-owned space — the platform and pad are
+built by the plugin, so a hand-made arena needs nothing but a spawn in
+mid-air. The generated arena is a 110-block shaft whose barrier walls run
+its **full height**, so the fall is walled in from platform to floor.
+Everything else is `settings.mlg`, all optional: `platform-radius` (glass
+platform half-size, default 1 → 3×3), `pad-radius` (default 5 → 11×11),
+`pad-material` (default `GRASS_BLOCK`), `min-drop` / `max-drop`
+(platform-to-pad distance range, defaults **20–100**) and `fuse-min-ticks` /
+`fuse-max-ticks` (how long the platform lasts, defaults 30–100, i.e.
+1.5–5s). The sidebar shows the round's rolled drop next to your streak.
+
 ## Messages
 
 Every piece of text the plugin shows a player lives in `messages.yml` —
 chat, action bars, titles, broadcasts, the sidebar (title and every line of
-both board layouts), the speedometer bar, and all GUI titles, button names
+every board layout), the speedometer bar, and all GUI titles, button names
 and lore. Formatting is MiniMessage, so colors, gradients, hover and click
 are available everywhere. Set any message to `''` to silence it. Menu
 *structure* (slots, icons, rows, fillers) lives separately in `guis.yml`.
@@ -171,6 +232,17 @@ absent key back into your file. The two exceptions are the menu item's own
 name and lore, which stay in `config.yml` beside its material and slot — they
 define the item rather than being something the plugin says.
 
+**Sidebar footer**: set `scoreboard.server-ip` in `config.yml` and every
+board — every mode — signs off with your server's address on its bottom
+line, styled by the `board.footer` lines in `messages.yml` (a gold gradient
+by default). While it stays `''`, no footer renders at all.
+
+Anything that takes more than an instant tells the player so as it starts:
+joining shows *Building &lt;arena&gt;…* and *teleporting you in…* on the
+action bar while the schematic pastes, the setup wizard says *Pasting…*
+while it builds, and imports and world regeneration announce themselves in
+chat — a command that goes quiet mid-work reads as a broken server.
+
 ## The bundled arenas
 
 `bundled-template` in `config.yml` unpacks the bridging arena that ships in
@@ -179,12 +251,12 @@ plugin starts. A marker file records that this happened, so deleting or
 renaming the arena does not bring it back on the next restart. Delete the
 marker (`plugins/PracticeCore/.bundled-installed`) to reinstall it.
 
-`generated-arenas` works the same way for the bedbreak arenas, except nothing
-is unpacked: the plugin builds each arena block-by-block in code and writes it
-out as a normal template folder (defaults `bedbreak` and
-`bedbreak-horizontal`, one per orientation) — fully editable, deletable, and
-guarded by its own marker file (`.generated-installed`; remove a line from it
-to regenerate that arena). Set a name to `''` or
+`generated-arenas` works the same way for the bedbreak and MLG arenas, except
+nothing is unpacked: the plugin builds each arena block-by-block in code and
+writes it out as a normal template folder (defaults `bedbreak` and
+`bedbreak-horizontal`, one per orientation, plus `mlg`) — fully editable,
+deletable, and guarded by its own marker file (`.generated-installed`; remove
+a line from it to regenerate that arena). Set a name to `''` or
 `generated-arenas.enabled: false` to skip them.
 
 ## The menu item and GUI
@@ -214,6 +286,10 @@ before the item existed. Right-clicking it opens:
   immediately mid-session and are undone when you leave.
 - **Help** and **Leave**
 
+Every one of these menus can also be opened directly from chat:
+`/practice menu <main|arenas|categories|leaderboards|stats|settings>` (a bare
+`/practice menu` opens the hub).
+
 The leave button restores everything and returns you to the world you came
 from — or hands you to the proxy server named in `leave.server`, if set.
 
@@ -235,9 +311,12 @@ and `session.validate-inventory-ticks` in `config.yml`.
 ## Requirements
 
 - Paper 1.21.x, Java 21+
-- WorldEdit 7.3+ (or FastAsyncWorldEdit — recommended on busy servers; the
-  plugin compiles against the WorldEdit API, which FAWE implements, and pastes
-  become async automatically)
+- WorldEdit 7.3+ — but **FastAsyncWorldEdit is strongly recommended**: with
+  FAWE detected, arena pastes, arena erases and rush map imports all run off
+  the main thread, so even an 8-team map loads without a lag spike. With
+  vanilla WorldEdit those operations must run on the main thread and big maps
+  will stall the tick loop. Parsed schematics are cached either way, so
+  repeated joins never re-read the file.
 - FastBoard is fetched automatically at runtime via `plugin.yml` `libraries:`
 - MBedwars 5.5+ (optional) — enables `/practice rush import` and the mirrored
   item shop for the rush mode
@@ -248,14 +327,14 @@ and `session.validate-inventory-ticks` in `config.yml`.
 |---|---|---|
 | `/practice join [arena]` | `practicecore.use` | Start practicing |
 | `/practice leave` | `practicecore.use` | Restore state and return |
-| `/practice menu` | `practicecore.menu` | Open the GUI |
+| `/practice menu [menu]` | `practicecore.menu` | Open the GUI (or one menu directly) |
 | `/practice list` | `practicecore.use` | List arenas |
 | `/practice top [arena]` | `practicecore.leaderboard` | Leaderboards |
 | `/practice stats [player]` | `practicecore.stats.other` for others | Personal bests |
 | `/practice sidebar` | `practicecore.use` | Show/hide the live timer |
 | `/practice setup …` | `practicecore.setup` | Arena configuration wizard |
 | `/practice edit <arena>` | `practicecore.setup` | Reopen a saved arena |
-| `/practice rush import\|list` | `practicecore.setup` | Pull rush maps from MBedwars |
+| `/practice rush import\|importall\|list` | `practicecore.setup` | Pull rush maps from MBedwars (one, or all matching a shape) |
 | `/practice arena …` | `practicecore.arena` | Administer saved arenas |
 | `/practice item [player]` | `practicecore.item` | Get the hotbar menu item |
 | `/practice pb reset <player> [arena\|all]` | `practicecore.pb.reset` | Wipe personal bests |
@@ -406,7 +485,7 @@ sessions first. Changing `world.name` is reported as needing
 
 `/practice world regen confirm` unloads, deletes and rebuilds the practice
 world from nothing, then restarts the grid at slot 0. Every session is ended
-and restored to where it came from first, the wizard is cancelled, and anyone
+and restored to where it came from first, the wizard is canceled, and anyone
 still standing in the world is moved to `leave.fallback-world` (or the main
 world). Arenas, kits and leaderboards are untouched. `/practice world info`
 shows the world, session count, allocated slots and loaded chunks.
@@ -460,4 +539,4 @@ gained multiple finish triggers — old files migrate to a one-entry list.
 - Warm-pool pre-pasted arenas for join bursts; staggered "dissolve" reset
   animation
 - Marker-block template import (spawn/finish baked into the schematic)
-- Holographic leaderboard signs/armour stands in the lobby world
+- Holographic leaderboard signs/armor stands in the lobby world

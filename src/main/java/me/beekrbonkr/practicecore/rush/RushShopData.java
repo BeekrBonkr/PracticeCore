@@ -3,7 +3,9 @@ package me.beekrbonkr.practicecore.rush;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A Bukkit-only snapshot of the MBedwars item shop, so the shop menu never
@@ -20,8 +22,14 @@ public final class RushShopData {
 
         /** True when the player's inventory covers every price line. */
         public boolean affordableWith(org.bukkit.inventory.PlayerInventory inventory) {
+            // Sum per material first — two price lines of the same material
+            // must not both count the same items.
+            Map<Material, Integer> needed = new EnumMap<>(Material.class);
             for (Price price : prices) {
-                if (count(inventory, price.material()) < price.amount()) {
+                needed.merge(price.material(), price.amount(), Integer::sum);
+            }
+            for (Map.Entry<Material, Integer> entry : needed.entrySet()) {
+                if (count(inventory, entry.getKey()) < entry.getValue()) {
                     return false;
                 }
             }

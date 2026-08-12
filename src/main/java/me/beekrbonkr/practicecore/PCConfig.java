@@ -23,6 +23,7 @@ public final class PCConfig {
     private final int maxSchematicSize;
     private final TimerStartMode timerStartMode;
     private final int scoreboardTicks;
+    private final String serverIp;
     private final int failYOffset;
     private final boolean allowPearls;
     private final boolean allowBuckets;
@@ -36,6 +37,7 @@ public final class PCConfig {
     private final int rushGoldIntervalTicks;
     private final int rushGeneratorItemCap;
     private final boolean rushBaseGeneratorsDefault;
+    private final me.beekrbonkr.practicecore.rush.RushSelection.DefensePreset rushCompetitiveDefense;
 
     private final boolean bundledTemplateEnabled;
     private final String bundledTemplateName;
@@ -77,12 +79,14 @@ public final class PCConfig {
         this.maxSchematicSize = cfg.getInt("grid.max-schematic-size", 800);
         TimerStartMode mode;
         try {
-            mode = TimerStartMode.valueOf(cfg.getString("timer.start-mode", "MOVE").toUpperCase());
+            mode = TimerStartMode.valueOf(cfg.getString("timer.start-mode", "MOVE")
+                    .toUpperCase(java.util.Locale.ROOT));
         } catch (IllegalArgumentException e) {
             mode = TimerStartMode.MOVE;
         }
         this.timerStartMode = mode;
         this.scoreboardTicks = Math.max(1, cfg.getInt("scoreboard.update-ticks", 2));
+        this.serverIp = cfg.getString("scoreboard.server-ip", "").trim();
         this.failYOffset = cfg.getInt("session.fail-y-offset", 0);
         this.allowPearls = cfg.getBoolean("session.allow-pearls", false);
         this.allowBuckets = cfg.getBoolean("session.allow-buckets", false);
@@ -96,6 +100,14 @@ public final class PCConfig {
         this.rushGoldIntervalTicks = Math.max(1, cfg.getInt("rush.gold-interval-ticks", 120));
         this.rushGeneratorItemCap = Math.max(1, cfg.getInt("rush.generator-item-cap", 48));
         this.rushBaseGeneratorsDefault = cfg.getBoolean("rush.base-generators-default", true);
+        me.beekrbonkr.practicecore.rush.RushSelection.DefensePreset competitiveDefense;
+        try {
+            competitiveDefense = me.beekrbonkr.practicecore.rush.RushSelection.DefensePreset.valueOf(
+                    cfg.getString("rush.competitive-defense", "ENDSTONE").toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            competitiveDefense = me.beekrbonkr.practicecore.rush.RushSelection.DefensePreset.ENDSTONE;
+        }
+        this.rushCompetitiveDefense = competitiveDefense;
 
         this.bundledTemplateEnabled = cfg.getBoolean("bundled-template.enabled", true);
         this.bundledTemplateName = cfg.getString("bundled-template.name", "turtle")
@@ -107,6 +119,8 @@ public final class PCConfig {
                         .trim().toLowerCase(Locale.ROOT),
                 "bedbreak-horizontal",
                 cfg.getString("generated-arenas.bedbreak-horizontal", "bedbreak-horizontal")
+                        .trim().toLowerCase(Locale.ROOT),
+                "mlg", cfg.getString("generated-arenas.mlg", "mlg")
                         .trim().toLowerCase(Locale.ROOT));
 
         AccessMode access;
@@ -172,6 +186,11 @@ public final class PCConfig {
         return timerStartMode;
     }
 
+    /** Server address for the sidebar footer; empty hides the footer. */
+    public String serverIp() {
+        return serverIp;
+    }
+
     public int scoreboardTicks() {
         return scoreboardTicks;
     }
@@ -215,6 +234,11 @@ public final class PCConfig {
     /** Items lying near a generator before it pauses dropping more. */
     public int rushGeneratorItemCap() {
         return rushGeneratorItemCap;
+    }
+
+    /** The bed defense preset every competitive run is pinned to. */
+    public me.beekrbonkr.practicecore.rush.RushSelection.DefensePreset rushCompetitiveDefense() {
+        return rushCompetitiveDefense;
     }
 
     /** Whether base generators run for players with no saved preference. */

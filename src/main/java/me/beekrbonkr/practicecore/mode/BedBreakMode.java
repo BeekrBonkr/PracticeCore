@@ -143,7 +143,7 @@ public final class BedBreakMode implements Mode {
                     + "' is missing settings.bedbreak bed position or blocks — runs can never finish.");
             return;
         }
-        rebuild(state);
+        rebuild(session, state);
     }
 
     private void parse(PracticeCorePlugin plugin, PracticeSession session, State state) {
@@ -195,7 +195,7 @@ public final class BedBreakMode implements Mode {
     }
 
     /** Restores the bed and re-rolls the blocks in front of / above it. */
-    private void rebuild(State state) {
+    private void rebuild(PracticeSession session, State state) {
         World world = state.bedHead.getWorld();
         String facing = state.facing.name().toLowerCase();
         world.getBlockAt(state.bedFoot).setBlockData(
@@ -210,7 +210,11 @@ public final class BedBreakMode implements Mode {
         int n = outward.size();
         for (int j = 0; j < n; j++) {
             for (Location loc : stepBlocks(state, j)) {
-                world.getBlockAt(loc).setType(outward.get(j), false);
+                // A blocks: config taller than the arena must not write past
+                // the bounds — nothing outside them is ever erased again.
+                if (session.containsBlock(loc)) {
+                    world.getBlockAt(loc).setType(outward.get(j), false);
+                }
             }
         }
         List<Material> breakOrder = new ArrayList<>(outward);

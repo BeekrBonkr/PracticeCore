@@ -38,8 +38,17 @@ public final class SessionManager {
 
     private final PracticeCorePlugin plugin;
     private final Map<UUID, PracticeSession> sessions = new HashMap<>();
+    /**
+     * Sessions by grid slot, so the per-block-event listeners (liquid flow,
+     * falling blocks) resolve "whose arena is this?" in O(1) instead of
+     * scanning every session — the scans went quadratic with many arenas full
+     * of spreading water.
+     */
+    private final Map<Long, PracticeSession> byGrid = new HashMap<>();
     private final Set<UUID> internalTeleports = new HashSet<>();
     private final Set<UUID> internalGamemode = new HashSet<>();
+    /** Players whose arena is being pasted off-thread right now. */
+    private final Set<UUID> pendingJoins = new HashSet<>();
 
     public SessionManager(PracticeCorePlugin plugin) {
         this.plugin = plugin;
@@ -55,6 +64,18 @@ public final class SessionManager {
 
     public boolean isInternalTeleport(UUID player) {
         return internalTeleports.contains(player);
+    }
+
+    /** The session whose arena contains this block, or null. O(1) via the grid. */
+    public PracticeSession sessionAtBlock(Location loc) {
+        int spacing = plugin.pcConfig().gridSpacing();
+        PracticeSession session = byGrid.get(gridKey(
+                Math.floorDiv(loc.getBlockX(), spacing), Math.floorDiv(loc.getBlockZ(), spacing)));
+        return session != null && session.containsBlock(loc) ? session : null;
+    }
+
+    private static long gridKey(int gridX, int gridZ) {
+        return ((long) gridX << 32) ^ (gridZ & 0xffffffffL);
     }
 
     public boolean isInternalGamemode(UUID player) {
@@ -77,6 +98,10 @@ public final class SessionManager {
     public void join(Player player, ArenaTemplate template) {
         UUID id = player.getUniqueId();
         Messages msg = plugin.messages();
+        if (pendingJoins.contains(id)) {
+            msg.send(player, "session.preparing");
+            return;
+        }
         PracticeSession current = sessions.get(id);
         if (current != null) {
             if (current.state() == SessionState.PREPARING || current.state() == SessionState.ENDING) {
@@ -101,7 +126,7 @@ public final class SessionManager {
             return;
         }
         if (!plugin.templates().canUse(player, template)) {
-            // The GUI hides or greys these out; the command path has to say so.
+            // The GUI hides or grays these out; the command path has to say so.
             msg.send(player, "arena.locked", "arena", template.displayName());
             return;
         }
@@ -134,7 +159,7 @@ public final class SessionManager {
         }
         Clipboard clipboard;
         try {
-            clipboard = plugin.schematics().load(template.schematicFile());
+            clipboard = plugin.schematics().loadCached(template.schematicFile());
         } catch (IOException e) {
             msg.send(player, "arena.schematic-failed");
             plugin.getLogger().severe("Failed to load schematic for '" + template.name() + "': " + e.getMessage());
@@ -151,16 +176,66 @@ public final class SessionManager {
         Location origin = new Location(world,
                 (long) slot.gridX() * spacing, plugin.pcConfig().baseY(), (long) slot.gridZ() * spacing);
 
-        BoundingBox bounds;
-        try {
-            bounds = plugin.schematics().paste(clipboard, origin);
-        } catch (WorldEditException e) {
+        // A big paste can take whole seconds; with FAWE it runs off-thread so
+        // the server never stalls, and the join resumes on the main thread.
+        // Say so up front — a silent pause after the command reads as lag.
+        pendingJoins.add(id);
+        msg.actionBar(player, "session.building", "arena", template.displayName());
+        if (plugin.schematics().supportsAsyncEdits()) {
+            java.util.concurrent.CompletableFuture
+                    .supplyAsync(() -> {
+                        try {
+                            return plugin.schematics().paste(clipboard, origin);
+                        } catch (WorldEditException e) {
+                            throw new java.util.concurrent.CompletionException(e);
+                        }
+                    })
+                    .whenComplete((bounds, error) -> Bukkit.getScheduler().runTask(plugin, () ->
+                            completeJoin(player, template, mode, current, slot, origin,
+                                    triggerData, bounds, error)));
+        } else {
+            BoundingBox bounds = null;
+            Throwable error = null;
+            try {
+                bounds = plugin.schematics().paste(clipboard, origin);
+            } catch (WorldEditException e) {
+                error = e;
+            }
+            completeJoin(player, template, mode, current, slot, origin, triggerData, bounds, error);
+        }
+    }
+
+    /**
+     * Second half of {@link #join} — runs on the main thread once the paste
+     * finished. The world may have moved on while the paste ran (the player
+     * quit, left, or was handed to setup), in which case the orphaned paste
+     * is torn back down instead of being turned into a session.
+     */
+    private void completeJoin(Player player, ArenaTemplate template,
+                              me.beekrbonkr.practicecore.mode.Mode mode,
+                              PracticeSession current, Slot slot, Location origin,
+                              Map<me.beekrbonkr.practicecore.template.ArenaTrigger, BlockData> triggerData,
+                              BoundingBox bounds, Throwable error) {
+        UUID id = player.getUniqueId();
+        pendingJoins.remove(id);
+        Messages msg = plugin.messages();
+        World world = plugin.worldService().world();
+        if (error != null || bounds == null || world == null) {
             plugin.allocator().release(slot);
             msg.send(player, "arena.paste-failed");
-            plugin.getLogger().severe("Paste failed for '" + template.name() + "': " + e.getMessage());
+            plugin.getLogger().severe("Paste failed for '" + template.name() + "': "
+                    + (error != null ? error.getMessage() : "no result"));
+            return;
+        }
+        if (!player.isOnline() || sessions.get(id) != current) {
+            slot.markDirty();
+            eraseRegion(world, bounds);
+            releaseLater(slot);
             return;
         }
         slot.occupy();
+        // Arena sizes never approach the grid spacing, so a slot's cell fully
+        // contains its arena and the cell key is unambiguous.
 
         // The finish triggers are not part of the schematic (they were placed
         // during setup, after the //copy) — the plugin stamps them in.
@@ -182,34 +257,60 @@ public final class SessionManager {
         session.setLastTimeMs(plugin.stats().lastMs(id, statsKey));
         // Replaces `current` in the map; `current` is still ours to clean up.
         sessions.put(id, session);
+        byGrid.put(gridKey(slot.gridX(), slot.gridZ()), session);
 
+        // First join only: the snapshot already on disk is the truth for
+        // anyone switching, and overwriting it would save a kit as their
+        // "real" inventory. Captured BEFORE the teleport is issued — capture
+        // after it and the "restore me to where I came from" location would
+        // be the arena itself.
+        if (!plugin.snapshots().has(id)) {
+            plugin.snapshots().save(id, PlayerSnapshot.capture(player));
+        }
+        msg.actionBar(player, "session.teleporting");
         internalTeleports.add(id);
+        // Exceptions inside a whenComplete callback vanish with the future —
+        // anything thrown here (a mode's onReady choking on bad settings)
+        // must be logged, or the session just silently never becomes READY.
         player.teleportAsync(session.spawn()).whenComplete((ok, err) -> {
-            internalTeleports.remove(id);
-            if (err != null || !Boolean.TRUE.equals(ok)
-                    || !player.isOnline() || sessions.get(id) != session) {
-                abortJoin(player, session, current);
-                return;
-            }
-            if (current != null) {
-                releaseArena(current);
-            }
-            // First join only: the snapshot already on disk is the truth for
-            // anyone switching, and overwriting it would save a kit as their
-            // "real" inventory.
-            if (!plugin.snapshots().has(id)) {
-                plugin.snapshots().save(id, PlayerSnapshot.capture(player));
-            }
-            applyPracticeState(player, session);
-            session.setState(SessionState.READY);
-            session.mode().onReady(plugin, player, session);
-            plugin.boards().create(player);
-            if (current != null) {
-                msg.send(player, "session.switched", "arena", template.displayName());
-            } else {
-                msg.send(player, "session.ready", "arena", template.displayName());
+            try {
+                finishTeleport(player, session, current, ok, err);
+            } catch (RuntimeException e) {
+                plugin.getLogger().severe("Entering '" + session.template().name()
+                        + "' failed after the teleport: " + e);
+                abortJoin(player, session, null);
             }
         });
+    }
+
+    /** Runs on the main thread once the join teleport settled, one way or the other. */
+    private void finishTeleport(Player player, PracticeSession session, PracticeSession current,
+                                Boolean ok, Throwable err) {
+        UUID id = player.getUniqueId();
+        Messages msg = plugin.messages();
+        ArenaTemplate template = session.template();
+        internalTeleports.remove(id);
+        if (err != null || !Boolean.TRUE.equals(ok)
+                || !player.isOnline() || sessions.get(id) != session
+                // Another plugin's teleport during the async window is
+                // masked by internalTeleports — spot it by where the
+                // player actually ended up.
+                || !plugin.worldService().isPracticeWorld(player.getWorld())) {
+            abortJoin(player, session, current);
+            return;
+        }
+        if (current != null) {
+            releaseArena(current);
+        }
+        applyPracticeState(player, session);
+        session.setState(SessionState.READY);
+        session.mode().onReady(plugin, player, session);
+        plugin.boards().create(player);
+        if (current != null) {
+            msg.send(player, "session.switched", "arena", template.displayName());
+        } else {
+            msg.send(player, "session.ready", "arena", template.displayName());
+        }
     }
 
     /**
@@ -291,7 +392,7 @@ public final class SessionManager {
         for (PotionEffect effect : player.getActivePotionEffects()) {
             player.removePotionEffect(effect.getType());
         }
-        AttributeInstance maxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        AttributeInstance maxHealth = player.getAttribute(PlayerSnapshot.maxHealthAttribute());
         player.setHealth(maxHealth != null ? maxHealth.getValue() : 20.0);
         player.setFoodLevel(20);
         player.setSaturation(20);
@@ -332,9 +433,13 @@ public final class SessionManager {
         String arena = session.mode().statsKey(plugin, session);
         String displayName = session.mode().runDisplayName(plugin, session);
         LeaderboardService.Entry previousRecord = plugin.leaderboards().record(arena);
-        boolean pbEligible = !session.template().requireBlocksForPb() || session.tracker().count() > 0;
+        // Some runs are off the books entirely (rush casual mode): the finish
+        // is announced to the player but no time, count or best is written.
+        boolean records = session.mode().recordsRun(plugin, session);
+        boolean pbEligible = records && session.mode().pbEligible(plugin, session);
         long previousBest = session.bestTimeMs();
-        boolean pb = plugin.stats().record(player.getUniqueId(), arena, millis, pbEligible);
+        boolean pb = records
+                && plugin.stats().record(player.getUniqueId(), arena, millis, pbEligible);
         Messages msg = plugin.messages();
         if (pb) {
             session.setBestTimeMs(millis);
@@ -431,6 +536,20 @@ public final class SessionManager {
         return true;
     }
 
+    /**
+     * Mode-driven success that records no time. Streak modes (MLG) score in
+     * consecutive successes, so the arena resets like a finish but the run's
+     * duration is never recorded, ranked or announced — the mode has already
+     * done its own scorekeeping and messaging before calling this.
+     */
+    public void completeUntimed(Player player, PracticeSession session) {
+        if (session.state() != SessionState.ACTIVE) {
+            return;
+        }
+        session.setState(SessionState.RESETTING);
+        resetArena(player, session);
+    }
+
     public void fail(Player player, PracticeSession session) {
         if (session.state() != SessionState.ACTIVE && session.state() != SessionState.READY) {
             return;
@@ -467,13 +586,14 @@ public final class SessionManager {
         internalTeleports.remove(player.getUniqueId());
         player.setFallDistance(0);
         player.setVelocity(new Vector(0, 0, 0));
-        session.setState(SessionState.READY);
-        session.mode().onReady(plugin, player, session);
-        // The stats key can change between runs (rush objective switched via
-        // restart) — re-read the cached bests from whatever board is now live.
+        // Re-read the cached bests before onReady wipes the mode state: rush
+        // keys off whichever objective ended the run just now, and onReady
+        // installing a fresh state would collapse the key to its fallback.
         String statsKey = session.mode().statsKey(plugin, session);
         session.setBestTimeMs(plugin.stats().bestMs(session.playerId(), statsKey));
         session.setLastTimeMs(plugin.stats().lastMs(session.playerId(), statsKey));
+        session.setState(SessionState.READY);
+        session.mode().onReady(plugin, player, session);
     }
 
     // ---------------------------------------------------------------- leave
@@ -514,6 +634,7 @@ public final class SessionManager {
             cleanupArena(session, false);
         }
         plugin.stats().unload(player.getUniqueId());
+        plugin.speedometer().forget(player.getUniqueId());
     }
 
     /** onDisable: restore everyone synchronously; the scheduler is gone. */
@@ -538,36 +659,83 @@ public final class SessionManager {
 
     private void cleanupArena(PracticeSession session, boolean immediateRelease) {
         notifyEnd(session); // backstop — a no-op on every path that already ran it
+        if (!session.markCleaned()) {
+            // A quit during the in-flight join teleport reaches here twice
+            // (handleQuit, then the teleport callback's abort). The second
+            // pass must not release the slot again — a double release hands
+            // the same slot to two players and their arenas paste over each
+            // other.
+            return;
+        }
         Slot slot = session.slot();
+        byGrid.remove(gridKey(slot.gridX(), slot.gridZ()), session);
         slot.markDirty();
         World world = plugin.worldService().world();
         session.tracker().revertAll();
-        plugin.schematics().erase(world, session.bounds());
+        eraseRegion(world, session.bounds());
         clearNonPlayerEntities(session);
         removeChunkTickets(world, session.bounds());
         if (immediateRelease || !plugin.isEnabled()) {
             plugin.allocator().release(slot);
         } else {
-            // With FAWE the erase may still be flushing off-thread; hold the
-            // slot briefly so a new paste can never race the wipe.
+            releaseLater(slot);
+        }
+    }
+
+    /**
+     * Fills a region with air — off the main thread when the WorldEdit
+     * implementation allows it (FAWE), because a big rush map erase is
+     * whole-tick expensive. Shutdown always erases synchronously; the
+     * scheduler is gone and the world must be clean before it unloads.
+     */
+    private void eraseRegion(World world, BoundingBox bounds) {
+        if (world == null) {
+            return;
+        }
+        if (plugin.isEnabled() && plugin.schematics().supportsAsyncEdits()) {
+            java.util.concurrent.CompletableFuture.runAsync(() ->
+                            plugin.schematics().erase(world, bounds))
+                    .exceptionally(e -> {
+                        plugin.getLogger().severe("Async arena erase failed: " + e.getMessage());
+                        return null;
+                    });
+        } else {
+            plugin.schematics().erase(world, bounds);
+        }
+    }
+
+    /**
+     * Releases a slot a few seconds from now — the erase may still be
+     * flushing off-thread, and a new paste must never race the wipe.
+     */
+    private void releaseLater(Slot slot) {
+        if (plugin.isEnabled()) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> plugin.allocator().release(slot), 60L);
+        } else {
+            plugin.allocator().release(slot);
         }
     }
 
     private void clearNonPlayerEntities(PracticeSession session) {
         World world = plugin.worldService().world();
+        if (world == null) {
+            // Shutdown ordering can unload the world first; an NPE here would
+            // abort endAllSync's loop and leave later players unrestored.
+            return;
+        }
         for (Entity entity : world.getNearbyEntities(session.bounds().clone().expand(4))) {
             if (!(entity instanceof Player)) {
                 entity.remove();
             }
         }
         // A pearl still in flight after the session ends must never land.
+        // Projectiles outrun the arena bounds, but scanning only them beats
+        // walking every entity in the world.
         Player player = Bukkit.getPlayer(session.playerId());
         if (player != null) {
-            for (Entity entity : world.getEntities()) {
-                if (entity instanceof Projectile projectile
-                        && player.equals(projectile.getShooter())) {
-                    entity.remove();
+            for (Projectile projectile : world.getEntitiesByClass(Projectile.class)) {
+                if (player.equals(projectile.getShooter())) {
+                    projectile.remove();
                 }
             }
         }

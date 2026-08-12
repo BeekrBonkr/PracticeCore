@@ -52,18 +52,18 @@ settings:
     wool-color: {enabled: true, slot: 13}
     time: {enabled: true, slot: 15, material: CLOCK}
 
-# The rush pre-join menu: objective, team base, difficulty modifiers, start.
+# The rush pre-join menu: team base, difficulty modifiers, start. Every
+# objective is armed on every run, so there is nothing to pick about the goal.
 rush:
   rows: 4
   back: {slot: 27}
   close: {slot: 35}
   buttons:
-    objective-bed: {slot: 10}
-    objective-emerald: {slot: 11}
-    objective-diamond: {slot: 12}
     # The team button's icon always shows the selected team's wool.
-    team: {slot: 14}
-    start: {slot: 16, material: LIME_DYE}
+    team: {slot: 11}
+    start: {slot: 13, material: LIME_DYE}
+    # Instant ranked start: generators on, no starting items, defenses on.
+    competitive: {slot: 15, material: NETHER_STAR}
     blocks: {slot: 19, material: WHITE_WOOL}
     currency: {slot: 20, material: IRON_INGOT}
     pickaxe: {slot: 21, material: IRON_PICKAXE}

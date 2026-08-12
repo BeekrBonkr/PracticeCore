@@ -31,6 +31,8 @@ final class SetupSession {
     /** Replaced by /practice setup capture and /practice setup schematic. */
     Clipboard clipboard;
     BoundingBox bounds;
+    /** One-shot cleanup guard: quit-during-teleport reaches cleanup twice, the slot must be released once. */
+    boolean cleaned;
 
     String mode;
     String category;

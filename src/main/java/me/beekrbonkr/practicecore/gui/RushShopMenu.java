@@ -28,6 +28,9 @@ public final class RushShopMenu extends Menu {
 
     private final RushShopData shop;
     private int page;
+    /** One warning per open, not one per refresh — buying re-renders. */
+    private boolean warnedTabCap;
+    private boolean warnedEntryCap;
 
     public RushShopMenu(PracticeCorePlugin plugin, Player viewer, RushShopData shop) {
         super(plugin, viewer, null);
@@ -49,6 +52,11 @@ public final class RushShopMenu extends Menu {
         List<RushShopData.Page> pages = shop.pages();
         page = Math.clamp(page, 0, pages.size() - 1);
 
+        if (pages.size() > 9 && !warnedTabCap) {
+            warnedTabCap = true;
+            plugin.getLogger().warning("The MBedwars shop has " + pages.size()
+                    + " pages; only the first 9 fit the tab row — the rest are hidden.");
+        }
         for (int i = 0; i < Math.min(9, pages.size()); i++) {
             RushShopData.Page tab = pages.get(i);
             int index = i;
@@ -64,6 +72,12 @@ public final class RushShopMenu extends Menu {
 
         RushShopData.Page current = shop.pages().get(page);
         List<RushShopData.Entry> entries = current.entries();
+        if (entries.size() > GRID_SIZE && !warnedEntryCap) {
+            warnedEntryCap = true;
+            plugin.getLogger().warning("Shop page '" + current.name() + "' has "
+                    + entries.size() + " items; only the first " + GRID_SIZE
+                    + " fit the grid — the rest are hidden.");
+        }
         for (int i = 0; i < Math.min(GRID_SIZE, entries.size()); i++) {
             RushShopData.Entry entry = entries.get(i);
             set(GRID_START + i, entryIcon(entry), event -> buy(entry));

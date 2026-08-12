@@ -29,6 +29,8 @@ public final class PracticeSession {
     private long bestTimeMs = -1;
     /** Guards the one-shot end-of-session mode hook. */
     private boolean endNotified;
+    /** Guards the one-shot arena teardown (quit and an in-flight join abort can both reach it). */
+    private boolean cleaned;
     /** Per-mode scratch state; owned entirely by the session's mode. */
     private Object modeState;
 
@@ -151,6 +153,15 @@ public final class PracticeSession {
             return false;
         }
         endNotified = true;
+        return true;
+    }
+
+    /** True the first time only — makes the arena teardown one-shot, so the slot is never released twice. */
+    public boolean markCleaned() {
+        if (cleaned) {
+            return false;
+        }
+        cleaned = true;
         return true;
     }
 

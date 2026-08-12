@@ -1,6 +1,5 @@
 package me.beekrbonkr.practicecore.listener;
 
-import me.beekrbonkr.practicecore.PCConfig;
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.session.PracticeSession;
 import me.beekrbonkr.practicecore.session.SessionState;
@@ -20,9 +19,14 @@ public final class MovementListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onMove(PlayerMoveEvent event) {
+        // Cheapest check first — most move events are sub-block and every
+        // player fires them constantly.
+        if (!event.hasChangedBlock()) {
+            return;
+        }
         Player player = event.getPlayer();
         PracticeSession session = plugin.sessions().get(player.getUniqueId());
-        if (session == null || !event.hasChangedBlock()) {
+        if (session == null) {
             return;
         }
         SessionState state = session.state();
@@ -31,16 +35,28 @@ public final class MovementListener implements Listener {
         }
         Location to = event.getTo();
         if (to.getY() < session.bounds().getMinY() + plugin.pcConfig().failYOffset()) {
-            plugin.sessions().fail(player, session);
+            // Deferred a tick: the fail teleports, and teleporting out of a
+            // move event mid-unwind fights the client's in-flight packets.
+            org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
+                if (plugin.sessions().get(player.getUniqueId()) == session
+                        && player.getLocation().getY()
+                        < session.bounds().getMinY() + plugin.pcConfig().failYOffset()) {
+                    plugin.sessions().fail(player, session);
+                }
+            });
             return;
         }
         if (session.isOutsideWalls(to)) {
-            event.setTo(event.getFrom());
+            // Push back position only — snapping yaw/pitch too rubber-bands
+            // the camera of a player turning while pressed against the wall.
+            Location back = event.getFrom().clone();
+            back.setYaw(to.getYaw());
+            back.setPitch(to.getPitch());
+            event.setTo(back);
             return;
         }
         if (state == SessionState.READY
-                && session.mode().usesStandardTimerStart()
-                && plugin.pcConfig().timerStartMode() == PCConfig.TimerStartMode.MOVE
+                && session.mode().startsTimerOnMove(plugin.pcConfig())
                 && !sameBlock(to, session.spawn())) {
             session.setState(SessionState.ACTIVE);
             session.startTimer();

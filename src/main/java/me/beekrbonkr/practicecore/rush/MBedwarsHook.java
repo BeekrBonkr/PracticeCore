@@ -73,6 +73,20 @@ public final class MBedwarsHook {
         return names;
     }
 
+    /** One line of arena metadata, enough to filter a mass import by shape. */
+    public record ArenaSummary(String name, int teams, int playersPerTeam) {
+    }
+
+    /** Every MBedwars arena with its team count and team size. */
+    public static List<ArenaSummary> arenaSummaries() {
+        List<ArenaSummary> summaries = new ArrayList<>();
+        for (Arena arena : BedwarsAPI.getGameAPI().getArenas()) {
+            summaries.add(new ArenaSummary(arena.getName(),
+                    arena.getEnabledTeams().size(), arena.getPlayersPerTeam()));
+        }
+        return summaries;
+    }
+
     /**
      * Reads everything the importer needs about one MBedwars arena, or throws
      * {@link IllegalStateException} with an admin-readable reason.

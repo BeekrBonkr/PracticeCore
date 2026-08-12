@@ -11,7 +11,7 @@ package me.beekrbonkr.practicecore.config;
 public final class Versions {
 
     /** config.yml — admin-editable. */
-    public static final int CONFIG = 2;
+    public static final int CONFIG = 3;
 
     /** messages.yml — admin-editable. */
     public static final int MESSAGES = 1;
