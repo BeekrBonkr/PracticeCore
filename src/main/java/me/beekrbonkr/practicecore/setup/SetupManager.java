@@ -77,6 +77,57 @@ public final class SetupManager {
         return active == null ? null : active.name;
     }
 
+    // ------------------------------------------- read-only state for the GUI
+
+    public boolean activeEditing() {
+        return active != null && active.editing;
+    }
+
+    public String activeMode() {
+        return active == null || active.mode == null
+                ? me.beekrbonkr.practicecore.mode.BridgingMode.ID : active.mode;
+    }
+
+    /** The explicit category, or null when the arena groups under its mode. */
+    public String activeCategory() {
+        return active == null ? null : active.category;
+    }
+
+    public String activeDisplayName() {
+        return active == null ? null
+                : (active.displayName != null ? active.displayName : active.name);
+    }
+
+    /** The explicit permission node, or null for the arena's default. */
+    public String activePermission() {
+        return active == null ? null : active.permission;
+    }
+
+    public boolean activeRequireBlocks() {
+        return active != null && active.requireBlocksForPb;
+    }
+
+    public boolean activeHasSpawn() {
+        return active != null && active.spawnOffset != null;
+    }
+
+    public int activeTriggerCount() {
+        return active == null ? 0 : active.triggers.size();
+    }
+
+    public int activeKitSize() {
+        return active == null ? 0 : active.kit.size();
+    }
+
+    public Material activeIcon() {
+        return active == null ? null : active.icon;
+    }
+
+    /** Whether the active setup could be saved right now. */
+    public boolean activeReady() {
+        return active != null && active.ready(needsTrigger(active));
+    }
+
     // ----------------------------------------------------------------- open
 
     public void start(Player admin, String name) {
@@ -225,21 +276,21 @@ public final class SetupManager {
     }
 
     /**
-     * The trigger lives outside the schematic — stamp it back in so the admin
-     * can see (and move) where runs currently finish.
+     * Triggers live outside the schematic — stamp them back in so the admin
+     * can see (and change) where runs currently finish.
      */
     private void stampTrigger(Player admin, SetupSession session) {
-        Location trigger = session.triggerLocation();
-        if (trigger == null || session.triggerBlockData == null) {
-            return;
-        }
-        try {
-            trigger.getBlock().setBlockData(Bukkit.createBlockData(session.triggerBlockData), false);
-            session.triggerCandidates.add(trigger);
-        } catch (IllegalArgumentException e) {
-            msg().send(admin, "setup.trigger-invalid", "data", session.triggerBlockData);
-            session.triggerOffset = null;
-            session.triggerBlockData = null;
+        for (java.util.Iterator<me.beekrbonkr.practicecore.template.ArenaTrigger> it =
+                session.triggers.iterator(); it.hasNext(); ) {
+            var trigger = it.next();
+            Location loc = trigger.location(session.origin);
+            try {
+                loc.getBlock().setBlockData(Bukkit.createBlockData(trigger.blockData()), false);
+                session.triggerCandidates.add(loc);
+            } catch (IllegalArgumentException e) {
+                msg().send(admin, "setup.trigger-invalid", "data", trigger.blockData());
+                it.remove();
+            }
         }
     }
 
@@ -276,19 +327,37 @@ public final class SetupManager {
         }
         Material type = block.getType();
         if (Tag.BUTTONS.isTagged(type) || Tag.PRESSURE_PLATES.isTagged(type)) {
-            session.triggerOffset = new Vector(
-                    block.getX() - session.origin.getBlockX(),
-                    block.getY() - session.origin.getBlockY(),
-                    block.getZ() - session.origin.getBlockZ());
-            session.triggerType = Tag.PRESSURE_PLATES.isTagged(type) ? TriggerType.PLATE : TriggerType.BUTTON;
-            session.triggerBlockData = block.getBlockData().getAsString();
+            TriggerType triggerType = Tag.PRESSURE_PLATES.isTagged(type)
+                    ? TriggerType.PLATE : TriggerType.BUTTON;
+            session.triggers.add(new me.beekrbonkr.practicecore.template.ArenaTrigger(
+                    new Vector(
+                            block.getX() - session.origin.getBlockX(),
+                            block.getY() - session.origin.getBlockY(),
+                            block.getZ() - session.origin.getBlockZ()),
+                    triggerType,
+                    block.getBlockData().getAsString()));
             session.triggerCandidates.add(block.getLocation());
-            msg().send(admin, "setup.trigger-set", msg().ref("type",
-                    session.triggerType == TriggerType.PLATE
-                            ? "setup.trigger-plate" : "setup.trigger-button"));
+            msg().send(admin, "setup.trigger-added",
+                    msg().ref("type", triggerType == TriggerType.PLATE
+                            ? "setup.trigger-plate" : "setup.trigger-button"),
+                    "count", String.valueOf(session.triggers.size()));
         } else if (!session.editing) {
             msg().actionBar(admin, "setup.not-captured-hint");
         }
+    }
+
+    /** Removes every placed finish trigger so the admin can start over. */
+    public void clearTriggers(Player admin) {
+        SetupSession session = requireActive(admin);
+        if (session == null) {
+            return;
+        }
+        for (Location candidate : session.triggerCandidates) {
+            candidate.getBlock().setType(Material.AIR, false);
+        }
+        session.triggerCandidates.clear();
+        session.triggers.clear();
+        msg().send(admin, "setup.triggers-cleared");
     }
 
     public void saveKit(Player admin) {
@@ -392,6 +461,124 @@ public final class SetupManager {
         msg().send(admin, "setup.mode-set", "mode", mode);
     }
 
+    /** Null or "default" clears the override; the arena groups under its mode. */
+    public void setCategory(Player admin, String category) {
+        SetupSession session = requireActive(admin);
+        if (session == null) {
+            return;
+        }
+        if (category == null || category.equalsIgnoreCase("default")) {
+            session.category = null;
+            msg().send(admin, "setup.category-cleared");
+            return;
+        }
+        session.category = category.trim().toLowerCase(java.util.Locale.ROOT);
+        msg().send(admin, "setup.category-set", "category", session.category);
+    }
+
+    // ------------------------------------------------------------- rush maps
+
+    private static final Set<String> RUSH_GENERATOR_TYPES =
+            Set.of("iron", "gold", "diamond", "emerald");
+
+    /** Records a rush team spawn where the admin stands. */
+    public void rushTeamSpawn(Player admin, String team) {
+        SetupSession session = requireActive(admin);
+        if (session == null) {
+            return;
+        }
+        Location loc = admin.getLocation();
+        if (!session.bounds.contains(loc.getX(), loc.getY(), loc.getZ())) {
+            msg().send(admin, "setup.out-of-bounds");
+            return;
+        }
+        String name = team.toUpperCase(Locale.ROOT);
+        me.beekrbonkr.practicecore.rush.RushMapData.writeTeamSpawn(session.settings, name,
+                new Vector(loc.getX() - session.origin.getX(),
+                        loc.getY() - session.origin.getY(),
+                        loc.getZ() - session.origin.getZ()),
+                loc.getYaw(), loc.getPitch());
+        msg().send(admin, "setup.rush-spawn-set", "team", name);
+    }
+
+    /** Records the bed the admin is looking at as a rush team's target bed. */
+    public void rushBed(Player admin, String team) {
+        SetupSession session = requireActive(admin);
+        if (session == null) {
+            return;
+        }
+        Block target = admin.getTargetBlockExact(6);
+        if (target == null || !(target.getBlockData() instanceof org.bukkit.block.data.type.Bed bed)) {
+            msg().send(admin, "setup.rush-need-bed");
+            return;
+        }
+        if (!session.bounds.contains(target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5)) {
+            msg().send(admin, "setup.out-of-bounds");
+            return;
+        }
+        Block head = bed.getPart() == org.bukkit.block.data.type.Bed.Part.HEAD
+                ? target : target.getRelative(bed.getFacing());
+        String name = team.toUpperCase(Locale.ROOT);
+        me.beekrbonkr.practicecore.rush.RushMapData.writeTeamBed(session.settings, name,
+                new Vector(head.getX() - session.origin.getBlockX(),
+                        head.getY() - session.origin.getBlockY(),
+                        head.getZ() - session.origin.getBlockZ()),
+                bed.getFacing(), target.getType());
+        msg().send(admin, "setup.rush-bed-set", "team", name);
+    }
+
+    /** Records a generator on the block the admin stands on. */
+    public void rushGenerator(Player admin, String type) {
+        SetupSession session = requireActive(admin);
+        if (session == null) {
+            return;
+        }
+        String normalized = type.toLowerCase(Locale.ROOT);
+        if (!RUSH_GENERATOR_TYPES.contains(normalized)) {
+            msg().send(admin, "setup.rush-bad-generator", "type", type);
+            return;
+        }
+        Location loc = admin.getLocation();
+        if (!session.bounds.contains(loc.getX(), loc.getY(), loc.getZ())) {
+            msg().send(admin, "setup.out-of-bounds");
+            return;
+        }
+        me.beekrbonkr.practicecore.rush.RushMapData.addGenerator(session.settings, normalized,
+                new Vector(loc.getBlockX() - session.origin.getBlockX(),
+                        loc.getBlockY() - session.origin.getBlockY() - 1,
+                        loc.getBlockZ() - session.origin.getBlockZ()));
+        msg().send(admin, "setup.rush-generator-set", "type", normalized);
+    }
+
+    /** Records a shop dealer NPC spot where the admin stands. */
+    public void rushDealer(Player admin) {
+        SetupSession session = requireActive(admin);
+        if (session == null) {
+            return;
+        }
+        Location loc = admin.getLocation();
+        if (!session.bounds.contains(loc.getX(), loc.getY(), loc.getZ())) {
+            msg().send(admin, "setup.out-of-bounds");
+            return;
+        }
+        me.beekrbonkr.practicecore.rush.RushMapData.addDealer(session.settings,
+                new Vector(loc.getX() - session.origin.getX(),
+                        loc.getY() - session.origin.getY(),
+                        loc.getZ() - session.origin.getZ()),
+                loc.getYaw());
+        msg().send(admin, "setup.rush-dealer-set");
+    }
+
+    /** Wipes the whole rush layout so the admin can start over. */
+    public void rushClear(Player admin) {
+        SetupSession session = requireActive(admin);
+        if (session == null) {
+            return;
+        }
+        session.settings.remove("rush");
+        msg().send(admin, "setup.rush-cleared");
+    }
+
     /**
      * Writes the arena region as it currently stands in the world back over
      * the template's schematic — this is what makes in-world editing stick.
@@ -464,13 +651,22 @@ public final class SetupManager {
                 "arena", session.name, "editing", session.editing ? "Editing" : "Creating");
         line(admin, "display-name", session.displayName != null ? session.displayName : session.name);
         line(admin, "mode", session.mode != null ? session.mode : "bridging");
+        line(admin, "category", session.category != null ? session.category
+                : (session.mode != null ? session.mode : "bridging") + " (mode default)");
         line(admin, "spawn", describe(session.spawnOffset));
-        line(admin, "trigger", describe(session.triggerOffset)
-                + (session.triggerType != null ? " (" + session.triggerType + ")" : ""));
+        line(admin, "triggers", session.triggers.isEmpty() ? "not set"
+                : session.triggers.size() + " placed");
         line(admin, "kit", session.kit.size() + " stack(s)");
         line(admin, "icon", session.icon != null ? session.icon.name() : "auto");
         line(admin, "permission", session.permission != null ? session.permission : "arena default");
         line(admin, "pb requires blocks", String.valueOf(session.requireBlocksForPb));
+        if (me.beekrbonkr.practicecore.mode.RushMode.ID.equals(session.mode)) {
+            var rush = me.beekrbonkr.practicecore.rush.RushMapData.parseSettings(session.settings);
+            line(admin, "rush teams", rush.playableTeams().size() + " playable of "
+                    + rush.teams().size() + " set");
+            line(admin, "rush generators", String.valueOf(rush.generators().size()));
+            line(admin, "rush dealers", String.valueOf(rush.dealers().size()));
+        }
         msg().send(admin, session.ready(needsTrigger(session))
                 ? "setup.info-ready" : "setup.info-not-ready");
     }
@@ -503,20 +699,25 @@ public final class SetupManager {
             msg().send(admin, "setup.need-spawn");
             return;
         }
-        if (needsTrigger(session) && session.triggerOffset == null) {
+        if (needsTrigger(session) && session.triggers.isEmpty()) {
             msg().send(admin, "setup.need-trigger");
+            return;
+        }
+        if (me.beekrbonkr.practicecore.mode.RushMode.ID.equals(session.mode)
+                && !me.beekrbonkr.practicecore.rush.RushMapData
+                        .parseSettings(session.settings).playable()) {
+            msg().send(admin, "setup.rush-need-base");
             return;
         }
         ArenaTemplate template = new ArenaTemplate(session.name, session.dir);
         template.setSpawn(session.spawnOffset, session.spawnYaw, session.spawnPitch);
-        if (session.triggerOffset != null) {
-            template.setTrigger(session.triggerOffset, session.triggerType, session.triggerBlockData);
-        }
+        template.setTriggers(session.triggers);
         template.kit().putAll(session.kit);
         template.settings().putAll(session.settings);
         if (session.mode != null) {
             template.setMode(session.mode);
         }
+        template.setCategory(session.category);
         if (session.displayName != null) {
             template.setDisplayName(session.displayName);
         }
@@ -617,8 +818,8 @@ public final class SetupManager {
         }
     }
 
-    /** Normalises a user-supplied arena name. */
-    public static String normalise(String name) {
+    /** Normalizes a user-supplied arena name. */
+    public static String normalize(String name) {
         return name.toLowerCase(Locale.ROOT);
     }
 }

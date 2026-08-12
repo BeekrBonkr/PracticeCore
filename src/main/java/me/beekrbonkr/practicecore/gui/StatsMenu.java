@@ -53,7 +53,7 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
     @Override
     protected ItemStack emptyIcon() {
         String key = self() ? "gui.stats.empty-self" : "gui.stats.empty-other";
-        return ItemBuilder.of(Material.COBWEB)
+        return ItemBuilder.of(emptyMaterial())
                 .name(name(key + ".name"))
                 .lore(lore(key + ".lore"))
                 .build();
@@ -63,13 +63,14 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
     protected ItemStack icon(Map.Entry<String, Long> entry) {
         String arena = entry.getKey();
         long best = entry.getValue();
-        ArenaTemplate template = plugin.templates().get(arena);
+        String display = displayFor(arena);
+        ArenaTemplate template = templateFor(arena);
         int rank = plugin.leaderboards().rank(arena, subject);
         LeaderboardService.Entry record = plugin.leaderboards().record(arena);
         long last = plugin.stats().lastMs(subject, arena);
 
         List<Component> lines = new ArrayList<>(lore("gui.stats.entry-lore",
-                "arena", template != null ? template.displayName() : arena,
+                "arena", display,
                 "best", TimeFormat.precise(best),
                 "last", last >= 0 ? TimeFormat.precise(last) : raw("gui.none"),
                 "finishes", String.valueOf(plugin.stats().finishes(subject, arena)),
@@ -82,21 +83,45 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
             lines.addAll(lore("gui.stats.entry-lore-missing", "arena", arena));
         }
         return ItemBuilder.of(template != null ? template.effectiveIcon() : Material.PAPER)
-                .name(name("gui.stats.entry-name",
-                        "arena", template != null ? template.displayName() : arena))
+                .name(name("gui.stats.entry-name", "arena", display))
                 .lore(lines)
                 .glow(rank == 1)
                 .build();
     }
 
+    /** The arena behind a stats key — plain name or a rush composite key. */
+    private ArenaTemplate templateFor(String key) {
+        ArenaTemplate template = plugin.templates().get(key);
+        if (template != null) {
+            return template;
+        }
+        var rush = plugin.rush().resolveStatsKey(key);
+        return rush != null ? rush.getKey() : null;
+    }
+
+    private String displayFor(String key) {
+        ArenaTemplate template = plugin.templates().get(key);
+        if (template != null) {
+            return template.displayName();
+        }
+        var rush = plugin.rush().resolveStatsKey(key);
+        return rush != null ? plugin.rush().displayFor(rush.getKey(), rush.getValue()) : key;
+    }
+
     @Override
     protected void onEntryClick(Map.Entry<String, Long> entry, InventoryClickEvent event) {
-        ArenaTemplate template = plugin.templates().get(entry.getKey());
+        ArenaTemplate template = templateFor(entry.getKey());
         if (template == null || !viewer.hasPermission("practicecore.leaderboard")) {
             deny();
             return;
         }
         click();
+        var rush = plugin.rush().resolveStatsKey(entry.getKey());
+        if (rush != null) {
+            later(() -> new ArenaLeaderboardMenu(plugin, viewer, this, template, entry.getKey(),
+                    plugin.rush().displayFor(rush.getKey(), rush.getValue())).open());
+            return;
+        }
         later(() -> new ArenaLeaderboardMenu(plugin, viewer, this, template).open());
     }
 

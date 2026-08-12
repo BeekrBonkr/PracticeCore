@@ -62,30 +62,102 @@ arena rather than re-pasting it.
 The original mode: run the course, hit the button or pressure plate at the
 end. Timer starts on first movement (or first block, per `timer.start-mode`).
 
+A **speedometer** sits above the hotbar during bridging sessions: your current
+speed in m/s (smoothed over the last few samples), the distance travelled this
+run and the blocks placed. Tune it with `speedometer.enabled` /
+`speedometer.update-ticks` in `config.yml`; the text itself is
+`speedometer.bar` in `messages.yml` (set to `''` to silence it).
+
 ### bedbreak
 
-A tower of defense blocks stands on a bed inside a sealed barrier shaft. You
-spawn on top with a diamond sword, pickaxe, axe and shears, and dig straight
-down to the bed as fast as possible. The column is **reshuffled every run but
-its composition is fixed**, so times are comparable between players. Broken
-blocks never drop, only the tower and the bed are breakable, the timer starts
-on your first broken block, and breaking the bed finishes the run.
+A fixed set of defense blocks stands between you and a bed; you break through
+to the bed as fast as possible. The blocks are **reshuffled every run but
+their composition is fixed**, so times are comparable between players. Broken
+blocks never drop, only the defenses and the bed are breakable, the timer
+starts on your first broken block, and breaking the bed finishes the run.
+
+Two orientations, chosen per arena with `settings.bedbreak.orientation`:
+
+- `VERTICAL` — a column above the bed inside a sealed barrier shaft; you spawn
+  on top and dig straight down. One block per step.
+- `HORIZONTAL` — a wall filling a sealed corridor in front of the bed; you dig
+  forward through it. Each step is a two-high column of the same material, so
+  the only way to the bed is straight through.
+
+The mode also tracks **reaction time** as its own stat: whenever finishing a
+step means the next one needs a different tool, the clock runs from the
+moment the step breaks until you switch to that tool (already holding it
+counts as a zero — pre-switching is the skill being measured). Consecutive
+steps of the same material, or sharing a best tool, never count. The run's
+average shows on the sidebar and is persisted per arena
+(`reaction-last-ms` / `reaction-best-ms` in playerdata).
 
 Rearranging the tools in your inventory is remembered **per player**: however
 your hotbar was ordered when the run ended is how the kit is handed to you
 next time.
 
-`settings.bedbreak`: `bed-x/y/z` (bed head, relative to the paste origin),
-`bed-facing`, `bed-material`, and `blocks` — a `MATERIAL: count` map; the
-tower's height is the sum of the counts and rises from one block above the
-bed's head.
+`settings.bedbreak`: `orientation`, `bed-x/y/z` (bed head, relative to the
+paste origin), `bed-facing` (also the direction a horizontal wall extends
+from the head), `bed-material`, and `blocks` — a `MATERIAL: count` map; one
+step per count, rising from one block above the bed's head (vertical) or
+extending from the head (horizontal).
+
+### rush
+
+An empty bedwars map with reset conditions: you spawn at a team base of your
+choice and race exactly one objective — **break an enemy bed**, or **pick the
+waiting emerald or diamond off its generator**. Each map+objective pair keeps
+its own personal bests and leaderboard (stored under `map#bed`, `map#emerald`,
+`map#diamond`), so a 6-second diamond grab never shares a board with a
+40-second bed rush.
+
+Maps come from two places:
+
+- **MBedwars import** — `/practice rush import <mbedwars-arena>` captures the
+  arena's region as a schematic and resolves everything else from the MBedwars
+  data: team spawns, bed positions, every item generator and the shop dealer
+  spots. The map is playable immediately, under the Rush category. Re-import
+  with `overwrite` after map changes; times and settings survive.
+- **By hand** — build or `//copy` a map, `/practice setup start <name>`,
+  `/practice setup mode rush`, then walk the map placing markers:
+  `rush team <color>` (stand at that base's spawn), `rush bed <color>` (look at
+  that team's bed), `rush gen <iron|gold|diamond|emerald>` (stand on the
+  spawner block), `rush dealer` (shop NPC spot), `rush clear` to start over.
+  At least one team needs both a spawn and a bed to save.
+
+Clicking a rush arena in the GUI opens the **rush setup menu** instead of
+joining straight away: pick the objective (only ones the map supports light
+up), cycle the team base, then the difficulty modifiers — **starter blocks**
+(none/16/32/64 wool), **starting resources** (iron/gold to spend
+immediately), **pickaxe tier** (none → diamond), **bed defenses**
+(auto-generated shells over every enemy bed: wool, wool + end stone, or end
+stone + obsidian, reusing nothing from the map itself), and whether your
+base's **iron/gold generators** run. Every choice is remembered per player —
+a plain `/practice join <map>` replays your last setup.
+
+During a run the **mirrored MBedwars shop** is open for business: villager
+NPCs stand at the map's dealer spots and sell the real MBedwars item shop —
+same pages, icons, items and prices — settled directly against your
+inventory, no MBedwars game involved. Purchased wool follows your wool-color
+setting. Generator items and shop stock are exempt from the inventory
+validator (rush manages its own economy); everything else about the session
+is standard machinery: full reset on death or void fall, blocks revert, beds
+and defenses are re-placed, NPCs and items respawn.
+
+MBedwars is a **soft dependency**: importing and the shop need it installed;
+hand-built rush arenas play fine without it (dealer clicks then explain the
+shop is unavailable). Generator pacing is configurable under `rush:` in
+`config.yml` (`iron-interval-ticks`, `gold-interval-ticks`,
+`generator-item-cap`, `base-generators-default`).
 
 ## Messages
 
 Every piece of text the plugin shows a player lives in `messages.yml` —
-chat, action bars, titles, broadcasts, and all GUI titles, button names and
-lore. Formatting is MiniMessage, so colours, gradients, hover and click are
-available everywhere. Set any message to `''` to silence it.
+chat, action bars, titles, broadcasts, the sidebar (title and every line of
+both board layouts), the speedometer bar, and all GUI titles, button names
+and lore. Formatting is MiniMessage, so colors, gradients, hover and click
+are available everywhere. Set any message to `''` to silence it. Menu
+*structure* (slots, icons, rows, fillers) lives separately in `guis.yml`.
 
 Placeholder values a player supplied (names, arena display names) are inserted
 with `Placeholder.unparsed`, so a name containing MiniMessage syntax is shown
@@ -107,12 +179,13 @@ plugin starts. A marker file records that this happened, so deleting or
 renaming the arena does not bring it back on the next restart. Delete the
 marker (`plugins/PracticeCore/.bundled-installed`) to reinstall it.
 
-`generated-arenas` works the same way for bedbreak, except nothing is
-unpacked: the plugin builds the arena block-by-block in code and writes it
-out as a normal template folder (default `bedbreak`) — fully editable,
-deletable, and guarded by its own marker file (`.generated-installed`; remove
-a line from it to regenerate that arena). Set the name to `''` or
-`generated-arenas.enabled: false` to skip it.
+`generated-arenas` works the same way for the bedbreak arenas, except nothing
+is unpacked: the plugin builds each arena block-by-block in code and writes it
+out as a normal template folder (defaults `bedbreak` and
+`bedbreak-horizontal`, one per orientation) — fully editable, deletable, and
+guarded by its own marker file (`.generated-installed`; remove a line from it
+to regenerate that arena). Set a name to `''` or
+`generated-arenas.enabled: false` to skip them.
 
 ## The menu item and GUI
 
@@ -123,18 +196,41 @@ into the hotbar slot you want, arrange the rest of the kit, then
 joins that arena. `menu-item.force-in-kit` retro-fits it into arenas built
 before the item existed. Right-clicking it opens:
 
-- **Play** — the arena picker, filtered by the same permission check the join
-  command uses, showing your best, your rank and the arena record per entry
+- **Play** — a category picker (one tile per arena category, each with its
+  own menu), then the arena picker: filtered by the same permission check the
+  join command uses, showing your best, your rank and the arena record per
+  entry. An arena's category is `category:` in its `arena.yml` (set with
+  `/practice setup category <name>`), defaulting to its mode id; turn
+  `categories.enabled` off in `guis.yml` to go back to one flat list.
 - **Random Arena** — straight into one of the arenas you can play
 - **Leaderboards** — per-arena top times, your standing, and the gap to the
   player one place ahead
 - **My Stats** — every arena you've finished, ranked
 - **Restart Run** — reverts your blocks and puts you back on the spawn
 - **Sidebar** — show/hide the live timer scoreboard (remembered per player)
+- **Settings** — per-player, persisted in playerdata: permanent night vision
+  while practicing, the color of the wool in your kit (and so of your
+  bridges), and a client-side time of day for your arena. Changes apply
+  immediately mid-session and are undone when you leave.
 - **Help** and **Leave**
 
 The leave button restores everything and returns you to the world you came
 from — or hands you to the proxy server named in `leave.server`, if set.
+
+Two server-wide announcements keep leaderboards alive (`effects` in
+`config.yml`): taking the **#1 spot** on an arena broadcasts loudly and plays
+a small chime for everyone online (`broadcast-records`), and quietly, beating
+your **own personal best** posts a one-line note (`broadcast-pbs`) — never on
+top of the record shout, and never for a first finish.
+
+Menu **layout** is configurable in `guis.yml`: every button's slot, icon
+material and visibility, row counts, the border filler, and the shared
+navigation row of the paged menus. All menu text stays in `messages.yml`.
+
+Kits are exact: while practicing, anything in your inventory that is not a
+kit item (or your wool recolor of one, or the menu item) is swept back out
+on a fixed schedule, and crafting is blocked — `session.validate-inventory`
+and `session.validate-inventory-ticks` in `config.yml`.
 
 ## Requirements
 
@@ -143,6 +239,8 @@ from — or hands you to the proxy server named in `leave.server`, if set.
   plugin compiles against the WorldEdit API, which FAWE implements, and pastes
   become async automatically)
 - FastBoard is fetched automatically at runtime via `plugin.yml` `libraries:`
+- MBedwars 5.5+ (optional) — enables `/practice rush import` and the mirrored
+  item shop for the rush mode
 
 ## Commands
 
@@ -157,6 +255,7 @@ from — or hands you to the proxy server named in `leave.server`, if set.
 | `/practice sidebar` | `practicecore.use` | Show/hide the live timer |
 | `/practice setup …` | `practicecore.setup` | Arena configuration wizard |
 | `/practice edit <arena>` | `practicecore.setup` | Reopen a saved arena |
+| `/practice rush import\|list` | `practicecore.setup` | Pull rush maps from MBedwars |
 | `/practice arena …` | `practicecore.arena` | Administer saved arenas |
 | `/practice item [player]` | `practicecore.item` | Get the hotbar menu item |
 | `/practice pb reset <player> [arena\|all]` | `practicecore.pb.reset` | Wipe personal bests |
@@ -219,6 +318,14 @@ path falls back to that player's first available arena rather than failing.
 
 ## Creating an arena template
 
+Everything below can also be done from a menu: `/practice setup gui` lists
+every arena (left-click edits, right-click deletes, the anvil creates a new
+one) and, while the wizard is open, shows a control panel with a button for
+each step — text answers like the display name are asked for in chat. That
+GUI is intentionally **not** configurable: it reads neither `messages.yml`
+nor `guis.yml`, so a half-edited config can never break the tool you would
+use to fix it.
+
 1. Build your arena anywhere (even another world). Include the start island,
    the gap, and the finish island. **Don't** place the finish button yet.
 2. Select it and run `//copy` (stand somewhere sensible — the copy point
@@ -226,9 +333,10 @@ path falls back to that player's first available arena rather than failing.
 3. `/practice setup start <name>` — the schematic is saved, pasted in the
    practice world, and you're teleported there in creative.
 4. Stand on the start island facing the gap: `/practice setup spawn`
-5. Place the provided **button or pressure plate** where runs should finish
-   (the plugin stamps it onto the arena after every paste — it doesn't need to
-   be in the schematic).
+5. Place **buttons or pressure plates** where runs should finish — as many as
+   you like; touching any one of them ends the run (the plugin stamps them
+   onto the arena after every paste — they don't need to be in the
+   schematic). `/practice setup trigger clear` removes them all to start over.
 6. Optional: arrange your inventory exactly as players should receive it
    (e.g. 2×64 wool) and run `/practice setup kit`
 7. `/practice setup save` — the template goes live immediately.
@@ -249,7 +357,7 @@ Optional polish, either mid-wizard or on a saved arena:
 ## Editing a saved arena
 
 `/practice edit <arena>` pastes the arena into a fresh grid slot, stamps its
-finish trigger back in, and pre-loads **every** setting — so any single part
+finish triggers back in, and pre-loads **every** setting — so any single part
 can be changed without redoing the rest. An admin who is mid-run when they open
 the editor is taken out of their arena **in place**: no bounce back to the
 lobby and no second teleport. Their original snapshot is kept rather than
@@ -258,7 +366,8 @@ any of it started — never to a kit-wearing pose inside an arena that no longer
 exists.
 
 - Move the spawn: stand where you want it, `/practice setup spawn`
-- Move the finish: place another button or pressure plate
+- Change the finishes: place more buttons or pressure plates (each one is
+  added), or `/practice setup trigger clear` and start fresh
 - Change the kit: `/practice setup kit load` puts the saved kit in your
   inventory, rearrange it, `/practice setup kit` saves it back
 - **Reshape the arena itself**: build in place, then `/practice setup capture`
@@ -311,11 +420,12 @@ plugin owns carries a `data-version` (see `config/Versions.java`):
 |---|---|---|
 | `config.yml` | `config-version` | `PracticeCorePlugin.configSteps` |
 | `messages.yml` | `config-version` | `Messages.steps` |
+| `guis.yml` | `config-version` | `GuiConfig.steps` |
 | `templates/<name>/arena.yml` | `config-version` | `ArenaTemplate.migrate` |
 | `playerdata/<uuid>.yml` | `data-version` | `StatsStore.migrate` |
 | `snapshots/<uuid>.yml` | `data-version` | version-checked on restore |
 
-The two admin-editable YAML files share one engine, `config/YamlMigrator`.
+The admin-editable YAML files share one engine, `config/YamlMigrator`.
 
 On startup, an out-of-date file is copied into `backups/` and then upgraded:
 renamed keys are moved by the version steps, and `config.yml` additionally gets
@@ -330,7 +440,9 @@ To add a format change: bump the constant in `Versions`, add the step to that
 file's migrator, and ship it. The backup and top-up are automatic. `config.yml`
 v1 → v2 is a worked example: it replaced the `arenas.require-permission`
 boolean with `arenas.access-mode`, mapping `true` to `ALLOW` and `false` to
-`DENY` so existing servers keep the behaviour they had.
+`DENY` so existing servers keep the behavior they had. `arena.yml` v1 → v2 is
+another: the single `trigger:` section became the `triggers:` list when arenas
+gained multiple finish triggers — old files migrate to a one-entry list.
 
 ## Building
 

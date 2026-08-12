@@ -16,12 +16,6 @@ import java.util.List;
  */
 public abstract class PagedMenu<T> extends Menu {
 
-    private static final int SLOT_BACK = 45;
-    private static final int SLOT_PREV = 48;
-    private static final int SLOT_PAGE = 49;
-    private static final int SLOT_NEXT = 50;
-    private static final int SLOT_CLOSE = 53;
-
     private int page;
 
     protected PagedMenu(PracticeCorePlugin plugin, Player viewer, Menu parent) {
@@ -68,7 +62,8 @@ public abstract class PagedMenu<T> extends Menu {
         }
 
         if (page > 0) {
-            set(SLOT_PREV, ItemBuilder.of(Material.SPECTRAL_ARROW)
+            set(plugin.guis().slot("nav.previous", 48),
+                    ItemBuilder.of(plugin.guis().buttonMaterial("nav.previous", Material.SPECTRAL_ARROW))
                     .name(name("gui.previous-page"))
                     .build(), event -> {
                 click();
@@ -77,7 +72,8 @@ public abstract class PagedMenu<T> extends Menu {
             });
         }
         if (page < pages - 1) {
-            set(SLOT_NEXT, ItemBuilder.of(Material.SPECTRAL_ARROW)
+            set(plugin.guis().slot("nav.next", 50),
+                    ItemBuilder.of(plugin.guis().buttonMaterial("nav.next", Material.SPECTRAL_ARROW))
                     .name(name("gui.next-page"))
                     .build(), event -> {
                 click();
@@ -86,14 +82,15 @@ public abstract class PagedMenu<T> extends Menu {
             });
         }
         if (pages > 1) {
-            set(SLOT_PAGE, ItemBuilder.of(Material.MAP, page + 1)
+            set(plugin.guis().slot("nav.page", 49),
+                    ItemBuilder.of(plugin.guis().buttonMaterial("nav.page", Material.MAP), page + 1)
                     .name(name("gui.page",
                             "page", String.valueOf(page + 1),
                             "pages", String.valueOf(pages)))
                     .build());
         }
-        backButton(SLOT_BACK);
-        closeButton(SLOT_CLOSE);
+        backButton(plugin.guis().slot("nav.back", 45));
+        closeButton(plugin.guis().slot("nav.close", 53));
         renderFooter();
     }
 

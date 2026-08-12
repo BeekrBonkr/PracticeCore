@@ -28,71 +28,109 @@ public final class MainMenu extends Menu {
 
     @Override
     protected int rows() {
-        return 4;
+        return plugin.guis().rows("main", 4);
+    }
+
+    private int slot(String button, int def) {
+        return plugin.guis().slot("main.buttons." + button, def);
+    }
+
+    private boolean shown(String button) {
+        return plugin.guis().buttonEnabled("main.buttons." + button);
+    }
+
+    private Material icon(String button, Material def) {
+        return plugin.guis().buttonMaterial("main.buttons." + button, def);
     }
 
     @Override
     protected void render() {
         border();
-        set(10, joinIcon(), event -> {
-            click();
-            later(() -> new ArenaMenu(plugin, viewer, this).open());
-        });
-        set(11, randomIcon(), event -> joinRandom());
-        if (viewer.hasPermission("practicecore.leaderboard")) {
-            set(12, leaderboardIcon(), event -> {
+        if (shown("play")) {
+            set(slot("play", 10), joinIcon(), event -> {
+                click();
+                later(() -> {
+                    if (plugin.guis().categoriesEnabled()) {
+                        new CategoryMenu(plugin, viewer, this).open();
+                    } else {
+                        new ArenaMenu(plugin, viewer, this, null).open();
+                    }
+                });
+            });
+        }
+        if (shown("random")) {
+            set(slot("random", 11), randomIcon(), event -> joinRandom());
+        }
+        if (shown("leaderboards") && viewer.hasPermission("practicecore.leaderboard")) {
+            set(slot("leaderboards", 12), leaderboardIcon(), event -> {
                 click();
                 later(() -> new LeaderboardMenu(plugin, viewer, this).open());
             });
         }
-        set(13, statsIcon(), event -> {
-            click();
-            later(() -> new StatsMenu(plugin, viewer, this).open());
-        });
-        set(14, restartIcon(), event -> restart());
-        set(15, scoreboardIcon(), event -> toggleScoreboard());
-        set(16, helpIcon(), event -> {
-            click();
-            later(() -> {
-                viewer.closeInventory();
-                PracticeCommand.sendHelp(plugin, viewer);
+        if (shown("stats")) {
+            set(slot("stats", 13), statsIcon(), event -> {
+                click();
+                later(() -> new StatsMenu(plugin, viewer, this).open());
             });
-        });
-        set(22, leaveIcon(), event -> {
-            sound(Sound.BLOCK_NOTE_BLOCK_PLING, 0.7f, 0.8f);
-            later(() -> {
-                viewer.closeInventory();
-                plugin.leaveService().leave(viewer);
+        }
+        if (shown("restart")) {
+            set(slot("restart", 14), restartIcon(), event -> restart());
+        }
+        if (shown("sidebar")) {
+            set(slot("sidebar", 15), scoreboardIcon(), event -> toggleScoreboard());
+        }
+        if (shown("help")) {
+            set(slot("help", 16), helpIcon(), event -> {
+                click();
+                later(() -> {
+                    viewer.closeInventory();
+                    PracticeCommand.sendHelp(plugin, viewer);
+                });
             });
-        });
+        }
+        if (shown("settings")) {
+            set(slot("settings", 21), settingsIcon(), event -> {
+                click();
+                later(() -> new SettingsMenu(plugin, viewer, this).open());
+            });
+        }
+        if (shown("leave")) {
+            set(slot("leave", 23), leaveIcon(), event -> {
+                sound(Sound.BLOCK_NOTE_BLOCK_PLING, 0.7f, 0.8f);
+                later(() -> {
+                    viewer.closeInventory();
+                    plugin.leaveService().leave(viewer);
+                });
+            });
+        }
     }
 
     // ---------------------------------------------------------------- icons
 
     private ItemStack joinIcon() {
         int count = plugin.templates().visibleTo(viewer).size();
-        return ItemBuilder.of(Material.COMPASS)
+        return ItemBuilder.of(icon("play", Material.COMPASS))
                 .name(name("gui.main.play.name"))
                 .lore(lore("gui.main.play.lore", "count", String.valueOf(count)))
                 .build();
     }
 
     private ItemStack randomIcon() {
-        return ItemBuilder.of(Material.ENDER_EYE)
+        return ItemBuilder.of(icon("random", Material.ENDER_EYE))
                 .name(name("gui.main.random.name"))
                 .lore(lore("gui.main.random.lore"))
                 .build();
     }
 
     private ItemStack leaderboardIcon() {
-        return ItemBuilder.of(Material.GOLD_INGOT)
+        return ItemBuilder.of(icon("leaderboards", Material.GOLD_INGOT))
                 .name(name("gui.main.leaderboards.name"))
                 .lore(lore("gui.main.leaderboards.lore"))
                 .build();
     }
 
     private ItemStack statsIcon() {
-        return ItemBuilder.of(Material.WRITABLE_BOOK)
+        return ItemBuilder.of(icon("stats", Material.WRITABLE_BOOK))
                 .name(name("gui.main.stats.name"))
                 .lore(lore("gui.main.stats.lore"))
                 .build();
@@ -100,7 +138,7 @@ public final class MainMenu extends Menu {
 
     private ItemStack restartIcon() {
         PracticeSession session = plugin.sessions().get(viewer.getUniqueId());
-        return ItemBuilder.of(Material.CLOCK)
+        return ItemBuilder.of(icon("restart", Material.CLOCK))
                 .name(name("gui.main.restart.name"))
                 .lore(session == null
                         ? lore("gui.main.restart.lore-idle")
@@ -110,7 +148,10 @@ public final class MainMenu extends Menu {
 
     private ItemStack scoreboardIcon() {
         boolean on = plugin.stats().scoreboardEnabled(viewer.getUniqueId());
-        return ItemBuilder.of(on ? Material.ITEM_FRAME : Material.GLOW_ITEM_FRAME)
+        return ItemBuilder.of(on
+                        ? icon("sidebar", Material.ITEM_FRAME)
+                        : plugin.guis().material("main.buttons.sidebar.material-off",
+                                Material.GLOW_ITEM_FRAME))
                 .name(name("gui.main.sidebar.name"))
                 .lore(lore("gui.main.sidebar.lore", plugin.messages().ref("state",
                         on ? "gui.main.sidebar.state-shown" : "gui.main.sidebar.state-hidden")))
@@ -119,14 +160,21 @@ public final class MainMenu extends Menu {
     }
 
     private ItemStack helpIcon() {
-        return ItemBuilder.of(Material.PAPER)
+        return ItemBuilder.of(icon("help", Material.PAPER))
                 .name(name("gui.main.help.name"))
                 .lore(lore("gui.main.help.lore"))
                 .build();
     }
 
+    private ItemStack settingsIcon() {
+        return ItemBuilder.of(icon("settings", Material.COMPARATOR))
+                .name(name("gui.main.settings.name"))
+                .lore(lore("gui.main.settings.lore"))
+                .build();
+    }
+
     private ItemStack leaveIcon() {
-        return ItemBuilder.of(Material.OAK_DOOR)
+        return ItemBuilder.of(icon("leave", Material.OAK_DOOR))
                 .name(name("gui.main.leave.name"))
                 .lore(lore("gui.main.leave.lore", "destination", destination()))
                 .build();

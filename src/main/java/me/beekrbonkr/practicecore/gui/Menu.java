@@ -106,7 +106,8 @@ public abstract class Menu implements InventoryHolder {
     }
 
     protected void border() {
-        ItemStack filler = ItemBuilder.of(Material.GRAY_STAINED_GLASS_PANE)
+        ItemStack filler = ItemBuilder.of(
+                        plugin.guis().material("filler.material", Material.GRAY_STAINED_GLASS_PANE))
                 .name(Component.empty())
                 .build();
         int size = rows() * 9;
@@ -123,7 +124,7 @@ public abstract class Menu implements InventoryHolder {
         if (parent == null) {
             return;
         }
-        set(slot, ItemBuilder.of(Material.ARROW)
+        set(slot, ItemBuilder.of(plugin.guis().buttonMaterial("nav.back", Material.ARROW))
                 .name(name("gui.back"))
                 .lore(lore("gui.back-lore"))
                 .build(), event -> {
@@ -133,12 +134,17 @@ public abstract class Menu implements InventoryHolder {
     }
 
     protected void closeButton(int slot) {
-        set(slot, ItemBuilder.of(Material.BARRIER)
+        set(slot, ItemBuilder.of(plugin.guis().buttonMaterial("nav.close", Material.BARRIER))
                 .name(name("gui.close"))
                 .build(), event -> {
             click();
             later(viewer::closeInventory);
         });
+    }
+
+    /** Icon shown in the middle of an empty list menu. */
+    protected Material emptyMaterial() {
+        return plugin.guis().material("nav.empty-material", Material.COBWEB);
     }
 
     // -------------------------------------------------------------- messages

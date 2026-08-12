@@ -100,6 +100,33 @@ public final class StatsStore {
         return pb;
     }
 
+    // -------------------------------------------------------- reaction time
+
+    /** Average tool-switch reaction of the player's last finished run, or -1. */
+    public long reactionLastMs(UUID player, String template) {
+        return data(player).getLong("templates." + template + ".reaction-last-ms", -1);
+    }
+
+    /** Best (lowest) average reaction across finished runs, or -1. */
+    public long reactionBestMs(UUID player, String template) {
+        return data(player).getLong("templates." + template + ".reaction-best-ms", -1);
+    }
+
+    /**
+     * Records the average reaction of a finished run. Deliberately does not
+     * save: it is always followed by {@link #record} for the same finish in
+     * the same tick, whose save persists both — one file write, not two.
+     */
+    public void recordReaction(UUID player, String template, long avgMs) {
+        YamlConfiguration yml = data(player);
+        String base = "templates." + template + ".";
+        yml.set(base + "reaction-last-ms", avgMs);
+        long best = yml.getLong(base + "reaction-best-ms", -1);
+        if (best < 0 || avgMs < best) {
+            yml.set(base + "reaction-best-ms", avgMs);
+        }
+    }
+
     // ------------------------------------------------------------- wiping
 
     /** Wipes one arena's times for a player. Returns false if there were none. */
@@ -211,6 +238,21 @@ public final class StatsStore {
     public void setScoreboardEnabled(UUID player, boolean enabled) {
         YamlConfiguration yml = data(player);
         yml.set("prefs.scoreboard", enabled);
+        saveAsync(player, yml);
+    }
+
+    /** Free-form personal setting (night vision, wool color, time of day). */
+    public String pref(UUID player, String key, String def) {
+        return data(player).getString("prefs." + key, def);
+    }
+
+    public boolean prefBool(UUID player, String key, boolean def) {
+        return data(player).getBoolean("prefs." + key, def);
+    }
+
+    public void setPref(UUID player, String key, Object value) {
+        YamlConfiguration yml = data(player);
+        yml.set("prefs." + key, value);
         saveAsync(player, yml);
     }
 

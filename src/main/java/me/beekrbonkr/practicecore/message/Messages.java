@@ -177,6 +177,11 @@ public final class Messages {
             return;
         }
         to.sendActionBar(Text.parse(raw(key), resolver(placeholders)));
+        // Anything that isn't the speedometer's own refresh must stay readable
+        // instead of being wiped by the next speedometer tick.
+        if (!key.startsWith("speedometer.") && plugin.speedometer() != null) {
+            plugin.speedometer().yieldActionBar(to.getUniqueId());
+        }
     }
 
     public void title(Player to, String titleKey, String subtitleKey, String... placeholders) {

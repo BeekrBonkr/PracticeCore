@@ -1,0 +1,88 @@
+# PracticeCore GUI layout
+#
+# This file controls menu STRUCTURE: which slot each button occupies, its icon
+# material, row counts, filler and navigation items. All display text (titles,
+# names, lore) lives in messages.yml.
+#
+# - Slots are raw inventory indices: 0 is the top-left, each row is 9 wide.
+# - Set a button to enabled: false (or slot: -1) to hide it.
+# - Any key you remove falls back to the built-in default.
+#
+# Do not edit config-version by hand; PracticeCore uses it to migrate this file
+# across upgrades (backups land in backups/).
+config-version: 1
+
+# The glass pane border drawn around every menu.
+filler:
+  material: GRAY_STAINED_GLASS_PANE
+
+# Navigation row shared by every paged menu (six-row menus).
+nav:
+  back: {slot: 45, material: ARROW}
+  previous: {slot: 48, material: SPECTRAL_ARROW}
+  page: {slot: 49, material: MAP}
+  next: {slot: 50, material: SPECTRAL_ARROW}
+  close: {slot: 53, material: BARRIER}
+  # Icon shown in the middle of an empty list.
+  empty-material: COBWEB
+
+# The hub menu (/practice menu).
+main:
+  rows: 4
+  buttons:
+    play: {enabled: true, slot: 10, material: COMPASS}
+    random: {enabled: true, slot: 11, material: ENDER_EYE}
+    leaderboards: {enabled: true, slot: 12, material: GOLD_INGOT}
+    stats: {enabled: true, slot: 13, material: WRITABLE_BOOK}
+    restart: {enabled: true, slot: 14, material: CLOCK}
+    # material is the icon while the sidebar is shown; material-off while hidden.
+    sidebar: {enabled: true, slot: 15, material: ITEM_FRAME, material-off: GLOW_ITEM_FRAME}
+    help: {enabled: true, slot: 16, material: PAPER}
+    settings: {enabled: true, slot: 21, material: COMPARATOR}
+    leave: {enabled: true, slot: 23, material: OAK_DOOR}
+
+# The per-player settings menu.
+settings:
+  rows: 3
+  back: {slot: 18}
+  close: {slot: 26}
+  buttons:
+    night-vision: {enabled: true, slot: 11, material: GOLDEN_CARROT}
+    # The wool button's icon always shows the currently selected color.
+    wool-color: {enabled: true, slot: 13}
+    time: {enabled: true, slot: 15, material: CLOCK}
+
+# The rush pre-join menu: objective, team base, difficulty modifiers, start.
+rush:
+  rows: 4
+  back: {slot: 27}
+  close: {slot: 35}
+  buttons:
+    objective-bed: {slot: 10}
+    objective-emerald: {slot: 11}
+    objective-diamond: {slot: 12}
+    # The team button's icon always shows the selected team's wool.
+    team: {slot: 14}
+    start: {slot: 16, material: LIME_DYE}
+    blocks: {slot: 19, material: WHITE_WOOL}
+    currency: {slot: 20, material: IRON_INGOT}
+    pickaxe: {slot: 21, material: IRON_PICKAXE}
+    defense: {slot: 22, material: END_STONE}
+    generators: {slot: 23, material: FURNACE}
+
+# The mirrored MBedwars item shop opened at a rush dealer NPC. Page tabs sit
+# in the top row and the items fill the grid; only the close slot moves.
+rushshop:
+  close: {slot: 49}
+
+# Arena categories. Every arena belongs to a category (arena.yml `category:`,
+# defaulting to the arena's mode id); the Play button opens a category picker
+# and each category gets its own arena menu.
+categories:
+  # false = skip the picker and list every arena in one menu, as before.
+  enabled: true
+  # Optional per-category display overrides. The key is the category name:
+  #   entries:
+  #     bridging: {name: 'Bridging', icon: LIGHT_BLUE_WOOL}
+  #     bedbreak: {name: 'Bed Break', icon: RED_BED}
+  entries: {}

@@ -26,6 +26,16 @@ public final class PCConfig {
     private final int failYOffset;
     private final boolean allowPearls;
     private final boolean allowBuckets;
+    private final boolean validateInventory;
+    private final int validateInventoryTicks;
+
+    private final boolean speedometerEnabled;
+    private final int speedometerTicks;
+
+    private final int rushIronIntervalTicks;
+    private final int rushGoldIntervalTicks;
+    private final int rushGeneratorItemCap;
+    private final boolean rushBaseGeneratorsDefault;
 
     private final boolean bundledTemplateEnabled;
     private final String bundledTemplateName;
@@ -58,6 +68,7 @@ public final class PCConfig {
     private final boolean finishTitle;
     private final boolean sounds;
     private final boolean broadcastRecords;
+    private final boolean broadcastPbs;
 
     public PCConfig(FileConfiguration cfg) {
         this.worldName = cfg.getString("world.name", "practice_world");
@@ -75,6 +86,16 @@ public final class PCConfig {
         this.failYOffset = cfg.getInt("session.fail-y-offset", 0);
         this.allowPearls = cfg.getBoolean("session.allow-pearls", false);
         this.allowBuckets = cfg.getBoolean("session.allow-buckets", false);
+        this.validateInventory = cfg.getBoolean("session.validate-inventory", true);
+        this.validateInventoryTicks = Math.max(1, cfg.getInt("session.validate-inventory-ticks", 20));
+
+        this.speedometerEnabled = cfg.getBoolean("speedometer.enabled", true);
+        this.speedometerTicks = Math.max(1, cfg.getInt("speedometer.update-ticks", 5));
+
+        this.rushIronIntervalTicks = Math.max(1, cfg.getInt("rush.iron-interval-ticks", 25));
+        this.rushGoldIntervalTicks = Math.max(1, cfg.getInt("rush.gold-interval-ticks", 120));
+        this.rushGeneratorItemCap = Math.max(1, cfg.getInt("rush.generator-item-cap", 48));
+        this.rushBaseGeneratorsDefault = cfg.getBoolean("rush.base-generators-default", true);
 
         this.bundledTemplateEnabled = cfg.getBoolean("bundled-template.enabled", true);
         this.bundledTemplateName = cfg.getString("bundled-template.name", "turtle")
@@ -83,6 +104,9 @@ public final class PCConfig {
         this.generatedArenasEnabled = cfg.getBoolean("generated-arenas.enabled", true);
         this.generatedArenaNames = java.util.Map.of(
                 "bedbreak", cfg.getString("generated-arenas.bedbreak", "bedbreak")
+                        .trim().toLowerCase(Locale.ROOT),
+                "bedbreak-horizontal",
+                cfg.getString("generated-arenas.bedbreak-horizontal", "bedbreak-horizontal")
                         .trim().toLowerCase(Locale.ROOT));
 
         AccessMode access;
@@ -117,6 +141,7 @@ public final class PCConfig {
         this.finishTitle = cfg.getBoolean("effects.finish-title", true);
         this.sounds = cfg.getBoolean("effects.sounds", true);
         this.broadcastRecords = cfg.getBoolean("effects.broadcast-records", true);
+        this.broadcastPbs = cfg.getBoolean("effects.broadcast-pbs", true);
     }
 
     private static Material material(String name, Material fallback) {
@@ -161,6 +186,40 @@ public final class PCConfig {
 
     public boolean allowBuckets() {
         return allowBuckets;
+    }
+
+    public boolean validateInventory() {
+        return validateInventory;
+    }
+
+    public int validateInventoryTicks() {
+        return validateInventoryTicks;
+    }
+
+    public boolean speedometerEnabled() {
+        return speedometerEnabled;
+    }
+
+    public int speedometerTicks() {
+        return speedometerTicks;
+    }
+
+    public int rushIronIntervalTicks() {
+        return rushIronIntervalTicks;
+    }
+
+    public int rushGoldIntervalTicks() {
+        return rushGoldIntervalTicks;
+    }
+
+    /** Items lying near a generator before it pauses dropping more. */
+    public int rushGeneratorItemCap() {
+        return rushGeneratorItemCap;
+    }
+
+    /** Whether base generators run for players with no saved preference. */
+    public boolean rushBaseGeneratorsDefault() {
+        return rushBaseGeneratorsDefault;
     }
 
     public boolean bundledTemplateEnabled() {
@@ -260,5 +319,9 @@ public final class PCConfig {
 
     public boolean broadcastRecords() {
         return broadcastRecords;
+    }
+
+    public boolean broadcastPbs() {
+        return broadcastPbs;
     }
 }

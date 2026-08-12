@@ -13,4 +13,9 @@ public final class BridgingMode implements Mode {
     public String displayName() {
         return "Bridging";
     }
+
+    @Override
+    public boolean showsSpeedometer() {
+        return true;
+    }
 }

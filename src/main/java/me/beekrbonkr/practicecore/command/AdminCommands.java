@@ -60,7 +60,7 @@ final class AdminCommands {
             arenaHelp(sender);
             return;
         }
-        ArenaTemplate template = plugin.templates().get(SetupManager.normalise(args[2]));
+        ArenaTemplate template = plugin.templates().get(SetupManager.normalize(args[2]));
         if (template == null) {
             msg().send(sender, "arena.unknown", "arena", args[2]);
             return;
@@ -135,7 +135,7 @@ final class AdminCommands {
             msg().note(sender, "Set it with /practice arena default <arena|none>.");
             return;
         }
-        String name = SetupManager.normalise(args[2]);
+        String name = SetupManager.normalize(args[2]);
         if (name.equals("none") || name.equals("clear")) {
             plugin.setConfigValue("default-arena.name", "");
             msg().done(sender, "Default arena cleared.");
@@ -189,8 +189,8 @@ final class AdminCommands {
                 ? template.icon().name() : "auto → " + template.effectiveIcon()));
         msg().note(sender, "  kit: " + template.kit().size() + " stack(s)");
         msg().note(sender, "  pb requires blocks: " + template.requireBlocksForPb());
-        msg().note(sender, "  trigger: " + (template.triggerOffset() != null
-                ? template.triggerType() + " at " + template.triggerOffset() : "not set"));
+        msg().note(sender, "  triggers: " + (template.hasTriggers()
+                ? template.triggers().size() + " placed" : "not set"));
         msg().note(sender, "  ranked players: " + plugin.leaderboards().size(template.name()));
         msg().note(sender, "  folder: " + template.dir().getPath());
     }
@@ -203,27 +203,13 @@ final class AdminCommands {
             msg().note(sender, "Run /practice arena delete " + template.name() + " confirm to go ahead.");
             return;
         }
-        for (PracticeSession session : List.copyOf(plugin.sessions().all())) {
-            if (session.template().name().equals(template.name())) {
-                Player player = Bukkit.getPlayer(session.playerId());
-                if (player != null) {
-                    msg().note(player, "This arena was removed by an admin.");
-                    plugin.sessions().leave(player, true);
-                }
-            }
-        }
         String name = template.name();
-        if (!plugin.templates().delete(name)) {
+        if (!plugin.templates().deleteCompletely(name, wiped -> msg().done(sender,
+                "Leaderboard for '" + name + "' cleared (" + wiped + " player record(s))."))) {
             msg().problem(sender, "Could not delete '" + name + "'.");
             return;
         }
-        // The board has to go from memory *and* from playerdata: leaving the
-        // times on disk would have the startup scan rebuild the leaderboard
-        // for an arena that no longer exists.
-        plugin.leaderboards().forget(name);
         msg().done(sender, "Deleted arena '" + name + "'. Clearing its recorded times…");
-        plugin.stats().purgeTemplate(name, wiped -> msg().done(sender,
-                "Leaderboard for '" + name + "' cleared (" + wiped + " player record(s))."));
     }
 
     private void persist(CommandSender sender, ArenaTemplate template, String message) {
@@ -274,7 +260,7 @@ final class AdminCommands {
         }
         UUID target = resolved.get();
         String name = Optional.ofNullable(plugin.stats().nameOf(target)).orElse(args[2]);
-        String scope = args.length > 3 ? SetupManager.normalise(args[3]) : "all";
+        String scope = args.length > 3 ? SetupManager.normalize(args[3]) : "all";
 
         if (scope.equals("all")) {
             int wiped = plugin.stats().resetAll(target);
@@ -282,7 +268,9 @@ final class AdminCommands {
                     ? name + " had no recorded times."
                     : "Wiped " + name + "'s times on " + wiped + " arena(s).");
         } else {
-            if (plugin.templates().get(scope) == null) {
+            // Rush composite keys ("map#bed") are valid wipe scopes too.
+            if (plugin.templates().get(scope) == null
+                    && plugin.rush().resolveStatsKey(scope) == null) {
                 msg().problem(sender, "No arena named '" + scope + "'. Use 'all' to wipe everything.");
                 return;
             }
@@ -302,8 +290,9 @@ final class AdminCommands {
     private void refreshBoards(UUID target) {
         PracticeSession session = plugin.sessions().get(target);
         if (session != null) {
-            session.setBestTimeMs(plugin.stats().bestMs(target, session.template().name()));
-            session.setLastTimeMs(plugin.stats().lastMs(target, session.template().name()));
+            String key = session.mode().statsKey(plugin, session);
+            session.setBestTimeMs(plugin.stats().bestMs(target, key));
+            session.setLastTimeMs(plugin.stats().lastMs(target, key));
         }
     }
 

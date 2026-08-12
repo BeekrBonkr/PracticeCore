@@ -44,7 +44,7 @@ public final class BlockListener implements Listener {
             return;
         }
         Location loc = event.getBlock().getLocation();
-        if (!session.containsBlock(loc) || loc.equals(session.trigger())) {
+        if (!session.containsBlock(loc) || session.isTrigger(loc)) {
             event.setCancelled(true);
             plugin.messages().actionBar(player, "build.out-of-bounds");
             return;

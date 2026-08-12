@@ -3,7 +3,7 @@ package me.beekrbonkr.practicecore.setup;
 import com.sk89q.worldedit.extent.clipboard.Clipboard;
 import me.beekrbonkr.practicecore.grid.Slot;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
-import me.beekrbonkr.practicecore.template.TriggerType;
+import me.beekrbonkr.practicecore.template.ArenaTrigger;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -33,6 +33,7 @@ final class SetupSession {
     BoundingBox bounds;
 
     String mode;
+    String category;
     String displayName;
     String permission;
     Material icon;
@@ -41,14 +42,13 @@ final class SetupSession {
     Vector spawnOffset;
     float spawnYaw;
     float spawnPitch;
-    Vector triggerOffset;
-    TriggerType triggerType;
-    String triggerBlockData;
+    /** Finish triggers so far; every placed button/plate adds one. */
+    final java.util.List<ArenaTrigger> triggers = new java.util.ArrayList<>();
 
     /**
      * Every position an admin has put a button or plate at during this setup,
-     * plus the one stamped in when an existing arena was opened. Only one is
-     * the live trigger; the rest are leftovers that must not be baked into a
+     * plus the ones stamped in when an existing arena was opened. Triggers
+     * live outside the schematic, so none of these may be baked into a
      * captured schematic.
      */
     final Set<Location> triggerCandidates = new LinkedHashSet<>();
@@ -71,6 +71,7 @@ final class SetupSession {
     /** Pre-fills the wizard from a saved arena so nothing has to be redone. */
     void copyFrom(ArenaTemplate template) {
         mode = template.mode();
+        category = template.category();
         displayName = template.displayName();
         permission = template.permission();
         icon = template.icon();
@@ -80,26 +81,12 @@ final class SetupSession {
             spawnYaw = template.spawnYaw();
             spawnPitch = template.spawnPitch();
         }
-        if (template.triggerOffset() != null) {
-            triggerOffset = template.triggerOffset().clone();
-            triggerType = template.triggerType();
-            triggerBlockData = template.triggerBlockData();
-        }
+        triggers.addAll(template.triggers());
         kit.putAll(template.kit());
         settings.putAll(template.settings());
     }
 
-    Location triggerLocation() {
-        if (triggerOffset == null) {
-            return null;
-        }
-        return new Location(origin.getWorld(),
-                origin.getBlockX() + triggerOffset.getBlockX(),
-                origin.getBlockY() + triggerOffset.getBlockY(),
-                origin.getBlockZ() + triggerOffset.getBlockZ());
-    }
-
     boolean ready(boolean needsTrigger) {
-        return spawnOffset != null && (!needsTrigger || triggerOffset != null);
+        return spawnOffset != null && (!needsTrigger || !triggers.isEmpty());
     }
 }

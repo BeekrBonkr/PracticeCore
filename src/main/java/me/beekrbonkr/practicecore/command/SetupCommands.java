@@ -13,8 +13,14 @@ import java.util.Locale;
 final class SetupCommands {
 
     private static final List<String> ACTIONS = List.of(
-            "start", "spawn", "kit", "capture", "schematic", "icon", "display",
-            "permission", "blocks", "mode", "info", "save", "cancel");
+            "start", "gui", "spawn", "kit", "trigger", "capture", "schematic", "icon", "display",
+            "permission", "blocks", "mode", "category", "rush", "info", "save", "cancel");
+
+    private static final List<String> RUSH_ACTIONS = List.of(
+            "team", "bed", "gen", "dealer", "clear");
+
+    private static final List<String> RUSH_TEAMS = List.of(
+            "red", "blue", "green", "yellow", "aqua", "white", "pink", "gray");
 
     private final PracticeCorePlugin plugin;
 
@@ -36,7 +42,7 @@ final class SetupCommands {
                             "/practice setup start <name> (with your arena on the WorldEdit clipboard)");
                     return;
                 }
-                wizard.start(admin, SetupManager.normalise(args[2]));
+                wizard.start(admin, SetupManager.normalize(args[2]));
             }
             case "edit" -> edit(sender, shift(args));
             case "spawn" -> wizard.setSpawn(admin);
@@ -76,10 +82,56 @@ final class SetupCommands {
                 }
                 wizard.setMode(admin, args[2].toLowerCase(Locale.ROOT));
             }
+            case "category" -> wizard.setCategory(admin, args.length > 2 ? args[2] : null);
+            case "trigger" -> {
+                if (args.length > 2 && args[2].equalsIgnoreCase("clear")) {
+                    wizard.clearTriggers(admin);
+                } else {
+                    plugin.messages().send(admin, "general.usage", "usage",
+                            "/practice setup trigger clear (placing a button or plate adds one)");
+                }
+            }
+            case "rush" -> rush(admin, args);
+            case "gui" -> me.beekrbonkr.practicecore.gui.admin.SetupGui.open(plugin, admin);
             case "info" -> wizard.info(admin);
             case "save" -> wizard.save(admin);
             case "cancel" -> wizard.cancel(admin);
             default -> help(admin);
+        }
+    }
+
+    /** The rush layout steps: team spawns, beds, generators, dealer spots. */
+    private void rush(Player admin, String[] args) {
+        String action = args.length > 2 ? args[2].toLowerCase(Locale.ROOT) : "help";
+        SetupManager wizard = plugin.setup();
+        switch (action) {
+            case "team" -> {
+                if (args.length < 4) {
+                    plugin.messages().send(admin, "general.usage", "usage",
+                            "/practice setup rush team <color> (stand at that base's spawn)");
+                    return;
+                }
+                wizard.rushTeamSpawn(admin, args[3]);
+            }
+            case "bed" -> {
+                if (args.length < 4) {
+                    plugin.messages().send(admin, "general.usage", "usage",
+                            "/practice setup rush bed <color> (look at that team's bed)");
+                    return;
+                }
+                wizard.rushBed(admin, args[3]);
+            }
+            case "gen" -> {
+                if (args.length < 4) {
+                    plugin.messages().send(admin, "general.usage", "usage",
+                            "/practice setup rush gen <iron|gold|diamond|emerald> (stand on the spawner block)");
+                    return;
+                }
+                wizard.rushGenerator(admin, args[3]);
+            }
+            case "dealer" -> wizard.rushDealer(admin);
+            case "clear" -> wizard.rushClear(admin);
+            default -> plugin.messages().send(admin, "help.setup-rush");
         }
     }
 
@@ -92,7 +144,7 @@ final class SetupCommands {
             plugin.messages().send(admin, "general.usage", "usage", "/practice edit <arena>");
             return;
         }
-        plugin.setup().edit(admin, SetupManager.normalise(args[1]));
+        plugin.setup().edit(admin, SetupManager.normalize(args[1]));
     }
 
     private Material material(Player admin, String name) {
@@ -134,11 +186,32 @@ final class SetupCommands {
             return PracticeCommand.filter(ACTIONS, args[1]);
         }
         String action = args[1].toLowerCase(Locale.ROOT);
+        if (action.equals("rush")) {
+            if (args.length == 3) {
+                return PracticeCommand.filter(RUSH_ACTIONS, args[2]);
+            }
+            if (args.length == 4) {
+                return switch (args[2].toLowerCase(Locale.ROOT)) {
+                    case "team", "bed" -> PracticeCommand.filter(RUSH_TEAMS, args[3]);
+                    case "gen" -> PracticeCommand.filter(
+                            List.of("iron", "gold", "diamond", "emerald"), args[3]);
+                    default -> List.of();
+                };
+            }
+            return List.of();
+        }
         if (args.length == 3) {
             return switch (action) {
                 case "kit" -> PracticeCommand.filter(List.of("load"), args[2]);
+                case "trigger" -> PracticeCommand.filter(List.of("clear"), args[2]);
                 case "blocks" -> PracticeCommand.filter(List.of("true", "false"), args[2]);
                 case "mode" -> PracticeCommand.filter(List.copyOf(plugin.modes().ids()), args[2]);
+                case "category" -> {
+                    java.util.LinkedHashSet<String> known = new java.util.LinkedHashSet<>();
+                    known.add("default");
+                    plugin.templates().all().forEach(t -> known.add(t.effectiveCategory()));
+                    yield PracticeCommand.filter(List.copyOf(known), args[2]);
+                }
                 case "permission" -> {
                     String open = plugin.setup().activeName();
                     yield PracticeCommand.filter(open == null

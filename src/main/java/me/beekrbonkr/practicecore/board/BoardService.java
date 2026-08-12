@@ -6,8 +6,6 @@ import me.beekrbonkr.practicecore.session.PracticeSession;
 import me.beekrbonkr.practicecore.session.SessionState;
 import me.beekrbonkr.practicecore.util.TimeFormat;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
@@ -50,7 +48,7 @@ public final class BoardService {
             return; // hidden by the player's own preference
         }
         FastBoard board = new FastBoard(player);
-        board.updateTitle(Component.text("Practice", NamedTextColor.GOLD, TextDecoration.BOLD));
+        board.updateTitle(plugin.messages().component("board.title"));
         boards.put(player.getUniqueId(), board);
     }
 
@@ -83,10 +81,17 @@ public final class BoardService {
     }
 
     private void updateAll() {
+        // Loop invariants: parsed once per pass, not once per player.
+        Component ready = null;
+        String none = null;
         for (Map.Entry<UUID, FastBoard> entry : boards.entrySet()) {
             PracticeSession session = plugin.sessions().get(entry.getKey());
             if (session == null) {
                 continue;
+            }
+            if (none == null) {
+                ready = plugin.messages().component("board.timer-ready");
+                none = plugin.messages().raw("gui.none");
             }
             // Modes that rank something other than the plain timer draw their
             // own board (streak counters, course progress, blocks left).
@@ -96,38 +101,24 @@ public final class BoardService {
                 continue;
             }
             int rank = plugin.leaderboards().rank(session.template().name(), entry.getKey());
-            entry.getValue().updateLines(
-                    Component.empty(),
-                    Component.text("Arena: ", NamedTextColor.GRAY)
-                            .append(Component.text(session.template().displayName(), NamedTextColor.WHITE)),
-                    Component.empty(),
-                    timerLine(session),
-                    Component.text("Last: ", NamedTextColor.GRAY)
-                            .append(time(session.lastTimeMs())),
-                    Component.text("Best: ", NamedTextColor.GRAY)
-                            .append(time(session.bestTimeMs())),
-                    Component.text("Rank: ", NamedTextColor.GRAY)
-                            .append(rank > 0
-                                    ? Component.text("#" + rank, NamedTextColor.WHITE)
-                                    : Component.text("—", NamedTextColor.DARK_GRAY)),
-                    Component.empty(),
-                    Component.text("Blocks: ", NamedTextColor.GRAY)
-                            .append(Component.text(session.tracker().count(), NamedTextColor.WHITE)));
+            var msg = plugin.messages();
+            Component timer = session.state() == SessionState.ACTIVE
+                    ? msg.component("board.timer-running",
+                            "time", TimeFormat.tenths(session.elapsedMs()))
+                    : ready;
+            java.util.List<Component> lines = msg.lore("board.lines",
+                    net.kyori.adventure.text.minimessage.tag.resolver.TagResolver.resolver(
+                            msg.ref("time", timer)),
+                    "arena", session.template().displayName(),
+                    "last", time(session.lastTimeMs(), none),
+                    "best", time(session.bestTimeMs(), none),
+                    "rank", rank > 0 ? "#" + rank : none,
+                    "blocks", String.valueOf(session.tracker().count()));
+            entry.getValue().updateLines(lines.toArray(Component[]::new));
         }
     }
 
-    private Component timerLine(PracticeSession session) {
-        if (session.state() == SessionState.ACTIVE) {
-            return Component.text("Time: ", NamedTextColor.GRAY)
-                    .append(Component.text(TimeFormat.tenths(session.elapsedMs()), NamedTextColor.YELLOW));
-        }
-        return Component.text("Time: ", NamedTextColor.GRAY)
-                .append(Component.text("ready", NamedTextColor.DARK_GRAY));
-    }
-
-    private Component time(long millis) {
-        return millis >= 0
-                ? Component.text(TimeFormat.tenths(millis), NamedTextColor.WHITE)
-                : Component.text("—", NamedTextColor.DARK_GRAY);
+    private static String time(long millis, String none) {
+        return millis >= 0 ? TimeFormat.tenths(millis) : none;
     }
 }
