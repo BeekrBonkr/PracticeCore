@@ -76,8 +76,17 @@ public final class Messages {
 
     /** Reshapes an older messages.yml. See {@link Versions#MESSAGES}. */
     private static void steps(FileConfiguration cfg, int from) {
-        // v0 → v1 is the first versioned layout; nothing moved. Later steps:
-        //   if (from < 2) YamlMigrator.move(cfg, "run.finished", "run.finished-normal");
+        // v0 → v1 is the first versioned layout; nothing moved.
+        if (from < 2 && "<red><bold>You died".equals(cfg.getString("pvpbot.title.death"))) {
+            // v2 shouts the death title; only rewrite the untouched default.
+            cfg.set("pvpbot.title.death", "<red><bold>YOU DIED");
+        }
+        if (from < 3 && "<red><bold>PvP Bot <dark_gray>| <red><health>❤"
+                .equals(cfg.getString("pvpbot.bot-name"))) {
+            // v3 splits the bot tag: health moved to its own bot-health line
+            // (added by top-up); an untouched combined default slims to the name.
+            cfg.set("pvpbot.bot-name", "<red><bold>PvP Bot");
+        }
     }
 
     private void index(FileConfiguration cfg) {

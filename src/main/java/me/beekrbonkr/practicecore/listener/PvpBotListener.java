@@ -178,6 +178,35 @@ public final class PvpBotListener implements Listener {
         }
     }
 
+    // -------------------------------------------------------- habit reading
+
+    /**
+     * Reads the player's swings at air: clicks landing well out of the bot's
+     * reach build a decaying habit score, and a habitual spammer gets
+     * whiff-punished — the bot lunges in behind the wasted click, before
+     * the next one is loaded.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onPlayerSwing(org.bukkit.event.player.PlayerAnimationEvent event) {
+        if (event.getAnimationType()
+                != org.bukkit.event.player.PlayerAnimationType.ARM_SWING) {
+            return;
+        }
+        Player player = event.getPlayer();
+        BotFight fight = PvpBotService.fightOf(plugin.sessions().get(player.getUniqueId()));
+        if (fight == null || fight.bot == null || !fight.bot.isValid()
+                || fight.paused || fight.settings == null) {
+            return;
+        }
+        double dist = player.getEyeLocation().distance(fight.bot.getEyeLocation());
+        if (dist > 3.4 && dist < 8) {
+            fight.whiffHabit = Math.min(8, fight.whiffHabit + 1);
+            if (fight.whiffHabit >= 3 && fight.settings.cerebral()) {
+                fight.punishTicks = 10;
+            }
+        }
+    }
+
     // ------------------------------------------------------------ bot pause
 
     /** Any of our menus opening freezes the bot — no free hits while browsing. */

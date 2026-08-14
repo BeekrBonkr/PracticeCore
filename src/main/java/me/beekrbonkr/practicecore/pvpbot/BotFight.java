@@ -12,7 +12,7 @@ public final class BotFight {
 
     // ------------------------------------------------------------- identity
     public Husk bot;
-    /** The floating name + health bar riding the bot. */
+    /** The floating name + health bar trailing the bot. */
     public org.bukkit.entity.TextDisplay nameTag;
     public BotSettings settings;
     public Location playerSpawn;
@@ -60,6 +60,35 @@ public final class BotFight {
     /** Ticks the bot rides incoming knockback without fighting it — combos. */
     public int hitstunTicks;
 
+    // -------------------------------------------- the cerebral layer's memory
+    /** Fight-level intent: circle and trade. */
+    public static final int NEUTRAL = 0;
+    /** Press a won exchange: tighter spacing, harder shoves. */
+    public static final int PRESSURE = 1;
+    /** Badly losing: kite, rod, block until the picture changes. */
+    public static final int RESET = 2;
+    public int stance = NEUTRAL;
+    /** Ticks until the stance is reviewed again. */
+    public int stanceTicks;
+    /** Where the bot last registered the player — stale by its reaction time. */
+    public Location seenLoc;
+    /** The player's motion at that registration, for dead-reckoning. */
+    public org.bukkit.util.Vector seenVel;
+    /** Ticks until the next perception refresh. */
+    public int seenIn;
+    /** Decaying count of the player's hops — jumpy players get crit-fished. */
+    public double jumpHabit;
+    /** Decaying count of out-of-range swings — spam gets whiff-punished. */
+    public double whiffHabit;
+    /** The player's on-ground state last tick, to spot the moment they hop. */
+    public boolean playerWasOnGround = true;
+    /** Ticks left of the lunge that punishes a whiffed swing. */
+    public int punishTicks;
+    /** Ticks left of the backpedal feint; a charging player eats the counter. */
+    public int feintTicks;
+    /** Ticks before another feint may start. */
+    public int feintCooldown;
+
     public boolean blocking() {
         return blockTicks > 0;
     }
@@ -91,5 +120,16 @@ public final class BotFight {
         heldRevertTicks = 0;
         recentHitsTaken = 0;
         recentHitsWindow = 0;
+        stance = NEUTRAL;
+        stanceTicks = 0;
+        seenLoc = null;
+        seenVel = null;
+        seenIn = 0;
+        punishTicks = 0;
+        feintTicks = 0;
+        feintCooldown = 60;
+        playerWasOnGround = true;
+        // jumpHabit / whiffHabit deliberately survive the stock: habits are
+        // session-long reads on the player, not per-life state.
     }
 }

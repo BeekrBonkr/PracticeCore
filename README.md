@@ -239,6 +239,21 @@ potshots**, and raises a **1.8 sword block** when it gets comboed (halving
 what lands). Hits it takes put it into a short **hitstun** where it rides
 the knockback like a real player — comboing it works the way it should.
 
+At the top two accuracy tiers the bot also fights with its head (the
+**cerebral layer**, on by default for Veteran and Demon): it **times its
+hits to your immunity window** — no wasted clicks, every swing lands the
+tick your i-frames expire; it acts on a **perceived position** refreshed at
+its reaction speed and dead-reckoned along your motion, so it leads you
+instead of chasing your past; it swaps between **stances** — pressing hard
+after winning an exchange, and **kiting behind rod chip and sword blocks**
+when it's badly losing; it plays the **arena edge** both ways, never
+strafing itself over the rim while angling its shoves to walk *you* toward
+it; it **reads your habits** — constant hopping gets met with timed
+crit-fishing, swinging at air gets whiff-punished with a lunge through the
+gap; and it occasionally **feints** a retreat, countering hard if you take
+the bait. Lower tiers instead carry honest human weaknesses: a stale
+picture of where you are and no rhythm to their clicks.
+
 With **ProtocolLib** installed the bot renders as a **real player model
 wearing your own skin** (a packet-level disguise: the server still runs a
 husk, clients see a player). Without it, the bot is a named husk scaled
@@ -250,10 +265,13 @@ instead: kills, deaths, hits landed/taken, current and best combo, and the
 bot's **name tag doubles as its health bar**. Every real hit on the bot pops
 a **floating damage indicator** (a DeluxeCombat-style hologram showing the
 hearts dealt, drifting upward before vanishing). Dying never shows a death
-screen: the fatal hit is intercepted, a **"You died" title** with your K/D
-appears, it costs a **stock**, both fighters snap back to their spawn points
-at full health, and the spar continues; killing the bot gets its own title.
-Getting knocked off the arena is a **ring-out** — same thing.
+screen: the fatal hit is intercepted, a **"YOU DIED" title** with your K/D
+appears, it costs a **stock**, and both fighters snap back to their spawn
+points at full health. Killing the bot gets its own title, but only the
+bot respawns — **you keep your ground**, with health and kit refreshed in
+place. Either way a **chat line sums up the exchange** with the hearts the
+survivor had left. Getting knocked off the arena is a **ring-out** — same
+thing.
 
 Kits come from the **kit gallery**: fourteen built-in presets — Sword,
 NoDebuff, Boxing, BuildUHC, Combo, Gapple, Iron, Diamond, Classic, Soup,
