@@ -673,11 +673,30 @@ public final class PvpBotService {
         // Stance: a slow-cadence read of the whole fight. PRESSURE while a
         // combo is rolling, the player is hurt, or a punish is on; RESET
         // (kite, rod, block) when the bot is badly losing; NEUTRAL otherwise.
+        // A kite runs on a budget — a few seconds of space-making, then the
+        // bot wheels around and goes all-in instead of backpedaling forever,
+        // and a lockout keeps it from turning tail again right away.
+        if (fight.resetLockout > 0) {
+            fight.resetLockout--;
+        }
+        if (fight.stance == BotFight.RESET) {
+            fight.resetBudget--;
+        }
         if (--fight.stanceTicks <= 0) {
             fight.stanceTicks = 10;
-            if (s.cerebral() && bot.getHealth() <= 7
-                    && player.getHealth() - bot.getHealth() >= 4) {
+            boolean losing = s.cerebral() && bot.getHealth() <= 7
+                    && player.getHealth() - bot.getHealth() >= 4;
+            if (fight.stance == BotFight.RESET) {
+                if (fight.resetBudget <= 0 || !losing) {
+                    // Kite spent: wheel around and attack, committed for a
+                    // couple of seconds before the next review.
+                    fight.stance = BotFight.PRESSURE;
+                    fight.stanceTicks = 40;
+                    fight.resetLockout = 200 + rnd(200);
+                }
+            } else if (losing && fight.resetLockout == 0) {
                 fight.stance = BotFight.RESET;
+                fight.resetBudget = 100 + rnd(100); // 5-10s of running
             } else if (fight.combo >= 2 || player.getHealth() <= 6
                     || fight.punishTicks > 0) {
                 fight.stance = BotFight.PRESSURE;
