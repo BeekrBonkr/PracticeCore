@@ -148,10 +148,9 @@ rush:
 # The PvP bot spar: an endless fight against an AI opponent. No timer, no
 # leaderboard — kills, deaths and combos live on the sidebar.
 pvpbot:
-  # Floats over the bot's head as two lines: the health line above the name
-  # line. <health> is the bot's remaining hearts.
-  bot-health: '<red><health>❤'
-  bot-name: '<red><bold>PvP Bot'
+  # Floats over the bot's head as a single line; the disguise's own player
+  # nameplate is hidden. <health> is the bot's remaining hearts.
+  bot-tag: '<white>Bot <red>♥ <white><health>'
   # Floating damage indicator; <damage> is the hearts one hit dealt.
   damage-indicator: '<red>-<damage>❤'
   # Titles on losing / winning a stock. <kills> <deaths>
@@ -954,6 +953,8 @@ gui:
         brawler: '<yellow>Brawler <dark_gray>— a fair fight'
         veteran: '<red>Veteran <dark_gray>— sharp and relentless'
         demon: '<dark_red>Demon <dark_gray>— frame-perfect menace'
+        unfair: '<dark_purple><bold>Unfair</bold> <dark_gray>— it read your habits before you had them'
+        suffer: '<red><bold>Suffer</bold> <dark_gray>— nothing it does is impossible; all of it is'
         custom: '<light_purple>Custom <dark_gray>— your own mix'
     # The kit gallery.
     kits:
@@ -1010,6 +1011,8 @@ gui:
         medium: 'medium'
         high: 'high'
         extreme: 'extreme'
+        unfair: 'unfair'
+        suffer: 'suffer'
     cps:
       name: '<white><bold>CPS'
       # <cps>
@@ -1033,6 +1036,8 @@ gui:
         medium: 'medium'
         high: 'high'
         perfect: 'perfect'
+        unfair: 'unfair'
+        suffer: 'suffer'
     combos:
       name: '<white><bold>Crits & W-Taps'
       # <level>
@@ -1046,6 +1051,8 @@ gui:
         off: 'off'
         some: 'some'
         full: 'full'
+        unfair: 'unfair'
+        suffer: 'suffer'
     reach:
       name: '<white><bold>Reach'
       # <level>
@@ -1072,6 +1079,8 @@ gui:
         balanced: 'balanced'
         relentless: 'relentless'
         frenzied: 'frenzied'
+        unfair: 'unfair'
+        suffer: 'suffer'
     rod:
       name: '<white><bold>Fishing Rod'
       # <state>

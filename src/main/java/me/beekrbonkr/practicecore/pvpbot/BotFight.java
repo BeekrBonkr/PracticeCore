@@ -60,6 +60,27 @@ public final class BotFight {
     /** Ticks the bot rides incoming knockback without fighting it — combos. */
     public int hitstunTicks;
 
+    // ------------------------------------------------------------- AFK watch
+    /** Ticks of a frozen player (no move, no aim, no swing) before the bot holds fire. */
+    public static final int AFK_TICKS = 60;
+    /** How long the player has been completely still, capped at AFK_TICKS. */
+    public int afkTicks;
+    /** The player's position and aim last tick, for the stillness check. */
+    public Location afkLoc;
+
+    /** The player stepped away — the bot stands down and waits. */
+    public boolean afk() {
+        return afkTicks >= AFK_TICKS;
+    }
+
+    /** Any player activity: ends an AFK hold, with a beat of mercy on the wake. */
+    public void wake() {
+        if (afk()) {
+            graceTicks = Math.max(graceTicks, 15);
+        }
+        afkTicks = 0;
+    }
+
     // -------------------------------------------- the cerebral layer's memory
     /** Fight-level intent: circle and trade. */
     public static final int NEUTRAL = 0;
@@ -135,6 +156,8 @@ public final class BotFight {
         feintTicks = 0;
         feintCooldown = 60;
         playerWasOnGround = true;
+        afkTicks = 0;
+        afkLoc = null;
         // jumpHabit / whiffHabit deliberately survive the stock: habits are
         // session-long reads on the player, not per-life state.
     }

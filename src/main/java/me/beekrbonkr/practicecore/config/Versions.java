@@ -14,7 +14,7 @@ public final class Versions {
     public static final int CONFIG = 3;
 
     /** messages.yml — admin-editable. */
-    public static final int MESSAGES = 3;
+    public static final int MESSAGES = 4;
 
     /** guis.yml — admin-editable menu layout. */
     public static final int GUIS = 1;

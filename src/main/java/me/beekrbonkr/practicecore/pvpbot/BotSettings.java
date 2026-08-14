@@ -19,7 +19,8 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
 
     /** How fast the bot strafes out of the player's crosshair, blocks/tick. */
     public enum Evasiveness {
-        LOW(0.12), MEDIUM(0.18), HIGH(0.26), EXTREME(0.34);
+        LOW(0.12), MEDIUM(0.18), HIGH(0.26), EXTREME(0.34), UNFAIR(0.45),
+        SUFFER(0.48);
 
         private final double speed;
 
@@ -66,9 +67,16 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
         }
     }
 
-    /** Chance each swing in range actually connects. */
+    /**
+     * Chance each swing in range actually connects. UNFAIR and SUFFER land
+     * like PERFECT — there is no headroom above 1.0 — but the accuracy knob
+     * has always been where the brain lives (reaction time, the cerebral
+     * layer), and these tiers unlock its dirtiest layers: see
+     * {@link #unfair()} and {@link #suffer()}.
+     */
     public enum Accuracy {
-        LOW(0.5), MEDIUM(0.7), HIGH(0.85), PERFECT(1.0);
+        LOW(0.5), MEDIUM(0.7), HIGH(0.85), PERFECT(1.0), UNFAIR(1.0),
+        SUFFER(1.0);
 
         private final double chance;
 
@@ -87,7 +95,7 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
 
     /** How often the bot goes for jump-crits and W-tap knockback resets. */
     public enum Combos {
-        OFF(0), SOME(0.2), FULL(0.4);
+        OFF(0), SOME(0.2), FULL(0.4), UNFAIR(0.65), SUFFER(0.85);
 
         private final double chance;
 
@@ -125,7 +133,7 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
     /** Approach speed and the spacing the bot tries to hold while strafing. */
     public enum Aggression {
         PASSIVE(1.0, 3.2), BALANCED(1.2, 2.8), RELENTLESS(1.4, 2.3),
-        FRENZIED(1.6, 2.0);
+        FRENZIED(1.6, 2.0), UNFAIR(1.8, 1.7), SUFFER(1.85, 1.5);
 
         private final double speed;
         private final double gap;
@@ -161,7 +169,17 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
         VETERAN(Evasiveness.HIGH, Cps.EIGHT, Accuracy.HIGH,
                 Combos.SOME, Reach.NORMAL, Aggression.RELENTLESS),
         DEMON(Evasiveness.EXTREME, Cps.TWELVE, Accuracy.PERFECT,
-                Combos.FULL, Reach.LONG, Aggression.FRENZIED);
+                Combos.FULL, Reach.LONG, Aggression.FRENZIED),
+        // Deliberately no reach cheat past LONG on the top presets: they must
+        // stay beatable by comboing and edge play, not turn into an aimbot
+        // with a lightsaber.
+        UNFAIR(Evasiveness.UNFAIR, Cps.TWELVE, Accuracy.UNFAIR,
+                Combos.UNFAIR, Reach.LONG, Aggression.UNFAIR),
+        // Everything UNFAIR does, done meaner and read faster — but still
+        // inside a player's movement envelope: no extra reach, no extra CPS,
+        // barely any extra speed. The cruelty is all in the brain.
+        SUFFER(Evasiveness.SUFFER, Cps.TWELVE, Accuracy.SUFFER,
+                Combos.SUFFER, Reach.LONG, Aggression.SUFFER);
 
         private final Evasiveness evasiveness;
         private final Cps cps;
@@ -221,7 +239,7 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
             case LOW -> 6;
             case MEDIUM -> 4;
             case HIGH -> 2;
-            case PERFECT -> 0;
+            case PERFECT, UNFAIR, SUFFER -> 0;
         };
     }
 
@@ -233,6 +251,28 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
      */
     public boolean cerebral() {
         return accuracy.ordinal() >= Accuracy.HIGH.ordinal();
+    }
+
+    /**
+     * The gloves-off layer above cerebral: faster stance reads, earlier
+     * combo escapes, sidestep bursts off the crosshair, freer feints,
+     * whiff-punishes, crit-fishing and rod pressure, and shoves that lean
+     * harder toward the rim. Everything it does a human could do on a
+     * blessed day — it just does all of it, every exchange.
+     */
+    public boolean unfair() {
+        return accuracy.ordinal() >= Accuracy.UNFAIR.ordinal();
+    }
+
+    /**
+     * The tier above unfair: the same dirty playbook with every dial at its
+     * ceiling — near-instant stance reads, immediate retaliation out of a
+     * slipped combo, relentless crit-fishing and rod pressure. Movement and
+     * combat stay inside what a player could physically do; only the
+     * decisions are inhuman.
+     */
+    public boolean suffer() {
+        return accuracy == Accuracy.SUFFER;
     }
 
     /** Bot gear override; MIRROR wears whatever the player's kit preset wears. */
