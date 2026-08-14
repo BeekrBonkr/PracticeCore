@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "me.beekrbonkr"
-version = "0.5.0"
+version = "0.6.0"
 
 repositories {
     mavenCentral()
@@ -37,6 +37,9 @@ tasks.compileJava {
 }
 
 tasks.processResources {
+    // Declared as an input so a version bump alone re-expands plugin.yml —
+    // without it Gradle serves the cached copy with the old version baked in.
+    inputs.property("version", project.version.toString())
     filesMatching("plugin.yml") {
         expand("version" to project.version)
     }
