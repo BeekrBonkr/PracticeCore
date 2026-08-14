@@ -433,9 +433,11 @@ public final class SessionManager {
             player.getInventory().setItem(entry.getKey(),
                     plugin.settings().recolor(player.getUniqueId(), entry.getValue().clone()));
         }
-        // Retro-fit for kits saved before the menu item existed.
-        if (plugin.pcConfig().menuItemEnabled() && plugin.pcConfig().menuItemForceInKit()
-                && !plugin.menuItems().kitContainsMenuItem(template.kit())) {
+        // The menu item always lands in its configured hotbar slot: kits that
+        // saved it elsewhere are corrected, force-in-kit retro-fits kits that
+        // predate the item entirely.
+        if (plugin.pcConfig().menuItemEnabled()
+                && (plugin.pcConfig().menuItemForceInKit() || hasMenuItem(player))) {
             plugin.menuItems().forceIntoInventory(player);
         }
     }
@@ -482,8 +484,8 @@ public final class SessionManager {
                 repaired = true;
             }
         }
-        if (plugin.pcConfig().menuItemEnabled() && plugin.pcConfig().menuItemForceInKit()
-                && !hasMenuItem(player)) {
+        if (plugin.pcConfig().menuItemEnabled()
+                && (plugin.pcConfig().menuItemForceInKit() || hasMenuItem(player))) {
             plugin.menuItems().forceIntoInventory(player);
         }
         if (session.mode().validatesInventory()) {

@@ -208,8 +208,8 @@ public final class GeneratedArenas {
         template.setMode(MlgMode.ID);
         template.setDisplayName("MLG");
         template.setIcon(Material.WATER_BUCKET);
-        // On the glass platform, looking out over the edge.
-        template.setSpawn(new Vector(0.5, 104.0, 0.5), 0f, 30f);
+        // On the glass platform, looking straight down at the pad.
+        template.setSpawn(new Vector(0.5, 104.0, 0.5), 0f, 90f);
         template.kit().put(0, new ItemStack(Material.WATER_BUCKET));
         Map<String, Object> mlg = new LinkedHashMap<>();
         mlg.put("platform-radius", 1);
@@ -217,8 +217,6 @@ public final class GeneratedArenas {
         mlg.put("pad-material", "GRASS_BLOCK");
         mlg.put("min-drop", 20);
         mlg.put("max-drop", 100);
-        mlg.put("fuse-min-ticks", 30);
-        mlg.put("fuse-max-ticks", 100);
         template.settings().put("mlg", mlg);
         template.setComplete(true);
         template.save();

@@ -197,13 +197,13 @@ shop is unavailable). Generator pacing is configurable under `rush:` in
 
 ### mlg
 
-Water bucket clutch practice: you spawn on a **glass platform that crumbles
-from under you after a random delay**, fall a **random distance** to the
-landing pad below, and have to place your water before impact. Touching the
-water is an instant win and resets the arena; hitting the pad without it
-fails. Both the platform's fuse and the drop height are re-rolled on every
-reset, so neither the moment the fall starts nor its length can be learned by
-muscle memory.
+Water bucket clutch practice: you spawn on a glass platform looking straight
+down at the landing pad, jump off whenever you're ready — **the platform
+breaks away behind you the moment you do** — fall a **random distance**, and
+have to place your water before impact. Touching the water is an instant win
+and resets the arena; hitting the pad without it fails. The drop height is
+re-rolled on every reset, so the fall's length can't be learned by muscle
+memory.
 
 There is no timer — the score is the **streak**: consecutive successful
 clutches, shown on the sidebar next to your highest ever. It is persisted per
@@ -223,10 +223,9 @@ mid-air. The generated arena is a 110-block shaft whose barrier walls run
 its **full height**, so the fall is walled in from platform to floor.
 Everything else is `settings.mlg`, all optional: `platform-radius` (glass
 platform half-size, default 1 → 3×3), `pad-radius` (default 5 → 11×11),
-`pad-material` (default `GRASS_BLOCK`), `min-drop` / `max-drop`
-(platform-to-pad distance range, defaults **20–100**) and `fuse-min-ticks` /
-`fuse-max-ticks` (how long the platform lasts, defaults 30–100, i.e.
-1.5–5s). The sidebar shows the round's rolled drop next to your streak.
+`pad-material` (default `GRASS_BLOCK`) and `min-drop` / `max-drop`
+(platform-to-pad distance range, defaults **20–100**). The sidebar shows the
+round's rolled drop next to your streak.
 
 ### pvpbot
 

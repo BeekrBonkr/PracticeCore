@@ -122,12 +122,19 @@ public final class RushListener implements Listener {
         plugin.rush().primeTnt(player, event.getBlock().getLocation());
     }
 
-    /** Right-clicking a shop-bought special item triggers its emulated use. */
-    @EventHandler(ignoreCancelled = true)
+    /**
+     * Right-clicking a shop-bought special item triggers its emulated use.
+     * No {@code ignoreCancelled} here: an air right-click has no block to
+     * interact with, so the event reports itself cancelled and the flag would
+     * silently drop every fireball aimed at the sky. The item-use result is
+     * what actually says whether another plugin denied the click.
+     */
+    @EventHandler
     public void onSpecialUse(PlayerInteractEvent event) {
         if (event.getHand() != EquipmentSlot.HAND
                 || (event.getAction() != Action.RIGHT_CLICK_AIR
-                    && event.getAction() != Action.RIGHT_CLICK_BLOCK)) {
+                    && event.getAction() != Action.RIGHT_CLICK_BLOCK)
+                || event.useItemInHand() == org.bukkit.event.Event.Result.DENY) {
             return;
         }
         ItemStack item = event.getItem();

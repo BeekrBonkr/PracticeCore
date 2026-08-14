@@ -14,19 +14,18 @@ import org.bukkit.block.Block;
 import org.bukkit.block.data.Waterlogged;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * MLG water bucket practice: the player spawns on a glass platform that
- * crumbles from under them after a random delay, falls a random distance, and
- * has to place water on the landing pad below before impact. Touching the
- * water is an instant success and resets the arena; hitting the pad without
- * it fails the run. Every reset re-rolls both the platform's fuse and how far
- * down the pad sits, so neither the moment the fall starts nor its length can
+ * MLG water bucket practice: the player spawns looking straight down at the
+ * landing pad from a glass platform, jumps off whenever they like — the
+ * platform breaks away behind them the moment they do — and has to place
+ * water on the pad below before impact. Touching the water is an instant
+ * success and resets the arena; hitting the pad without it fails the run.
+ * Every reset re-rolls how far down the pad sits, so the fall's length can't
  * be learned by muscle memory.
  *
  * Scorekeeping is the <b>streak</b> — consecutive successful clutches, not
@@ -46,8 +45,6 @@ import java.util.concurrent.ThreadLocalRandom;
  *   pad-material: GRASS_BLOCK
  *   min-drop: 20           # platform-to-pad distance is rolled from…
  *   max-drop: 100          # …this range every reset
- *   fuse-min-ticks: 30     # the platform vanishes after a random time…
- *   fuse-max-ticks: 100    # …in this range (20 ticks = 1s)
  * </pre>
  */
 public final class MlgMode implements Mode {
@@ -60,8 +57,6 @@ public final class MlgMode implements Mode {
         Material padMaterial = Material.GRASS_BLOCK;
         int minDrop = 20;
         int maxDrop = 100;
-        int fuseMinTicks = 30;
-        int fuseMaxTicks = 100;
         /** This round's rolled platform-to-pad distance, for the sidebar. */
         int currentDrop;
 
@@ -77,7 +72,6 @@ public final class MlgMode implements Mode {
 
         final List<Location> platformBlocks = new ArrayList<>();
         final List<Location> padBlocks = new ArrayList<>();
-        BukkitTask fuse;
     }
 
     @Override
@@ -131,9 +125,10 @@ public final class MlgMode implements Mode {
             state.streak = plugin.stats().streak(session.playerId(), session.template().name());
             state.streakLoaded = true;
         }
-        cancelFuse(state);
         clearBuilt(state);
         buildRound(plugin, player, session, state);
+        // Aim the camera at the pad — the whole round happens straight below.
+        player.setRotation(player.getLocation().getYaw(), 90f);
     }
 
     private void parse(PracticeSession session, State state) {
@@ -144,11 +139,9 @@ public final class MlgMode implements Mode {
         state.padMaterial = pad != null && pad.isBlock() && pad.isSolid() ? pad : Material.GRASS_BLOCK;
         state.minDrop = Math.max(2, cfg.getInt("mlg.min-drop", 20));
         state.maxDrop = Math.max(state.minDrop, cfg.getInt("mlg.max-drop", 100));
-        state.fuseMinTicks = Math.max(1, cfg.getInt("mlg.fuse-min-ticks", 30));
-        state.fuseMaxTicks = Math.max(state.fuseMinTicks, cfg.getInt("mlg.fuse-max-ticks", 100));
     }
 
-    /** Rebuilds the glass platform, rolls the pad depth, and lights the fuse. */
+    /** Rebuilds the glass platform and rolls the pad depth. */
     private void buildRound(PracticeCorePlugin plugin, Player player,
                             PracticeSession session, State state) {
         Location spawn = session.spawn();
@@ -186,35 +179,16 @@ public final class MlgMode implements Mode {
             }
         }
 
-        int fuse = rnd.nextInt(state.fuseMinTicks, state.fuseMaxTicks + 1);
-        state.fuse = Bukkit.getScheduler().runTaskLater(plugin,
-                () -> crumble(plugin, player, session, state), fuse);
     }
 
-    /** The fuse ran out — the platform vanishes and the fall begins. */
-    private void crumble(PracticeCorePlugin plugin, Player player,
-                         PracticeSession session, State state) {
-        state.fuse = null;
-        if (plugin.sessions().get(session.playerId()) != session) {
-            return;
-        }
-        SessionState current = session.state();
-        if (current != SessionState.READY && current != SessionState.ACTIVE) {
-            return;
-        }
+    /** The player jumped off — the platform breaks away behind them. */
+    private void breakPlatform(PracticeCorePlugin plugin, Player player, State state) {
         for (Location loc : state.platformBlocks) {
             loc.getWorld().getBlockAt(loc).setType(Material.AIR, false);
         }
         state.platformBlocks.clear();
         if (player.isOnline() && plugin.pcConfig().sounds()) {
             player.playSound(player.getLocation(), Sound.BLOCK_GLASS_BREAK, 0.8f, 1.0f);
-        }
-    }
-
-    private void cancelFuse(State state) {
-        if (state.fuse != null) {
-            state.fuse.cancel();
-            state.fuse = null;
         }
     }
 
@@ -242,9 +216,12 @@ public final class MlgMode implements Mode {
         if (session.state() == SessionState.READY) {
             // A block below the spawn can only mean the fall has begun — a
             // normal jump on the platform never dips under its own surface.
+            // The platform breaks the instant the player commits, so there is
+            // no landing back on it and the clutch is armed from the jump.
             if (session.spawn().getY() - to.getY() > 1.0) {
                 session.setState(SessionState.ACTIVE);
                 state.airborne = true;
+                breakPlatform(plugin, player, state);
             }
             return;
         }
@@ -304,7 +281,6 @@ public final class MlgMode implements Mode {
     @Override
     public void onArenaReset(PracticeCorePlugin plugin, Player player, PracticeSession session) {
         State state = state(session);
-        cancelFuse(state);
         // A run abandoned mid-air (restart, arena switch) is a dodged fail —
         // it costs the streak, or bailing just before impact would keep it.
         if (state.airborne && !state.finishing) {
@@ -315,7 +291,6 @@ public final class MlgMode implements Mode {
     @Override
     public void onSessionEnd(PracticeCorePlugin plugin, Player player, PracticeSession session) {
         State state = state(session);
-        cancelFuse(state);
         if (state.airborne && !state.finishing) {
             dropStreak(plugin, session, state);
         }
