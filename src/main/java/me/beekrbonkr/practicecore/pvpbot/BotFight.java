@@ -82,6 +82,10 @@ public final class BotFight {
     public double whiffHabit;
     /** The player's on-ground state last tick, to spot the moment they hop. */
     public boolean playerWasOnGround = true;
+    /** Ticks of kiting left before a RESET must wheel around and attack. */
+    public int resetBudget;
+    /** Ticks before the bot may turn tail into another RESET. */
+    public int resetLockout;
     /** Ticks left of the lunge that punishes a whiffed swing. */
     public int punishTicks;
     /** Ticks left of the backpedal feint; a charging player eats the counter. */
@@ -122,6 +126,8 @@ public final class BotFight {
         recentHitsWindow = 0;
         stance = NEUTRAL;
         stanceTicks = 0;
+        resetBudget = 0;
+        resetLockout = 0;
         seenLoc = null;
         seenVel = null;
         seenIn = 0;
