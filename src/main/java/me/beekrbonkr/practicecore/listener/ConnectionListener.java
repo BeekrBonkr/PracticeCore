@@ -27,6 +27,9 @@ public final class ConnectionListener implements Listener {
         // Keeps the name index current so admin commands can tab-complete and
         // resolve this player long after they have gone offline.
         plugin.stats().touch(player);
+        // Bot disguise profiles must reach this client before it tracks any
+        // bot entity, or running fights' bots stay invisible to them.
+        plugin.pvpBot().handleJoin(player);
         // Orphaned snapshot = the server crashed (or cleanup was missed) while
         // this player was practicing. Restoring it covers every such path.
         if (plugin.snapshots().has(id)) {

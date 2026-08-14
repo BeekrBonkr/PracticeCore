@@ -239,8 +239,8 @@ potshots**, and raises a **1.8 sword block** when it gets comboed (halving
 what lands). Hits it takes put it into a short **hitstun** where it rides
 the knockback like a real player — comboing it works the way it should.
 
-At the top two accuracy tiers the bot also fights with its head (the
-**cerebral layer**, on by default for Veteran and Demon): it **times its
+At the high accuracy tiers the bot also fights with its head (the
+**cerebral layer**, on by default for Veteran and above): it **times its
 hits to your immunity window** — no wasted clicks, every swing lands the
 tick your i-frames expire; it acts on a **perceived position** refreshed at
 its reaction speed and dead-reckoned along your motion, so it leads you
@@ -289,15 +289,46 @@ truly needs all nine.
 The bot is configured from the **practice menu**: while sparring, a **Bot
 Settings** entry appears next to the regular settings — the kit gallery, bot
 gear (mirror your kit, or a fixed tier), a named **difficulty preset**
-(**Rookie → Brawler → Veteran → Demon**, one click setting every AI knob;
-hand-tuned mixes read as Custom), plus the individual knobs — evasiveness,
-CPS, accuracy, crits/W-taps, reach, aggression — and the rod/bow/block
-toggles. The top tier of two knobs is Demon's own: **extreme** evasiveness
-(fastest strafe, hops mid-fight, shrugs off hitstun sooner and escapes long
-combos more often) and **frenzied** aggression (fastest approach, tightest
-spacing, closes distance with sprint-jumps like a player holding W and
-spamming space) — both cycle like any other value, so they can be mixed
-into custom setups too. **The bot freezes and
+(**Rookie → Brawler → Veteran → Demon → Unfair → Suffer**, one click setting every
+AI knob; hand-tuned mixes read as Custom), plus the individual knobs —
+evasiveness, CPS, accuracy, crits/W-taps, reach, aggression — and the
+rod/bow/block toggles. The near-top tier of two knobs is Demon's own:
+**extreme** evasiveness (fastest strafe, hops mid-fight, shrugs off hitstun
+sooner and escapes long combos more often) and **frenzied** aggression
+(fastest approach, tightest spacing, closes distance with sprint-jumps like
+a player holding W and spamming space) — every tier cycles like any other
+value, so they can be mixed into custom setups too.
+
+Above Demon sits **Unfair**, for the insane: four knobs gain an **unfair**
+tier and the accuracy knob's unfair setting switches on a gloves-off layer
+above cerebral. It strafes faster than Demon and *darts* sideways the
+instant your crosshair settles on it, hops twice as often, slips out of
+combos a hit earlier, re-reads the fight almost twice as often and starts
+kiting before it is actually desperate, feints, whiff-punishes and
+crit-fishes far more freely, leans on the rod harder in neutral, w-taps or
+crits on most clean hits, and angles every shove harder toward the rim.
+What it deliberately does **not** do is cheat the numbers: reach stays
+capped at long (3.4), CPS is still tick-capped, its accuracy is Demon's
+same perfect 1.0, and hitstun still applies — so wall combos, rod resets
+and edge discipline beat it. Barely.
+
+And above Unfair sits **Suffer** — the same dirty playbook with every dial
+at its ceiling, while movement and combat stay strictly inside a player's
+physical envelope (no extra reach, no extra CPS, barely any extra speed;
+only the decisions are inhuman). It re-reads the fight near-continuously
+and starts kiting the moment the trade math tips, slips combos at 90% and
+turns every slip into an immediate counter-offensive, darts harder off a
+settled crosshair and hops constantly, whiff-punishes almost every wasted
+click, crit-fishes and feints and max-range-baits at will, w-taps or crits
+on nearly every clean hit, and shoves hardest of all toward the rim. It is
+the honest ceiling of the engine: everything Suffer does, a human could do
+once — it does all of it, every exchange, forever.
+
+The bot also keeps an **AFK watch** at every difficulty: if your position,
+aim and clicks all freeze for a few seconds, it stands down — stops
+attacking, stops closing, and just stares — then resumes the moment
+anything stirs (moving, looking, or clicking), with a short grace beat so
+returning from AFK never costs a free hit. **The bot freezes and
 holds fire while any menu is open** and re-reads everything on close; every
 choice is persisted per player. Combat *mechanics* — 1.8 cooldowns,
 knockback shaping, the player's own sword-block damage halving — are left to

@@ -87,6 +87,12 @@ public final class Messages {
             // (added by top-up); an untouched combined default slims to the name.
             cfg.set("pvpbot.bot-name", "<red><bold>PvP Bot");
         }
+        if (from < 4) {
+            // v4 merges the bot tag back into the single bot-tag line (added
+            // by top-up); the split keys are unused now, whatever they say.
+            cfg.set("pvpbot.bot-health", null);
+            cfg.set("pvpbot.bot-name", null);
+        }
     }
 
     private void index(FileConfiguration cfg) {

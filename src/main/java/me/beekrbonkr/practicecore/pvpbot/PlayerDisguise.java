@@ -44,6 +44,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class PlayerDisguise {
 
+    /** The fake profiles' username — also the team entry hiding their nameplate. */
+    private static final String PROFILE_NAME = "PvPBot";
     /** Player metadata index for displayed skin parts (1.21). */
     private static final int SKIN_PARTS_INDEX = 17;
     /** Metadata indexes above this are entity-type-specific — never shared. */
@@ -62,6 +64,7 @@ public final class PlayerDisguise {
     public PlayerDisguise(PracticeCorePlugin plugin) {
         this.plugin = plugin;
         this.manager = ProtocolLibrary.getProtocolManager();
+        hideNameplate();
         manager.addPacketListener(new PacketAdapter(plugin, ListenerPriority.NORMAL,
                 PacketType.Play.Server.SPAWN_ENTITY, PacketType.Play.Server.ENTITY_METADATA) {
             @Override
@@ -93,13 +96,32 @@ public final class PlayerDisguise {
         }
         try {
             WrappedGameProfile profile =
-                    new WrappedGameProfile(UUID.randomUUID(), "PvPBot");
+                    new WrappedGameProfile(UUID.randomUUID(), PROFILE_NAME);
             // The bot wears the practicing player's own skin — a mirror match.
             WrappedGameProfile ownerProfile = WrappedGameProfile.fromPlayer(owner);
             profile.getProperties().putAll("textures",
                     ownerProfile.getProperties().get("textures"));
             disguised.put(bot.getEntityId(), profile);
             broadcast(infoPacket(profile));
+        } catch (Throwable t) {
+            fail(t);
+        }
+    }
+
+    /**
+     * Replays every live disguise profile to one player. Joiners (spectators
+     * above all) arrive after {@link #apply}'s broadcast; without the profile
+     * their client silently drops the rewritten player-type spawn packet and
+     * the bot is simply invisible to them.
+     */
+    public void sendProfilesTo(Player player) {
+        if (broken) {
+            return;
+        }
+        try {
+            for (WrappedGameProfile profile : disguised.values()) {
+                manager.sendServerPacket(player, infoPacket(profile));
+            }
         } catch (Throwable t) {
             fail(t);
         }
@@ -118,6 +140,26 @@ public final class PlayerDisguise {
         } catch (Throwable t) {
             fail(t);
         }
+    }
+
+    /**
+     * A never-visible team on the main scoreboard suppresses the fake
+     * profiles' built-in player nameplate — the floating display tag is the
+     * bot's single source of name and health. Team membership is by username,
+     * and every disguise shares one, so a single entry covers all bots.
+     * (FastBoard sends only objective packets, so clients keep the main
+     * scoreboard's teams.)
+     */
+    private void hideNameplate() {
+        org.bukkit.scoreboard.Scoreboard main =
+                Bukkit.getScoreboardManager().getMainScoreboard();
+        org.bukkit.scoreboard.Team team = main.getTeam("pvpbot");
+        if (team == null) {
+            team = main.registerNewTeam("pvpbot");
+        }
+        team.setOption(org.bukkit.scoreboard.Team.Option.NAME_TAG_VISIBILITY,
+                org.bukkit.scoreboard.Team.OptionStatus.NEVER);
+        team.addEntry(PROFILE_NAME);
     }
 
     // -------------------------------------------------------------- packets
@@ -165,7 +207,8 @@ public final class PlayerDisguise {
     /**
      * Profiles go to everyone online (unlisted, so tab stays clean) — anyone
      * near the arena must be able to render the model, and a viewer without
-     * the profile would see nothing at all.
+     * the profile would see nothing at all. Later joiners get theirs from
+     * {@link #sendProfilesTo}.
      */
     private void broadcast(PacketContainer packet) {
         for (Player online : Bukkit.getOnlinePlayers()) {

@@ -169,8 +169,14 @@ public final class PvpBotListener implements Listener {
         // being carried helplessly across the arena, and an extreme-evasive
         // bot rides less of it to begin with — combos still land, but each
         // one has to be earned.
-        int stun = fight.settings != null && fight.settings.evasiveness()
-                == me.beekrbonkr.practicecore.pvpbot.BotSettings.Evasiveness.EXTREME ? 8 : 10;
+        int stun = switch (fight.settings == null
+                ? me.beekrbonkr.practicecore.pvpbot.BotSettings.Evasiveness.MEDIUM
+                : fight.settings.evasiveness()) {
+            case SUFFER -> 6;
+            case UNFAIR -> 7;
+            case EXTREME -> 8;
+            default -> 10;
+        };
         fight.hitstunTicks = fight.combo >= 3 ? stun / 2 : stun;
         if (event.getFinalDamage() >= fight.bot.getHealth()) {
             event.setCancelled(true);
@@ -198,6 +204,8 @@ public final class PvpBotListener implements Listener {
                 || fight.paused || fight.settings == null) {
             return;
         }
+        // Clicking counts as being at the keyboard, even standing still.
+        fight.wake();
         double dist = player.getEyeLocation().distance(fight.bot.getEyeLocation());
         if (dist > 3.4 && dist < 8) {
             fight.whiffHabit = Math.min(8, fight.whiffHabit + 1);

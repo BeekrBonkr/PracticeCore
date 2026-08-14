@@ -93,6 +93,18 @@ public final class PvpBotService {
         }
     }
 
+    /**
+     * A joiner missed the profile broadcasts of every bot already fighting —
+     * without them the disguised bots render as nothing at all (spectators
+     * were the visible symptom). Replay the profiles before their client can
+     * start tracking any bot entity.
+     */
+    public void handleJoin(Player player) {
+        if (disguise != null && disguise.active()) {
+            disguise.sendProfilesTo(player);
+        }
+    }
+
     public static BotFight fightOf(PracticeSession session) {
         return session != null && session.mode() instanceof PvpBotMode
                 && session.modeState() instanceof BotFight fight ? fight : null;
@@ -228,9 +240,9 @@ public final class PvpBotService {
         });
     }
 
-    /** Where the floating tag sits: above the head, clear of the nameplate. */
+    /** Where the floating tag sits: where a nameplate would (the real one is hidden). */
     private static Location tagLocation(Husk bot) {
-        return bot.getLocation().add(0, bot.getHeight() + 0.8, 0);
+        return bot.getLocation().add(0, bot.getHeight() + 0.35, 0);
     }
 
     /** Dresses the bot per the settings (kit mirror or gear-tier override). */
@@ -570,9 +582,13 @@ public final class PvpBotService {
                         }
                     }
                 }
-                if (fight.combo >= 3 && bot.isOnGround()
-                        && chance(fight.settings.evasiveness()
-                                == BotSettings.Evasiveness.EXTREME ? 0.65 : 0.4)) {
+                // An unfair bot slips combos a hit earlier and more reliably —
+                // chains still land, but never carry it across the arena.
+                double escapeChance = settings.suffer() ? 0.9 : settings.unfair() ? 0.8
+                        : settings.evasiveness().ordinal()
+                                >= BotSettings.Evasiveness.EXTREME.ordinal() ? 0.65 : 0.4;
+                if (fight.combo >= (settings.unfair() ? 2 : 3)
+                        && bot.isOnGround() && chance(escapeChance)) {
                     Vector along = player.getLocation().toVector()
                             .subtract(bot.getLocation().toVector());
                     along.setY(0);
@@ -582,6 +598,12 @@ public final class PvpBotService {
                     escape = steerInside(bot.getLocation(), escape, session.bounds());
                     bot.setVelocity(escape.setY(0.42));
                     fight.hitstunTicks = 0;
+                    // Suffer doesn't just escape the combo — it turns the
+                    // slip into an immediate counter-offensive.
+                    if (settings.suffer()) {
+                        fight.stance = BotFight.PRESSURE;
+                        fight.stanceTicks = 30;
+                    }
                 }
             }
             fight.lastX = bot.getLocation().getX();
@@ -621,6 +643,26 @@ public final class PvpBotService {
         }
 
         if (fight.paused) {
+            bot.getPathfinder().stopPathfinding();
+            bot.lookAt(player);
+            return;
+        }
+
+        // AFK watch: position, aim and swings all frozen for a few seconds
+        // means the player stepped away — the bot stands down, holds fire and
+        // waits, resuming (after a short mercy beat) the moment anything
+        // stirs. Swings count as activity too, via the animation listener.
+        Location playerNow = player.getLocation();
+        if (fight.afkLoc == null || fight.afkLoc.getWorld() != playerNow.getWorld()
+                || fight.afkLoc.distanceSquared(playerNow) > 0.0004
+                || Math.abs(fight.afkLoc.getYaw() - playerNow.getYaw()) > 0.5
+                || Math.abs(fight.afkLoc.getPitch() - playerNow.getPitch()) > 0.5) {
+            fight.afkLoc = playerNow;
+            fight.wake();
+        } else if (fight.afkTicks < BotFight.AFK_TICKS) {
+            fight.afkTicks++;
+        }
+        if (fight.afk()) {
             bot.getPathfinder().stopPathfinding();
             bot.lookAt(player);
             return;
@@ -683,9 +725,12 @@ public final class PvpBotService {
             fight.resetBudget--;
         }
         if (--fight.stanceTicks <= 0) {
-            fight.stanceTicks = 10;
-            boolean losing = s.cerebral() && bot.getHealth() <= 7
-                    && player.getHealth() - bot.getHealth() >= 4;
+            // Unfair re-reads the fight almost twice as often and starts
+            // saving itself before it is actually desperate; suffer reads
+            // it near-continuously.
+            fight.stanceTicks = s.suffer() ? 4 : s.unfair() ? 6 : 10;
+            boolean losing = s.cerebral() && bot.getHealth() <= (s.suffer() ? 10 : s.unfair() ? 9 : 7)
+                    && player.getHealth() - bot.getHealth() >= (s.suffer() ? 2 : s.unfair() ? 3 : 4);
             if (fight.stance == BotFight.RESET) {
                 if (fight.resetBudget <= 0 || !losing) {
                     // Kite spent: wheel around and attack, committed for a
@@ -719,10 +764,11 @@ public final class PvpBotService {
         if (fight.graceTicks == 0 && !fight.blocking()) {
             boolean resetting = fight.stance == BotFight.RESET;
             if (s.rod() && fight.rodCooldown == 0 && dist > (resetting ? 3.0 : 3.5)
-                    && dist < 8 && chance(resetting ? 0.22 : 0.06)) {
+                    && dist < 8
+                    && chance(resetting ? 0.22 : s.suffer() ? 0.18 : s.unfair() ? 0.12 : 0.06)) {
                 castRod(bot, player, fight);
-            } else if (s.bow() && fight.bowCooldown == 0
-                    && dist >= (resetting ? 7 : 8) && chance(resetting ? 0.15 : 0.08)) {
+            } else if (s.bow() && fight.bowCooldown == 0 && dist >= (resetting ? 7 : 8)
+                    && chance(resetting ? 0.15 : s.suffer() ? 0.18 : s.unfair() ? 0.14 : 0.08)) {
                 shootBow(bot, player, fight, s);
             }
         }
@@ -763,7 +809,8 @@ public final class PvpBotService {
         }
         if (fight.stance == BotFight.NEUTRAL && s.cerebral()
                 && s.combos().chance() > 0 && fight.feintCooldown == 0
-                && dist > gap - 0.3 && dist < gap + 1.5 && chance(0.012)) {
+                && dist > gap - 0.3 && dist < gap + 1.5
+                && chance(s.suffer() ? 0.05 : s.unfair() ? 0.03 : 0.012)) {
             fight.feintTicks = 12 + rnd(8);
         }
 
@@ -781,13 +828,14 @@ public final class PvpBotService {
             }
         } else if (dist > gap + 1.2) {
             if (--fight.repathTicks <= 0) {
-                fight.repathTicks = s.aggression() == BotSettings.Aggression.FRENZIED ? 3 : 5;
+                fight.repathTicks = s.aggression().ordinal()
+                        >= BotSettings.Aggression.FRENZIED.ordinal() ? 3 : 5;
                 bot.getPathfinder().moveTo(player,
                         s.aggression().speed() * (fight.blocking() ? 0.5 : 1.0));
             }
             // Sprint-jumping: closing like a player holding W and spamming
             // space — always under frenzy, and under pressure or a punish.
-            if ((s.aggression() == BotSettings.Aggression.FRENZIED
+            if ((s.aggression().ordinal() >= BotSettings.Aggression.FRENZIED.ordinal()
                     || fight.stance == BotFight.PRESSURE || fight.punishTicks > 0)
                     && bot.isOnGround() && dist > gap + 2
                     && !fight.blocking() && chance(0.15)) {
@@ -804,7 +852,7 @@ public final class PvpBotService {
         // range — lunge through the gap behind a wasted swing, arriving
         // before the next click is loaded.
         if (fight.punishTicks > 0 && bot.isOnGround() && dist > 1.8
-                && !fight.blocking() && chance(0.5)) {
+                && !fight.blocking() && chance(s.suffer() ? 0.85 : s.unfair() ? 0.7 : 0.5)) {
             Vector lunge = toBot.clone().multiply(-1).normalize();
             bot.setVelocity(bot.getVelocity().add(lunge.multiply(0.4)).setY(0.25));
         }
@@ -821,10 +869,11 @@ public final class PvpBotService {
 
         // A jumpy player gets crit-fished: as they rise, the bot leaves the
         // ground too, timed so its falling strike meets them on the way down.
-        if (s.cerebral() && fight.jumpHabit >= 3
+        if (s.cerebral() && fight.jumpHabit >= (s.unfair() ? 2 : 3)
                 && !playerOnGround && player.getVelocity().getY() > 0.1
                 && fight.critTicks < 0 && bot.isOnGround() && fight.graceTicks == 0
-                && !fight.blocking() && dist < s.reach().blocks() + 1.5 && chance(0.3)) {
+                && !fight.blocking() && dist < s.reach().blocks() + 1.5
+                && chance(s.suffer() ? 0.6 : s.unfair() ? 0.45 : 0.3)) {
             bot.setVelocity(bot.getVelocity().setY(0.42));
             fight.critTicks = 6;
         }
@@ -863,7 +912,8 @@ public final class PvpBotService {
             }
         } else if (s.cerebral() && fight.stance == BotFight.NEUTRAL
                 && fight.attackCooldown == 0 && eyeDist > s.reach().blocks()
-                && eyeDist < s.reach().blocks() + 1 && chance(0.03)) {
+                && eyeDist < s.reach().blocks() + 1
+                && chance(s.suffer() ? 0.1 : s.unfair() ? 0.06 : 0.03)) {
             bot.swingMainHand(); // max-range bait click, inviting a counter
         }
 
@@ -890,6 +940,7 @@ public final class PvpBotService {
         Vector look = player.getEyeLocation().getDirection();
         look.setY(0);
         Vector strafeDir;
+        double burst = 1.0;
         if (look.lengthSquared() < 0.01) {
             strafeDir = perpendicular(toBot).multiply(fight.strafeSign);
         } else {
@@ -913,12 +964,19 @@ public final class PvpBotService {
                     }
                 }
                 strafeDir = perpendicular(toBot).multiply(fight.strafeSign);
+                // The unfair tiers don't drift off the crosshair — they dart:
+                // a burst sidestep the instant the aim settles dead-on.
+                if (s.evasiveness() == BotSettings.Evasiveness.SUFFER) {
+                    burst = 1.45;
+                } else if (s.evasiveness() == BotSettings.Evasiveness.UNFAIR) {
+                    burst = 1.3;
+                }
             } else {
                 strafeDir = away.normalize();
             }
         }
         Vector velocity = strafeDir.multiply(
-                s.evasiveness().speed() * (fight.blocking() ? 0.4 : 1.0));
+                s.evasiveness().speed() * burst * (fight.blocking() ? 0.4 : 1.0));
         double closeIn = fight.stance == BotFight.PRESSURE ? 0.14 : 0.08;
         if (dist < gap - 0.4) {
             velocity.add(toBot.clone().normalize().multiply(0.08)); // back off
@@ -936,8 +994,13 @@ public final class PvpBotService {
         // An extreme strafer also hops mid-fight the way real 1.8 duellers
         // bounce around — vertical motion the crosshair has to chase too.
         double y = bot.getVelocity().getY();
-        if (s.evasiveness() == BotSettings.Evasiveness.EXTREME
-                && bot.isOnGround() && !fight.blocking() && chance(0.06)) {
+        if (s.evasiveness().ordinal() >= BotSettings.Evasiveness.EXTREME.ordinal()
+                && bot.isOnGround() && !fight.blocking()
+                && chance(switch (s.evasiveness()) {
+                    case SUFFER -> 0.16;
+                    case UNFAIR -> 0.12;
+                    default -> 0.06;
+                })) {
             y = 0.42;
         }
         bot.setVelocity(new Vector(velocity.getX(), y, velocity.getZ()));
@@ -967,7 +1030,8 @@ public final class PvpBotService {
                     player.getLocation().getX() - (b.getMinX() + b.getMaxX()) / 2, 0,
                     player.getLocation().getZ() - (b.getMinZ() + b.getMaxZ()) / 2);
             if (outward.lengthSquared() > 0.01) {
-                shove.add(outward.normalize().multiply(0.35)).normalize();
+                shove.add(outward.normalize()
+                        .multiply(s.suffer() ? 0.6 : s.unfair() ? 0.5 : 0.35)).normalize();
             }
         }
         player.setVelocity(player.getVelocity().add(shove.multiply(strength).setY(0.05)));
@@ -1065,18 +1129,12 @@ public final class PvpBotService {
     }
 
     /**
-     * The floating tag text: the health line stacked above the name line.
-     * Composed in code, not in one message — the health can then never
-     * vanish because an older messages.yml carries a name-only bot-name
-     * (the migrator tops up missing keys but never edits existing ones).
-     * The name line still gets the health resolver so a stale combined
-     * default keeps rendering its number too.
+     * The floating tag text: one line carrying name and health together.
+     * The profile nameplate is suppressed by a scoreboard team (see
+     * PlayerDisguise), so this display is the bot's only overhead text.
      */
     private net.kyori.adventure.text.Component botName(double health) {
-        String hearts = hearts(health);
-        return plugin.messages().component("pvpbot.bot-health", "health", hearts)
-                .append(net.kyori.adventure.text.Component.newline())
-                .append(plugin.messages().component("pvpbot.bot-name", "health", hearts));
+        return plugin.messages().component("pvpbot.bot-tag", "health", hearts(health));
     }
 
     /** Health points rendered as hearts, one decimal. */
