@@ -512,10 +512,38 @@ public final class PvpBotService {
 
         // Hitstun: a bot that just got hit rides the knockback like a real
         // player instead of instantly overriding its own velocity — this is
-        // what makes combos possible at all.
+        // what makes combos possible at all. It only suspends steering:
+        // like a real comboed player the bot keeps clicking back, and a long
+        // combo (classically: pinned against a wall) triggers a sideways
+        // escape leap the first time it touches ground.
         if (fight.hitstunTicks > 0) {
             fight.hitstunTicks--;
             bot.getPathfinder().stopPathfinding();
+            if (fight.attackCooldown > 0) {
+                fight.attackCooldown--;
+            }
+            if (!fight.paused && fight.graceTicks == 0) {
+                bot.lookAt(player);
+                BotSettings settings = fight.settings;
+                if (fight.attackCooldown == 0 && bot.getEyeLocation()
+                        .distance(player.getEyeLocation()) <= settings.reach().blocks()) {
+                    fight.attackCooldown = settings.cps().intervalTicks() + (chance(0.4) ? 1 : 0);
+                    if (chance(settings.accuracy().chance())) {
+                        strike(bot, player);
+                    } else {
+                        bot.swingMainHand();
+                    }
+                }
+                if (fight.combo >= 3 && bot.isOnGround() && chance(0.4)) {
+                    Vector along = player.getLocation().toVector()
+                            .subtract(bot.getLocation().toVector());
+                    along.setY(0);
+                    Vector escape = perpendicular(along)
+                            .multiply(fight.strafeSign).multiply(0.5);
+                    bot.setVelocity(escape.setY(0.42));
+                    fight.hitstunTicks = 0;
+                }
+            }
             fight.lastX = bot.getLocation().getX();
             fight.lastZ = bot.getLocation().getZ();
             return;

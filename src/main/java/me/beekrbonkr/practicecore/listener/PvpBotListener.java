@@ -164,8 +164,10 @@ public final class PvpBotListener implements Listener {
             plugin.pvpBot().spawnDamageIndicator(fight.bot, event.getFinalDamage());
         }
         // Ride the knockback instead of instantly strafing out of it — the
-        // window that makes real 1.8-style combos possible.
-        fight.hitstunTicks = 10;
+        // window that makes real 1.8-style combos possible. Deep in a combo
+        // the stun shortens so the bot gets chances to fight back instead of
+        // being carried helplessly across the arena.
+        fight.hitstunTicks = fight.combo >= 3 ? 5 : 10;
         if (event.getFinalDamage() >= fight.bot.getHealth()) {
             event.setCancelled(true);
             plugin.pvpBot().botDied(player, session, fight);

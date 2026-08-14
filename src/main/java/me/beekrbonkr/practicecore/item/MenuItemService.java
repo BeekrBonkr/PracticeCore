@@ -59,41 +59,64 @@ public final class MenuItemService {
     public void give(Player player) {
         PlayerInventory inventory = player.getInventory();
         int slot = plugin.pcConfig().menuItemSlot();
+        if (settleIntoSlot(inventory)) {
+            return;
+        }
         ItemStack existing = inventory.getItem(slot);
         inventory.setItem(slot, create());
-        if (existing != null && !existing.getType().isAir() && !isMenuItem(existing)) {
+        if (existing != null && !existing.getType().isAir()) {
             inventory.addItem(existing).values()
                     .forEach(left -> player.getWorld().dropItemNaturally(player.getLocation(), left));
         }
     }
 
     /**
-     * Used by {@code menu-item.force-in-kit} when a kit predates the item.
-     * The menu item always lands in the hotbar — the configured slot when
-     * it is free, else the first empty hotbar slot — but never displaces a
-     * kit item: a kit that genuinely fills every slot wins, and the menu
-     * stays reachable through /practice.
+     * Puts the menu item in its configured slot, always: an item a kit saved
+     * elsewhere is swapped into place, a missing one is inserted with the
+     * slot's occupant relocated to the first free slot instead. The one case
+     * that keeps the item out is a kit with genuinely no room for it — the
+     * kit wins, and the menu stays reachable through /practice.
      */
     public void forceIntoInventory(Player player) {
         PlayerInventory inventory = player.getInventory();
+        if (settleIntoSlot(inventory)) {
+            return;
+        }
         int preferred = plugin.pcConfig().menuItemSlot();
-        ItemStack at = inventory.getItem(preferred);
-        if (at == null || at.getType().isAir() || isMenuItem(at)) {
+        ItemStack occupant = inventory.getItem(preferred);
+        if (isFree(occupant)) {
             inventory.setItem(preferred, create());
             return;
         }
-        for (int slot = 0; slot < 9; slot++) {
+        for (int slot = 0; slot < 36; slot++) {
             if (isFree(inventory.getItem(slot))) {
-                inventory.setItem(slot, create());
+                inventory.setItem(slot, occupant);
+                inventory.setItem(preferred, create());
                 return;
             }
         }
-        for (int slot = 9; slot < 36; slot++) {
-            if (isFree(inventory.getItem(slot))) {
-                inventory.setItem(slot, create());
-                return;
+    }
+
+    /**
+     * Moves an already-present menu item into the configured slot, swapping
+     * whatever sits there into the item's old spot.
+     *
+     * @return true when the inventory now has the item in its slot
+     */
+    private boolean settleIntoSlot(PlayerInventory inventory) {
+        int preferred = plugin.pcConfig().menuItemSlot();
+        if (isMenuItem(inventory.getItem(preferred))) {
+            return true;
+        }
+        for (int slot = 0; slot < 36; slot++) {
+            ItemStack item = inventory.getItem(slot);
+            if (isMenuItem(item)) {
+                inventory.setItem(slot, inventory.getItem(preferred));
+                inventory.setItem(preferred, item);
+                return true;
             }
         }
+        return false;
     }
 
     private static boolean isFree(ItemStack stack) {

@@ -148,11 +148,13 @@ menu-item:
   lore:
     - '<gray>Right-click to open'
     - '<gray>the practice menu.'
-  # Hotbar slot /practice item drops the item into (0-8).
+  # Hotbar slot the item always sits in (0-8). Kits saved with the item in a
+  # different slot are corrected on every deal.
   slot: 8
   # Put the item in that slot for every arena kit even when the template's
   # saved kit does not contain it. Handy for retro-fitting arenas built before
-  # the item existed — note it overwrites whatever the kit had in that slot.
+  # the item existed — whatever the kit had in that slot is moved to the first
+  # free slot rather than lost.
   force-in-kit: false
 
 leaderboard:
