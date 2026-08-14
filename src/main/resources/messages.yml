@@ -103,6 +103,8 @@ spectate:
   # <player>
   target-not-practicing: '<prefix><red><player> is not practicing right now.'
   not-spectating: '<prefix><red>You are not spectating anyone.'
+  # Another plugin cancelled the teleport into the practice world.
+  entry-blocked: '<prefix><red>Something blocked your way into the practice world — tell an admin.'
   self: '<prefix><red>You cannot spectate yourself.'
   # <player>
   unknown-player: '<prefix><red>No online player named <white><player><red>.'

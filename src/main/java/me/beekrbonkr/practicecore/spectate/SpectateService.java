@@ -168,7 +168,20 @@ public final class SpectateService {
             targets.put(id, target.getUniqueId());
         }
         giveItems(spectator, target);
-        spectator.teleportAsync(perch(target));
+        // Synchronous on purpose: the target session pins its chunks, so the
+        // load is free — and the result says whether some other plugin
+        // (world access control, region entry) vetoed the teleport. Admins
+        // usually bypass those, which would make a swallowed failure here
+        // look like a players-only bug.
+        if (!spectator.teleport(perch(target))) {
+            targets.remove(id);
+            restore(spectator, true);
+            msg.send(spectator, "spectate.entry-blocked");
+            plugin.getLogger().warning("Another plugin cancelled " + spectator.getName()
+                    + "'s teleport into the practice world — spectating aborted. "
+                    + "Check world access / region entry rules for the practice world.");
+            return;
+        }
         msg.send(spectator, "spectate.started",
                 "target", target.getName(),
                 "arena", targetSession.template().displayName());
@@ -193,14 +206,7 @@ public final class SpectateService {
         if (watched == null) {
             return false;
         }
-        plugin.boards().remove(spectator);
-        showToOthers(spectator);
-        // Not part of the snapshot — undone by hand before it applies.
-        spectator.setInvulnerable(false);
-        spectator.setCollidable(true);
-        plugin.snapshots().load(id).ifPresent(snapshot ->
-                snapshot.apply(spectator, restoreLocation));
-        plugin.snapshots().delete(id);
+        restore(spectator, restoreLocation);
         if (messageKey != null) {
             plugin.messages().send(spectator, messageKey);
         }
@@ -210,6 +216,18 @@ public final class SpectateService {
                     "player", spectator.getName());
         }
         return true;
+    }
+
+    /** The un-spectate mechanics shared by stop() and a failed start. */
+    private void restore(Player spectator, boolean restoreLocation) {
+        plugin.boards().remove(spectator);
+        showToOthers(spectator);
+        // Not part of the snapshot — undone by hand before it applies.
+        spectator.setInvulnerable(false);
+        spectator.setCollidable(true);
+        plugin.snapshots().load(spectator.getUniqueId()).ifPresent(snapshot ->
+                snapshot.apply(spectator, restoreLocation));
+        plugin.snapshots().delete(spectator.getUniqueId());
     }
 
     /**

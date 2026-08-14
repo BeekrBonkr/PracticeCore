@@ -57,7 +57,8 @@ public final class ConnectionListener implements Listener {
             return;
         }
         Bukkit.getScheduler().runTask(plugin, () -> {
-            if (player.isOnline() && plugin.sessions().get(player.getUniqueId()) == null) {
+            if (player.isOnline() && plugin.sessions().get(player.getUniqueId()) == null
+                    && !plugin.spectate().isSpectator(player.getUniqueId())) {
                 plugin.sessions().join(player, arena);
             }
         });
