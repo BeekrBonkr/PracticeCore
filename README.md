@@ -274,7 +274,12 @@ gear (mirror your kit, or a fixed tier), a named **difficulty preset**
 (**Rookie → Brawler → Veteran → Demon**, one click setting every AI knob;
 hand-tuned mixes read as Custom), plus the individual knobs — evasiveness,
 CPS, accuracy, crits/W-taps, reach, aggression — and the rod/bow/block
-toggles. **The bot freezes and
+toggles. The top tier of two knobs is Demon's own: **extreme** evasiveness
+(fastest strafe, hops mid-fight, shrugs off hitstun sooner and escapes long
+combos more often) and **frenzied** aggression (fastest approach, tightest
+spacing, closes distance with sprint-jumps like a player holding W and
+spamming space) — both cycle like any other value, so they can be mixed
+into custom setups too. **The bot freezes and
 holds fire while any menu is open** and re-reads everything on close; every
 choice is persisted per player. Combat *mechanics* — 1.8 cooldowns,
 knockback shaping, the player's own sword-block damage halving — are left to
@@ -288,6 +293,42 @@ Building an arena needs just a platform and a spawn: `/practice setup start
 `/practice setup pvpbot bot` standing where the bot should spawn (without a
 marker it spawns a few blocks ahead of the player spawn, facing back), then
 `save`. No kit and no trigger are required.
+
+## Spectator mode
+
+`/practice spectate` (also `spec`, `watch`) opens a picker of everyone
+currently practicing — one head per player — and clicking one drops you into
+their arena as a spectator; `/practice spectate <player>` goes straight there,
+and the main menu has a Spectate button. Spectating from inside your own
+session ends your run first, fully restored.
+
+A spectator can watch but never touch: flying, invulnerable, non-collidable,
+**invisible to everyone except other spectators**, and unable to break or
+place blocks, press triggers or pressure plates, pick up items (a rush
+objective is safe under a hovering spectator), deal or take damage, throw
+projectiles, open shops or rearrange their own hotbar. They hold three tools:
+a **compass** (teleport back to the player being watched), a **spyglass**
+(switch to another player), and a **bed** (stop spectating). The sidebar
+shows who they watch, the arena, the mode and the live timer.
+
+Spectators are leashed to the arena they are watching — drift more than a
+dozen blocks past its walls and you are pulled back to the target, which also
+auto-follows them through arena switches. Leaving spectator mode (the bed,
+`/practice spectate leave`, or the watched player stopping) restores you and
+then drops you straight into the **default arena** — on a practice server
+that is home; when no arena is available to you, the restore alone stands.
+`/practice leave` still exits practice entirely. The pre-spectate state uses
+the same crash-safe snapshot store as sessions, so even a server crash
+mid-spectate restores you on next login. The watched player is told when
+someone starts and stops watching them.
+
+For admins: the permission is `practicecore.spectate` (part of the default
+`practicecore.user` kit), the main-menu button is configured at
+`main.buttons.spectate` in `guis.yml`, and every piece of text lives in
+`messages.yml` under `spectate.*` (chat, the three tools), `gui.spectate.*`
+(the picker) and `board.spectate-lines` (the sidebar). Spectators hold no
+session and no grid slot, so they cost nothing and count toward no limits —
+nothing needs to be sized for them.
 
 ## Messages
 
@@ -340,11 +381,15 @@ a line from it to regenerate that arena). Set a name to `''` or
 ## The menu item and GUI
 
 `/practice item` gives an admin the hotbar menu item — a tagged item (a
-persistent-data key, not a name match, so look-alikes can't spoof it). Drop it
-into the hotbar slot you want, arrange the rest of the kit, then
-`/practice setup kit`: it is saved with the kit and handed to every player who
-joins that arena. `menu-item.force-in-kit` retro-fits it into arenas built
-before the item existed. Right-clicking it opens:
+persistent-data key, not a name match, so look-alikes can't spoof it). Include
+it when you `/practice setup kit` and it is handed to every player who joins
+that arena. Wherever a kit was saved with it, the item is **normalized into
+`menu-item.slot`** (default 8, the last hotbar slot) on every deal, swapping
+whatever sat there into its old spot — so it always shows up in the same
+place. `menu-item.force-in-kit` retro-fits it into arenas built before the
+item existed, relocating (never destroying) the slot's occupant; a kit that
+genuinely fills all 36 slots wins, and the menu stays reachable via
+`/practice`. Right-clicking it opens:
 
 - **Play** — a category picker (one tile per arena category, each with its
   own menu), then the arena picker: filtered by the same permission check the
@@ -361,6 +406,8 @@ before the item existed. Right-clicking it opens:
   player one place ahead
 - **My Stats** — every arena you've finished, ranked
 - **Restart Run** — reverts your blocks and puts you back on the spawn
+- **Spectate** — the spectator target picker: one head per player currently
+  practicing (needs `practicecore.spectate`; see [Spectator mode](#spectator-mode))
 - **Sidebar** — show/hide the live timer scoreboard (remembered per player)
 - **Settings** — per-player, persisted in playerdata: permanent night vision
   while practicing, the color of the wool in your kit (and so of your
@@ -411,6 +458,7 @@ and `session.validate-inventory-ticks` in `config.yml`.
 |---|---|---|
 | `/practice join [arena]` | `practicecore.use` | Start practicing |
 | `/practice leave` | `practicecore.use` | Restore state and return |
+| `/practice spectate [player\|leave]` | `practicecore.spectate` | Watch someone practice (bare opens the picker) |
 | `/practice menu [menu]` | `practicecore.menu` | Open the GUI (or one menu directly) |
 | `/practice list` | `practicecore.use` | List arenas |
 | `/practice top [arena]` | `practicecore.leaderboard` | Leaderboards |
@@ -435,8 +483,9 @@ current as players join.
 ### The player permission kit
 
 `practicecore.user` is the node a normal player needs, and it is on by default.
-It is a parent of `practicecore.use`, `practicecore.menu` and
-`practicecore.leaderboard` (each of which defaults to false on its own), so
+It is a parent of `practicecore.use`, `practicecore.menu`,
+`practicecore.leaderboard` and `practicecore.spectate` (each of which defaults
+to false on its own), so
 revoking `practicecore.user` from a group switches the plugin off for them in
 one move, while the children stay available for finer control.
 `practicecore.admin` is the equivalent kit for every admin node.

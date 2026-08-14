@@ -88,6 +88,12 @@ public final class MainMenu extends Menu {
                 later(() -> new PvpBotSettingsMenu(plugin, viewer, this, session).open());
             });
         }
+        if (shown("spectate") && viewer.hasPermission("practicecore.spectate")) {
+            set(slot("spectate", 19), spectateIcon(), event -> {
+                click();
+                later(() -> new SpectateMenu(plugin, viewer, this).open());
+            });
+        }
         if (shown("sidebar")) {
             set(slot("sidebar", 15), scoreboardIcon(), event -> toggleScoreboard());
         }
@@ -175,6 +181,13 @@ public final class MainMenu extends Menu {
         return ItemBuilder.of(icon("bot", Material.ZOMBIE_HEAD))
                 .name(name("gui.main.bot.name"))
                 .lore(lore("gui.main.bot.lore"))
+                .build();
+    }
+
+    private ItemStack spectateIcon() {
+        return ItemBuilder.of(icon("spectate", Material.SPYGLASS))
+                .name(name("gui.main.spectate.name"))
+                .lore(lore("gui.main.spectate.lore"))
                 .build();
     }
 

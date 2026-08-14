@@ -37,6 +37,8 @@ import me.beekrbonkr.practicecore.settings.SettingsService;
 import me.beekrbonkr.practicecore.setup.ChatPrompts;
 import me.beekrbonkr.practicecore.setup.SetupManager;
 import me.beekrbonkr.practicecore.snapshot.SnapshotStore;
+import me.beekrbonkr.practicecore.spectate.SpectateListener;
+import me.beekrbonkr.practicecore.spectate.SpectateService;
 import me.beekrbonkr.practicecore.stats.LeaderboardService;
 import me.beekrbonkr.practicecore.stats.StatsStore;
 import me.beekrbonkr.practicecore.template.TemplateRegistry;
@@ -77,6 +79,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
     private ChatPrompts prompts;
     private RushService rush;
     private PvpBotService pvpBot;
+    private SpectateService spectate;
 
     @Override
     public void onEnable() {
@@ -116,6 +119,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         prompts = new ChatPrompts(this);
         rush = new RushService(this);
         pvpBot = new PvpBotService(this);
+        spectate = new SpectateService(this);
 
         // Builds the name index and every leaderboard from disk, off-thread.
         stats.scanAsync();
@@ -132,6 +136,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         pm.registerEvents(new RushListener(this), this);
         pm.registerEvents(new MlgListener(this), this);
         pm.registerEvents(new PvpBotListener(this), this);
+        pm.registerEvents(new SpectateListener(this), this);
         pm.registerEvents(prompts, this);
 
         // Used by the leave button when leave.server points at a proxy backend.
@@ -149,6 +154,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         inventoryValidator.startTask();
         rush.startTask();
         pvpBot.startTask();
+        spectate.startTask();
         getLogger().info("PracticeCore enabled — practice world '" + pcConfig.worldName() + "' ready.");
     }
 
@@ -158,6 +164,11 @@ public final class PracticeCorePlugin extends JavaPlugin {
         // (restores every player synchronously), then UI and pending writes.
         if (setup != null) {
             setup.cancelAll();
+        }
+        if (spectate != null) {
+            // Before sessions: a spectator restore must not race the world unload.
+            spectate.shutdown();
+            spectate.endAllSync();
         }
         if (sessions != null) {
             sessions.endAllSync();
@@ -239,6 +250,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         }
 
         String wizard = setup.activeName();
+        int watching = spectate.spectators().size();
         int running = sessions.all().size();
         if ((running > 0 || wizard != null) && !force) {
             if (running > 0) {
@@ -276,6 +288,10 @@ public final class PracticeCorePlugin extends JavaPlugin {
             setup.cancelAll();
             notes.add("Canceled the setup wizard on '" + wizard + "'.");
         }
+        if (watching > 0) {
+            spectate.endAllSync();
+            notes.add("Ended and restored " + watching + " spectator(s).");
+        }
         if (running > 0) {
             sessions.endAllSync();
             notes.add("Ended and restored " + running + " session(s).");
@@ -285,6 +301,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         inventoryValidator.restartTask();
         rush.restartTask();
         pvpBot.restartTask();
+        spectate.restartTask();
 
         if (!pcConfig.worldName().equals(previous.worldName())) {
             notes.add("world.name changed '" + previous.worldName() + "' → '" + pcConfig.worldName()
@@ -391,5 +408,9 @@ public final class PracticeCorePlugin extends JavaPlugin {
 
     public PvpBotService pvpBot() {
         return pvpBot;
+    }
+
+    public SpectateService spectate() {
+        return spectate;
     }
 }

@@ -25,6 +25,7 @@ permission:
   use: '<prefix><red>You may not use practice arenas.'
   menu: '<prefix><red>You may not open the practice menu.'
   leaderboard: '<prefix><red>You may not view leaderboards.'
+  spectate: '<prefix><red>You may not spectate practice sessions.'
   stats-other: '<prefix><red>You may not view other players'' stats.'
   setup: '<prefix><red>You may not configure arenas.'
   arena-admin: '<prefix><red>You may not administer arenas.'
@@ -88,6 +89,46 @@ mlg:
   success: '<prefix><green>MLG! <gray>Streak: <white><streak>'
   # <streak> — the clutch that beat your highest streak ever
   success-best: '<prefix><green>MLG! <gray>Streak: <white><streak> <gold>— new best!'
+
+# Spectator mode: /practice spectate, the main menu's Spectate button, and
+# the three hotbar tools every spectator carries.
+spectate:
+  # <target> <arena>
+  started: '<prefix><gray>Now spectating <white><target> <gray>on <white><arena><gray>. Fly freely — the bed brings you back.'
+  stopped: '<prefix><gray>Stopped spectating — welcome back.'
+  # The spectator was pulled out by an external teleport (/spawn, /tpa, …).
+  ended: '<prefix><gray>Spectating ended.'
+  # The watched player's session ended (they left, finished for good, or quit).
+  target-left: '<prefix><gray>The player you were watching stopped practicing.'
+  # <player>
+  target-not-practicing: '<prefix><red><player> is not practicing right now.'
+  not-spectating: '<prefix><red>You are not spectating anyone.'
+  self: '<prefix><red>You cannot spectate yourself.'
+  # <player>
+  unknown-player: '<prefix><red>No online player named <white><player><red>.'
+  # Sent to the watched player. <player>
+  watcher-joined: '<prefix><gray><player> is now spectating you.'
+  # <player>
+  watcher-left: '<prefix><gray><player> stopped spectating you.'
+  # Action bar when a spectator drifts too far and is pulled back.
+  leash: '<gray>Pulled back to the arena you are spectating'
+  item:
+    teleport:
+      # <target>
+      name: '<aqua><bold>Teleport to <target>'
+      lore:
+        - '<gray>Right-click to snap back'
+        - '<gray>to the player you watch.'
+    menu:
+      name: '<white><bold>Switch Player'
+      lore:
+        - '<gray>Right-click to pick another'
+        - '<gray>player to spectate.'
+    leave:
+      name: '<red><bold>Stop Spectating'
+      lore:
+        - '<gray>Right-click to head back'
+        - '<gray>into an arena of your own.'
 
 rush:
   not-configured: '<prefix><red>This rush arena has no playable team base — tell an admin.'
@@ -183,6 +224,15 @@ board:
     - '<gray>Kills: <green><kills> <dark_gray>/ <gray>Deaths: <red><deaths>'
     - '<gray>Hits: <white><hits> <dark_gray>/ <gray>Taken: <white><taken>'
     - '<gray>Combo: <white><combo> <dark_gray>(best <best-combo>)'
+  # The spectator sidebar: who you watch and their live run.
+  # <target> <arena> <mode> <time>
+  spectate-lines:
+    - ''
+    - '<gray>Watching: <white><target>'
+    - ''
+    - '<gray>Arena: <white><arena>'
+    - '<gray>Mode: <white><mode>'
+    - '<gray>Time: <time>'
   # The rush board is assembled per run: these header lines, then one
   # objective-line per objective the map actually supports, then the
   # casual-line on unranked runs.
@@ -289,6 +339,7 @@ help:
     - '<dark_gray> • <white>/practice stats [player] <dark_gray>— personal bests'
     - '<dark_gray> • <white>/practice top [arena] <dark_gray>— leaderboards'
     - '<dark_gray> • <white>/practice sidebar <dark_gray>— show or hide the live timer'
+    - '<dark_gray> • <white>/practice spectate [player] <dark_gray>— watch someone practice'
   setup:
     - '<dark_gray> • <white>/practice setup … <dark_gray>— create an arena'
     - '<dark_gray> • <white>/practice edit <arena> <dark_gray>— reopen a saved arena'
@@ -538,6 +589,12 @@ gui:
         - '<gray>Night vision, wool color'
         - '<gray>and your arena''s time of day.'
         - '<yellow>Click to open'
+    spectate:
+      name: '<aqua><bold>Spectate'
+      lore:
+        - '<gray>Watch another player practice'
+        - '<gray>without disturbing their run.'
+        - '<yellow>Click to pick a player'
     leave:
       name: '<red><bold>Leave'
       # <destination>
@@ -638,6 +695,24 @@ gui:
     status-locked: '<red>You do not have access to this arena.'
     # <node>
     status-locked-node: '<dark_gray>needs <node>'
+
+  spectate:
+    title: '<dark_gray><bold>Spectate a player'
+    empty:
+      name: '<red>Nobody is practicing'
+      lore:
+        - '<gray>Players appear here the moment'
+        - '<gray>they enter an arena.'
+    entry:
+      # <player>
+      name: '<aqua><bold><player>'
+      # <arena> <mode> <watchers>
+      lore:
+        - '<gray>Arena: <white><arena>'
+        - '<gray>Mode: <white><mode>'
+        - '<gray>Spectators: <white><watchers>'
+        - ''
+        - '<yellow>Click to spectate'
 
   leaderboards:
     title: '<dark_gray><bold>Leaderboards'
@@ -926,6 +1001,7 @@ gui:
         low: 'low'
         medium: 'medium'
         high: 'high'
+        extreme: 'extreme'
     cps:
       name: '<white><bold>CPS'
       # <cps>
@@ -987,6 +1063,7 @@ gui:
         passive: 'passive'
         balanced: 'balanced'
         relentless: 'relentless'
+        frenzied: 'frenzied'
     rod:
       name: '<white><bold>Fishing Rod'
       # <state>

@@ -534,7 +534,9 @@ public final class PvpBotService {
                         bot.swingMainHand();
                     }
                 }
-                if (fight.combo >= 3 && bot.isOnGround() && chance(0.4)) {
+                if (fight.combo >= 3 && bot.isOnGround()
+                        && chance(fight.settings.evasiveness()
+                                == BotSettings.Evasiveness.EXTREME ? 0.65 : 0.4)) {
                     Vector along = player.getLocation().toVector()
                             .subtract(bot.getLocation().toVector());
                     along.setY(0);
@@ -617,9 +619,16 @@ public final class PvpBotService {
         double gap = s.aggression().gap();
         if (dist > gap + 1.2) {
             if (--fight.repathTicks <= 0) {
-                fight.repathTicks = 5;
+                fight.repathTicks = s.aggression() == BotSettings.Aggression.FRENZIED ? 3 : 5;
                 bot.getPathfinder().moveTo(player,
                         s.aggression().speed() * (fight.blocking() ? 0.5 : 1.0));
+            }
+            // Sprint-jumping: a frenzied bot closes like a player holding W
+            // and spamming space, not a mob walking its path.
+            if (s.aggression() == BotSettings.Aggression.FRENZIED && bot.isOnGround()
+                    && dist > gap + 2 && !fight.blocking() && chance(0.15)) {
+                Vector forward = toBot.clone().multiply(-1).normalize();
+                bot.setVelocity(bot.getVelocity().add(forward.multiply(0.35)).setY(0.42));
             }
         } else {
             fight.repathTicks = 0;
@@ -711,7 +720,14 @@ public final class PvpBotService {
         } else if (dist > gap + 0.4) {
             velocity.add(toBot.clone().normalize().multiply(-0.08)); // close in
         }
-        bot.setVelocity(new Vector(velocity.getX(), bot.getVelocity().getY(), velocity.getZ()));
+        // An extreme strafer also hops mid-fight the way real 1.8 duellers
+        // bounce around — vertical motion the crosshair has to chase too.
+        double y = bot.getVelocity().getY();
+        if (s.evasiveness() == BotSettings.Evasiveness.EXTREME
+                && bot.isOnGround() && !fight.blocking() && chance(0.06)) {
+            y = 0.42;
+        }
+        bot.setVelocity(new Vector(velocity.getX(), y, velocity.getZ()));
     }
 
     private static Vector perpendicular(Vector horizontal) {

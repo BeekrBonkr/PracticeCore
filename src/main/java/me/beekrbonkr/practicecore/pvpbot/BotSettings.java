@@ -19,7 +19,7 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
 
     /** How fast the bot strafes out of the player's crosshair, blocks/tick. */
     public enum Evasiveness {
-        LOW(0.12), MEDIUM(0.18), HIGH(0.26);
+        LOW(0.12), MEDIUM(0.18), HIGH(0.26), EXTREME(0.34);
 
         private final double speed;
 
@@ -118,7 +118,8 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
 
     /** Approach speed and the spacing the bot tries to hold while strafing. */
     public enum Aggression {
-        PASSIVE(1.0, 3.2), BALANCED(1.2, 2.8), RELENTLESS(1.4, 2.3);
+        PASSIVE(1.0, 3.2), BALANCED(1.2, 2.8), RELENTLESS(1.4, 2.3),
+        FRENZIED(1.6, 2.0);
 
         private final double speed;
         private final double gap;
@@ -153,8 +154,8 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
                 Combos.SOME, Reach.NORMAL, Aggression.BALANCED),
         VETERAN(Evasiveness.HIGH, Cps.EIGHT, Accuracy.HIGH,
                 Combos.SOME, Reach.NORMAL, Aggression.RELENTLESS),
-        DEMON(Evasiveness.HIGH, Cps.TWELVE, Accuracy.PERFECT,
-                Combos.FULL, Reach.LONG, Aggression.RELENTLESS);
+        DEMON(Evasiveness.EXTREME, Cps.TWELVE, Accuracy.PERFECT,
+                Combos.FULL, Reach.LONG, Aggression.FRENZIED);
 
         private final Evasiveness evasiveness;
         private final Cps cps;

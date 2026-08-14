@@ -54,7 +54,8 @@ public final class BoardService {
 
     /** Re-evaluates the player's sidebar preference (menu toggle, /practice sidebar). */
     public void applyPreference(Player player) {
-        if (plugin.sessions().get(player.getUniqueId()) == null) {
+        if (plugin.sessions().get(player.getUniqueId()) == null
+                && !plugin.spectate().isSpectator(player.getUniqueId())) {
             remove(player);
             return;
         }
@@ -87,6 +88,7 @@ public final class BoardService {
         for (Map.Entry<UUID, FastBoard> entry : boards.entrySet()) {
             PracticeSession session = plugin.sessions().get(entry.getKey());
             if (session == null) {
+                updateSpectator(entry.getKey(), entry.getValue());
                 continue;
             }
             if (none == null) {
@@ -116,6 +118,28 @@ public final class BoardService {
                     "blocks", String.valueOf(session.tracker().count()));
             entry.getValue().updateLines(withFooter(lines).toArray(Component[]::new));
         }
+    }
+
+    /** A spectator's sidebar mirrors the watched run: target, arena, live timer. */
+    private void updateSpectator(UUID spectator, FastBoard board) {
+        UUID targetId = plugin.spectate().targetOf(spectator);
+        PracticeSession session = targetId == null ? null : plugin.sessions().get(targetId);
+        Player target = targetId == null ? null : Bukkit.getPlayer(targetId);
+        if (session == null || target == null) {
+            return; // mid-transition — the spectate sweep will settle it
+        }
+        var msg = plugin.messages();
+        Component timer = session.state() == SessionState.ACTIVE
+                ? msg.component("board.timer-running",
+                        "time", TimeFormat.tenths(session.elapsedMs()))
+                : msg.component("board.timer-ready");
+        java.util.List<Component> lines = msg.lore("board.spectate-lines",
+                net.kyori.adventure.text.minimessage.tag.resolver.TagResolver.resolver(
+                        msg.ref("time", timer)),
+                "target", target.getName(),
+                "arena", session.template().displayName(),
+                "mode", session.mode().displayName());
+        board.updateLines(withFooter(lines).toArray(Component[]::new));
     }
 
     /**

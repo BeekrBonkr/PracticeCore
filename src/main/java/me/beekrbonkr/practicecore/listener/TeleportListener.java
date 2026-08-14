@@ -33,6 +33,9 @@ public final class TeleportListener implements Listener {
         if (plugin.sessions().isInternalTeleport(id) || plugin.setup().isAdmin(id)) {
             return;
         }
+        if (plugin.spectate().isSpectator(id)) {
+            return; // sessionless by design; the spectate service leashes them
+        }
         if (plugin.sessions().get(id) != null) {
             switch (event.getCause()) {
                 case ENDER_PEARL, CHORUS_FRUIT -> event.setCancelled(true);

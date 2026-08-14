@@ -24,8 +24,12 @@ permissions:
       practicecore.use: true
       practicecore.menu: true
       practicecore.leaderboard: true
+      practicecore.spectate: true
   practicecore.use:
     description: Join and leave practice arenas
+    default: false
+  practicecore.spectate:
+    description: Spectate other players' practice sessions
     default: false
   practicecore.menu:
     description: Open the practice GUI

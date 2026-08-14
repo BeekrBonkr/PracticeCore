@@ -82,6 +82,11 @@ public final class SessionManager {
         return internalGamemode.contains(player);
     }
 
+    /** True while this player's arena paste is still in flight. */
+    public boolean isPreparingJoin(UUID player) {
+        return pendingJoins.contains(player);
+    }
+
     // ------------------------------------------------------------------ join
 
     /**
@@ -170,6 +175,12 @@ public final class SessionManager {
             msg.send(player, "world.unavailable");
             return;
         }
+
+        // Every refusal is behind us — a spectator joining an arena now stops
+        // watching first, fully restored, so the snapshot this join captures
+        // is their real state and none of the spectator flags (invulnerable,
+        // hidden) leak into the run.
+        plugin.spectate().stop(player, true, null);
 
         Slot slot = plugin.allocator().acquire(id);
         int spacing = plugin.pcConfig().gridSpacing();
