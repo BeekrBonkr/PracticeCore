@@ -55,6 +55,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
         switch (sub) {
             case "join" -> join(sender, args);
             case "leave" -> leave(sender);
+            case "spectate", "spec", "watch" -> spectate(sender, args);
             case "list", "arenas" -> list(sender);
             case "menu", "gui" -> menu(sender, args);
             case "top", "leaderboard" -> top(sender, args);
@@ -121,6 +122,39 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
             return;
         }
         plugin.leaveService().leave(player);
+    }
+
+    /**
+     * /practice spectate [player|leave] — bare opens the target picker, a name
+     * starts (or switches) watching, "leave" stops and restores.
+     */
+    private void spectate(CommandSender sender, String[] args) {
+        Player player = asPlayer(sender);
+        if (player == null) {
+            return;
+        }
+        if (!player.hasPermission("practicecore.spectate")) {
+            msg().send(player, "permission.spectate");
+            return;
+        }
+        if (args.length < 2) {
+            new me.beekrbonkr.practicecore.gui.SpectateMenu(plugin, player, null).open();
+            return;
+        }
+        String arg = args[1];
+        if (arg.equalsIgnoreCase("leave") || arg.equalsIgnoreCase("stop")
+                || arg.equalsIgnoreCase("off")) {
+            if (!plugin.spectate().stopIntoDefaultArena(player, "spectate.stopped")) {
+                msg().send(player, "spectate.not-spectating");
+            }
+            return;
+        }
+        Player target = Bukkit.getPlayerExact(arg);
+        if (target == null) {
+            msg().send(player, "spectate.unknown-player", "player", arg);
+            return;
+        }
+        plugin.spectate().start(player, target);
     }
 
     private void list(CommandSender sender) {
@@ -348,7 +382,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
             List<String> subs = new ArrayList<>(List.of(
-                    "join", "leave", "list", "menu", "top", "stats", "sidebar", "help"));
+                    "join", "leave", "spectate", "list", "menu", "top", "stats", "sidebar", "help"));
             if (sender.hasPermission("practicecore.setup")) {
                 subs.add("setup");
                 subs.add("edit");
@@ -378,6 +412,8 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
                             ? plugin.templates().availableTo(player).stream().map(ArenaTemplate::name).toList()
                             : plugin.templates().names(), args[1])
                     : List.of();
+            case "spectate", "spec", "watch" -> args.length == 2
+                    ? filter(spectatableNames(sender), args[1]) : List.of();
             case "menu", "gui" -> args.length == 2 ? filter(MENUS, args[1]) : List.of();
             case "top", "leaderboard" -> args.length == 2
                     ? filter(completeNames(), args[1]) : List.of();
@@ -416,6 +452,23 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
 
     private static List<String> onlineNames() {
         return Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
+    }
+
+    /** Everyone currently practicing (minus yourself), plus the leave keyword. */
+    private List<String> spectatableNames(CommandSender sender) {
+        List<String> names = new ArrayList<>();
+        names.add("leave");
+        for (PracticeSession session : plugin.sessions().all()) {
+            if (sender instanceof Player player
+                    && session.playerId().equals(player.getUniqueId())) {
+                continue;
+            }
+            Player practicing = Bukkit.getPlayer(session.playerId());
+            if (practicing != null) {
+                names.add(practicing.getName());
+            }
+        }
+        return names;
     }
 
     static List<String> filter(List<String> options, String prefix) {

@@ -1,0 +1,388 @@
+package me.beekrbonkr.practicecore.spectate;
+
+import me.beekrbonkr.practicecore.PracticeCorePlugin;
+import me.beekrbonkr.practicecore.message.Messages;
+import me.beekrbonkr.practicecore.session.PracticeSession;
+import me.beekrbonkr.practicecore.session.SessionState;
+import me.beekrbonkr.practicecore.snapshot.PlayerSnapshot;
+import me.beekrbonkr.practicecore.util.ItemBuilder;
+import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Sound;
+import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.BoundingBox;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+/**
+ * Spectator mode: watch another player's practice session from inside their
+ * arena without being able to touch it.
+ *
+ * A spectator is deliberately <em>not</em> a session — they hold no grid slot,
+ * no kit and no timer, so every session-gated listener (block edits, triggers,
+ * mode logic, explosion knockback) already ignores them for free. What they
+ * are instead: flying, invulnerable, non-collidable, hidden from everyone but
+ * other spectators, carrying three tagged hotbar tools (teleport to target,
+ * target picker, leave), and leashed to the target's arena by {@link #tick}.
+ *
+ * The pre-spectate state reuses the session {@link PlayerSnapshot} store, so
+ * a crash mid-spectate restores the player on next login exactly like a
+ * crashed session would. Ending spectating restores the snapshot in full.
+ */
+public final class SpectateService {
+
+    public static final String ITEM_TELEPORT = "teleport";
+    public static final String ITEM_MENU = "menu";
+    public static final String ITEM_LEAVE = "leave";
+
+    /** Blocks past the target's arena walls a spectator may drift. */
+    private static final double LEASH_MARGIN = 12;
+    /** Ticks between leash/validity sweeps. */
+    private static final long TICK_PERIOD = 20L;
+
+    private final PracticeCorePlugin plugin;
+    private final NamespacedKey itemKey;
+    /** Spectator → the player they are watching. */
+    private final Map<UUID, UUID> targets = new HashMap<>();
+    private BukkitTask task;
+
+    public SpectateService(PracticeCorePlugin plugin) {
+        this.plugin = plugin;
+        this.itemKey = new NamespacedKey(plugin, "spectate-item");
+    }
+
+    // ------------------------------------------------------------ lifecycle
+
+    public void startTask() {
+        task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, TICK_PERIOD, TICK_PERIOD);
+    }
+
+    public void restartTask() {
+        if (task != null) {
+            task.cancel();
+        }
+        startTask();
+    }
+
+    public void shutdown() {
+        if (task != null) {
+            task.cancel();
+            task = null;
+        }
+    }
+
+    // -------------------------------------------------------------- queries
+
+    public boolean isSpectator(UUID player) {
+        return targets.containsKey(player);
+    }
+
+    /** The watched player's UUID, or null when this player is not spectating. */
+    public UUID targetOf(UUID spectator) {
+        return targets.get(spectator);
+    }
+
+    public Set<UUID> spectators() {
+        return Set.copyOf(targets.keySet());
+    }
+
+    public int watcherCount(UUID target) {
+        int count = 0;
+        for (UUID watched : targets.values()) {
+            if (watched.equals(target)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /** The MBedwars-style tag on a spectate hotbar tool, or null for plain items. */
+    public String itemTypeOf(ItemStack stack) {
+        if (stack == null || !stack.hasItemMeta()) {
+            return null;
+        }
+        return stack.getItemMeta().getPersistentDataContainer()
+                .get(itemKey, PersistentDataType.STRING);
+    }
+
+    // ---------------------------------------------------------------- start
+
+    /**
+     * Starts watching {@code target}, or retargets an already-spectating
+     * player without touching their stored snapshot. A spectator's own
+     * running session is ended (fully restored) first — the snapshot captured
+     * for spectating must be their real pre-practice state, never a kit.
+     */
+    public void start(Player spectator, Player target) {
+        Messages msg = plugin.messages();
+        UUID id = spectator.getUniqueId();
+        if (spectator.equals(target)) {
+            msg.send(spectator, "spectate.self");
+            return;
+        }
+        if (plugin.setup().isAdmin(id)) {
+            msg.send(spectator, "session.setup-in-progress");
+            return;
+        }
+        if (plugin.sessions().isPreparingJoin(id)) {
+            // Their own arena paste is in flight — becoming a spectator now
+            // would let the finished paste hand them a session on top.
+            msg.send(spectator, "session.preparing");
+            return;
+        }
+        PracticeSession targetSession = plugin.sessions().get(target.getUniqueId());
+        if (targetSession == null
+                || targetSession.state() == SessionState.PREPARING
+                || targetSession.state() == SessionState.ENDING) {
+            msg.send(spectator, "spectate.target-not-practicing", "player", target.getName());
+            return;
+        }
+        boolean switching = targets.containsKey(id);
+        if (!switching) {
+            if (plugin.sessions().get(id) != null) {
+                // Their own run ends first, with a full restore — the state
+                // captured below must be the real one, not an arena kit.
+                plugin.sessions().leave(spectator, true);
+            }
+            if (!plugin.snapshots().has(id)) {
+                plugin.snapshots().save(id, PlayerSnapshot.capture(spectator));
+            }
+            targets.put(id, target.getUniqueId());
+            applySpectatorState(spectator);
+            hideFromOthers(spectator);
+            plugin.boards().create(spectator);
+        } else {
+            targets.put(id, target.getUniqueId());
+        }
+        giveItems(spectator, target);
+        spectator.teleportAsync(perch(target));
+        msg.send(spectator, "spectate.started",
+                "target", target.getName(),
+                "arena", targetSession.template().displayName());
+        msg.send(target, "spectate.watcher-joined", "player", spectator.getName());
+        if (plugin.pcConfig().sounds()) {
+            spectator.playSound(spectator.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.7f, 1.5f);
+        }
+    }
+
+    // ----------------------------------------------------------------- stop
+
+    /**
+     * Ends spectating and restores the snapshot. {@code restoreLocation} is
+     * false when another plugin's teleport already decided where the player
+     * goes. {@code messageKey} may be null (quit, shutdown).
+     *
+     * @return false when the player was not spectating
+     */
+    public boolean stop(Player spectator, boolean restoreLocation, String messageKey) {
+        UUID id = spectator.getUniqueId();
+        UUID watched = targets.remove(id);
+        if (watched == null) {
+            return false;
+        }
+        plugin.boards().remove(spectator);
+        showToOthers(spectator);
+        // Not part of the snapshot — undone by hand before it applies.
+        spectator.setInvulnerable(false);
+        spectator.setCollidable(true);
+        plugin.snapshots().load(id).ifPresent(snapshot ->
+                snapshot.apply(spectator, restoreLocation));
+        plugin.snapshots().delete(id);
+        if (messageKey != null) {
+            plugin.messages().send(spectator, messageKey);
+        }
+        Player target = Bukkit.getPlayer(watched);
+        if (target != null && target.isOnline()) {
+            plugin.messages().send(target, "spectate.watcher-left",
+                    "player", spectator.getName());
+        }
+        return true;
+    }
+
+    /**
+     * The voluntary exits (the bed tool, /practice spectate leave) and a
+     * target who stopped practicing: the spectator is restored, then dropped
+     * straight back into the default arena — on a practice server that is
+     * "home". When no arena is available to them the restore alone stands.
+     *
+     * @return false when the player was not spectating
+     */
+    public boolean stopIntoDefaultArena(Player spectator, String messageKey) {
+        if (!stop(spectator, true, messageKey)) {
+            return false;
+        }
+        if (!spectator.hasPermission("practicecore.use")) {
+            return true;
+        }
+        me.beekrbonkr.practicecore.template.ArenaTemplate arena =
+                plugin.templates().defaultFor(spectator);
+        if (arena == null) {
+            return true;
+        }
+        // Deferred a tick: stop() may run inside an event or the sweep, and
+        // join teleports — never mid-unwind.
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (spectator.isOnline()
+                    && plugin.sessions().get(spectator.getUniqueId()) == null
+                    && !isSpectator(spectator.getUniqueId())) {
+                plugin.sessions().join(spectator, arena);
+            }
+        });
+        return true;
+    }
+
+    /** onDisable and forced reloads: everyone restored synchronously. */
+    public void endAllSync() {
+        for (UUID id : List.copyOf(targets.keySet())) {
+            Player spectator = Bukkit.getPlayer(id);
+            if (spectator != null && spectator.isOnline()) {
+                stop(spectator, true, null);
+            } else {
+                targets.remove(id);
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- tools
+
+    /** Compass tool: snap back to the target. */
+    public void teleportToTarget(Player spectator) {
+        UUID watched = targets.get(spectator.getUniqueId());
+        Player target = watched == null ? null : Bukkit.getPlayer(watched);
+        if (target == null) {
+            return;
+        }
+        spectator.teleport(perch(target));
+        if (plugin.pcConfig().sounds()) {
+            spectator.playSound(spectator.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 0.5f, 1.4f);
+        }
+    }
+
+    // ----------------------------------------------------------- the sweep
+
+    /**
+     * Once a second: drop spectators whose target stopped practicing, keep
+     * flight on (something may have toggled it), and leash everyone to their
+     * target's arena — following them automatically through arena switches.
+     */
+    private void tick() {
+        for (Map.Entry<UUID, UUID> entry : Map.copyOf(targets).entrySet()) {
+            Player spectator = Bukkit.getPlayer(entry.getKey());
+            if (spectator == null || !spectator.isOnline()) {
+                continue; // the quit listener owns this case
+            }
+            Player target = Bukkit.getPlayer(entry.getValue());
+            PracticeSession session = plugin.sessions().get(entry.getValue());
+            if (target == null || !target.isOnline() || session == null
+                    || session.state() == SessionState.ENDING) {
+                stopIntoDefaultArena(spectator, "spectate.target-left");
+                continue;
+            }
+            if (!spectator.getAllowFlight()) {
+                spectator.setAllowFlight(true);
+                spectator.setFlying(true);
+            }
+            if (session.state() == SessionState.PREPARING) {
+                continue; // mid arena-switch — the next pass leashes to the new bounds
+            }
+            Location loc = spectator.getLocation();
+            BoundingBox leash = session.bounds().clone().expand(LEASH_MARGIN);
+            if (!plugin.worldService().isPracticeWorld(loc.getWorld())) {
+                continue; // an outbound teleport — the teleport listener owns it
+            }
+            if (!leash.contains(loc.toVector())) {
+                spectator.teleport(perch(target));
+                plugin.messages().actionBar(spectator, "spectate.leash");
+            }
+        }
+    }
+
+    // -------------------------------------------------------------- helpers
+
+    private Location perch(Player target) {
+        Location loc = target.getLocation().clone().add(0, 1, 0);
+        loc.setPitch(Math.max(loc.getPitch(), 20)); // arrive looking slightly down at them
+        return loc;
+    }
+
+    private void applySpectatorState(Player spectator) {
+        spectator.closeInventory();
+        spectator.getInventory().clear();
+        spectator.setGameMode(GameMode.ADVENTURE);
+        spectator.setAllowFlight(true);
+        spectator.setFlying(true);
+        spectator.setInvulnerable(true);
+        spectator.setCollidable(false);
+        AttributeInstance maxHealth = spectator.getAttribute(PlayerSnapshot.maxHealthAttribute());
+        spectator.setHealth(maxHealth != null ? maxHealth.getValue() : 20.0);
+        spectator.setFoodLevel(20);
+        spectator.setSaturation(20);
+        spectator.setFireTicks(0);
+        spectator.setArrowsInBody(0);
+        spectator.setFallDistance(0);
+        for (PotionEffect effect : spectator.getActivePotionEffects()) {
+            spectator.removePotionEffect(effect.getType());
+        }
+    }
+
+    /**
+     * Invisible to everyone except fellow spectators — the watched player
+     * must never have a ghost in their peripheral vision mid-run.
+     */
+    private void hideFromOthers(Player spectator) {
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (!online.equals(spectator) && !isSpectator(online.getUniqueId())) {
+                online.hidePlayer(plugin, spectator);
+            }
+        }
+    }
+
+    private void showToOthers(Player spectator) {
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            online.showPlayer(plugin, spectator);
+        }
+    }
+
+    /** A fresh joiner must not see the spectators already flying around. */
+    public void hideAllFrom(Player joiner) {
+        for (UUID id : targets.keySet()) {
+            Player spectator = Bukkit.getPlayer(id);
+            if (spectator != null && !spectator.equals(joiner)) {
+                joiner.hidePlayer(plugin, spectator);
+            }
+        }
+    }
+
+    private void giveItems(Player spectator, Player target) {
+        PlayerInventory inv = spectator.getInventory();
+        inv.clear();
+        inv.setItem(0, tool(Material.COMPASS, "spectate.item.teleport", ITEM_TELEPORT,
+                "target", target.getName()));
+        inv.setItem(4, tool(Material.SPYGLASS, "spectate.item.menu", ITEM_MENU));
+        inv.setItem(8, tool(Material.RED_BED, "spectate.item.leave", ITEM_LEAVE));
+        inv.setHeldItemSlot(0);
+    }
+
+    private ItemStack tool(Material material, String key, String type, String... placeholders) {
+        return ItemBuilder.of(material)
+                .name(plugin.messages().name(key + ".name", placeholders))
+                .lore(plugin.messages().lore(key + ".lore", placeholders))
+                .hideAttributes()
+                .edit(meta -> meta.getPersistentDataContainer()
+                        .set(itemKey, PersistentDataType.STRING, type))
+                .build();
+    }
+}

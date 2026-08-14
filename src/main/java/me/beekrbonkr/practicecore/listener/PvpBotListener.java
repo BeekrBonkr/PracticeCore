@@ -166,8 +166,12 @@ public final class PvpBotListener implements Listener {
         // Ride the knockback instead of instantly strafing out of it — the
         // window that makes real 1.8-style combos possible. Deep in a combo
         // the stun shortens so the bot gets chances to fight back instead of
-        // being carried helplessly across the arena.
-        fight.hitstunTicks = fight.combo >= 3 ? 5 : 10;
+        // being carried helplessly across the arena, and an extreme-evasive
+        // bot rides less of it to begin with — combos still land, but each
+        // one has to be earned.
+        int stun = fight.settings != null && fight.settings.evasiveness()
+                == me.beekrbonkr.practicecore.pvpbot.BotSettings.Evasiveness.EXTREME ? 8 : 10;
+        fight.hitstunTicks = fight.combo >= 3 ? stun / 2 : stun;
         if (event.getFinalDamage() >= fight.bot.getHealth()) {
             event.setCancelled(true);
             plugin.pvpBot().botDied(player, session, fight);

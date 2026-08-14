@@ -28,6 +28,9 @@ public final class LeaveService {
 
     /** @return false when there was nothing to leave. */
     public boolean leave(Player player) {
+        if (plugin.spectate().stop(player, true, "spectate.stopped")) {
+            return true;
+        }
         PracticeSession session = plugin.sessions().get(player.getUniqueId());
         boolean wasPracticing = session != null;
         boolean inPracticeWorld = plugin.worldService().isPracticeWorld(player.getWorld());

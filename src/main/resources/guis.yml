@@ -40,6 +40,8 @@ main:
     help: {enabled: true, slot: 16, material: PAPER}
     # Only rendered during a PvP bot session.
     bot: {enabled: true, slot: 20, material: ZOMBIE_HEAD}
+    # Opens the spectate target picker; needs practicecore.spectate.
+    spectate: {enabled: true, slot: 19, material: SPYGLASS}
     settings: {enabled: true, slot: 21, material: COMPARATOR}
     leave: {enabled: true, slot: 23, material: OAK_DOOR}
 
