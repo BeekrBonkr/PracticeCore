@@ -29,6 +29,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
 import java.util.Map;
@@ -180,6 +181,13 @@ public final class PvpBotService {
             if (knockback != null) {
                 knockback.setBaseValue(0.0);
             }
+            // A zombie's ~35-block follow range also caps how far the Paper
+            // pathfinder will compute a path — too short for a big arena. A
+            // long leash lets the bot spot and chase the player from anywhere.
+            AttributeInstance follow = husk.getAttribute(followRangeAttribute());
+            if (follow != null) {
+                follow.setBaseValue(128.0);
+            }
             // The disguise must be registered before the entity tracker sends
             // the spawn packet, i.e. inside the spawn consumer.
             if (disguise != null && disguise.active() && owner != null) {
@@ -197,21 +205,32 @@ public final class PvpBotService {
         // Movement is velocity/pathfinder-driven from tick().
         Bukkit.getMobGoals().removeAllGoals(fight.bot);
         equipBot(fight);
-        // Name and health ride above the bot as a display entity — a player
-        // model shows its profile name, not a mob custom name, so the tag
-        // has to be its own entity either way.
-        fight.nameTag = loc.getWorld().spawn(loc, org.bukkit.entity.TextDisplay.class, tag -> {
+        // Name and health float above the bot as a display entity — a player
+        // model shows its profile name, not a mob custom name, so the tag has
+        // to be its own entity either way. It follows by teleport each tick
+        // rather than riding as a passenger: mount packets around the
+        // disguise's rewritten spawn render unreliably on the client, which
+        // left the health bar invisible.
+        spawnNameTag(fight);
+    }
+
+    private void spawnNameTag(BotFight fight) {
+        Location loc = tagLocation(fight.bot);
+        fight.nameTag = loc.getWorld().spawn(loc,
+                org.bukkit.entity.TextDisplay.class, tag -> {
             tag.text(botName(fight.bot.getHealth()));
             tag.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
             tag.setDefaultBackground(false);
             tag.setBackgroundColor(org.bukkit.Color.fromARGB(64, 0, 0, 0));
             tag.setShadowed(true);
             tag.setPersistent(false);
-            tag.setTransformation(new org.bukkit.util.Transformation(
-                    new org.joml.Vector3f(0, 0.4f, 0), new org.joml.Quaternionf(),
-                    new org.joml.Vector3f(1, 1, 1), new org.joml.Quaternionf()));
+            tag.setTeleportDuration(2); // glide between per-tick follows
         });
-        fight.bot.addPassenger(fight.nameTag);
+    }
+
+    /** Where the floating tag sits: above the head, clear of the nameplate. */
+    private static Location tagLocation(Husk bot) {
+        return bot.getLocation().add(0, bot.getHeight() + 0.8, 0);
     }
 
     /** Dresses the bot per the settings (kit mirror or gear-tier override). */
@@ -375,10 +394,12 @@ public final class PvpBotService {
         plugin.messages().title(player, "pvpbot.title.death", "pvpbot.title.death-sub",
                 "kills", String.valueOf(fight.kills),
                 "deaths", String.valueOf(fight.deaths));
+        plugin.messages().send(player, "pvpbot.chat.bot-killed-player", "hearts",
+                hearts(fight.bot != null && fight.bot.isValid() ? fight.bot.getHealth() : 0));
         if (plugin.pcConfig().sounds()) {
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_DEATH, 0.7f, 1.0f);
         }
-        resetStock(player, session, fight);
+        resetStock(player, session, fight, true);
     }
 
     /** The bot dropped — a kill on the board and a fresh stock. */
@@ -387,25 +408,33 @@ public final class PvpBotService {
         plugin.messages().title(player, "pvpbot.title.kill", "pvpbot.title.kill-sub",
                 "kills", String.valueOf(fight.kills),
                 "deaths", String.valueOf(fight.deaths));
+        plugin.messages().send(player, "pvpbot.chat.player-killed-bot",
+                "hearts", hearts(player.getHealth()));
         if (plugin.pcConfig().sounds()) {
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 1.2f);
         }
-        resetStock(player, session, fight);
+        // The winner keeps their ground: health and kit refresh in place, only
+        // the bot goes back to its spawn.
+        resetStock(player, session, fight, false);
     }
 
-    private void resetStock(Player player, PracticeSession session, BotFight fight) {
+    private void resetStock(Player player, PracticeSession session, BotFight fight,
+                            boolean respawnPlayer) {
         captureLayout(player, fight); // keep mid-fight rearrangements
         fight.resetStock();
         session.tracker().revertAll(); // block kits: the arena resets each stock
-        plugin.sessions().teleportInternal(player, fight.playerSpawn);
-        if (plugin.pcConfig().sounds()) {
-            player.playSound(fight.playerSpawn, Sound.ENTITY_ENDERMAN_TELEPORT, 0.5f, 1.4f);
+        if (respawnPlayer) {
+            plugin.sessions().teleportInternal(player, fight.playerSpawn);
+            if (plugin.pcConfig().sounds()) {
+                player.playSound(fight.playerSpawn, Sound.ENTITY_ENDERMAN_TELEPORT, 0.5f, 1.4f);
+            }
         }
         AttributeInstance maxHealth = player.getAttribute(PlayerSnapshot.maxHealthAttribute());
         player.setHealth(maxHealth != null ? maxHealth.getValue() : 20.0);
         player.setFoodLevel(20);
         player.setSaturation(20);
         player.setFireTicks(0);
+        player.setFallDistance(0); // no teleport on a bot kill to clear it
         player.setArrowsInBody(0);
         for (PotionEffect effect : player.getActivePotionEffects()) {
             player.removePotionEffect(effect.getType());
@@ -414,15 +443,14 @@ public final class PvpBotService {
         plugin.sessions().regiveKit(player, session);
         syncSwordComponents(player);
         if (fight.bot != null && fight.bot.isValid()) {
-            fight.bot.teleport(fight.botSpawn); // ejects the name tag
+            fight.bot.teleport(fight.botSpawn);
             AttributeInstance botMax = fight.bot.getAttribute(PlayerSnapshot.maxHealthAttribute());
             fight.bot.setHealth(botMax != null ? botMax.getValue() : 20.0);
             fight.bot.setFireTicks(0);
             fight.bot.setVelocity(new Vector(0, 0, 0));
             equipBot(fight);
             if (fight.nameTag != null && fight.nameTag.isValid()) {
-                fight.nameTag.teleport(fight.botSpawn);
-                fight.bot.addPassenger(fight.nameTag);
+                fight.nameTag.teleport(tagLocation(fight.bot));
             }
         }
     }
@@ -497,17 +525,17 @@ public final class PvpBotService {
             return;
         }
 
-        // The floating tag doubles as the health bar over the bot's head.
+        // The floating tag doubles as the health bar over the bot's head: it
+        // trails the bot every tick, its text refreshing on a slower beat.
+        // Whatever removed it (arena wipe, /kill, a plugin sweep), it must
+        // come back — a fight without the health bar is flying blind.
+        if (fight.nameTag == null || !fight.nameTag.isValid()) {
+            spawnNameTag(fight);
+        }
+        fight.nameTag.teleport(tagLocation(bot));
         if (--fight.nameTicks <= 0) {
             fight.nameTicks = NAME_TICKS;
-            if (fight.nameTag != null && fight.nameTag.isValid()) {
-                fight.nameTag.text(botName(bot.getHealth()));
-                if (!bot.getPassengers().contains(fight.nameTag)) {
-                    // Knockback or a teleport shook the tag loose — re-seat it.
-                    fight.nameTag.teleport(bot.getLocation());
-                    bot.addPassenger(fight.nameTag);
-                }
-            }
+            fight.nameTag.text(botName(bot.getHealth()));
         }
 
         // Hitstun: a bot that just got hit rides the knockback like a real
@@ -527,11 +555,19 @@ public final class PvpBotService {
                 BotSettings settings = fight.settings;
                 if (fight.attackCooldown == 0 && bot.getEyeLocation()
                         .distance(player.getEyeLocation()) <= settings.reach().blocks()) {
-                    fight.attackCooldown = settings.cps().intervalTicks() + (chance(0.4) ? 1 : 0);
-                    if (chance(settings.accuracy().chance())) {
-                        strike(bot, player);
+                    if (settings.cerebral() && immune(player)) {
+                        // Save the real click for the tick the window opens.
+                        if (chance(0.3)) {
+                            bot.swingMainHand();
+                        }
                     } else {
-                        bot.swingMainHand();
+                        fight.attackCooldown =
+                                settings.cps().intervalTicks() + (chance(0.4) ? 1 : 0);
+                        if (chance(settings.accuracy().chance())) {
+                            strike(bot, player);
+                        } else {
+                            bot.swingMainHand();
+                        }
                     }
                 }
                 if (fight.combo >= 3 && bot.isOnGround()
@@ -542,6 +578,8 @@ public final class PvpBotService {
                     along.setY(0);
                     Vector escape = perpendicular(along)
                             .multiply(fight.strafeSign).multiply(0.5);
+                    // Never leap out of a combo straight over the rim.
+                    escape = steerInside(bot.getLocation(), escape, session.bounds());
                     bot.setVelocity(escape.setY(0.42));
                     fight.hitstunTicks = 0;
                 }
@@ -587,15 +625,66 @@ public final class PvpBotService {
             bot.lookAt(player);
             return;
         }
-        bot.lookAt(player);
 
         BotSettings s = fight.settings;
+
+        // Perception: the bot acts on where it last *registered* the player,
+        // stale by its reaction time on the lower tiers. A cerebral bot both
+        // refreshes faster and dead-reckons the picture forward along the
+        // player's motion — which reads as prediction: it works off where
+        // you're going, not where you were.
+        if (--fight.seenIn <= 0 || fight.seenLoc == null) {
+            fight.seenIn = s.reactionTicks() + 1;
+            fight.seenLoc = player.getLocation();
+            fight.seenVel = player.getVelocity().clone().setY(0);
+        }
+        Location perceived = fight.seenLoc.clone();
+        if (s.cerebral()) {
+            perceived.add(fight.seenVel.clone().multiply(s.reactionTicks() + 1));
+        }
+        bot.lookAt(perceived.clone().add(0, player.getEyeHeight(), 0));
+
         Location botLoc = bot.getLocation();
-        Location playerLoc = player.getLocation();
-        Vector toBot = botLoc.toVector().subtract(playerLoc.toVector());
+        Vector toBot = botLoc.toVector().subtract(perceived.toVector());
         toBot.setY(0);
         double dist = Math.max(0.01, toBot.length());
+        // Hits stay honest: reach is always measured against the real player.
         double eyeDist = bot.getEyeLocation().distance(player.getEyeLocation());
+        // Client-reported ground state — spoofable, but this only feeds the
+        // bot's reads, not anything security-relevant.
+        boolean playerOnGround = ((Entity) player).isOnGround();
+
+        // Habit reads, decaying slowly: hops and air-swings are patterns, and
+        // patterns get punished. (whiffHabit is fed by the swing listener.)
+        if (fight.playerWasOnGround && !playerOnGround
+                && player.getVelocity().getY() > 0.2) {
+            fight.jumpHabit = Math.min(8, fight.jumpHabit + 1);
+        }
+        fight.playerWasOnGround = playerOnGround;
+        fight.jumpHabit *= 0.995;
+        fight.whiffHabit *= 0.995;
+        if (fight.punishTicks > 0) {
+            fight.punishTicks--;
+        }
+        if (fight.feintCooldown > 0) {
+            fight.feintCooldown--;
+        }
+
+        // Stance: a slow-cadence read of the whole fight. PRESSURE while a
+        // combo is rolling, the player is hurt, or a punish is on; RESET
+        // (kite, rod, block) when the bot is badly losing; NEUTRAL otherwise.
+        if (--fight.stanceTicks <= 0) {
+            fight.stanceTicks = 10;
+            if (s.cerebral() && bot.getHealth() <= 7
+                    && player.getHealth() - bot.getHealth() >= 4) {
+                fight.stance = BotFight.RESET;
+            } else if (fight.combo >= 2 || player.getHealth() <= 6
+                    || fight.punishTicks > 0) {
+                fight.stance = BotFight.PRESSURE;
+            } else {
+                fight.stance = BotFight.NEUTRAL;
+            }
+        }
 
         // A jump-crit in progress strikes when its fall window arrives.
         if (fight.critTicks >= 0) {
@@ -607,33 +696,98 @@ public final class PvpBotService {
         }
 
         // Ranged options fire from spacing the melee brain won't close fast.
+        // A resetting bot leans on them: the rod is its space-maker.
         if (fight.graceTicks == 0 && !fight.blocking()) {
-            if (s.rod() && fight.rodCooldown == 0 && dist > 3.5 && dist < 8 && chance(0.06)) {
+            boolean resetting = fight.stance == BotFight.RESET;
+            if (s.rod() && fight.rodCooldown == 0 && dist > (resetting ? 3.0 : 3.5)
+                    && dist < 8 && chance(resetting ? 0.22 : 0.06)) {
                 castRod(bot, player, fight);
-            } else if (s.bow() && fight.bowCooldown == 0 && dist >= 8 && chance(0.08)) {
+            } else if (s.bow() && fight.bowCooldown == 0
+                    && dist >= (resetting ? 7 : 8) && chance(resetting ? 0.15 : 0.08)) {
                 shootBow(bot, player, fight, s);
             }
         }
 
-        // Movement: pathfind in from far out, strafe once in the fight.
+        // Spacing target by stance: pressure crowds in, a reset kites far out.
         double gap = s.aggression().gap();
-        if (dist > gap + 1.2) {
+        if (fight.stance == BotFight.PRESSURE) {
+            gap = Math.max(1.6, gap - 0.6);
+        } else if (fight.stance == BotFight.RESET) {
+            gap = 6.5;
+        }
+
+        // Feint in progress: back off as if disengaging. A player who takes
+        // the bait and charges eats a timed counter and a shove; one who
+        // holds their ground just watches the bot circle back in.
+        if (fight.feintTicks > 0) {
+            fight.feintTicks--;
+            bot.getPathfinder().stopPathfinding();
+            Vector back = toBot.clone().normalize().multiply(0.22);
+            bot.setVelocity(new Vector(back.getX(), bot.getVelocity().getY(), back.getZ()));
+            boolean bit = eyeDist <= s.reach().blocks() && fight.attackCooldown == 0
+                    && !immune(player)
+                    && player.getVelocity().dot(toBot.clone().normalize()) > 0.1;
+            if (bit) {
+                fight.feintTicks = 0;
+                fight.attackCooldown = s.cps().intervalTicks();
+                strike(bot, player);
+                shove(player, botLoc, session, s, 0.3);
+                fight.stance = BotFight.PRESSURE;
+                fight.stanceTicks = 20;
+            }
+            if (fight.feintTicks == 0) {
+                fight.feintCooldown = 100 + rnd(60);
+            }
+            fight.lastX = botLoc.getX();
+            fight.lastZ = botLoc.getZ();
+            return;
+        }
+        if (fight.stance == BotFight.NEUTRAL && s.cerebral()
+                && s.combos().chance() > 0 && fight.feintCooldown == 0
+                && dist > gap - 0.3 && dist < gap + 1.5 && chance(0.012)) {
+            fight.feintTicks = 12 + rnd(8);
+        }
+
+        // Movement: kite when resetting, pathfind in from far out, strafe
+        // once in the fight.
+        if (fight.stance == BotFight.RESET) {
+            if (--fight.repathTicks <= 0) {
+                fight.repathTicks = 4;
+                bot.getPathfinder().moveTo(
+                        fleeTarget(botLoc, perceived, session.bounds()),
+                        s.aggression().speed() * 1.15);
+            }
+            if (s.block() && !fight.blocking() && dist < 3.2 && chance(0.2)) {
+                fight.blockTicks = 10 + rnd(6);
+            }
+        } else if (dist > gap + 1.2) {
             if (--fight.repathTicks <= 0) {
                 fight.repathTicks = s.aggression() == BotSettings.Aggression.FRENZIED ? 3 : 5;
                 bot.getPathfinder().moveTo(player,
                         s.aggression().speed() * (fight.blocking() ? 0.5 : 1.0));
             }
-            // Sprint-jumping: a frenzied bot closes like a player holding W
-            // and spamming space, not a mob walking its path.
-            if (s.aggression() == BotSettings.Aggression.FRENZIED && bot.isOnGround()
-                    && dist > gap + 2 && !fight.blocking() && chance(0.15)) {
+            // Sprint-jumping: closing like a player holding W and spamming
+            // space — always under frenzy, and under pressure or a punish.
+            if ((s.aggression() == BotSettings.Aggression.FRENZIED
+                    || fight.stance == BotFight.PRESSURE || fight.punishTicks > 0)
+                    && bot.isOnGround() && dist > gap + 2
+                    && !fight.blocking() && chance(0.15)) {
                 Vector forward = toBot.clone().multiply(-1).normalize();
                 bot.setVelocity(bot.getVelocity().add(forward.multiply(0.35)).setY(0.42));
             }
         } else {
             fight.repathTicks = 0;
             bot.getPathfinder().stopPathfinding();
-            strafe(bot, player, fight, s, toBot, dist, gap);
+            strafe(bot, player, fight, s, toBot, dist, gap, session.bounds());
+        }
+
+        // Whiff-punish: the player has been clicking at air just out of
+        // range — lunge through the gap behind a wasted swing, arriving
+        // before the next click is loaded.
+        if (fight.punishTicks > 0 && bot.isOnGround() && dist > 1.8
+                && !fight.blocking() && chance(0.5)) {
+            Vector lunge = toBot.clone().multiply(-1).normalize();
+            bot.setVelocity(bot.getVelocity().add(lunge.multiply(0.4)).setY(0.25));
         }
 
         // Hop over lips and out of corners when movement stalls.
@@ -646,29 +800,52 @@ public final class PvpBotService {
         fight.lastX = botLoc.getX();
         fight.lastZ = botLoc.getZ();
 
-        // Melee: spam at the configured CPS, whiffing per accuracy.
-        if (fight.graceTicks == 0 && !fight.blocking() && fight.critTicks < 0
-                && fight.attackCooldown == 0 && eyeDist <= s.reach().blocks()) {
+        // A jumpy player gets crit-fished: as they rise, the bot leaves the
+        // ground too, timed so its falling strike meets them on the way down.
+        if (s.cerebral() && fight.jumpHabit >= 3
+                && !playerOnGround && player.getVelocity().getY() > 0.1
+                && fight.critTicks < 0 && bot.isOnGround() && fight.graceTicks == 0
+                && !fight.blocking() && dist < s.reach().blocks() + 1.5 && chance(0.3)) {
+            bot.setVelocity(bot.getVelocity().setY(0.42));
+            fight.critTicks = 6;
+        }
+
+        // Melee. A cerebral bot never wastes the click: while the player's
+        // immunity window is up it only mimes the clicking, saving the real
+        // swing for the exact tick the window expires — the locked-in rhythm
+        // of a good 1.8 player. It also takes the free clean hit on a falling
+        // player instead of gambling on a whiff or a crit windup.
+        boolean mayHit = fight.graceTicks == 0 && !fight.blocking()
+                && fight.critTicks < 0 && fight.attackCooldown == 0
+                && eyeDist <= s.reach().blocks();
+        if (mayHit && s.cerebral() && immune(player)) {
+            if (chance(0.3)) {
+                bot.swingMainHand(); // keeps the spam-click look
+            }
+        } else if (mayHit) {
             fight.attackCooldown = s.cps().intervalTicks() + (chance(0.4) ? 1 : 0);
-            if (!chance(s.accuracy().chance())) {
+            boolean airPunish = s.cerebral() && !playerOnGround
+                    && player.getVelocity().getY() < 0;
+            if (!airPunish && !chance(s.accuracy().chance())) {
                 bot.swingMainHand(); // a whiff, like a real missed click
-            } else if (s.combos().chance() > 0 && bot.isOnGround()
+            } else if (!airPunish && s.combos().chance() > 0 && bot.isOnGround()
                     && chance(s.combos().chance() * 0.5)) {
                 // Jump-crit: leave the ground now, strike mid-fall.
                 bot.setVelocity(bot.getVelocity().setY(0.42));
                 fight.critTicks = 6;
             } else {
                 strike(bot, player);
-                if (chance(s.combos().chance())) {
-                    // W-tap: the sprint-reset shove right after a clean hit.
-                    Vector shove = playerLoc.toVector().subtract(botLoc.toVector());
-                    shove.setY(0);
-                    if (shove.lengthSquared() > 0.01) {
-                        player.setVelocity(player.getVelocity()
-                                .add(shove.normalize().multiply(0.22).setY(0.05)));
-                    }
+                // W-tap: the sprint-reset shove right after a clean hit,
+                // thrown more freely while pressing an advantage.
+                if (chance(s.combos().chance()
+                        + (fight.stance == BotFight.PRESSURE ? 0.2 : 0))) {
+                    shove(player, botLoc, session, s, 0.22);
                 }
             }
+        } else if (s.cerebral() && fight.stance == BotFight.NEUTRAL
+                && fight.attackCooldown == 0 && eyeDist > s.reach().blocks()
+                && eyeDist < s.reach().blocks() + 1 && chance(0.03)) {
+            bot.swingMainHand(); // max-range bait click, inviting a counter
         }
 
         // Getting comboed? Raise the 1.8 sword block for a moment.
@@ -690,7 +867,7 @@ public final class PvpBotService {
      * term holds the aggression-defined spacing.
      */
     private void strafe(Husk bot, Player player, BotFight fight, BotSettings s,
-                        Vector toBot, double dist, double gap) {
+                        Vector toBot, double dist, double gap, BoundingBox bounds) {
         Vector look = player.getEyeLocation().getDirection();
         look.setY(0);
         Vector strafeDir;
@@ -708,6 +885,14 @@ public final class PvpBotService {
                     }
                     fight.strafeFlipTicks = 20 + rnd(20);
                 }
+                // A cerebral bot cuts the corner instead: it matches the
+                // player's own lateral drift, so orbiting away never works.
+                if (s.cerebral() && fight.seenVel != null) {
+                    double lateral = fight.seenVel.dot(perpendicular(toBot));
+                    if (Math.abs(lateral) > 0.08) {
+                        fight.strafeSign = lateral > 0 ? 1 : -1;
+                    }
+                }
                 strafeDir = perpendicular(toBot).multiply(fight.strafeSign);
             } else {
                 strafeDir = away.normalize();
@@ -715,10 +900,19 @@ public final class PvpBotService {
         }
         Vector velocity = strafeDir.multiply(
                 s.evasiveness().speed() * (fight.blocking() ? 0.4 : 1.0));
+        double closeIn = fight.stance == BotFight.PRESSURE ? 0.14 : 0.08;
         if (dist < gap - 0.4) {
             velocity.add(toBot.clone().normalize().multiply(0.08)); // back off
         } else if (dist > gap + 0.4) {
-            velocity.add(toBot.clone().normalize().multiply(-0.08)); // close in
+            velocity.add(toBot.clone().normalize().multiply(-closeIn)); // close in
+        }
+        // Never strafe over the rim: a drift that would carry the bot off the
+        // arena is bent back toward the middle, and the held side flips so
+        // the next dodge works with the bend instead of fighting it.
+        Vector steered = steerInside(bot.getLocation(), velocity, bounds);
+        if (steered != velocity) {
+            fight.strafeSign = -fight.strafeSign;
+            velocity = steered;
         }
         // An extreme strafer also hops mid-fight the way real 1.8 duellers
         // bounce around — vertical motion the crosshair has to chase too.
@@ -728,6 +922,69 @@ public final class PvpBotService {
             y = 0.42;
         }
         bot.setVelocity(new Vector(velocity.getX(), y, velocity.getZ()));
+    }
+
+    /** Inside the vanilla half-window where another equal hit does nothing. */
+    private static boolean immune(Player player) {
+        return player.getNoDamageTicks() > player.getMaximumNoDamageTicks() / 2;
+    }
+
+    /**
+     * The sprint-reset shove after a clean hit. A cerebral bot leans it
+     * toward the arena rim — knockback with a destination, walking the
+     * player toward the edge one trade at a time.
+     */
+    private void shove(Player player, Location botLoc, PracticeSession session,
+                       BotSettings s, double strength) {
+        Vector shove = player.getLocation().toVector().subtract(botLoc.toVector());
+        shove.setY(0);
+        if (shove.lengthSquared() < 0.01) {
+            return;
+        }
+        shove.normalize();
+        if (s.cerebral()) {
+            BoundingBox b = session.bounds();
+            Vector outward = new Vector(
+                    player.getLocation().getX() - (b.getMinX() + b.getMaxX()) / 2, 0,
+                    player.getLocation().getZ() - (b.getMinZ() + b.getMaxZ()) / 2);
+            if (outward.lengthSquared() > 0.01) {
+                shove.add(outward.normalize().multiply(0.35)).normalize();
+            }
+        }
+        player.setVelocity(player.getVelocity().add(shove.multiply(strength).setY(0.05)));
+    }
+
+    /** A kite waypoint: straight away from the player, held inside the rim. */
+    private static Location fleeTarget(Location botLoc, Location playerLoc,
+                                       BoundingBox bounds) {
+        Vector away = botLoc.toVector().subtract(playerLoc.toVector());
+        away.setY(0);
+        if (away.lengthSquared() < 0.01) {
+            away = new Vector(1, 0, 0);
+        }
+        Location target = botLoc.clone().add(away.normalize().multiply(6));
+        target.setX(Math.min(bounds.getMaxX() - 2, Math.max(bounds.getMinX() + 2, target.getX())));
+        target.setZ(Math.min(bounds.getMaxZ() - 2, Math.max(bounds.getMinZ() + 2, target.getZ())));
+        return target;
+    }
+
+    /**
+     * Bends a horizontal velocity back toward the arena middle when its
+     * continuation would carry the entity over the rim. Returns the input
+     * object untouched when the move is safe — callers compare identity.
+     */
+    private static Vector steerInside(Location from, Vector velocity, BoundingBox bounds) {
+        double aheadX = from.getX() + velocity.getX() * 6;
+        double aheadZ = from.getZ() + velocity.getZ() * 6;
+        if (aheadX > bounds.getMinX() + 1.5 && aheadX < bounds.getMaxX() - 1.5
+                && aheadZ > bounds.getMinZ() + 1.5 && aheadZ < bounds.getMaxZ() - 1.5) {
+            return velocity;
+        }
+        Vector inward = new Vector(
+                (bounds.getMinX() + bounds.getMaxX()) / 2 - from.getX(), 0,
+                (bounds.getMinZ() + bounds.getMaxZ()) / 2 - from.getZ());
+        return inward.lengthSquared() < 0.01 ? velocity
+                : inward.normalize().multiply(velocity.length());
     }
 
     private static Vector perpendicular(Vector horizontal) {
@@ -788,10 +1045,24 @@ public final class PvpBotService {
                 player.getLocation().add(0, 1.2, 0), 8, 0.3, 0.3, 0.3, 0.2);
     }
 
-    /** The nametag health bar: name plus hearts, one decimal. */
+    /**
+     * The floating tag text: the health line stacked above the name line.
+     * Composed in code, not in one message — the health can then never
+     * vanish because an older messages.yml carries a name-only bot-name
+     * (the migrator tops up missing keys but never edits existing ones).
+     * The name line still gets the health resolver so a stale combined
+     * default keeps rendering its number too.
+     */
     private net.kyori.adventure.text.Component botName(double health) {
-        return plugin.messages().component("pvpbot.bot-name",
-                "health", String.format(java.util.Locale.ROOT, "%.1f", health / 2.0));
+        String hearts = hearts(health);
+        return plugin.messages().component("pvpbot.bot-health", "health", hearts)
+                .append(net.kyori.adventure.text.Component.newline())
+                .append(plugin.messages().component("pvpbot.bot-name", "health", hearts));
+    }
+
+    /** Health points rendered as hearts, one decimal. */
+    private static String hearts(double health) {
+        return String.format(java.util.Locale.ROOT, "%.1f", health / 2.0);
     }
 
     /**
@@ -808,7 +1079,7 @@ public final class PvpBotService {
         org.bukkit.entity.TextDisplay display = loc.getWorld().spawn(loc,
                 org.bukkit.entity.TextDisplay.class, text -> {
                     text.text(plugin.messages().component("pvpbot.damage-indicator",
-                            "damage", String.format(java.util.Locale.ROOT, "%.1f", damage / 2.0)));
+                            "damage", hearts(damage)));
                     text.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
                     text.setDefaultBackground(false);
                     text.setBackgroundColor(org.bukkit.Color.fromARGB(0, 0, 0, 0));
@@ -845,6 +1116,10 @@ public final class PvpBotService {
 
     private static Attribute scaleAttribute() {
         return attribute("generic.scale", "scale");
+    }
+
+    private static Attribute followRangeAttribute() {
+        return attribute("generic.follow_range", "follow_range");
     }
 
     private static Attribute attribute(String legacy, String modern) {

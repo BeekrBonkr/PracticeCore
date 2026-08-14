@@ -12,7 +12,7 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 1
+config-version: 3
 
 prefix: '<gold>Practice <dark_gray>» '
 
@@ -148,16 +148,22 @@ rush:
 # The PvP bot spar: an endless fight against an AI opponent. No timer, no
 # leaderboard — kills, deaths and combos live on the sidebar.
 pvpbot:
-  # Floats over the bot's head; <health> is its remaining hearts.
-  bot-name: '<red><bold>PvP Bot <dark_gray>| <red><health>❤'
+  # Floats over the bot's head as two lines: the health line above the name
+  # line. <health> is the bot's remaining hearts.
+  bot-health: '<red><health>❤'
+  bot-name: '<red><bold>PvP Bot'
   # Floating damage indicator; <damage> is the hearts one hit dealt.
   damage-indicator: '<red>-<damage>❤'
   # Titles on losing / winning a stock. <kills> <deaths>
   title:
-    death: '<red><bold>You died'
+    death: '<red><bold>YOU DIED'
     death-sub: '<gray>Kills <green><kills> <dark_gray>/ <gray>Deaths <red><deaths>'
     kill: '<green><bold>Bot slain'
     kill-sub: '<gray>Kills <green><kills> <dark_gray>/ <gray>Deaths <red><deaths>'
+  # Chat summary after each stock; <hearts> is what the survivor had left.
+  chat:
+    bot-killed-player: '<prefix><red>Bot killed player <dark_gray>(<gray>bot had <red><hearts>❤<gray> left<dark_gray>)'
+    player-killed-bot: '<prefix><green>Player killed bot <dark_gray>(<gray>you had <red><hearts>❤<gray> left<dark_gray>)'
 
 # Action-bar speedometer shown during bridging runs.
 # <speed> — current speed in m/s, <moved> — blocks traveled this run,

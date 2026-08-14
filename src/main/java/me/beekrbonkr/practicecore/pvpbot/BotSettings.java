@@ -50,9 +50,15 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
             return clicks;
         }
 
-        /** Ticks between swings, never below one. */
+        /**
+         * Ticks between swings, never below one. Floored, not rounded: the
+         * service's 40%-chance extra tick supplies the fraction, so each tier
+         * averages out near its nominal rate. TWELVE floors to a single tick —
+         * the swing lands the instant the target's immunity expires, which is
+         * exactly what a 1.8-style spam-clicker feels like.
+         */
         public int intervalTicks() {
-            return Math.max(1, Math.round(20f / clicks));
+            return Math.max(1, 20 / clicks);
         }
 
         public Cps next() {
@@ -204,6 +210,29 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
             }
         }
         return null;
+    }
+
+    /**
+     * Perception lag in ticks: how stale the bot's picture of the player's
+     * position and motion may be. The top tiers effectively see live.
+     */
+    public int reactionTicks() {
+        return switch (accuracy) {
+            case LOW -> 6;
+            case MEDIUM -> 4;
+            case HIGH -> 2;
+            case PERFECT -> 0;
+        };
+    }
+
+    /**
+     * The high accuracy tiers fight with their head, not just their aim:
+     * immunity-timed hits, motion prediction, habit reads, feints, kiting
+     * when losing, and edge play. Difficulty scales by thinking better,
+     * not by hitting harder.
+     */
+    public boolean cerebral() {
+        return accuracy.ordinal() >= Accuracy.HIGH.ordinal();
     }
 
     /** Bot gear override; MIRROR wears whatever the player's kit preset wears. */
