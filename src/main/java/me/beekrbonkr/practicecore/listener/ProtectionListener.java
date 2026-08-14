@@ -42,12 +42,20 @@ public final class ProtectionListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onDamage(EntityDamageEvent event) {
-        if (event.getEntity() instanceof Player player
-                && plugin.worldService().isPracticeWorld(player.getWorld())) {
-            // Death must be structurally impossible; falls are handled by the
-            // movement fail check, not by void/fall damage.
-            event.setCancelled(true);
+        if (!(event.getEntity() instanceof Player player)
+                || !plugin.worldService().isPracticeWorld(player.getWorld())) {
+            return;
         }
+        // PvP sparring is the one sanctioned damage source: the session's own
+        // bot and its projectiles go through — PvpBotListener intercepts any
+        // hit that would actually kill. Everything else keeps death
+        // structurally impossible; falls are handled by the movement fail
+        // check, not by void/fall damage.
+        PracticeSession session = plugin.sessions().get(player.getUniqueId());
+        if (session != null && plugin.pvpBot().allowsDamage(session, event)) {
+            return;
+        }
+        event.setCancelled(true);
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -197,11 +205,25 @@ public final class ProtectionListener implements Listener {
         }
     }
 
+    /**
+     * Explosions (rush TNT and fireballs) behave the way bedwars players
+     * expect: blocks the player placed and generated bed defenses break, the
+     * map itself — beds included — never does, nothing drops, and the
+     * knockback the cancelled damage event would have applied is re-added.
+     */
     @EventHandler(ignoreCancelled = true)
     public void onExplode(EntityExplodeEvent event) {
-        if (plugin.worldService().isPracticeWorld(event.getEntity().getWorld())) {
-            event.blockList().clear();
+        if (!plugin.worldService().isPracticeWorld(event.getEntity().getWorld())) {
+            return;
         }
+        event.setYield(0);
+        event.blockList().removeIf(block -> {
+            PracticeSession session = plugin.sessions().sessionAtBlock(block.getLocation());
+            return session == null
+                    || !me.beekrbonkr.practicecore.mode.RushMode
+                            .explosionCanBreak(session, block.getLocation());
+        });
+        plugin.rush().applyExplosionKnockback(event.getLocation());
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -216,6 +238,29 @@ public final class ProtectionListener implements Listener {
         if (plugin.worldService().isPracticeWorld(event.getBlock().getWorld())
                 && (event.getPlayer() == null
                     || !plugin.setup().isAdmin(event.getPlayer().getUniqueId()))) {
+            event.setCancelled(true);
+        }
+    }
+
+    /** Thrown eggs (the rush bridge egg) must never hatch chickens. */
+    @EventHandler(ignoreCancelled = true)
+    public void onEggThrow(org.bukkit.event.player.PlayerEggThrowEvent event) {
+        if (plugin.worldService().isPracticeWorld(event.getPlayer().getWorld())) {
+            event.setHatching(false);
+        }
+    }
+
+    /**
+     * Ender chest contents are real player data that lives outside the arena:
+     * a snapshot never captures them, so items stashed there would survive
+     * resets and leak out of practice entirely. Rush maps imported from
+     * MBedwars often contain ender chests — they stay closed.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onOpenEnderChest(org.bukkit.event.inventory.InventoryOpenEvent event) {
+        if (event.getInventory().getType() == org.bukkit.event.inventory.InventoryType.ENDER_CHEST
+                && event.getPlayer() instanceof Player player
+                && plugin.sessions().get(player.getUniqueId()) != null) {
             event.setCancelled(true);
         }
     }

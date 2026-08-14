@@ -59,6 +59,8 @@ public abstract class Menu implements InventoryHolder {
         }
         redraw();
         viewer.openInventory(inventory);
+        // One consistent open cue across every menu; refresh() stays silent.
+        sound(Sound.BLOCK_NOTE_BLOCK_HAT, 0.4f, 1.7f);
     }
 
     /** Rebuilds contents in place — used after a menu action changes state. */

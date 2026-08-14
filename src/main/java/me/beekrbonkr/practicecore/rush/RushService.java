@@ -40,12 +40,15 @@ public final class RushService {
     private final NamespacedKey dropKey;
     /** Villagers acting as shop dealers. */
     private final NamespacedKey dealerKey;
+    /** Shop-bought special items; value = MBedwars special-item type id. */
+    private final NamespacedKey specialKey;
     private BukkitTask task;
 
     public RushService(PracticeCorePlugin plugin) {
         this.plugin = plugin;
         this.dropKey = new NamespacedKey(plugin, "rush-drop");
         this.dealerKey = new NamespacedKey(plugin, "rush-dealer");
+        this.specialKey = new NamespacedKey(plugin, "rush-special");
     }
 
     // ---------------------------------------------------------- selections
@@ -185,6 +188,170 @@ public final class RushService {
         return entity instanceof Item item && dropTypeOf(item) != null;
     }
 
+    // -------------------------------------------------------- special items
+
+    /** Stamps a shop-bought special item so use-time listeners recognize it. */
+    public ItemStack tagSpecial(ItemStack stack, String type) {
+        stack.editMeta(meta -> meta.getPersistentDataContainer()
+                .set(specialKey, PersistentDataType.STRING, type));
+        return stack;
+    }
+
+    /** The MBedwars special-item type id of a stack, or null for plain items. */
+    public String specialTypeOf(ItemStack stack) {
+        if (stack == null || !stack.hasItemMeta()) {
+            return null;
+        }
+        return stack.getItemMeta().getPersistentDataContainer()
+                .get(specialKey, PersistentDataType.STRING);
+    }
+
+    /** Takes one item off the given hand — a special item or TNT being used. */
+    public void consumeHand(Player player, org.bukkit.inventory.EquipmentSlot hand) {
+        boolean off = hand == org.bukkit.inventory.EquipmentSlot.OFF_HAND;
+        ItemStack held = off ? player.getInventory().getItemInOffHand()
+                : player.getInventory().getItemInMainHand();
+        if (held.getAmount() <= 1) {
+            held = null;
+        } else {
+            held = held.clone();
+            held.setAmount(held.getAmount() - 1);
+        }
+        if (off) {
+            player.getInventory().setItemInOffHand(held);
+        } else {
+            player.getInventory().setItemInMainHand(held);
+        }
+    }
+
+    /**
+     * Launches a fireball the way MBedwars does: straight along the aim line,
+     * no fire trail (arenas must stay clean), explosion handled by the
+     * explosion listener — placed blocks and defenses break, the map doesn't.
+     */
+    public void launchFireball(Player player) {
+        Vector direction = player.getEyeLocation().getDirection();
+        org.bukkit.entity.Fireball fireball = player.launchProjectile(
+                org.bukkit.entity.Fireball.class, direction.multiply(1.5));
+        fireball.setIsIncendiary(false);
+        fireball.setYield(3.0f);
+        if (plugin.pcConfig().sounds()) {
+            player.getWorld().playSound(player.getLocation(),
+                    org.bukkit.Sound.ENTITY_GHAST_SHOOT, 0.8f, 1.0f);
+        }
+    }
+
+    /** MBedwars-style auto-ignited TNT: no block, just the primed entity. */
+    public void primeTnt(Player player, Location blockLocation) {
+        blockLocation.getWorld().spawn(blockLocation.toCenterLocation(),
+                org.bukkit.entity.TNTPrimed.class, tnt -> {
+                    tnt.setFuseTicks(60);
+                    tnt.setSource(player);
+                });
+        if (plugin.pcConfig().sounds()) {
+            blockLocation.getWorld().playSound(blockLocation,
+                    org.bukkit.Sound.ENTITY_TNT_PRIMED, 1.0f, 1.0f);
+        }
+    }
+
+    /**
+     * Explosion side-effects the cancelled damage event swallows: bedwars
+     * players expect TNT jumps and fireball jumps, so the knockback is applied
+     * directly. Strength falls off linearly to nothing at {@code radius}.
+     */
+    public void applyExplosionKnockback(Location center) {
+        double radius = 5.0;
+        for (Entity entity : center.getWorld()
+                .getNearbyEntities(center, radius, radius, radius)) {
+            if (!(entity instanceof Player player)
+                    || plugin.sessions().get(player.getUniqueId()) == null) {
+                continue;
+            }
+            Location eye = player.getLocation().add(0, 0.5, 0);
+            double distance = eye.distance(center);
+            if (distance > radius) {
+                continue;
+            }
+            double strength = 1.6 * (1.0 - distance / radius);
+            Vector push = eye.toVector().subtract(center.toVector());
+            if (push.lengthSquared() < 0.01) {
+                push = new Vector(0, 1, 0);
+            }
+            push = push.normalize().multiply(strength);
+            // The vertical lift is what makes TNT jumps work.
+            push.setY(Math.max(push.getY(), 0.55 * strength + 0.25));
+            player.setVelocity(player.getVelocity().add(push));
+        }
+    }
+
+    /**
+     * The bridge egg: an egg that trails a wool bridge under its flight path
+     * for a few seconds, built out of tracked blocks so the reset removes it.
+     */
+    public void throwBridgeEgg(Player player, PracticeSession session) {
+        org.bukkit.entity.Egg egg = player.launchProjectile(org.bukkit.entity.Egg.class,
+                player.getEyeLocation().getDirection().multiply(1.4));
+        if (plugin.pcConfig().sounds()) {
+            player.getWorld().playSound(player.getLocation(),
+                    org.bukkit.Sound.ENTITY_EGG_THROW, 0.8f, 0.9f);
+        }
+        Material wool = bridgeWool(player);
+        BukkitTask[] builder = new BukkitTask[1];
+        builder[0] = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (!egg.isValid() || plugin.sessions().get(player.getUniqueId()) != session
+                    || egg.getTicksLived() > 60) {
+                egg.remove();
+                builder[0].cancel();
+                return;
+            }
+            Location spot = egg.getLocation().subtract(0, 2, 0);
+            placeTracked(session, spot.getBlock(), wool);
+        }, 1L, 1L);
+    }
+
+    /**
+     * The rescue platform: a slime disc a couple of blocks under the player,
+     * tracked so the reset removes it.
+     *
+     * @return false when nothing could be built (entirely out of bounds)
+     */
+    public boolean buildRescuePlatform(Player player, PracticeSession session) {
+        Location center = player.getLocation().subtract(0, 2, 0);
+        boolean built = false;
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                if (Math.abs(dx) == 2 && Math.abs(dz) == 2) {
+                    continue; // rounded corners, like the MBedwars platform
+                }
+                built |= placeTracked(session,
+                        center.clone().add(dx, 0, dz).getBlock(), Material.SLIME_BLOCK);
+            }
+        }
+        if (built && plugin.pcConfig().sounds()) {
+            player.getWorld().playSound(center, org.bukkit.Sound.BLOCK_SLIME_BLOCK_PLACE, 1.0f, 0.9f);
+        }
+        return built;
+    }
+
+    /** Places one tracked block if the spot is in-bounds air. */
+    private boolean placeTracked(PracticeSession session, org.bukkit.block.Block block,
+                                 Material material) {
+        if (!session.containsBlock(block.getLocation()) || !block.getType().isAir()) {
+            return false;
+        }
+        session.tracker().recordPlace(block, block.getBlockData());
+        block.setType(material, false);
+        return true;
+    }
+
+    /** The player's chosen wool color, defaulting to white — same as the kit. */
+    private Material bridgeWool(Player player) {
+        org.bukkit.DyeColor color = plugin.settings().woolColor(player.getUniqueId());
+        Material wool = color == null ? null
+                : me.beekrbonkr.practicecore.settings.SettingsService.woolOf(color);
+        return wool != null ? wool : Material.WHITE_WOOL;
+    }
+
     // -------------------------------------------------------------- dealers
 
     public Villager spawnDealer(Location loc) {
@@ -217,7 +384,7 @@ public final class RushService {
                 return;
             }
             if (shopCache == null) {
-                shopCache = MBedwarsHook.shopSnapshot(player);
+                shopCache = MBedwarsHook.shopSnapshot();
             }
             shop = shopCache;
         } catch (LinkageError e) {
@@ -230,6 +397,9 @@ public final class RushService {
         if (shop.pages().isEmpty()) {
             plugin.messages().send(player, "rush.shop-empty");
             return;
+        }
+        if (plugin.pcConfig().sounds()) {
+            player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_TRADE, 0.7f, 1.0f);
         }
         new me.beekrbonkr.practicecore.gui.RushShopMenu(plugin, player, shop).open();
     }

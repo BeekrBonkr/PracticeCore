@@ -40,7 +40,8 @@ public final class MovementListener implements Listener {
             org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
                 if (plugin.sessions().get(player.getUniqueId()) == session
                         && player.getLocation().getY()
-                        < session.bounds().getMinY() + plugin.pcConfig().failYOffset()) {
+                        < session.bounds().getMinY() + plugin.pcConfig().failYOffset()
+                        && !session.mode().onVoidFall(plugin, player, session)) {
                     plugin.sessions().fail(player, session);
                 }
             });

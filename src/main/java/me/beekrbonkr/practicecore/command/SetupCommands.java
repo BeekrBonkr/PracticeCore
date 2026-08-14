@@ -14,7 +14,8 @@ final class SetupCommands {
 
     private static final List<String> ACTIONS = List.of(
             "start", "edit", "gui", "spawn", "kit", "trigger", "capture", "schematic", "icon",
-            "display", "permission", "blocks", "mode", "category", "rush", "info", "save", "cancel");
+            "display", "permission", "blocks", "mode", "category", "rush", "pvpbot",
+            "info", "save", "cancel");
 
     /** Every item material name, computed once — the registry is large. */
     private static final List<String> MATERIAL_NAMES = java.util.Arrays.stream(Material.values())
@@ -24,6 +25,8 @@ final class SetupCommands {
 
     private static final List<String> RUSH_ACTIONS = List.of(
             "team", "bed", "gen", "dealer", "clear");
+
+    private static final List<String> PVPBOT_ACTIONS = List.of("bot", "clear");
 
     private static final List<String> RUSH_TEAMS = List.of(
             "red", "blue", "green", "yellow", "aqua", "white", "pink", "gray");
@@ -106,6 +109,7 @@ final class SetupCommands {
                 }
             }
             case "rush" -> rush(admin, args);
+            case "pvpbot" -> pvpbot(admin, args);
             case "gui" -> me.beekrbonkr.practicecore.gui.admin.SetupGui.open(plugin, admin);
             case "info" -> wizard.info(admin);
             case "save" -> wizard.save(admin);
@@ -146,6 +150,16 @@ final class SetupCommands {
             case "dealer" -> wizard.rushDealer(admin);
             case "clear" -> wizard.rushClear(admin);
             default -> plugin.messages().send(admin, "help.setup-rush");
+        }
+    }
+
+    /** The PvP bot layout: the bot's spawn marker (spawn stays the player's). */
+    private void pvpbot(Player admin, String[] args) {
+        String action = args.length > 2 ? args[2].toLowerCase(Locale.ROOT) : "help";
+        switch (action) {
+            case "bot" -> plugin.setup().pvpBotSpawn(admin);
+            case "clear" -> plugin.setup().pvpBotClear(admin);
+            default -> plugin.messages().send(admin, "help.setup-pvpbot");
         }
     }
 
@@ -213,6 +227,10 @@ final class SetupCommands {
                 };
             }
             return List.of();
+        }
+        if (action.equals("pvpbot")) {
+            return args.length == 3
+                    ? PracticeCommand.filter(PVPBOT_ACTIONS, args[2]) : List.of();
         }
         if (args.length == 3) {
             return switch (action) {

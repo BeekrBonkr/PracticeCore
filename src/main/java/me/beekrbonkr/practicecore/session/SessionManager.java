@@ -305,11 +305,15 @@ public final class SessionManager {
         applyPracticeState(player, session);
         session.setState(SessionState.READY);
         session.mode().onReady(plugin, player, session);
+        verifyKitSoon(player, session);
         plugin.boards().create(player);
         if (current != null) {
             msg.send(player, "session.switched", "arena", template.displayName());
         } else {
             msg.send(player, "session.ready", "arena", template.displayName());
+        }
+        if (plugin.pcConfig().sounds()) {
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.7f, 1.5f);
         }
     }
 
@@ -403,6 +407,24 @@ public final class SessionManager {
         giveKit(player, session);
     }
 
+    /**
+     * Teleports a session player within their own arena without tripping the
+     * leave-on-teleport listener — spar stock resets snap fighters back to
+     * their spawn points mid-session.
+     */
+    public void teleportInternal(Player player, Location destination) {
+        internalTeleports.add(player.getUniqueId());
+        player.teleport(destination);
+        internalTeleports.remove(player.getUniqueId());
+        player.setFallDistance(0);
+        player.setVelocity(new Vector(0, 0, 0));
+    }
+
+    /** Re-deals the session kit mid-run — spar stock resets hand out a fresh loadout. */
+    public void regiveKit(Player player, PracticeSession session) {
+        giveKit(player, session);
+    }
+
     private void giveKit(Player player, PracticeSession session) {
         ArenaTemplate template = session.template();
         player.getInventory().clear();
@@ -416,6 +438,82 @@ public final class SessionManager {
                 && !plugin.menuItems().kitContainsMenuItem(template.kit())) {
             plugin.menuItems().forceIntoInventory(player);
         }
+    }
+
+    /**
+     * Ticks after a spawn at which the kit is re-verified. A single give
+     * occasionally does not stick — a plugin clearing inventories on teleport,
+     * or the client missing the update packet mid-teleport — so the kit is
+     * checked several times over the first two seconds.
+     */
+    private static final long[] KIT_VERIFY_TICKS = {5L, 20L, 40L};
+
+    private void verifyKitSoon(Player player, PracticeSession session) {
+        for (long delay : KIT_VERIFY_TICKS) {
+            Bukkit.getScheduler().runTaskLater(plugin,
+                    () -> verifyKit(player, session), delay);
+        }
+    }
+
+    /**
+     * Repairs a kit that failed to arrive: any kit material completely absent
+     * from the inventory is put back in its slot. Materials merely depleted
+     * or moved still count as present, so mid-run block usage and rush shop
+     * purchases are never touched. Also re-runs the validator sweep for modes
+     * that use it, and forces a client resync either way.
+     */
+    private void verifyKit(Player player, PracticeSession session) {
+        if (!player.isOnline() || sessions.get(player.getUniqueId()) != session) {
+            return;
+        }
+        SessionState state = session.state();
+        if (state != SessionState.READY && state != SessionState.ACTIVE) {
+            return;
+        }
+        boolean repaired = false;
+        for (Map.Entry<Integer, ItemStack> entry
+                : session.mode().arrangeKit(plugin, player, session.template()).entrySet()) {
+            ItemStack expected = plugin.settings()
+                    .recolor(player.getUniqueId(), entry.getValue().clone());
+            // Full-contents scan, not Inventory#contains — that skips worn
+            // armor and the off-hand, and kits can live in both.
+            if (!hasMaterial(player, expected.getType())) {
+                player.getInventory().setItem(entry.getKey(), expected);
+                repaired = true;
+            }
+        }
+        if (plugin.pcConfig().menuItemEnabled() && plugin.pcConfig().menuItemForceInKit()
+                && !hasMenuItem(player)) {
+            plugin.menuItems().forceIntoInventory(player);
+        }
+        if (session.mode().validatesInventory()) {
+            plugin.validator().sweep(player, session);
+        }
+        if (repaired) {
+            plugin.messages().actionBar(player, "inventory.kit-restored");
+            if (plugin.pcConfig().sounds()) {
+                player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.7f, 1.0f);
+            }
+        }
+        player.updateInventory();
+    }
+
+    private static boolean hasMaterial(Player player, org.bukkit.Material material) {
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (item != null && item.getType() == material) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasMenuItem(Player player) {
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (plugin.menuItems().isMenuItem(item)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // -------------------------------------------------------- finish / fail
@@ -556,6 +654,9 @@ public final class SessionManager {
         }
         session.setState(SessionState.RESETTING);
         plugin.messages().send(player, "run.failed");
+        if (plugin.pcConfig().sounds()) {
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.7f, 0.6f);
+        }
         resetArena(player, session);
     }
 
@@ -573,11 +674,15 @@ public final class SessionManager {
         resetArena(player, session);
         plugin.messages().send(player, "run.restarted",
                 "arena", session.template().displayName());
+        if (plugin.pcConfig().sounds()) {
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.7f, 1.1f);
+        }
     }
 
     private void resetArena(Player player, PracticeSession session) {
         session.mode().onArenaReset(plugin, player, session);
         session.tracker().revertAll();
+        wipeContainers(session);
         clearNonPlayerEntities(session);
         session.resetTimer();
         giveKit(player, session);
@@ -594,6 +699,28 @@ public final class SessionManager {
         session.setLastTimeMs(plugin.stats().lastMs(session.playerId(), statsKey));
         session.setState(SessionState.READY);
         session.mode().onReady(plugin, player, session);
+        verifyKitSoon(player, session);
+    }
+
+    /**
+     * Empties every storage block (chest, barrel, furnace, shulker, …) inside
+     * the arena. Runs on every reset: block reverts restore the shape but not
+     * container contents, so anything stashed in a chest would survive a death
+     * and leak into the next run.
+     */
+    private void wipeContainers(PracticeSession session) {
+        World world = session.origin().getWorld();
+        BoundingBox bounds = session.bounds();
+        for (int cx = ((int) bounds.getMinX()) >> 4; cx <= ((int) bounds.getMaxX()) >> 4; cx++) {
+            for (int cz = ((int) bounds.getMinZ()) >> 4; cz <= ((int) bounds.getMaxZ()) >> 4; cz++) {
+                for (org.bukkit.block.BlockState tile : world.getChunkAt(cx, cz).getTileEntities()) {
+                    if (tile instanceof org.bukkit.block.Container container
+                            && bounds.contains(tile.getX(), tile.getY(), tile.getZ())) {
+                        container.getInventory().clear();
+                    }
+                }
+            }
+        }
     }
 
     // ---------------------------------------------------------------- leave

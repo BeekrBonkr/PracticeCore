@@ -67,9 +67,37 @@ public final class MenuItemService {
         }
     }
 
-    /** Used by {@code menu-item.force-in-kit} when a kit predates the item. */
+    /**
+     * Used by {@code menu-item.force-in-kit} when a kit predates the item.
+     * The menu item always lands in the hotbar — the configured slot when
+     * it is free, else the first empty hotbar slot — but never displaces a
+     * kit item: a kit that genuinely fills every slot wins, and the menu
+     * stays reachable through /practice.
+     */
     public void forceIntoInventory(Player player) {
-        player.getInventory().setItem(plugin.pcConfig().menuItemSlot(), create());
+        PlayerInventory inventory = player.getInventory();
+        int preferred = plugin.pcConfig().menuItemSlot();
+        ItemStack at = inventory.getItem(preferred);
+        if (at == null || at.getType().isAir() || isMenuItem(at)) {
+            inventory.setItem(preferred, create());
+            return;
+        }
+        for (int slot = 0; slot < 9; slot++) {
+            if (isFree(inventory.getItem(slot))) {
+                inventory.setItem(slot, create());
+                return;
+            }
+        }
+        for (int slot = 9; slot < 36; slot++) {
+            if (isFree(inventory.getItem(slot))) {
+                inventory.setItem(slot, create());
+                return;
+            }
+        }
+    }
+
+    private static boolean isFree(ItemStack stack) {
+        return stack == null || stack.getType().isAir();
     }
 
     public NamespacedKey key() {

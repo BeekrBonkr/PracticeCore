@@ -12,6 +12,8 @@ import de.marcely.bedwars.api.game.shop.price.SpawnerItemShopPrice;
 import de.marcely.bedwars.api.game.shop.product.ItemShopProduct;
 import de.marcely.bedwars.api.game.shop.product.ShopProduct;
 import de.marcely.bedwars.api.game.shop.product.SpawnerItemShopProduct;
+import de.marcely.bedwars.api.game.shop.product.SpecialItemShopProduct;
+import de.marcely.bedwars.api.game.specialitem.SpecialItem;
 import de.marcely.bedwars.api.game.spawner.DropType;
 import de.marcely.bedwars.api.game.spawner.Spawner;
 import de.marcely.bedwars.api.world.WorldStorage;
@@ -24,15 +26,12 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.BoundingBox;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 /**
  * The only class that touches the MBedwars API. Everything it hands out is
@@ -181,12 +180,12 @@ public final class MBedwarsHook {
      * whose price or products can't be resolved outside a running game are
      * skipped rather than sold broken.
      */
-    public static RushShopData shopSnapshot(Player player) {
+    public static RushShopData shopSnapshot() {
         List<RushShopData.Page> pages = new ArrayList<>();
         for (ShopPage page : BedwarsAPI.getGameAPI().getShopPages()) {
             List<RushShopData.Entry> entries = new ArrayList<>();
             for (ShopItem item : page.getItems()) {
-                RushShopData.Entry entry = entryOf(item, player);
+                RushShopData.Entry entry = entryOf(item);
                 if (entry != null) {
                     entries.add(entry);
                 }
@@ -198,7 +197,7 @@ public final class MBedwarsHook {
         return new RushShopData(pages);
     }
 
-    private static RushShopData.Entry entryOf(ShopItem item, Player player) {
+    private static RushShopData.Entry entryOf(ShopItem item) {
         List<RushShopData.Price> prices = new ArrayList<>();
         for (ShopPrice price : item.getPrices()) {
             Material material = priceMaterial(price);
@@ -208,11 +207,12 @@ public final class MBedwarsHook {
             }
             prices.add(new RushShopData.Price(material, amount));
         }
-        List<ItemStack> products = productsOf(item, player);
+        List<RushShopData.Product> products = productsOf(item);
         if (prices.isEmpty() || products.isEmpty()) {
             return null;
         }
-        return new RushShopData.Entry(safeIcon(item.getIcon()), prices, products);
+        return new RushShopData.Entry(safeIcon(item.getIcon()), item.getForceSlot(),
+                prices, products);
     }
 
     private static Material priceMaterial(ShopPrice price) {
@@ -234,39 +234,53 @@ public final class MBedwarsHook {
         return null;
     }
 
-    private static List<ItemStack> productsOf(ShopItem item, Player player) {
-        // Identical stacks are merged so a "16 wool" product is one stack.
-        Map<ItemStack, Integer> merged = new LinkedHashMap<>();
+    private static List<RushShopData.Product> productsOf(ShopItem item) {
+        List<RushShopData.Product> products = new ArrayList<>();
         for (ShopProduct product : item.getProducts()) {
-            for (ItemStack stack : resolve(product, player)) {
-                if (stack == null || stack.getType().isAir()) {
-                    continue;
+            for (RushShopData.Product resolved : resolve(product)) {
+                // Oversized amounts split into legal stacks.
+                ItemStack stack = resolved.stack();
+                int amount = stack.getAmount();
+                while (amount > 0) {
+                    int size = Math.min(amount, stack.getMaxStackSize());
+                    products.add(new RushShopData.Product(stack.asQuantity(size),
+                            resolved.autoWear(), resolved.specialType()));
+                    amount -= size;
                 }
-                ItemStack key = stack.asOne();
-                merged.merge(key, stack.getAmount(), Integer::sum);
             }
         }
-        List<ItemStack> products = new ArrayList<>();
-        merged.forEach((stack, amount) -> {
-            while (amount > 0) {
-                int size = Math.min(amount, stack.getMaxStackSize());
-                products.add(stack.asQuantity(size));
-                amount -= size;
-            }
-        });
         return products;
     }
 
-    private static List<ItemStack> resolve(ShopProduct product, Player player) {
+    private static List<RushShopData.Product> resolve(ShopProduct product) {
+        // Special items resolve to the exact stack MBedwars would hand out,
+        // remembered by type so use-time behavior (fireball launch, bridge
+        // egg, …) can be emulated without a running game. Checked before
+        // ItemShopProduct — SpecialItemShopProduct extends it.
+        if (product instanceof SpecialItemShopProduct specialProduct) {
+            SpecialItem special = specialProduct.getSpecialItem();
+            if (special == null) {
+                return List.of(); // configured id no longer registered
+            }
+            ItemStack stack = special.getItemStack();
+            if (stack == null || stack.getType().isAir()) {
+                return List.of();
+            }
+            return List.of(new RushShopData.Product(
+                    stack.clone().asQuantity(Math.max(1, product.getAmount())),
+                    product.isAutoWear(),
+                    special.getType() == null ? "plugin" : special.getType().getId()));
+        }
         if (product instanceof ItemShopProduct itemProduct) {
             ItemStack[] stacks = itemProduct.getItemStacks();
             if (stacks == null) {
                 return List.of();
             }
-            List<ItemStack> copies = new ArrayList<>();
+            List<RushShopData.Product> copies = new ArrayList<>();
             for (ItemStack stack : stacks) {
-                if (stack != null) {
-                    copies.add(stack.clone());
+                if (stack != null && !stack.getType().isAir()) {
+                    copies.add(new RushShopData.Product(stack.clone(),
+                            product.isAutoWear(), null));
                 }
             }
             return copies;
@@ -274,11 +288,13 @@ public final class MBedwarsHook {
         if (product instanceof SpawnerItemShopProduct spawnerProduct) {
             for (ItemStack drop : spawnerProduct.getDropType().getDroppingMaterials()) {
                 if (!drop.getType().isAir()) {
-                    return List.of(drop.clone().asQuantity(Math.max(1, product.getAmount())));
+                    return List.of(new RushShopData.Product(
+                            drop.clone().asQuantity(Math.max(1, product.getAmount())),
+                            false, null));
                 }
             }
         }
-        // Special items and command products need a running MBedwars game.
+        // Command products genuinely need a running MBedwars game.
         return List.of();
     }
 

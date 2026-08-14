@@ -251,11 +251,12 @@ public final class RushState {
     }
 
     /**
-     * Iron/gold generators belong to whichever playable team's spawn is
-     * nearest; only the chosen base's run during practice.
+     * Arms every iron/gold generator on the map — all bases produce, exactly
+     * as they would in a real game, so rushing an enemy base finds resources
+     * waiting there. The per-generator item cap keeps distant bases from
+     * flooding while the player is elsewhere.
      */
     private void armBaseGenerators(PracticeCorePlugin plugin, Location origin) {
-        List<RushMapData.TeamBase> playable = data.playableTeams();
         for (RushMapData.Generator generator : data.generators()) {
             Material drops = switch (generator.type()) {
                 case "iron" -> Material.IRON_INGOT;
@@ -263,18 +264,6 @@ public final class RushState {
                 default -> null;
             };
             if (drops == null) {
-                continue;
-            }
-            RushMapData.TeamBase nearest = null;
-            double nearestSq = Double.MAX_VALUE;
-            for (RushMapData.TeamBase team : playable) {
-                double distanceSq = team.spawn().distanceSquared(generator.offset());
-                if (distanceSq < nearestSq) {
-                    nearestSq = distanceSq;
-                    nearest = team;
-                }
-            }
-            if (nearest == null || !nearest.name().equals(base.name())) {
                 continue;
             }
             int interval = drops == Material.IRON_INGOT

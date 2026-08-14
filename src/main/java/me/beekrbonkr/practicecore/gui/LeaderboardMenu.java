@@ -29,7 +29,11 @@ public final class LeaderboardMenu extends PagedMenu<ArenaTemplate> {
     protected List<ArenaTemplate> entries() {
         // Leaderboards are public even for arenas you cannot play — knowing
         // the times is half of why anyone wants access in the first place.
-        return plugin.templates().completeTemplates();
+        // Modes without time boards (MLG streaks, PvP bot sparring) are left
+        // out entirely rather than listed forever-empty.
+        return plugin.templates().completeTemplates().stream()
+                .filter(template -> plugin.modes().of(template).hasLeaderboards())
+                .toList();
     }
 
     @Override

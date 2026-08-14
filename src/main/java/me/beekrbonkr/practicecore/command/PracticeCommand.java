@@ -217,6 +217,12 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
                 msg().send(sender, "leaderboard.rush-pick-board", "arena", template.name());
                 return;
             }
+            if (!plugin.modes().of(template).hasLeaderboards()) {
+                // MLG scores streaks, the PvP bot keeps session stats —
+                // pointing at their empty time board would just confuse.
+                msg().send(sender, "leaderboard.not-ranked", "arena", template.displayName());
+                return;
+            }
             key = template.name();
             display = template.displayName();
         } else {
