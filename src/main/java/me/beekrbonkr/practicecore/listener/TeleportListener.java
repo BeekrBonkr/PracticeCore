@@ -57,7 +57,10 @@ public final class TeleportListener implements Listener {
                 && player.hasPermission("practicecore.use")
                 && plugin.templates().canUse(player, fallback)) {
             Bukkit.getScheduler().runTask(plugin, () -> {
-                if (player.isOnline() && plugin.sessions().get(id) == null) {
+                // A spectator has no session but must never be force-joined —
+                // spectating may have started between the veto and this tick.
+                if (player.isOnline() && plugin.sessions().get(id) == null
+                        && !plugin.spectate().isSpectator(id)) {
                     plugin.sessions().join(player, fallback);
                 }
             });
