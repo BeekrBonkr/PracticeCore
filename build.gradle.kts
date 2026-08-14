@@ -3,13 +3,14 @@ plugins {
 }
 
 group = "me.beekrbonkr"
-version = "0.4.0"
+version = "0.5.0"
 
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://maven.enginehub.org/repo/")
     maven("https://repo.marcely.de/repository/maven-public/")
+    maven("https://repo.dmulloy2.net/repository/public/")
 }
 
 dependencies {
@@ -17,6 +18,8 @@ dependencies {
     compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.6")
     // Soft dependency: rush practice pulls maps and the shop from MBedwars.
     compileOnly("de.marcely.bedwars:API:5.5.5")
+    // Soft dependency: the PvP bot's player-model disguise is packet-level.
+    compileOnly("com.comphenix.protocol:ProtocolLib:5.3.0")
     // Loaded at runtime by the server via plugin.yml `libraries:` — no shading needed.
     compileOnly("fr.mrmicky:fastboard:2.2.1")
 }

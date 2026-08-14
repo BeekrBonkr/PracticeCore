@@ -173,6 +173,22 @@ public final class RushMode implements Mode {
         state.rebuild(plugin, session);
     }
 
+    /**
+     * What an explosion may take out: blocks the player placed and generated
+     * defense shells. Never the map, and — unlike a pickaxe — never a bed;
+     * bedwars beds are explosion-proof and runs must end by hand.
+     */
+    public static boolean explosionCanBreak(PracticeSession session, Location loc) {
+        if (!(session.mode() instanceof RushMode)) {
+            return false;
+        }
+        if (session.tracker().isTracked(loc)) {
+            return true;
+        }
+        RushState state = state(session);
+        return state != null && state.isDefenseBlock(loc);
+    }
+
     @Override
     public boolean canBreak(PracticeSession session, Block block) {
         Location loc = block.getLocation();

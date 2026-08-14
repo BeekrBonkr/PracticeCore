@@ -79,7 +79,11 @@ public final class PracticeWorldService {
         world.setGameRule(GameRule.KEEP_INVENTORY, true);
         world.setGameRule(GameRule.SPAWN_RADIUS, 0);
         world.setTime(6000L);
-        world.setDifficulty(Difficulty.PEACEFUL);
+        // NORMAL, not PEACEFUL: peaceful removes hostile mobs on the spot and
+        // zeroes their damage — the PvP bot (a husk) needs both to exist.
+        // Natural spawning stays off via DO_MOB_SPAWNING; only plugin-spawned
+        // entities (bots, dealers) ever appear.
+        world.setDifficulty(Difficulty.NORMAL);
         world.setAutoSave(false);
     }
 

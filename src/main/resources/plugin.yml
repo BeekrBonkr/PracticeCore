@@ -5,7 +5,7 @@ api-version: '1.21'
 description: Modular practice minigame core. Bridging is the first bundled mode.
 author: beekrbonkr
 depend: [WorldEdit]
-softdepend: [MBedwars]
+softdepend: [MBedwars, ProtocolLib]
 libraries:
   - fr.mrmicky:fastboard:2.2.1
 commands:

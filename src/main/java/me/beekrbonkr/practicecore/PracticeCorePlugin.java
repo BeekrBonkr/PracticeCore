@@ -19,12 +19,15 @@ import me.beekrbonkr.practicecore.listener.MovementListener;
 import me.beekrbonkr.practicecore.listener.ProtectionListener;
 import me.beekrbonkr.practicecore.listener.TeleportListener;
 import me.beekrbonkr.practicecore.listener.MlgListener;
+import me.beekrbonkr.practicecore.listener.PvpBotListener;
 import me.beekrbonkr.practicecore.listener.RushListener;
 import me.beekrbonkr.practicecore.mode.BedBreakMode;
 import me.beekrbonkr.practicecore.mode.BridgingMode;
 import me.beekrbonkr.practicecore.mode.MlgMode;
+import me.beekrbonkr.practicecore.mode.PvpBotMode;
 import me.beekrbonkr.practicecore.mode.ModeRegistry;
 import me.beekrbonkr.practicecore.mode.RushMode;
+import me.beekrbonkr.practicecore.pvpbot.PvpBotService;
 import me.beekrbonkr.practicecore.rush.RushService;
 import me.beekrbonkr.practicecore.schematic.SchematicService;
 import me.beekrbonkr.practicecore.session.InventoryValidator;
@@ -73,6 +76,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
     private InventoryValidator inventoryValidator;
     private ChatPrompts prompts;
     private RushService rush;
+    private PvpBotService pvpBot;
 
     @Override
     public void onEnable() {
@@ -89,6 +93,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         modes.register(new BedBreakMode());
         modes.register(new RushMode());
         modes.register(new MlgMode());
+        modes.register(new PvpBotMode());
 
         worldService = new PracticeWorldService(this);
         worldService.recreate();
@@ -110,6 +115,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         inventoryValidator = new InventoryValidator(this);
         prompts = new ChatPrompts(this);
         rush = new RushService(this);
+        pvpBot = new PvpBotService(this);
 
         // Builds the name index and every leaderboard from disk, off-thread.
         stats.scanAsync();
@@ -125,6 +131,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         pm.registerEvents(new MenuItemListener(this), this);
         pm.registerEvents(new RushListener(this), this);
         pm.registerEvents(new MlgListener(this), this);
+        pm.registerEvents(new PvpBotListener(this), this);
         pm.registerEvents(prompts, this);
 
         // Used by the leave button when leave.server points at a proxy backend.
@@ -141,6 +148,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         speedometer.startTask();
         inventoryValidator.startTask();
         rush.startTask();
+        pvpBot.startTask();
         getLogger().info("PracticeCore enabled — practice world '" + pcConfig.worldName() + "' ready.");
     }
 
@@ -165,6 +173,9 @@ public final class PracticeCorePlugin extends JavaPlugin {
         }
         if (rush != null) {
             rush.shutdown();
+        }
+        if (pvpBot != null) {
+            pvpBot.shutdown();
         }
         if (stats != null) {
             stats.flushSync();
@@ -273,6 +284,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         speedometer.restartTask();
         inventoryValidator.restartTask();
         rush.restartTask();
+        pvpBot.restartTask();
 
         if (!pcConfig.worldName().equals(previous.worldName())) {
             notes.add("world.name changed '" + previous.worldName() + "' → '" + pcConfig.worldName()
@@ -371,5 +383,13 @@ public final class PracticeCorePlugin extends JavaPlugin {
 
     public RushService rush() {
         return rush;
+    }
+
+    public InventoryValidator validator() {
+        return inventoryValidator;
+    }
+
+    public PvpBotService pvpBot() {
+        return pvpBot;
     }
 }

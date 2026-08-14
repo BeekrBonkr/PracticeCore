@@ -1,7 +1,8 @@
 # PracticeCore
 
-A modular practice minigame plugin for Paper 1.21+. Four modes ship in the
-box — **bridging**, **bed breaking**, **rush** and **MLG clutching** — and
+A modular practice minigame plugin for Paper 1.21+. Five modes ship in the
+box — **bridging**, **bed breaking**, **rush**, **MLG clutching** and an
+**AI PvP bot** — and
 every player gets their own ephemeral schematic-built arena in a self-cleaning
 void world, a millisecond-honest timer, and per-arena personal bests.
 
@@ -16,9 +17,10 @@ Parkour) can be adapted where useful.
 ## How it works
 
 - On every plugin enable the practice world's folder is **deleted and
-  recreated** (void chunk generator, mob spawning/insomnia/weather/daylight
-  disabled, auto-save off). Nothing in it ever persists — crash recovery for
-  the world is free.
+  recreated** (void chunk generator, natural mob spawning/insomnia/weather/
+  daylight disabled, auto-save off, difficulty NORMAL so plugin-spawned
+  hostiles — the PvP bot — exist and hit). Nothing in it ever persists —
+  crash recovery for the world is free.
 - Joining players are assigned a slot on a **square spiral grid** (default
   1000-block spacing); their arena schematic is pasted there, then they're
   teleported (async) and given the template's kit. Freed slots are reused
@@ -158,19 +160,34 @@ ranked loadout, or dial the casual difficulty modifiers — **starter blocks**
 (none/16/32/64 wool), **starting resources** (iron/gold to spend
 immediately), **pickaxe tier** (none → diamond), **bed defenses**
 (auto-generated shells over every enemy bed: wool, wool + end stone, or end
-stone + obsidian, reusing nothing from the map itself), and whether your
-base's **iron/gold generators** run — and **Start Casual**. Every choice
+stone + obsidian, reusing nothing from the map itself), and whether the
+**iron/gold generators** run — every team base produces, exactly like a real
+game, with a per-generator item cap so idle bases don't flood — and **Start
+Casual**. Every choice
 (including which mode you last played) is remembered per player — a plain
 `/practice join <map>` replays your last setup.
 
 During a run the **mirrored MBedwars shop** is open for business: villager
 NPCs stand at the map's dealer spots and sell the real MBedwars item shop —
-same pages, icons, items and prices — settled directly against your
-inventory, no MBedwars game involved. Purchased wool follows your wool-color
-setting. Generator items and shop stock are exempt from the inventory
-validator (rush manages its own economy); everything else about the session
-is standard machinery: full reset on death or void fall, blocks revert, beds
-and defenses are re-placed, NPCs and items respawn.
+same pages, icons, items, prices and slot layout — settled directly against
+your inventory, no MBedwars game involved. Purchased wool follows your
+wool-color setting, and auto-wear armor equips itself just like the real
+shop. **Special items** resolve to the exact stacks MBedwars sells and the
+ones that make sense solo are fully emulated: **fireballs** launch on right
+click, **TNT auto-ignites** on place, the **bridge egg** trails a wool
+bridge, the **rescue platform** builds a slime disc underfoot and the mini
+shop opens the shop; explosions break only blocks you placed and generated
+bed defenses (never the map or a bed), with proper bedwars knockback for TNT
+and fireball jumps. Special items that need enemies (trap, tracker, guard
+dog, …) are still sold but say so when used.
+
+Generator items and shop stock are exempt from the inventory validator (rush
+manages its own economy); everything else about the session is standard
+machinery: full reset on death or void fall, blocks revert, beds and defenses
+are re-placed, NPCs and items respawn, and every storage block in the arena
+(team chests included) is emptied so nothing stashed survives a death. Ender
+chests stay closed during sessions — their contents are real player data that
+would leak out of practice.
 
 MBedwars is a **soft dependency**: importing and the shop need it installed;
 hand-built rush arenas play fine without it (dealer clicks then explain the
@@ -210,6 +227,68 @@ platform half-size, default 1 → 3×3), `pad-radius` (default 5 → 11×11),
 (platform-to-pad distance range, defaults **20–100**) and `fuse-min-ticks` /
 `fuse-max-ticks` (how long the platform lasts, defaults 30–100, i.e.
 1.5–5s). The sidebar shows the round's rolled drop next to your streak.
+
+### pvpbot
+
+PvP practice against an **AI opponent**: an endless spar in an admin-built
+arena against a bot that fights like a 1.8.9 player — it **strafes out of
+your crosshair** (the better you track, the harder it works to slip off your
+cursor), holds duel spacing, **spam-clicks at a configured CPS** with a
+configurable miss chance, goes for **jump-crits and W-tap knockback resets**,
+and — each individually toggleable — **rods you at range**, takes **bow
+potshots**, and raises a **1.8 sword block** when it gets comboed (halving
+what lands). Hits it takes put it into a short **hitstun** where it rides
+the knockback like a real player — comboing it works the way it should.
+
+With **ProtocolLib** installed the bot renders as a **real player model
+wearing your own skin** (a packet-level disguise: the server still runs a
+husk, clients see a player). Without it, the bot is a named husk scaled
+down to player height. Either way its floating tag shows its **live
+health**, and its brain is entirely this plugin's — no NPC dependencies.
+
+There is **no timer and no leaderboard** — the sidebar keeps session stats
+instead: kills, deaths, hits landed/taken, current and best combo, and the
+bot's **name tag doubles as its health bar**. Every real hit on the bot pops
+a **floating damage indicator** (a DeluxeCombat-style hologram showing the
+hearts dealt, drifting upward before vanishing). Dying never shows a death
+screen: the fatal hit is intercepted, a **"You died" title** with your K/D
+appears, it costs a **stock**, both fighters snap back to their spawn points
+at full health, and the spar continues; killing the bot gets its own title.
+Getting knocked off the arena is a **ring-out** — same thing.
+
+Kits come from the **kit gallery**: fourteen built-in presets — Sword,
+NoDebuff, Boxing, BuildUHC, Combo, Gapple, Iron, Diamond, Classic, Soup,
+Archer, Axe, Bedwars and Skywars — some carrying **blocks to place**
+(BuildUHC, Bedwars, Skywars; every stock reset reverts what you built).
+Left-click a tile to select, **right-click for a full preview** laid out
+exactly like your inventory (armor up top, hotbar at the bottom). The plugin
+**remembers the last kit you chose** and hands it to you on your next join,
+**remembers how you arranged its items** (per preset — rearrange your
+NoDebuff hotbar once and every future deal matches it), and keeps
+consumables (pots, gapples, arrows, blocks) **topped up** so a spar never
+runs dry. The practice menu item always keeps a hotbar slot unless the kit
+truly needs all nine.
+
+The bot is configured from the **practice menu**: while sparring, a **Bot
+Settings** entry appears next to the regular settings — the kit gallery, bot
+gear (mirror your kit, or a fixed tier), a named **difficulty preset**
+(**Rookie → Brawler → Veteran → Demon**, one click setting every AI knob;
+hand-tuned mixes read as Custom), plus the individual knobs — evasiveness,
+CPS, accuracy, crits/W-taps, reach, aggression — and the rod/bow/block
+toggles. **The bot freezes and
+holds fire while any menu is open** and re-reads everything on close; every
+choice is persisted per player. Combat *mechanics* — 1.8 cooldowns,
+knockback shaping, the player's own sword-block damage halving — are left to
+the server's combat plugins (OldCombatMechanics, vanilla-sword-blocking),
+with one correction: modern servers treat a raised block-animation sword as
+a *shield* that negates hits entirely, so the mode strips that full negation
+and restores the true 1.8 behavior (blocking halves damage, on both sides).
+
+Building an arena needs just a platform and a spawn: `/practice setup start
+<name>`, `/practice setup mode pvpbot`, `/practice setup spawn`, optionally
+`/practice setup pvpbot bot` standing where the bot should spawn (without a
+marker it spawns a few blocks ahead of the player spawn, facing back), then
+`save`. No kit and no trigger are required.
 
 ## Messages
 
@@ -324,6 +403,8 @@ and `session.validate-inventory-ticks` in `config.yml`.
 - FastBoard is fetched automatically at runtime via `plugin.yml` `libraries:`
 - MBedwars 5.5+ (optional) — enables `/practice rush import` and the mirrored
   item shop for the rush mode
+- ProtocolLib 5.3+ (optional) — renders the PvP bot as a real player model
+  wearing your skin; without it the bot is a husk scaled to player height
 
 ## Commands
 

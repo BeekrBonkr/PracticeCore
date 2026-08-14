@@ -38,6 +38,8 @@ main:
     # material is the icon while the sidebar is shown; material-off while hidden.
     sidebar: {enabled: true, slot: 15, material: ITEM_FRAME, material-off: GLOW_ITEM_FRAME}
     help: {enabled: true, slot: 16, material: PAPER}
+    # Only rendered during a PvP bot session.
+    bot: {enabled: true, slot: 20, material: ZOMBIE_HEAD}
     settings: {enabled: true, slot: 21, material: COMPARATOR}
     leave: {enabled: true, slot: 23, material: OAK_DOOR}
 
@@ -69,6 +71,37 @@ rush:
     pickaxe: {slot: 21, material: IRON_PICKAXE}
     defense: {slot: 22, material: END_STONE}
     generators: {slot: 23, material: FURNACE}
+
+# The PvP bot settings menu, opened by the in-arena settings item.
+# The kit and gear buttons' icons follow the current selection.
+pvpbot:
+  rows: 5
+  back: {slot: 36}
+  close: {slot: 40}
+  buttons:
+    kit: {slot: 11}
+    preset: {slot: 13, material: NETHER_STAR}
+    gear: {slot: 15}
+    evasiveness: {slot: 19, material: FEATHER}
+    cps: {slot: 20, material: CLOCK}
+    accuracy: {slot: 21, material: TARGET}
+    combos: {slot: 22, material: RABBIT_FOOT}
+    reach: {slot: 23, material: STICK}
+    aggression: {slot: 24, material: BLAZE_POWDER}
+    rod: {slot: 29, material: FISHING_ROD}
+    bow: {slot: 30, material: BOW}
+    block: {slot: 31, material: SHIELD}
+
+# The PvP kit gallery (left-click selects, right-click previews).
+pvpbot-kits:
+  rows: 5
+  back: {slot: 36}
+  close: {slot: 40}
+
+# The full-inventory kit preview window.
+pvpbot-preview:
+  back: {slot: 0}
+  close: {slot: 8}
 
 # The mirrored MBedwars item shop opened at a rush dealer NPC. Page tabs sit
 # in the top row and the items fill the grid; only the close slot moves.

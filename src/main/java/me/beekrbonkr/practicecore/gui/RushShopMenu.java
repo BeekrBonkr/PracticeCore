@@ -78,9 +78,30 @@ public final class RushShopMenu extends Menu {
                     + entries.size() + " items; only the first " + GRID_SIZE
                     + " fit the grid — the rest are hidden.");
         }
-        for (int i = 0; i < Math.min(GRID_SIZE, entries.size()); i++) {
-            RushShopData.Entry entry = entries.get(i);
-            set(GRID_START + i, entryIcon(entry), event -> buy(entry));
+        // Entries pinned to a slot in the MBedwars GUI land on the same slot
+        // here; the rest flow into the remaining cells in order.
+        boolean[] taken = new boolean[GRID_SIZE];
+        List<RushShopData.Entry> flowing = new ArrayList<>();
+        for (RushShopData.Entry entry : entries) {
+            Integer slot = entry.forceSlot();
+            if (slot != null && slot >= GRID_START && slot < GRID_START + GRID_SIZE
+                    && !taken[slot - GRID_START]) {
+                taken[slot - GRID_START] = true;
+                set(slot, entryIcon(entry), event -> buy(entry));
+            } else {
+                flowing.add(entry);
+            }
+        }
+        int cell = 0;
+        for (RushShopData.Entry entry : flowing) {
+            while (cell < GRID_SIZE && taken[cell]) {
+                cell++;
+            }
+            if (cell >= GRID_SIZE) {
+                break;
+            }
+            taken[cell] = true;
+            set(GRID_START + cell, entryIcon(entry), event -> buy(entry));
         }
 
         ItemStack filler = ItemBuilder.of(
@@ -153,8 +174,16 @@ public final class RushShopMenu extends Menu {
             removeItems(inventory, price.material(), price.amount());
         }
         boolean overflow = false;
-        for (ItemStack product : entry.products()) {
-            ItemStack give = plugin.settings().recolor(viewer.getUniqueId(), product.clone());
+        for (RushShopData.Product product : entry.products()) {
+            ItemStack give = plugin.settings().recolor(viewer.getUniqueId(),
+                    product.stack().clone());
+            if (product.specialType() != null) {
+                plugin.rush().tagSpecial(give, product.specialType());
+            }
+            // Auto-wear armor equips itself, exactly like the MBedwars shop.
+            if (product.autoWear() && wear(inventory, give)) {
+                continue;
+            }
             Map<Integer, ItemStack> left = inventory.addItem(give);
             if (!left.isEmpty()) {
                 overflow = true;
@@ -167,6 +196,23 @@ public final class RushShopMenu extends Menu {
         }
         sound(org.bukkit.Sound.ENTITY_ITEM_PICKUP, 0.8f, 1.2f);
         refresh(); // afford states may have flipped
+    }
+
+    /** Equips armor into its slot; true when it went on the body. */
+    private static boolean wear(PlayerInventory inventory, ItemStack armor) {
+        String name = armor.getType().name();
+        if (name.endsWith("_HELMET")) {
+            inventory.setHelmet(armor);
+        } else if (name.endsWith("_CHESTPLATE")) {
+            inventory.setChestplate(armor);
+        } else if (name.endsWith("_LEGGINGS")) {
+            inventory.setLeggings(armor);
+        } else if (name.endsWith("_BOOTS")) {
+            inventory.setBoots(armor);
+        } else {
+            return false;
+        }
+        return true;
     }
 
     private static void removeItems(PlayerInventory inventory, Material material, int amount) {

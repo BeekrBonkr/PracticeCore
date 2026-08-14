@@ -79,6 +79,16 @@ public interface Mode {
     }
 
     /**
+     * Whether arenas of this mode have shared time leaderboards at all.
+     * Modes that score differently (MLG streaks, PvP bot session stats)
+     * return false so leaderboard menus and commands never show their
+     * permanently empty boards.
+     */
+    default boolean hasLeaderboards() {
+        return true;
+    }
+
+    /**
      * Whether bucket emptying is allowed in sessions of this mode regardless
      * of the {@code session.allow-buckets} config (modes whose whole point is
      * the bucket).
@@ -164,6 +174,15 @@ public interface Mode {
      * still visible. Cancel tasks and persist anything worth keeping.
      */
     default void onSessionEnd(PracticeCorePlugin plugin, Player player, PracticeSession session) {
+    }
+
+    /**
+     * The player fell below the arena floor. Return true when the mode
+     * handled it itself (PvP sparring counts it as a ring-out death); false
+     * runs the standard fail-and-reset.
+     */
+    default boolean onVoidFall(PracticeCorePlugin plugin, Player player, PracticeSession session) {
+        return false;
     }
 
     /** May the player break this block? Default: only blocks they placed. */

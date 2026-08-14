@@ -648,6 +648,42 @@ public final class SetupManager {
         msg().send(admin, "setup.rush-cleared");
     }
 
+    /** Marks where the PvP bot spawns: the admin's feet, facing their way. */
+    public void pvpBotSpawn(Player admin) {
+        SetupSession session = requireActive(admin);
+        if (session == null) {
+            return;
+        }
+        Location loc = admin.getLocation();
+        if (!session.bounds.contains(loc.getX(), loc.getY(), loc.getZ())) {
+            msg().send(admin, "setup.out-of-bounds");
+            return;
+        }
+        Map<String, Object> spawn = new java.util.LinkedHashMap<>();
+        spawn.put("x", loc.getX() - session.origin.getX());
+        spawn.put("y", loc.getY() - session.origin.getY());
+        spawn.put("z", loc.getZ() - session.origin.getZ());
+        spawn.put("yaw", loc.getYaw());
+        Map<String, Object> pvpbot = pvpBotSection(session.settings);
+        pvpbot.put("bot-spawn", spawn);
+        msg().send(admin, "setup.pvpbot-spawn-set");
+    }
+
+    public void pvpBotClear(Player admin) {
+        SetupSession session = requireActive(admin);
+        if (session == null) {
+            return;
+        }
+        session.settings.remove("pvpbot");
+        msg().send(admin, "setup.pvpbot-cleared");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> pvpBotSection(Map<String, Object> settings) {
+        return (Map<String, Object>) settings
+                .computeIfAbsent("pvpbot", k -> new java.util.LinkedHashMap<String, Object>());
+    }
+
     /**
      * Writes the arena region as it currently stands in the world back over
      * the template's schematic — this is what makes in-world editing stick.
@@ -774,6 +810,10 @@ public final class SetupManager {
                     + rush.teams().size() + " set");
             line(admin, "rush generators", String.valueOf(rush.generators().size()));
             line(admin, "rush dealers", String.valueOf(rush.dealers().size()));
+        }
+        if (me.beekrbonkr.practicecore.mode.PvpBotMode.ID.equals(session.mode)) {
+            line(admin, "bot spawn", session.settings.containsKey("pvpbot")
+                    ? "set" : "auto (ahead of player spawn)");
         }
         msg().send(admin, session.ready(needsTrigger(session))
                 ? "setup.info-ready" : "setup.info-not-ready");

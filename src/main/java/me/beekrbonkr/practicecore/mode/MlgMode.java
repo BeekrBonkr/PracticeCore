@@ -105,6 +105,11 @@ public final class MlgMode implements Mode {
         return true;
     }
 
+    @Override
+    public boolean hasLeaderboards() {
+        return false; // streaks are per-player; there is no shared time board
+    }
+
     private State state(PracticeSession session) {
         if (session.modeState() instanceof State state) {
             return state;

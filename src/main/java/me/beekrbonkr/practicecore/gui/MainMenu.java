@@ -76,8 +76,17 @@ public final class MainMenu extends Menu {
                 later(() -> new StatsMenu(plugin, viewer, this).open());
             });
         }
-        if (shown("restart")) {
+        // Contextual entries: shown only when they can actually do something
+        // — a menu that offers dead buttons teaches players to ignore it.
+        PracticeSession session = plugin.sessions().get(viewer.getUniqueId());
+        if (shown("restart") && session != null) {
             set(slot("restart", 14), restartIcon(), event -> restart());
+        }
+        if (shown("bot") && me.beekrbonkr.practicecore.pvpbot.PvpBotService.fightOf(session) != null) {
+            set(slot("bot", 20), botIcon(), event -> {
+                click();
+                later(() -> new PvpBotSettingsMenu(plugin, viewer, this, session).open());
+            });
         }
         if (shown("sidebar")) {
             set(slot("sidebar", 15), scoreboardIcon(), event -> toggleScoreboard());
@@ -97,7 +106,7 @@ public final class MainMenu extends Menu {
                 later(() -> new SettingsMenu(plugin, viewer, this).open());
             });
         }
-        if (shown("leave")) {
+        if (shown("leave") && session != null) {
             set(slot("leave", 23), leaveIcon(), event -> {
                 sound(Sound.BLOCK_NOTE_BLOCK_PLING, 0.7f, 0.8f);
                 later(() -> {
@@ -159,6 +168,13 @@ public final class MainMenu extends Menu {
                 .lore(lore("gui.main.sidebar.lore", plugin.messages().ref("state",
                         on ? "gui.main.sidebar.state-shown" : "gui.main.sidebar.state-hidden")))
                 .glow(on)
+                .build();
+    }
+
+    private ItemStack botIcon() {
+        return ItemBuilder.of(icon("bot", Material.ZOMBIE_HEAD))
+                .name(name("gui.main.bot.name"))
+                .lore(lore("gui.main.bot.lore"))
                 .build();
     }
 
