@@ -931,15 +931,20 @@ public final class PvpBotService {
         } else if (fight.stance == BotFight.RESET) {
             gap = 6.5;
         }
-        // Reach discipline, the unfair tiers' spacing game: instead of hugging
-        // the player they hold the tip of their own reach — close enough to
-        // land, far enough that a three-block swing has to be timed — and
-        // slide back out of it entirely while the player's immunity window
-        // burns, so every wasted click is thrown at empty air.
-        if (s.unfair() && fight.stance != BotFight.RESET) {
-            gap = Math.max(gap, s.reach().blocks() - 0.35);
-            if (immune(player)) {
-                gap += s.suffer() ? 0.9 : 0.7;
+        // Reach discipline, the duellist tiers' spacing game: instead of
+        // hugging the player they hold the tip of their own reach — close
+        // enough to land, far enough that a three-block swing has to be timed
+        // — and slide back out of it while the player's immunity window burns,
+        // so a wasted click is thrown at empty air. Demon plays a tighter,
+        // more forgiving version of the same idea.
+        //
+        // The step-out ends a few ticks early on purpose: the bot has to be
+        // back at the tip of its reach by the time the window reopens, or the
+        // dance turns into standing off at arm's length doing nothing.
+        if (s.duellist() && fight.stance != BotFight.RESET) {
+            gap = Math.max(gap, s.reach().blocks() - (s.unfair() ? 0.35 : 0.7));
+            if (immunityLeft(player) > 5) {
+                gap += s.suffer() ? 0.9 : s.unfair() ? 0.7 : 0.35;
             }
         }
 
@@ -996,7 +1001,7 @@ public final class PvpBotService {
             fight.repathTicks = 0;
             bot.getPathfinder().stopPathfinding();
             Vector chase = toBot.clone().multiply(-1).normalize()
-                    .multiply(s.suffer() ? 0.33 : 0.30);
+                    .multiply(s.suffer() ? 0.33 : s.unfair() ? 0.30 : 0.27);
             chase = steerInside(botLoc, chase, session.bounds());
             double chaseY = bot.getVelocity().getY();
             if (bot.isOnGround() && !fight.crouching() && dist > gap + 1.5 && chance(0.2)) {
@@ -1010,11 +1015,19 @@ public final class PvpBotService {
                 bot.getPathfinder().moveTo(player,
                         s.aggression().speed() * (fight.blocking() ? 0.5 : 1.0));
             }
-            // Nobody good walks a straight line in: the unfair tiers weave
+            // Nobody good walks a straight line in: the duellist tiers weave
             // across the approach so closing the distance stays a moving shot.
-            if (s.unfair() && !fight.blocking() && !fight.crouching()) {
-                bot.setVelocity(bot.getVelocity()
-                        .add(perpendicular(toBot).multiply(fight.strafeSign * 0.11)));
+            // The side has to alternate on its own here — the strafe branch is
+            // what normally flips it, and a lateral push that never changes
+            // sign curves the whole approach into an orbit the bot never
+            // closes.
+            if (s.duellist() && !fight.blocking() && !fight.crouching()) {
+                if (fight.strafeFlipTicks == 0) {
+                    fight.strafeSign = -fight.strafeSign;
+                    fight.strafeFlipTicks = 10 + rnd(8);
+                }
+                bot.setVelocity(bot.getVelocity().add(perpendicular(toBot)
+                        .multiply(fight.strafeSign * (s.unfair() ? 0.11 : 0.07))));
             }
             // Sprint-jumping: closing like a player holding W and spamming
             // space — always under frenzy, and under pressure or a punish.
@@ -1082,9 +1095,9 @@ public final class PvpBotService {
         // of a good 1.8 player. It also takes the free clean hit on a falling
         // player instead of gambling on a whiff or a crit windup.
         // Block-hitting: the 1.8 trick of swinging with the sword still up, so
-        // the answer to your hit lands at half. Only the unfair tiers do it,
-        // and only when the player armed the bot with sword blocking at all.
-        boolean blockHits = s.unfair() && s.block();
+        // the answer to your hit lands at half. Demon and up only, and only
+        // when the player armed the bot with sword blocking at all.
+        boolean blockHits = s.duellist() && s.block();
         boolean mayHit = fight.graceTicks == 0 && (blockHits || !fight.blocking())
                 && fight.critTicks < 0 && fight.attackCooldown == 0
                 && eyeDist <= s.reach().blocks();
@@ -1114,7 +1127,8 @@ public final class PvpBotService {
                 }
                 // ...then straight back behind the sword: the player's answer
                 // to a clean hit arrives inside exactly this window.
-                if (blockHits && !fight.blocking() && chance(s.suffer() ? 0.6 : 0.4)) {
+                if (blockHits && !fight.blocking()
+                        && chance(s.suffer() ? 0.6 : s.unfair() ? 0.4 : 0.25)) {
                     fight.blockTicks = 6 + rnd(4);
                 }
             }
@@ -1161,10 +1175,12 @@ public final class PvpBotService {
                 // changes on a short, unpredictable beat, so a crosshair that
                 // has learned the rhythm is already wrong.
                 if (fight.strafeFlipTicks == 0) {
-                    if (chance(s.suffer() ? 0.6 : s.unfair() ? 0.5 : 0.35)) {
+                    if (chance(s.suffer() ? 0.6 : s.unfair() ? 0.5
+                            : s.duellist() ? 0.4 : 0.35)) {
                         fight.strafeSign = -fight.strafeSign;
                     }
-                    fight.strafeFlipTicks = s.unfair() ? 8 + rnd(10) : 20 + rnd(20);
+                    fight.strafeFlipTicks = s.unfair() ? 8 + rnd(10)
+                            : s.duellist() ? 14 + rnd(12) : 20 + rnd(20);
                 }
                 // A cerebral bot cuts the corner instead: it matches the
                 // player's own lateral drift, so orbiting away never works.
@@ -1186,14 +1202,40 @@ public final class PvpBotService {
                 strafeDir = away.normalize();
             }
         }
+        // Anti-orbit. Dodging away from the crosshair points the same way
+        // around the player every tick, and a player who chases with their aim
+        // keeps it pointing that way — left alone it reads as a bot on rails,
+        // circling forever. So the circle is timed: once it has held one
+        // direction for a few seconds the bot cuts back through the aim line,
+        // which is exactly how a real strafe reverses.
+        int sense = strafeDir.dot(perpendicular(toBot)) >= 0 ? 1 : -1;
+        if (fight.cutbackTicks > 0) {
+            fight.cutbackTicks--;
+            strafeDir = perpendicular(toBot).multiply(-fight.orbitSense);
+        } else if (sense == fight.orbitSense) {
+            int patience = s.unfair() ? 16 : s.duellist() ? 24 : 34;
+            if (++fight.orbitTicks > patience) {
+                fight.cutbackTicks = 8 + rnd(8);
+                fight.orbitTicks = 0;
+                fight.strafeSign = -sense;
+            }
+        } else {
+            fight.orbitSense = sense;
+            fight.orbitTicks = 0;
+        }
         Vector velocity = strafeDir.multiply(
                 s.evasiveness().speed() * burst
                         * (fight.blocking() ? 0.4 : fight.crouching() ? 0.6 : 1.0));
-        double closeIn = fight.stance == BotFight.PRESSURE ? 0.14 : 0.08;
-        if (dist < gap - 0.4) {
-            velocity.add(toBot.clone().normalize().multiply(0.08)); // back off
-        } else if (dist > gap + 0.4) {
-            velocity.add(toBot.clone().normalize().multiply(-closeIn)); // close in
+        // Radial correction toward the spacing target, proportional to how far
+        // off it is. A flat nudge was too slow for the reach dance: a bot that
+        // steps out of range while the immunity window burns has to be able to
+        // step back in before the window reopens, or it just circles at arm's
+        // length never throwing a punch.
+        double error = dist - gap;
+        if (Math.abs(error) > 0.25) {
+            double urgency = fight.stance == BotFight.PRESSURE ? 0.22 : 0.16;
+            double pull = Math.min(0.28, Math.abs(error) * urgency + 0.06);
+            velocity.add(toBot.clone().normalize().multiply(error > 0 ? -pull : pull));
         }
         // Never strafe over the rim: a drift that would carry the bot off the
         // arena is bent back toward the middle, and the held side flips so
@@ -1221,6 +1263,11 @@ public final class PvpBotService {
     /** Inside the vanilla half-window where another equal hit does nothing. */
     private static boolean immune(Player player) {
         return player.getNoDamageTicks() > player.getMaximumNoDamageTicks() / 2;
+    }
+
+    /** Ticks until that window reopens; zero or less means hittable now. */
+    private static int immunityLeft(Player player) {
+        return player.getNoDamageTicks() - player.getMaximumNoDamageTicks() / 2;
     }
 
     // ------------------------------------------------------------- crouching

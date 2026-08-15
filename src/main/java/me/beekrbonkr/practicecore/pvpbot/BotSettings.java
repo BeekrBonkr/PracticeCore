@@ -254,6 +254,17 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
     }
 
     /**
+     * The duellist layer, one step above cerebral: reach discipline, combo
+     * follow-ups, s-taps, block-hits and strafe jukes — the techniques a good
+     * 1.8 player has in their hands rather than in their head. Demon fights
+     * with the honest version of each; {@link #unfair()} turns every one of
+     * them up rather than adding new ones.
+     */
+    public boolean duellist() {
+        return accuracy.ordinal() >= Accuracy.PERFECT.ordinal();
+    }
+
+    /**
      * The gloves-off layer above cerebral: faster stance reads, earlier
      * combo escapes, sidestep bursts off the crosshair, freer feints,
      * whiff-punishes, crit-fishing and rod pressure, and shoves that lean
