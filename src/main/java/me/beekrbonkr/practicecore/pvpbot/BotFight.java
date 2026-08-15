@@ -63,12 +63,20 @@ public final class BotFight {
     public int crouchTicks;
     /** Ticks before the bot may crouch again. */
     public int crouchCooldown;
+    /** Ticks left of an s-tap: the backward tap that eats incoming knockback. */
+    public int stapTicks;
+    /** Ticks before the bot may s-tap again. */
+    public int stapCooldown;
+    /** Ticks the bot chases its own knockback to keep a combo alive. */
+    public int comboFollowTicks;
 
     // ------------------------------------------------------- respawn timers
     /** Ticks the player stays "dead" (blind, untouchable) before respawning. */
     public int playerRespawnTicks;
     /** Ticks the bot stays despawned before its body comes back. */
     public int botRespawnTicks;
+    /** Where the body waits out the hold — the spawn teleport is the respawn. */
+    public Location deathAnchor;
 
     public boolean playerDead() {
         return playerRespawnTicks > 0;
@@ -80,6 +88,11 @@ public final class BotFight {
 
     public boolean crouching() {
         return crouchTicks > 0;
+    }
+
+    /** Mid-s-tap: the hit that lands right now carries less knockback. */
+    public boolean stapping() {
+        return stapTicks > 0;
     }
 
     // ------------------------------------------------------------- AFK watch
@@ -159,6 +172,9 @@ public final class BotFight {
         hitstunTicks = 0;
         crouchTicks = 0;
         crouchCooldown = 0;
+        stapTicks = 0;
+        stapCooldown = 0;
+        comboFollowTicks = 0;
         attackCooldown = 20;
         graceTicks = 20;
         critTicks = -1;

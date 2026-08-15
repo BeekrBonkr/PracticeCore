@@ -57,6 +57,8 @@ public final class PvpBotService {
     private static final int RESPAWN_TICKS = 60;
     /** How much of the incoming knockback a crouching bot still takes. */
     public static final double CROUCH_KNOCKBACK_FACTOR = 0.6;
+    /** How much of it an s-tapping bot takes — the backward tap, not a stance. */
+    public static final double STAP_KNOCKBACK_FACTOR = 0.75;
 
     private final PracticeCorePlugin plugin;
     /** Bot entities; value = owning player's UUID. */
@@ -122,6 +124,10 @@ public final class PvpBotService {
         fight.botSpawn = resolveBotSpawn(session);
         fight.resetStock();
         session.setModeState(fight);
+        // A restart in the middle of a death hold must not carry the corpse's
+        // blindness and slowness into the fresh fight.
+        player.removePotionEffect(org.bukkit.potion.PotionEffectType.BLINDNESS);
+        player.removePotionEffect(org.bukkit.potion.PotionEffectType.SLOWNESS);
         spawnBot(session, fight);
         syncSwordComponents(player);
     }
@@ -406,15 +412,16 @@ public final class PvpBotService {
 
     /**
      * The player would have died — no death screen, just a lost stock and a
-     * 3-second "dead" hold: blind at spawn, untouchable, the death title
-     * counting the respawn down. The blindness is removed the moment they
-     * come back alive.
+     * 3-second "dead" hold: the body stays pinned where it fell, blind and
+     * untouchable, under the death title counting the respawn down. The
+     * spawn teleport <em>is</em> the respawn, so it lands when the timer runs
+     * out, together with the heal, the fresh kit and the bot's own reset.
      */
     public void playerDied(Player player, PracticeSession session, BotFight fight) {
         if (fight.playerDead()) {
-            // Already dead — a blind walk off the edge mid-hold. Just put
-            // them back on the arena; the running countdown carries on.
-            plugin.sessions().teleportInternal(player, fight.playerSpawn);
+            // Already dead — a stumble off the edge mid-hold. Put the body
+            // back on its anchor; the running countdown carries on.
+            holdAtAnchor(player, fight);
             return;
         }
         fight.deaths++;
@@ -423,14 +430,41 @@ public final class PvpBotService {
         if (plugin.pcConfig().sounds()) {
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_DEATH, 0.7f, 1.0f);
         }
-        resetStock(player, session, fight, true);
+        fight.deathAnchor = anchorFor(player, session, fight);
+        holdAtAnchor(player, fight);
         fight.playerRespawnTicks = RESPAWN_TICKS;
-        // A shade longer than the hold so it never flickers out early; the
-        // respawn removes it explicitly.
+        // A shade longer than the hold so they never flicker out early; the
+        // respawn removes them explicitly. Slowness pins the corpse without
+        // rubber-banding it — the anchor teleport only has to undo gravity.
         player.addPotionEffect(new PotionEffect(
                 org.bukkit.potion.PotionEffectType.BLINDNESS,
                 RESPAWN_TICKS + 20, 0, false, false));
+        player.addPotionEffect(new PotionEffect(
+                org.bukkit.potion.PotionEffectType.SLOWNESS,
+                RESPAWN_TICKS + 20, 6, false, false));
         sendDeathCountdown(player, RESPAWN_TICKS / 20);
+    }
+
+    /**
+     * Where the body waits out the hold: exactly where it fell, unless the
+     * fall itself was the death — a ring-out leaves no ground to stand on, so
+     * the spawn is the only place to hold.
+     */
+    private Location anchorFor(Player player, PracticeSession session, BotFight fight) {
+        Location loc = player.getLocation();
+        if (loc.getWorld() != fight.playerSpawn.getWorld()
+                || !session.containsBlock(loc)
+                || loc.getY() < session.bounds().getMinY() + plugin.pcConfig().failYOffset() + 1) {
+            return fight.playerSpawn;
+        }
+        return loc;
+    }
+
+    /** Pins the corpse: no drifting, no falling, no walking it off the arena. */
+    private void holdAtAnchor(Player player, BotFight fight) {
+        Location anchor = fight.deathAnchor != null ? fight.deathAnchor : fight.playerSpawn;
+        plugin.sessions().teleportInternal(player, anchor);
+        player.setVelocity(new Vector(0, 0, 0));
     }
 
     private void sendDeathCountdown(Player player, int seconds) {
@@ -455,8 +489,9 @@ public final class PvpBotService {
         if (plugin.pcConfig().sounds()) {
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 1.2f);
         }
-        // The winner keeps their ground: health and kit refresh in place; the
-        // bot's body disappears until the timer brings it back at its spawn.
+        // Health and kit refresh in place; the bot's body disappears until the
+        // timer brings it back at its spawn — and the winner goes back to
+        // their own spawn with it, so a kill can never become a spawn camp.
         resetStock(player, session, fight, false);
         despawn(fight);
         fight.botRespawnTicks = RESPAWN_TICKS;
@@ -565,19 +600,38 @@ public final class PvpBotService {
         if (playerHeld) {
             fight.playerRespawnTicks--;
             if (fight.playerRespawnTicks == 0) {
-                // Alive again: sight back, a beat of grace before the bot re-engages.
+                // Alive again, and only now: the stock reset — spawn teleport,
+                // heal, fresh kit, the bot back on its own mark — lands as the
+                // countdown ends, followed by a beat of grace.
                 player.removePotionEffect(org.bukkit.potion.PotionEffectType.BLINDNESS);
+                player.removePotionEffect(org.bukkit.potion.PotionEffectType.SLOWNESS);
+                fight.deathAnchor = null;
+                resetStock(player, session, fight, true);
                 plugin.messages().title(player, "pvpbot.title.respawned",
                         "pvpbot.title.respawned-sub");
                 fight.graceTicks = Math.max(fight.graceTicks, 10);
-            } else if (fight.playerRespawnTicks % 20 == 0) {
-                sendDeathCountdown(player, fight.playerRespawnTicks / 20);
+            } else {
+                // The body doesn't wander: gravity, leftover momentum and a
+                // blind player's own input are all undone at the anchor.
+                if (fight.deathAnchor != null
+                        && player.getWorld() == fight.deathAnchor.getWorld()
+                        && player.getLocation().distanceSquared(fight.deathAnchor) > 0.04) {
+                    holdAtAnchor(player, fight);
+                }
+                if (fight.playerRespawnTicks % 20 == 0) {
+                    sendDeathCountdown(player, fight.playerRespawnTicks / 20);
+                }
             }
         }
         if (fight.botDead()) {
             fight.botRespawnTicks--;
             if (fight.botRespawnTicks == 0) {
                 spawnBot(session, fight);
+                // Both fighters open the new round on their own spawn: the
+                // winner is put back at the same moment the body returns.
+                if (!fight.playerDead()) {
+                    plugin.sessions().teleportInternal(player, fight.playerSpawn);
+                }
                 fight.graceTicks = Math.max(fight.graceTicks, 10);
                 if (plugin.pcConfig().sounds()) {
                     player.playSound(fight.botSpawn, Sound.ENTITY_ENDERMAN_TELEPORT, 0.5f, 1.0f);
@@ -633,6 +687,17 @@ public final class PvpBotService {
         }
         if (fight.crouchTicks > 0 && --fight.crouchTicks == 0) {
             endCrouch(fight);
+        }
+        // Same reasoning for the s-tap window and the combo chase: both are
+        // at their most useful during the knockback they are answering.
+        if (fight.stapTicks > 0) {
+            fight.stapTicks--;
+        }
+        if (fight.stapCooldown > 0) {
+            fight.stapCooldown--;
+        }
+        if (fight.comboFollowTicks > 0) {
+            fight.comboFollowTicks--;
         }
 
         // Hitstun: a bot that just got hit rides the knockback like a real
@@ -866,6 +931,17 @@ public final class PvpBotService {
         } else if (fight.stance == BotFight.RESET) {
             gap = 6.5;
         }
+        // Reach discipline, the unfair tiers' spacing game: instead of hugging
+        // the player they hold the tip of their own reach — close enough to
+        // land, far enough that a three-block swing has to be timed — and
+        // slide back out of it entirely while the player's immunity window
+        // burns, so every wasted click is thrown at empty air.
+        if (s.unfair() && fight.stance != BotFight.RESET) {
+            gap = Math.max(gap, s.reach().blocks() - 0.35);
+            if (immune(player)) {
+                gap += s.suffer() ? 0.9 : 0.7;
+            }
+        }
 
         // Feint in progress: back off as if disengaging. A player who takes
         // the bait and charges eats a timed counter and a shove; one who
@@ -912,12 +988,33 @@ public final class PvpBotService {
             if (s.block() && !fight.blocking() && dist < 3.2 && chance(0.2)) {
                 fight.blockTicks = 10 + rnd(6);
             }
+        } else if (fight.comboFollowTicks > 0 && dist > gap && !fight.blocking()) {
+            // Chasing its own knockback. A combo only continues if the bot
+            // travels with the hit it just landed instead of waiting for the
+            // player to drift back into range — the follow runs at a sprint,
+            // never faster, and gives up when the window closes.
+            fight.repathTicks = 0;
+            bot.getPathfinder().stopPathfinding();
+            Vector chase = toBot.clone().multiply(-1).normalize()
+                    .multiply(s.suffer() ? 0.33 : 0.30);
+            chase = steerInside(botLoc, chase, session.bounds());
+            double chaseY = bot.getVelocity().getY();
+            if (bot.isOnGround() && !fight.crouching() && dist > gap + 1.5 && chance(0.2)) {
+                chaseY = 0.42; // sprint-jump to keep up with the knockback
+            }
+            bot.setVelocity(new Vector(chase.getX(), chaseY, chase.getZ()));
         } else if (dist > gap + 1.2) {
             if (--fight.repathTicks <= 0) {
                 fight.repathTicks = s.aggression().ordinal()
                         >= BotSettings.Aggression.FRENZIED.ordinal() ? 3 : 5;
                 bot.getPathfinder().moveTo(player,
                         s.aggression().speed() * (fight.blocking() ? 0.5 : 1.0));
+            }
+            // Nobody good walks a straight line in: the unfair tiers weave
+            // across the approach so closing the distance stays a moving shot.
+            if (s.unfair() && !fight.blocking() && !fight.crouching()) {
+                bot.setVelocity(bot.getVelocity()
+                        .add(perpendicular(toBot).multiply(fight.strafeSign * 0.11)));
             }
             // Sprint-jumping: closing like a player holding W and spamming
             // space — always under frenzy, and under pressure or a punish.
@@ -984,7 +1081,11 @@ public final class PvpBotService {
         // swing for the exact tick the window expires — the locked-in rhythm
         // of a good 1.8 player. It also takes the free clean hit on a falling
         // player instead of gambling on a whiff or a crit windup.
-        boolean mayHit = fight.graceTicks == 0 && !fight.blocking()
+        // Block-hitting: the 1.8 trick of swinging with the sword still up, so
+        // the answer to your hit lands at half. Only the unfair tiers do it,
+        // and only when the player armed the bot with sword blocking at all.
+        boolean blockHits = s.unfair() && s.block();
+        boolean mayHit = fight.graceTicks == 0 && (blockHits || !fight.blocking())
                 && fight.critTicks < 0 && fight.attackCooldown == 0
                 && eyeDist <= s.reach().blocks();
         if (mayHit && s.cerebral() && immune(player)) {
@@ -998,7 +1099,8 @@ public final class PvpBotService {
             if (!airPunish && !chance(s.accuracy().chance())) {
                 bot.swingMainHand(); // a whiff, like a real missed click
             } else if (!airPunish && s.combos().chance() > 0 && bot.isOnGround()
-                    && !fight.crouching() && chance(s.combos().chance() * 0.5)) {
+                    && !fight.crouching() && !fight.blocking()
+                    && chance(s.combos().chance() * 0.5)) {
                 // Jump-crit: leave the ground now, strike mid-fall.
                 bot.setVelocity(bot.getVelocity().setY(0.42));
                 fight.critTicks = 6;
@@ -1009,6 +1111,11 @@ public final class PvpBotService {
                 if (chance(s.combos().chance()
                         + (fight.stance == BotFight.PRESSURE ? 0.2 : 0))) {
                     shove(player, botLoc, session, s, 0.22);
+                }
+                // ...then straight back behind the sword: the player's answer
+                // to a clean hit arrives inside exactly this window.
+                if (blockHits && !fight.blocking() && chance(s.suffer() ? 0.6 : 0.4)) {
+                    fight.blockTicks = 6 + rnd(4);
                 }
             }
         } else if (s.cerebral() && fight.stance == BotFight.NEUTRAL
@@ -1049,12 +1156,15 @@ public final class PvpBotService {
             Vector away = toBot.clone().subtract(look.multiply(dist));
             away.setY(0);
             if (away.lengthSquared() < 0.09) {
-                // Aimed dead-on: dodge to the held side, flipping now and then.
+                // Aimed dead-on: dodge to the held side, flipping now and
+                // then. The unfair tiers juke instead of drifting — the side
+                // changes on a short, unpredictable beat, so a crosshair that
+                // has learned the rhythm is already wrong.
                 if (fight.strafeFlipTicks == 0) {
-                    if (chance(0.35)) {
+                    if (chance(s.suffer() ? 0.6 : s.unfair() ? 0.5 : 0.35)) {
                         fight.strafeSign = -fight.strafeSign;
                     }
-                    fight.strafeFlipTicks = 20 + rnd(20);
+                    fight.strafeFlipTicks = s.unfair() ? 8 + rnd(10) : 20 + rnd(20);
                 }
                 // A cerebral bot cuts the corner instead: it matches the
                 // player's own lateral drift, so orbiting away never works.

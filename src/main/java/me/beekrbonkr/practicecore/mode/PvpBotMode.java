@@ -166,7 +166,12 @@ public final class PvpBotMode implements Mode {
         if (fight == null) {
             return null;
         }
+        BotSettings.Preset preset = fight.settings.matchingPreset();
         return plugin.messages().lore("board.pvpbot-lines",
+                // The difficulty label carries its own color, so it goes in as
+                // a rendered reference rather than as literal text.
+                plugin.messages().ref("difficulty", "gui.pvpbot.preset.short."
+                        + (preset == null ? "custom" : preset.name().toLowerCase(Locale.ROOT))),
                 "arena", session.template().displayName(),
                 "kit", plugin.messages().raw("gui.pvpbot.kit.option."
                         + fight.settings.kit().name().toLowerCase(Locale.ROOT)),

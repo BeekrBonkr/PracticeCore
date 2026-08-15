@@ -51,6 +51,12 @@ public final class PvpBotListener implements Listener {
             event.setDamage(event.getDamage() * 1.5);
             plugin.pvpBot().playCritEffect(player);
         }
+        // A clean melee hit opens a combo, and the unfair tiers know what to
+        // do with one: they travel with their own knockback for the next
+        // second instead of letting the player drift back out of range.
+        if (fight.settings != null && fight.settings.unfair()) {
+            fight.comboFollowTicks = fight.settings.suffer() ? 16 : 12;
+        }
     }
 
     /**
@@ -184,6 +190,18 @@ public final class PvpBotListener implements Listener {
             default -> 10;
         };
         fight.hitstunTicks = fight.combo >= 3 ? stun / 2 : stun;
+        // S-tapping: the backward tap a good 1.8 player throws in as the hit
+        // lands, eating part of the knockback so the chain never carries them
+        // anywhere. It costs the bot nothing but its cooldown, which is why
+        // only the unfair tiers get it — and it shortens the stun with it,
+        // because a player who taps back is already moving again.
+        if (fight.settings != null && fight.settings.unfair() && fight.stapCooldown == 0
+                && java.util.concurrent.ThreadLocalRandom.current().nextDouble()
+                        < (fight.settings.suffer() ? 0.85 : 0.6)) {
+            fight.stapTicks = 5;
+            fight.stapCooldown = 12;
+            fight.hitstunTicks = Math.max(2, fight.hitstunTicks - 2);
+        }
         // The unfair tiers answer a building combo with a shift-anchor: a
         // short crouch that scales down the knockback of the hits still to
         // come, so the chain never carries them far. Deliberately absent from
@@ -201,11 +219,12 @@ public final class PvpBotListener implements Listener {
     }
 
     /**
-     * The crouch's mechanical payoff: while the bot is sneaking, the
-     * knockback of hits (and rod tags) that land on it is scaled down —
-     * vanilla gives players no such lever, but the bot's whole moveset is
-     * hand-rolled, and "crouching anchors you" reads instantly to the player
-     * watching the model sink into a sneak.
+     * The payoff for both knockback answers: while the bot is sneaking, or
+     * inside the s-tap window it opened as the hit landed, the knockback of
+     * hits (and rod tags) that land on it is scaled down. Vanilla gives
+     * players no such lever, but the bot's whole moveset is hand-rolled, and
+     * "crouching anchors you" reads instantly to the player watching the model
+     * sink into a sneak.
      */
     @EventHandler(ignoreCancelled = true)
     public void onBotKnockback(io.papermc.paper.event.entity.EntityKnockbackEvent event) {
@@ -215,9 +234,18 @@ public final class PvpBotListener implements Listener {
         UUID owner = plugin.pvpBot().ownerOf(event.getEntity());
         BotFight fight = owner == null ? null
                 : PvpBotService.fightOf(plugin.sessions().get(owner));
-        if (fight != null && event.getEntity().equals(fight.bot) && fight.crouching()) {
-            event.setKnockback(event.getKnockback()
-                    .multiply(PvpBotService.CROUCH_KNOCKBACK_FACTOR));
+        if (fight == null || !event.getEntity().equals(fight.bot)) {
+            return;
+        }
+        double factor = 1.0;
+        if (fight.crouching()) {
+            factor *= PvpBotService.CROUCH_KNOCKBACK_FACTOR;
+        }
+        if (fight.stapping()) {
+            factor *= PvpBotService.STAP_KNOCKBACK_FACTOR;
+        }
+        if (factor < 1.0) {
+            event.setKnockback(event.getKnockback().multiply(factor));
         }
     }
 
