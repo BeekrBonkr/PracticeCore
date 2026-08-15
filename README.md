@@ -265,13 +265,15 @@ instead: kills, deaths, hits landed/taken, current and best combo, and the
 bot's **name tag doubles as its health bar**. Every real hit on the bot pops
 a **floating damage indicator** (a DeluxeCombat-style hologram showing the
 hearts dealt, drifting upward before vanishing). Dying never shows a death
-screen: the fatal hit is intercepted, a **"YOU DIED" title** with your K/D
-appears, it costs a **stock**, and both fighters snap back to their spawn
-points at full health. Killing the bot gets its own title, but only the
-bot respawns — **you keep your ground**, with health and kit refreshed in
-place. Either way a **chat line sums up the exchange** with the hearts the
-survivor had left. Getting knocked off the arena is a **ring-out** — same
-thing.
+screen: the fatal hit is intercepted, it costs a **stock**, and you snap
+back to your spawn for a **3-second respawn hold** — blind, untouchable,
+the **"YOU DIED" title counting the respawn down**, sight and a "FIGHT"
+title returning the moment you come alive. Killing the bot gets its own
+title with your K/D; its body vanishes for its own 3-second timer, **counted
+down above your hotbar**, and you keep your ground — health and kit
+refreshed in place. Either way a **chat line sums up the exchange** with the
+hearts the survivor had left. Getting knocked off the arena is a
+**ring-out** — same thing.
 
 Kits come from the **kit gallery**: fourteen built-in presets — Sword,
 NoDebuff, Boxing, BuildUHC, Combo, Gapple, Iron, Diamond, Classic, Soup,
@@ -311,6 +313,14 @@ What it deliberately does **not** do is cheat the numbers: reach stays
 capped at long (3.4), CPS is still tick-capped, its accuracy is Demon's
 same perfect 1.0, and hitstun still applies — so wall combos, rod resets
 and edge discipline beat it. Barely.
+
+The bot also **crouches strategically**: while sneaking it takes **reduced
+knockback** (and visibly sinks into the sneak, on the player model too), at
+the price of slower strafing and no jumps. A cerebral-tier bot (Veteran and
+up) shift-anchors when it is cornered against the rim with you on top of
+it; the Unfair tiers additionally answer a building combo with a short
+crouch so the chain never carries them across the arena — deliberately
+absent below Unfair, where combos staying earnable is the point.
 
 And above Unfair sits **Suffer** — the same dirty playbook with every dial
 at its ceiling, while movement and combat stay strictly inside a player's

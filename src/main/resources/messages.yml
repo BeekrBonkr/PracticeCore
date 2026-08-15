@@ -153,12 +153,17 @@ pvpbot:
   bot-tag: '<white>Bot <red>♥ <white><health>'
   # Floating damage indicator; <damage> is the hearts one hit dealt.
   damage-indicator: '<red>-<damage>❤'
-  # Titles on losing / winning a stock. <kills> <deaths>
+  # Titles on losing / winning a stock. The death title's subtitle is the
+  # 3-second respawn countdown (<seconds>); K/D lives in the chat summary.
   title:
     death: '<red><bold>YOU DIED'
-    death-sub: '<gray>Kills <green><kills> <dark_gray>/ <gray>Deaths <red><deaths>'
+    respawn-sub: '<gray>Respawning in <yellow><seconds><gray>...'
+    respawned: '<green><bold>FIGHT'
+    respawned-sub: ''
     kill: '<green><bold>Bot slain'
     kill-sub: '<gray>Kills <green><kills> <dark_gray>/ <gray>Deaths <red><deaths>'
+  # Action bar counting down the bot's own 3-second respawn. <seconds>
+  respawn-bar: '<gray>Bot respawns in <yellow><seconds><gray>...'
   # Chat summary after each stock; <hearts> is what the survivor had left.
   chat:
     bot-killed-player: '<prefix><red>Bot killed player <dark_gray>(<gray>bot had <red><hearts>❤<gray> left<dark_gray>)'

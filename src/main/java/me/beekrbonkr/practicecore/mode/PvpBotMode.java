@@ -22,8 +22,9 @@ import java.util.Map;
  *
  * There is no timer and no leaderboard. The sidebar keeps session stats
  * (kills, deaths, hits, combos); dying — including a ring-out over the edge —
- * costs a stock, snaps both fighters back to their spawns at full health, and
- * the spar continues with no death screen. Kits are the built-in presets in
+ * costs a stock and starts a 3-second respawn hold (blind and untouchable
+ * under a countdown title; the bot's own deaths count down on the action
+ * bar), then the spar continues with no death screen. Kits are the built-in presets in
  * {@link me.beekrbonkr.practicecore.pvpbot.PvpKit}, not the arena's admin kit,
  * and their consumables are kept topped up.
  *

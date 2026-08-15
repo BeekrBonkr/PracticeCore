@@ -53,6 +53,10 @@ public final class PvpBotService {
     private static final int REFILL_TICKS = 60;
     /** Ticks between health-name refreshes over the bot's head. */
     private static final int NAME_TICKS = 5;
+    /** Ticks either fighter stays dead before respawning (the 3-second timer). */
+    private static final int RESPAWN_TICKS = 60;
+    /** How much of the incoming knockback a crouching bot still takes. */
+    public static final double CROUCH_KNOCKBACK_FACTOR = 0.6;
 
     private final PracticeCorePlugin plugin;
     /** Bot entities; value = owning player's UUID. */
@@ -400,22 +404,48 @@ public final class PvpBotService {
 
     // ---------------------------------------------------------- stock flow
 
-    /** The player would have died — no death screen, just a lost stock. */
+    /**
+     * The player would have died — no death screen, just a lost stock and a
+     * 3-second "dead" hold: blind at spawn, untouchable, the death title
+     * counting the respawn down. The blindness is removed the moment they
+     * come back alive.
+     */
     public void playerDied(Player player, PracticeSession session, BotFight fight) {
+        if (fight.playerDead()) {
+            // Already dead — a blind walk off the edge mid-hold. Just put
+            // them back on the arena; the running countdown carries on.
+            plugin.sessions().teleportInternal(player, fight.playerSpawn);
+            return;
+        }
         fight.deaths++;
-        plugin.messages().title(player, "pvpbot.title.death", "pvpbot.title.death-sub",
-                "kills", String.valueOf(fight.kills),
-                "deaths", String.valueOf(fight.deaths));
         plugin.messages().send(player, "pvpbot.chat.bot-killed-player", "hearts",
                 hearts(fight.bot != null && fight.bot.isValid() ? fight.bot.getHealth() : 0));
         if (plugin.pcConfig().sounds()) {
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_DEATH, 0.7f, 1.0f);
         }
         resetStock(player, session, fight, true);
+        fight.playerRespawnTicks = RESPAWN_TICKS;
+        // A shade longer than the hold so it never flickers out early; the
+        // respawn removes it explicitly.
+        player.addPotionEffect(new PotionEffect(
+                org.bukkit.potion.PotionEffectType.BLINDNESS,
+                RESPAWN_TICKS + 20, 0, false, false));
+        sendDeathCountdown(player, RESPAWN_TICKS / 20);
     }
 
-    /** The bot dropped — a kill on the board and a fresh stock. */
+    private void sendDeathCountdown(Player player, int seconds) {
+        plugin.messages().title(player, "pvpbot.title.death", "pvpbot.title.respawn-sub",
+                "seconds", String.valueOf(seconds));
+    }
+
+    /**
+     * The bot dropped — a kill on the board, and its body is gone for the
+     * 3-second respawn timer, counted down above the player's hotbar.
+     */
     public void botDied(Player player, PracticeSession session, BotFight fight) {
+        if (fight.botDead()) {
+            return;
+        }
         fight.kills++;
         plugin.messages().title(player, "pvpbot.title.kill", "pvpbot.title.kill-sub",
                 "kills", String.valueOf(fight.kills),
@@ -425,9 +455,13 @@ public final class PvpBotService {
         if (plugin.pcConfig().sounds()) {
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 1.2f);
         }
-        // The winner keeps their ground: health and kit refresh in place, only
-        // the bot goes back to its spawn.
+        // The winner keeps their ground: health and kit refresh in place; the
+        // bot's body disappears until the timer brings it back at its spawn.
         resetStock(player, session, fight, false);
+        despawn(fight);
+        fight.botRespawnTicks = RESPAWN_TICKS;
+        plugin.messages().actionBar(player, "pvpbot.respawn-bar",
+                "seconds", String.valueOf(RESPAWN_TICKS / 20));
     }
 
     private void resetStock(Player player, PracticeSession session, BotFight fight,
@@ -460,6 +494,7 @@ public final class PvpBotService {
             fight.bot.setHealth(botMax != null ? botMax.getValue() : 20.0);
             fight.bot.setFireTicks(0);
             fight.bot.setVelocity(new Vector(0, 0, 0));
+            fight.bot.setPose(org.bukkit.entity.Pose.STANDING, false); // uncrouch
             equipBot(fight);
             if (fight.nameTag != null && fight.nameTag.isValid()) {
                 fight.nameTag.teleport(tagLocation(fight.bot));
@@ -522,6 +557,47 @@ public final class PvpBotService {
     // ------------------------------------------------------------ the brain
 
     private void tick(Player player, PracticeSession session, BotFight fight) {
+        // Respawn holds run before anything else: a dead player counts down
+        // under the death title, a dead bot counts down above the hotbar.
+        // The two can overlap (a blind edge-walk while the bot is down), so
+        // both timers tick independently.
+        boolean playerHeld = fight.playerDead();
+        if (playerHeld) {
+            fight.playerRespawnTicks--;
+            if (fight.playerRespawnTicks == 0) {
+                // Alive again: sight back, a beat of grace before the bot re-engages.
+                player.removePotionEffect(org.bukkit.potion.PotionEffectType.BLINDNESS);
+                plugin.messages().title(player, "pvpbot.title.respawned",
+                        "pvpbot.title.respawned-sub");
+                fight.graceTicks = Math.max(fight.graceTicks, 10);
+            } else if (fight.playerRespawnTicks % 20 == 0) {
+                sendDeathCountdown(player, fight.playerRespawnTicks / 20);
+            }
+        }
+        if (fight.botDead()) {
+            fight.botRespawnTicks--;
+            if (fight.botRespawnTicks == 0) {
+                spawnBot(session, fight);
+                fight.graceTicks = Math.max(fight.graceTicks, 10);
+                if (plugin.pcConfig().sounds()) {
+                    player.playSound(fight.botSpawn, Sound.ENTITY_ENDERMAN_TELEPORT, 0.5f, 1.0f);
+                }
+            } else if (fight.botRespawnTicks % 20 == 0) {
+                plugin.messages().actionBar(player, "pvpbot.respawn-bar",
+                        "seconds", String.valueOf(fight.botRespawnTicks / 20));
+            }
+            return; // no body to drive yet
+        }
+        if (playerHeld) {
+            // The bot waits out the player's death hold at its spawn.
+            if (fight.bot != null && fight.bot.isValid()) {
+                fight.bot.getPathfinder().stopPathfinding();
+                if (fight.nameTag != null && fight.nameTag.isValid()) {
+                    fight.nameTag.teleport(tagLocation(fight.bot));
+                }
+            }
+            return;
+        }
         if (fight.bot == null || !fight.bot.isValid()) {
             // Something unexpected removed the entity — bring the fight back.
             spawnBot(session, fight);
@@ -548,6 +624,15 @@ public final class PvpBotService {
         if (--fight.nameTicks <= 0) {
             fight.nameTicks = NAME_TICKS;
             fight.nameTag.text(botName(bot.getHealth()));
+        }
+
+        // Crouch bookkeeping runs even through hitstun — riding knockback is
+        // exactly when the reduced-knockback crouch earns its keep.
+        if (fight.crouchCooldown > 0) {
+            fight.crouchCooldown--;
+        }
+        if (fight.crouchTicks > 0 && --fight.crouchTicks == 0) {
+            endCrouch(fight);
         }
 
         // Hitstun: a bot that just got hit rides the knockback like a real
@@ -596,6 +681,7 @@ public final class PvpBotService {
                             .multiply(fight.strafeSign).multiply(0.5);
                     // Never leap out of a combo straight over the rim.
                     escape = steerInside(bot.getLocation(), escape, session.bounds());
+                    endCrouch(fight); // can't leap out of a crouch
                     bot.setVelocity(escape.setY(0.42));
                     fight.hitstunTicks = 0;
                     // Suffer doesn't just escape the combo — it turns the
@@ -838,7 +924,7 @@ public final class PvpBotService {
             if ((s.aggression().ordinal() >= BotSettings.Aggression.FRENZIED.ordinal()
                     || fight.stance == BotFight.PRESSURE || fight.punishTicks > 0)
                     && bot.isOnGround() && dist > gap + 2
-                    && !fight.blocking() && chance(0.15)) {
+                    && !fight.blocking() && !fight.crouching() && chance(0.15)) {
                 Vector forward = toBot.clone().multiply(-1).normalize();
                 bot.setVelocity(bot.getVelocity().add(forward.multiply(0.35)).setY(0.42));
             }
@@ -852,13 +938,14 @@ public final class PvpBotService {
         // range — lunge through the gap behind a wasted swing, arriving
         // before the next click is loaded.
         if (fight.punishTicks > 0 && bot.isOnGround() && dist > 1.8
-                && !fight.blocking() && chance(s.suffer() ? 0.85 : s.unfair() ? 0.7 : 0.5)) {
+                && !fight.blocking() && !fight.crouching()
+                && chance(s.suffer() ? 0.85 : s.unfair() ? 0.7 : 0.5)) {
             Vector lunge = toBot.clone().multiply(-1).normalize();
             bot.setVelocity(bot.getVelocity().add(lunge.multiply(0.4)).setY(0.25));
         }
 
         // Hop over lips and out of corners when movement stalls.
-        if (bot.isOnGround() && dist > s.reach().blocks()
+        if (bot.isOnGround() && dist > s.reach().blocks() && !fight.crouching()
                 && Math.abs(botLoc.getX() - fight.lastX) < 0.01
                 && Math.abs(botLoc.getZ() - fight.lastZ) < 0.01
                 && chance(0.5)) {
@@ -867,12 +954,26 @@ public final class PvpBotService {
         fight.lastX = botLoc.getX();
         fight.lastZ = botLoc.getZ();
 
+        // Edge play, defensive half: with its back to the rim and the player
+        // right on top of it, a thinking bot crouches — the listener scales
+        // the knockback it takes while crouched, trading strafe speed for
+        // ground it cannot afford to give. Gated by the same cerebral tier
+        // that unlocks the offensive edge-shoves; the unfair tiers read the
+        // danger faster.
+        if (s.cerebral() && !fight.crouching() && fight.crouchCooldown == 0
+                && !fight.blocking() && dist < 4
+                && rimDistance(botLoc, session.bounds()) < 2.5
+                && chance(s.suffer() ? 0.5 : s.unfair() ? 0.35 : 0.2)) {
+            startCrouch(fight, 15 + rnd(10));
+        }
+
         // A jumpy player gets crit-fished: as they rise, the bot leaves the
         // ground too, timed so its falling strike meets them on the way down.
         if (s.cerebral() && fight.jumpHabit >= (s.unfair() ? 2 : 3)
                 && !playerOnGround && player.getVelocity().getY() > 0.1
                 && fight.critTicks < 0 && bot.isOnGround() && fight.graceTicks == 0
-                && !fight.blocking() && dist < s.reach().blocks() + 1.5
+                && !fight.blocking() && !fight.crouching()
+                && dist < s.reach().blocks() + 1.5
                 && chance(s.suffer() ? 0.6 : s.unfair() ? 0.45 : 0.3)) {
             bot.setVelocity(bot.getVelocity().setY(0.42));
             fight.critTicks = 6;
@@ -897,7 +998,7 @@ public final class PvpBotService {
             if (!airPunish && !chance(s.accuracy().chance())) {
                 bot.swingMainHand(); // a whiff, like a real missed click
             } else if (!airPunish && s.combos().chance() > 0 && bot.isOnGround()
-                    && chance(s.combos().chance() * 0.5)) {
+                    && !fight.crouching() && chance(s.combos().chance() * 0.5)) {
                 // Jump-crit: leave the ground now, strike mid-fall.
                 bot.setVelocity(bot.getVelocity().setY(0.42));
                 fight.critTicks = 6;
@@ -976,7 +1077,8 @@ public final class PvpBotService {
             }
         }
         Vector velocity = strafeDir.multiply(
-                s.evasiveness().speed() * burst * (fight.blocking() ? 0.4 : 1.0));
+                s.evasiveness().speed() * burst
+                        * (fight.blocking() ? 0.4 : fight.crouching() ? 0.6 : 1.0));
         double closeIn = fight.stance == BotFight.PRESSURE ? 0.14 : 0.08;
         if (dist < gap - 0.4) {
             velocity.add(toBot.clone().normalize().multiply(0.08)); // back off
@@ -995,7 +1097,7 @@ public final class PvpBotService {
         // bounce around — vertical motion the crosshair has to chase too.
         double y = bot.getVelocity().getY();
         if (s.evasiveness().ordinal() >= BotSettings.Evasiveness.EXTREME.ordinal()
-                && bot.isOnGround() && !fight.blocking()
+                && bot.isOnGround() && !fight.blocking() && !fight.crouching()
                 && chance(switch (s.evasiveness()) {
                     case SUFFER -> 0.16;
                     case UNFAIR -> 0.12;
@@ -1009,6 +1111,37 @@ public final class PvpBotService {
     /** Inside the vanilla half-window where another equal hit does nothing. */
     private static boolean immune(Player player) {
         return player.getNoDamageTicks() > player.getMaximumNoDamageTicks() / 2;
+    }
+
+    // ------------------------------------------------------------- crouching
+
+    /**
+     * Drops the bot into a sneak for a moment: while crouched the listener
+     * scales incoming knockback by {@link #CROUCH_KNOCKBACK_FACTOR}, the bot
+     * strafes slower and stays off its jumps — the same anchor-in-place trade
+     * a real player makes holding shift at the rim. The pose is fixed so the
+     * player model visibly sneaks.
+     */
+    public void startCrouch(BotFight fight, int ticks) {
+        fight.crouchTicks = ticks;
+        fight.crouchCooldown = 60 + rnd(40);
+        if (fight.bot != null && fight.bot.isValid()) {
+            fight.bot.setPose(org.bukkit.entity.Pose.SNEAKING, true);
+        }
+    }
+
+    private static void endCrouch(BotFight fight) {
+        fight.crouchTicks = 0;
+        if (fight.bot != null && fight.bot.isValid()) {
+            fight.bot.setPose(org.bukkit.entity.Pose.STANDING, false);
+        }
+    }
+
+    /** Horizontal distance from the arena rim, whichever edge is nearest. */
+    private static double rimDistance(Location loc, BoundingBox bounds) {
+        return Math.min(
+                Math.min(loc.getX() - bounds.getMinX(), bounds.getMaxX() - loc.getX()),
+                Math.min(loc.getZ() - bounds.getMinZ(), bounds.getMaxZ() - loc.getZ()));
     }
 
     /**
