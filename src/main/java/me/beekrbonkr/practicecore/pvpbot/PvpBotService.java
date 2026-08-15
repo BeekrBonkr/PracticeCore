@@ -419,7 +419,7 @@ public final class PvpBotService {
         }
         fight.deaths++;
         plugin.messages().send(player, "pvpbot.chat.bot-killed-player", "hearts",
-                hearts(fight.bot != null && fight.bot.isValid() ? fight.bot.getHealth() : 0));
+                healthPoints(fight.bot != null && fight.bot.isValid() ? fight.bot.getHealth() : 0));
         if (plugin.pcConfig().sounds()) {
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_DEATH, 0.7f, 1.0f);
         }
@@ -451,7 +451,7 @@ public final class PvpBotService {
                 "kills", String.valueOf(fight.kills),
                 "deaths", String.valueOf(fight.deaths));
         plugin.messages().send(player, "pvpbot.chat.player-killed-bot",
-                "hearts", hearts(player.getHealth()));
+                "hearts", healthPoints(player.getHealth()));
         if (plugin.pcConfig().sounds()) {
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 1.2f);
         }
@@ -1267,12 +1267,17 @@ public final class PvpBotService {
      * PlayerDisguise), so this display is the bot's only overhead text.
      */
     private net.kyori.adventure.text.Component botName(double health) {
-        return plugin.messages().component("pvpbot.bot-tag", "health", hearts(health));
+        return plugin.messages().component("pvpbot.bot-tag", "health", healthPoints(health));
     }
 
-    /** Health points rendered as hearts, one decimal. */
-    private static String hearts(double health) {
-        return String.format(java.util.Locale.ROOT, "%.1f", health / 2.0);
+    /**
+     * Health rendered in health points — half-hearts, the 0-20 scale the
+     * scoreboard uses — with a trailing .0 trimmed so whole values read clean.
+     */
+    private static String healthPoints(double health) {
+        String formatted = String.format(java.util.Locale.ROOT, "%.1f", health);
+        return formatted.endsWith(".0")
+                ? formatted.substring(0, formatted.length() - 2) : formatted;
     }
 
     /**
@@ -1289,7 +1294,7 @@ public final class PvpBotService {
         org.bukkit.entity.TextDisplay display = loc.getWorld().spawn(loc,
                 org.bukkit.entity.TextDisplay.class, text -> {
                     text.text(plugin.messages().component("pvpbot.damage-indicator",
-                            "damage", hearts(damage)));
+                            "damage", healthPoints(damage)));
                     text.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
                     text.setDefaultBackground(false);
                     text.setBackgroundColor(org.bukkit.Color.fromARGB(0, 0, 0, 0));

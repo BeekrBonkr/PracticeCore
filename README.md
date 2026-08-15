@@ -264,7 +264,7 @@ There is **no timer and no leaderboard** — the sidebar keeps session stats
 instead: kills, deaths, hits landed/taken, current and best combo, and the
 bot's **name tag doubles as its health bar**. Every real hit on the bot pops
 a **floating damage indicator** (a DeluxeCombat-style hologram showing the
-hearts dealt, drifting upward before vanishing). Dying never shows a death
+health points dealt, drifting upward before vanishing). Dying never shows a death
 screen: the fatal hit is intercepted, it costs a **stock**, and you snap
 back to your spawn for a **3-second respawn hold** — blind, untouchable,
 the **"YOU DIED" title counting the respawn down**, sight and a "FIGHT"
@@ -272,7 +272,8 @@ title returning the moment you come alive. Killing the bot gets its own
 title with your K/D; its body vanishes for its own 3-second timer, **counted
 down above your hotbar**, and you keep your ground — health and kit
 refreshed in place. Either way a **chat line sums up the exchange** with the
-hearts the survivor had left. Getting knocked off the arena is a
+health the survivor had left (in health points — half-hearts, out of a
+normal max of 20). Getting knocked off the arena is a
 **ring-out** — same thing.
 
 Kits come from the **kit gallery**: fourteen built-in presets — Sword,

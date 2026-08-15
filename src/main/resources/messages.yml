@@ -149,9 +149,10 @@ rush:
 # leaderboard — kills, deaths and combos live on the sidebar.
 pvpbot:
   # Floats over the bot's head as a single line; the disguise's own player
-  # nameplate is hidden. <health> is the bot's remaining hearts.
+  # nameplate is hidden. <health> is the bot's remaining health points
+  # (half-hearts, the scoreboard's 0-20 scale).
   bot-tag: '<white>Bot <red>♥ <white><health>'
-  # Floating damage indicator; <damage> is the hearts one hit dealt.
+  # Floating damage indicator; <damage> is the health points one hit dealt.
   damage-indicator: '<red>-<damage>❤'
   # Titles on losing / winning a stock. The death title's subtitle is the
   # 3-second respawn countdown (<seconds>); K/D lives in the chat summary.
@@ -164,7 +165,8 @@ pvpbot:
     kill-sub: '<gray>Kills <green><kills> <dark_gray>/ <gray>Deaths <red><deaths>'
   # Action bar counting down the bot's own 3-second respawn. <seconds>
   respawn-bar: '<gray>Bot respawns in <yellow><seconds><gray>...'
-  # Chat summary after each stock; <hearts> is what the survivor had left.
+  # Chat summary after each stock; <hearts> is the health points (half-hearts)
+  # the survivor had left.
   chat:
     bot-killed-player: '<prefix><red>Bot killed player <dark_gray>(<gray>bot had <red><hearts>❤<gray> left<dark_gray>)'
     player-killed-bot: '<prefix><green>Player killed bot <dark_gray>(<gray>you had <red><hearts>❤<gray> left<dark_gray>)'
