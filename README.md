@@ -17,10 +17,11 @@ Parkour) can be adapted where useful.
 ## How it works
 
 - On every plugin enable the practice world's folder is **deleted and
-  recreated** (void chunk generator, natural mob spawning/insomnia/weather/
-  daylight disabled, auto-save off, difficulty NORMAL so plugin-spawned
-  hostiles — the PvP bot — exist and hit). Nothing in it ever persists —
-  crash recovery for the world is free.
+  recreated** (void chunk generator, auto-save off, and the gamerules,
+  difficulty and time of day from `config.yml` — by default natural mob
+  spawning/insomnia/weather/daylight off and difficulty NORMAL, so
+  plugin-spawned hostiles like the PvP bot exist and hit). Nothing in it ever
+  persists — crash recovery for the world is free.
 - Joining players are assigned a slot on a **square spiral grid** (default
   1000-block spacing); their arena schematic is pasted there, then they're
   teleported (async) and given the template's kit. Freed slots are reused
@@ -279,10 +280,12 @@ exchange** with the health the survivor had left (in health points —
 half-hearts, out of a normal max of 20). Getting knocked off the arena is a
 **ring-out** — same thing.
 
-Kits come from the **kit gallery**: fourteen built-in presets — Sword,
-NoDebuff, Boxing, BuildUHC, Combo, Gapple, Iron, Diamond, Classic, Soup,
-Archer, Axe, Bedwars and Skywars — some carrying **blocks to place**
-(BuildUHC, Bedwars, Skywars; every stock reset reverts what you built).
+Kits come from the **kit gallery**, defined in `pvpbot.yml`. Fourteen ship
+with the plugin — Sword, NoDebuff, Boxing, BuildUHC, Combo, Gapple, Iron,
+Diamond, Classic, Soup, Archer, Axe, Bedwars and Skywars — some carrying
+**blocks to place** (BuildUHC, Bedwars, Skywars; every stock reset reverts what
+you built). They are data, not code: retune one, drop one, or add your own, and
+the gallery follows.
 Left-click a tile to select, **right-click for a full preview** laid out
 exactly like your inventory (armor up top, hotbar at the bottom). The plugin
 **remembers the last kit you chose** and hands it to you on your next join,
@@ -321,25 +324,30 @@ enough to be unfair. Which is the next tier's job.
 
 Above Demon sits **Unfair**, for the insane: four knobs gain an **unfair**
 tier and the accuracy knob's unfair setting switches on a gloves-off layer
-above cerebral. It strafes faster than Demon and *darts* sideways the
-instant your crosshair settles on it, hops twice as often, slips out of
-combos a hit earlier, re-reads the fight almost twice as often and starts
-kiting before it is actually desperate, feints, whiff-punishes and
-crit-fishes far more freely, leans on the rod harder in neutral, w-taps or
-crits on most clean hits, and angles every shove harder toward the rim.
+above cerebral. It strafes faster than Demon and *darts* sideways the instant
+your crosshair settles on it, hops more often, slips out of combos far more
+reliably, re-reads the fight more often and starts kiting before it is actually
+desperate, feints, whiff-punishes and crit-fishes more freely, leans on the rod
+harder in neutral, w-taps or crits on more of its clean hits, and angles every
+shove harder toward the rim.
 
 It takes every technique of Demon's duellist layer past honest. Its **reach
-discipline** holds a full block further out and steps clean out of *your*
-range while your immunity burns, so a wasted click is thrown at air; its
-**combo follow** runs half again as long; it **s-taps** most of the hits it
-takes rather than a third of them; it **block-hits** more freely; and it
-**jukes** on a beat roughly twice as fast, so a crosshair that has learned
-the rhythm is already wrong.
+discipline** holds further out and steps clean out of *your* range while your
+immunity burns, so a wasted click is thrown at air; its **combo follow** runs
+noticeably longer; it **s-taps** about half the hits it takes rather than a
+quarter; it **block-hits** more freely; and it **jukes** on a distinctly faster
+beat, so a crosshair that has learned the rhythm is already wrong.
 
-What it deliberately does **not** do is cheat the numbers: reach stays
-capped at long (3.4), CPS is still tick-capped, its accuracy is Demon's
-same perfect 1.0, and hitstun still applies — so wall combos, rod resets
-and edge discipline beat it. Barely.
+Both Demon and Unfair are deliberately tuned to be *beatable*: they miss
+sometimes, they react a tick late, and they ride enough hitstun to be comboed.
+Every one of those numbers is a line in `pvpbot.yml` — see
+[Tuning the bot](#tuning-the-bot) — so if they land wrong for your server, move
+them rather than living with them.
+
+What it deliberately does **not** do is cheat the numbers: reach stays capped
+at long (3.4), CPS is still tick-capped, its aim still misses now and then, it
+still reads you a tick late, and hitstun still applies — so wall combos, rod
+resets and edge discipline beat it.
 
 The bot also **crouches strategically**: while sneaking it takes **reduced
 knockback** (and visibly sinks into the sneak, on the player model too), at
@@ -376,6 +384,46 @@ the server's combat plugins (OldCombatMechanics, vanilla-sword-blocking),
 with one correction: modern servers treat a raised block-animation sword as
 a *shield* that negates hits entirely, so the mode strips that full negation
 and restores the true 1.8 behavior (blocking halves damage, on both sides).
+
+#### Tuning the bot
+
+Every number the bot runs on lives in `pvpbot.yml`, and `/practice reload`
+applies it to fights already in progress. Two ideas run through the file.
+
+**Tiers keep their names, not their numbers.** `EXTREME` evasiveness is always
+called `EXTREME` — saved player preferences and message keys never move — but
+how fast it actually strafes is a line under `tiers`. That is what makes
+retuning a difficulty safe while people are playing. The tier *names* are fixed
+(they are what the GUI cycles and what playerdata stores); to change what
+players see one called, edit `gui.pvpbot.*` in `messages.yml`.
+
+**Behaviors scale by layer.** The brain has four layers on top of its plain
+behavior — cerebral, duellist, unfair, suffer — and which accuracy tier unlocks
+each is itself configurable under `layers` (including `never`, to switch a
+whole layer off server-wide). Any knob under `behavior` may be one value, or a
+block that scales:
+
+```yaml
+combo-escape:
+  chance:
+    base: 0.4        # every bot
+    unfair: 0.6      # …unless it has the unfair layer
+    suffer: 0.9      # …or suffer
+```
+
+The best layer a bot qualifies for wins. Write the knob as a single number and
+it stops scaling at all. Windows written as `{min: x, max: y}` are re-rolled
+every time they are used — that is deliberate, and it is why the bot does not
+fall into a rhythm a player can learn.
+
+The rest of the file covers the bot's body (`bot`: respawn hold, refill
+cadence, AFK threshold, grace beats, follow range, jump velocity, knockback
+factors, damage indicators), the named difficulties (`presets` — reorder,
+retune, rename or add), the gear tiers, and the per-player defaults a bot
+starts on before anyone opens the settings menu.
+
+`kits` and `presets` are **curated**: an entry you delete stays deleted rather
+than reappearing on the next start.
 
 Building an arena needs just a platform and a spawn: `/practice setup start
 <name>`, `/practice setup mode pvpbot`, `/practice setup spawn`, optionally
@@ -418,6 +466,56 @@ For admins: the permission is `practicecore.spectate` (part of the default
 (the picker) and `board.spectate-lines` (the sidebar). Spectators hold no
 session and no grid slot, so they cost nothing and count toward no limits —
 nothing needs to be sized for them.
+
+## Configuration
+
+Everything an admin can change lives in five YAML files under
+`plugins/PracticeCore/`, and every one of them is re-read by
+`/practice reload` — see [Reload and world regeneration](#reload-and-world-regeneration).
+
+| File | What it controls |
+|---|---|
+| `config.yml` | how the plugin behaves: world, grid, session rules, mode defaults, effects |
+| `messages.yml` | every piece of text shown to a player |
+| `guis.yml` | menu *structure*: which slot each button sits in, its icon, row counts |
+| `sounds.yml` | every sound the plugin plays |
+| `pvpbot.yml` | the PvP bot's difficulty tuning, its named presets, and the kit gallery |
+
+Each is heavily commented — the file itself is the reference, and this section
+only covers what is worth knowing before opening one.
+
+**`config.yml`** has a section per subsystem. The parts most worth knowing
+about:
+
+- `world.gamerules` is an open list, matched against the server's own registry
+  rather than a fixed set — a gamerule added by a later Minecraft release can
+  be set here without waiting for a plugin update, and one this server does not
+  know is reported in the console and skipped. `world.difficulty` and
+  `world.time` sit beside it. All three are pushed onto the live world on
+  reload.
+- `session` carries the arena rules *and* the protection switches that keep the
+  practice world inert — pistons, crafting, ender chests, vehicles, elytra,
+  hunger, item drops. Each one has a comment saying what it was protecting
+  against; turn one off knowing that.
+- `mlg` and `bedbreak` hold the **server-wide defaults** for those modes. An
+  arena's own `settings:` block in its `arena.yml` overrides whichever keys it
+  names, so you can retune every MLG arena at once and still let one of them
+  disagree.
+- `rush` covers the generators, the emulated MBedwars combat items (TNT fuse,
+  fireball power, explosion knockback, the bridge egg, the rescue platform) and
+  the dealer's villager profession.
+- `spectate` can be switched off entirely, and carries the leash margin and the
+  three hotbar tools' materials and slots.
+
+**`sounds.yml`** names each cue by what it *means* — `run.finish-pb`, not
+`ENTITY_PLAYER_LEVELUP` — and maps it to `SOUND [volume] [pitch]`. Set one to
+`''` to silence just that cue; `effects.sounds: false` in `config.yml` silences
+all of them. Sounds resolve through the server's registry, so either spelling
+works (`ENTITY_PLAYER_LEVELUP` or `minecraft:entity.player.levelup`) and a name
+this server does not know is reported once rather than throwing.
+
+**`pvpbot.yml`** is the largest of them, and is documented in full under
+[the pvpbot mode](#pvpbot).
 
 ## Messages
 
@@ -694,19 +792,49 @@ cleared when it finishes.
 
 ## Reload and world regeneration
 
-`/practice reload` is all-or-nothing. It parses config.yml on a throwaway
-object **before** touching anything, because Bukkit's own `reloadConfig()`
-swallows a syntax error and hands back an empty config — on a live server that
-would silently reset every setting to its default. A broken file changes
-nothing and says why. The previous `PCConfig` is likewise kept until the new
-one has been built without throwing, and arenas are collected into a local map
-and swapped in only once the whole pass succeeds.
+`/practice reload` re-reads **every** admin-editable file — `config.yml`,
+`messages.yml`, `guis.yml`, `sounds.yml`, `pvpbot.yml` and every arena folder.
+The plugin is built so that changing a setting never needs a server restart.
 
-Because grid spacing, base Y and arena definitions all describe arenas that are
-already pasted, a reload with anyone practicing (or the setup wizard open)
-stops and asks: `/practice reload confirm` ends and fully restores those
-sessions first. Changing `world.name` is reported as needing
-`/practice world regen`.
+**All or nothing.** Each file is parsed on a throwaway object *before*
+anything live is replaced, because Bukkit's own `reloadConfig()` swallows a
+syntax error and hands back an empty config — on a live server that would
+silently reset every setting to its default. One broken file changes nothing at
+all and says why. The previous `PCConfig` is likewise kept until the new one
+has been built without throwing, and arenas are collected into a local map and
+swapped in only once the whole pass succeeds.
+
+**Runs are only interrupted when they have to be.** Almost everything in these
+files describes what happens *next* — text, menu layout, sounds, bot tuning and
+kits, mode settings, protection rules, effects — and is simply picked up by
+whatever asks for it after the swap. A reload that touches only those applies
+live and says so; nobody's run ends.
+
+Four things are different, because they describe arenas that are *already
+pasted into the world*:
+
+| Change | Why it interrupts |
+|---|---|
+| `world.name` | the arenas live in the old world |
+| `grid.spacing` | slot positions would move under pasted arenas |
+| `grid.base-y` | same, vertically |
+| `grid.max-schematic-size` | the size rule the pasted arenas were admitted under |
+| an edited `arena.yml` or `arena.schem` | the file no longer describes the copy in the ground |
+
+Only then does the reload stop and ask, listing exactly what changed;
+`/practice reload confirm` ends and fully restores those sessions first. Arena
+files are spotted by a fingerprint of their size and timestamp, taken fresh on
+each reload and committed only once the reload actually succeeds.
+
+Gamerules, difficulty and the fixed time of day are pushed onto the live world
+on every reload, so changing one of those needs neither a regeneration nor a
+restart. Changing `world.name` is reported as needing `/practice world regen
+confirm`; the old world stays in use until you run it.
+
+The one thing a reload genuinely cannot pick up is `plugin.yml` — Bukkit
+registers permissions and commands at load time, so adding a permission node
+there still needs a restart. Nothing PracticeCore itself owns is in that
+position.
 
 `/practice world regen confirm` unloads, deletes and rebuilds the practice
 world from nothing, then restarts the grid at slot 0. Every session is ended
@@ -725,20 +853,38 @@ plugin owns carries a `data-version` (see `config/Versions.java`):
 | `config.yml` | `config-version` | `PracticeCorePlugin.configSteps` |
 | `messages.yml` | `config-version` | `Messages.steps` |
 | `guis.yml` | `config-version` | `GuiConfig.steps` |
+| `sounds.yml` | `config-version` | `SoundConfig.steps` |
+| `pvpbot.yml` | `config-version` | `BotTuning.steps` |
 | `templates/[<category>/]<name>/arena.yml` | `config-version` | `ArenaTemplate.migrate` |
 | `playerdata/<uuid>.yml` | `data-version` | `StatsStore.migrate` |
 | `snapshots/<uuid>.yml` | `data-version` | version-checked on restore |
 
-The admin-editable YAML files share one engine, `config/YamlMigrator`.
+The admin-editable YAML files share one engine, `config/YamlMigrator`, wrapped
+by `config/ConfigFile` — which also lays the jar's copy underneath yours as
+defaults, so a key you delete by hand still resolves instead of collapsing to
+whatever fallback the call site happened to pass.
 
 On startup, an out-of-date file is copied into `backups/` and then upgraded:
-renamed keys are moved by the version steps, and `config.yml` additionally gets
-any key the jar defines but your file lacks — values and comments you already
-had are preserved, so a new setting never silently runs on a hard-coded
-default. A file stamped **newer** than this build understands is left strictly
-alone and reported, rather than being "fixed up" into a downgrade. Playerdata
-migrates in memory and stamps itself on the next write, so reading someone's
-stats never rewrites their file.
+renamed keys are moved by the version steps, and every file gets any key the
+jar defines but yours lacks — **with the comments that explain it**, so a new
+setting arrives documented rather than as a bare line. Values you already had
+are never touched. A file stamped **newer** than this build understands is left
+strictly alone and reported, rather than being "fixed up" into a downgrade.
+Playerdata migrates in memory and stamps itself on the next write, so reading
+someone's stats never rewrites their file.
+
+**Curated sections are the exception to that top-up.** Where a file defines a
+*collection* rather than a set of settings, the list is yours outright and an
+entry you delete stays deleted:
+
+| File | Curated section |
+|---|---|
+| `pvpbot.yml` | `kits`, `presets` |
+| `guis.yml` | `categories.entries` |
+| `config.yml` | `world.gamerules` |
+
+(Removing such a section *entirely* still gets you the shipped one back — that
+is a lost file, not a decision.)
 
 To add a format change: bump the constant in `Versions`, add the step to that
 file's migrator, and ship it. The backup and top-up are automatic. `config.yml`

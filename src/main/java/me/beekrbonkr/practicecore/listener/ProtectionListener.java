@@ -60,7 +60,8 @@ public final class ProtectionListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onHunger(FoodLevelChangeEvent event) {
-        if (event.getEntity() instanceof Player player
+        if (plugin.pcConfig().freezeHunger()
+                && event.getEntity() instanceof Player player
                 && plugin.sessions().get(player.getUniqueId()) != null) {
             // Hunger would eventually break sprint-bridging.
             event.setCancelled(true);
@@ -69,7 +70,8 @@ public final class ProtectionListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onDrop(PlayerDropItemEvent event) {
-        if (plugin.worldService().isPracticeWorld(event.getPlayer().getWorld())
+        if (plugin.pcConfig().blockItemDrops()
+                && plugin.worldService().isPracticeWorld(event.getPlayer().getWorld())
                 && !plugin.setup().isAdmin(event.getPlayer().getUniqueId())) {
             event.setCancelled(true);
         }
@@ -99,7 +101,8 @@ public final class ProtectionListener implements Listener {
     /** Kits are exact: crafting could mint items no kit contains. */
     @EventHandler(ignoreCancelled = true)
     public void onCraft(org.bukkit.event.inventory.CraftItemEvent event) {
-        if (event.getWhoClicked() instanceof Player player
+        if (plugin.pcConfig().blockCrafting()
+                && event.getWhoClicked() instanceof Player player
                 && plugin.sessions().get(player.getUniqueId()) != null) {
             event.setCancelled(true);
         }
@@ -119,7 +122,8 @@ public final class ProtectionListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onGlide(EntityToggleGlideEvent event) {
-        if (event.isGliding() && event.getEntity() instanceof Player player
+        if (plugin.pcConfig().blockElytra()
+                && event.isGliding() && event.getEntity() instanceof Player player
                 && plugin.sessions().get(player.getUniqueId()) != null) {
             event.setCancelled(true);
         }
@@ -129,7 +133,8 @@ public final class ProtectionListener implements Listener {
     public void onVehicleEnter(VehicleEnterEvent event) {
         // Vehicle movement bypasses PlayerMoveEvent — the bounds backstop
         // would go blind, so vehicles are simply banned during sessions.
-        if (event.getEntered() instanceof Player player
+        if (plugin.pcConfig().blockVehicles()
+                && event.getEntered() instanceof Player player
                 && plugin.sessions().get(player.getUniqueId()) != null) {
             event.setCancelled(true);
         }
@@ -193,14 +198,16 @@ public final class ProtectionListener implements Listener {
      */
     @EventHandler(ignoreCancelled = true)
     public void onPistonExtend(BlockPistonExtendEvent event) {
-        if (plugin.worldService().isPracticeWorld(event.getBlock().getWorld())) {
+        if (plugin.pcConfig().blockPistons()
+                && plugin.worldService().isPracticeWorld(event.getBlock().getWorld())) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onPistonRetract(BlockPistonRetractEvent event) {
-        if (plugin.worldService().isPracticeWorld(event.getBlock().getWorld())) {
+        if (plugin.pcConfig().blockPistons()
+                && plugin.worldService().isPracticeWorld(event.getBlock().getWorld())) {
             event.setCancelled(true);
         }
     }
@@ -258,7 +265,8 @@ public final class ProtectionListener implements Listener {
      */
     @EventHandler(ignoreCancelled = true)
     public void onOpenEnderChest(org.bukkit.event.inventory.InventoryOpenEvent event) {
-        if (event.getInventory().getType() == org.bukkit.event.inventory.InventoryType.ENDER_CHEST
+        if (plugin.pcConfig().blockEnderChests()
+                && event.getInventory().getType() == org.bukkit.event.inventory.InventoryType.ENDER_CHEST
                 && event.getPlayer() instanceof Player player
                 && plugin.sessions().get(player.getUniqueId()) != null) {
             event.setCancelled(true);

@@ -12,7 +12,6 @@ import me.beekrbonkr.practicecore.util.TimeFormat;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
-import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -323,9 +322,7 @@ public final class SessionManager {
         } else {
             msg.send(player, "session.ready", "arena", template.displayName());
         }
-        if (plugin.pcConfig().sounds()) {
-            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.7f, 1.5f);
-        }
+        plugin.sounds().play(player, "session.ready");
     }
 
     /**
@@ -454,15 +451,13 @@ public final class SessionManager {
     }
 
     /**
-     * Ticks after a spawn at which the kit is re-verified. A single give
-     * occasionally does not stick — a plugin clearing inventories on teleport,
-     * or the client missing the update packet mid-teleport — so the kit is
-     * checked several times over the first two seconds.
+     * Re-verifies the kit at each of the configured delays after a spawn. A
+     * single give occasionally does not stick — a plugin clearing inventories
+     * on teleport, or the client missing the update packet mid-teleport — so
+     * the kit is checked several times over the first couple of seconds.
      */
-    private static final long[] KIT_VERIFY_TICKS = {5L, 20L, 40L};
-
     private void verifyKitSoon(Player player, PracticeSession session) {
-        for (long delay : KIT_VERIFY_TICKS) {
+        for (long delay : plugin.pcConfig().kitVerifyTicks()) {
             Bukkit.getScheduler().runTaskLater(plugin,
                     () -> verifyKit(player, session), delay);
         }
@@ -504,9 +499,7 @@ public final class SessionManager {
         }
         if (repaired) {
             plugin.messages().actionBar(player, "inventory.kit-restored");
-            if (plugin.pcConfig().sounds()) {
-                player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.7f, 1.0f);
-            }
+            plugin.sounds().play(player, "session.kit-restored");
         }
         player.updateInventory();
     }
@@ -601,11 +594,7 @@ public final class SessionManager {
                     "delta", delta,
                     "arena", displayName);
         }
-        if (plugin.pcConfig().sounds()) {
-            player.playSound(player.getLocation(),
-                    pb ? Sound.ENTITY_PLAYER_LEVELUP : Sound.ENTITY_EXPERIENCE_ORB_PICKUP,
-                    0.8f, pb ? 1.4f : 1.8f);
-        }
+        plugin.sounds().play(player, pb ? "run.finish-pb" : "run.finish");
     }
 
     /**
@@ -639,11 +628,7 @@ public final class SessionManager {
                     "previous-holder", previousRecord.displayName(),
                     "delta", TimeFormat.precise(previousRecord.millis() - millis));
         }
-        if (plugin.pcConfig().sounds()) {
-            for (Player online : Bukkit.getOnlinePlayers()) {
-                online.playSound(online.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 0.5f, 1.6f);
-            }
-        }
+        plugin.sounds().broadcast("run.record-broadcast");
         return true;
     }
 
@@ -667,9 +652,7 @@ public final class SessionManager {
         }
         session.setState(SessionState.RESETTING);
         plugin.messages().send(player, "run.failed");
-        if (plugin.pcConfig().sounds()) {
-            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.7f, 0.6f);
-        }
+        plugin.sounds().play(player, "run.failed");
         resetArena(player, session);
     }
 
@@ -687,15 +670,15 @@ public final class SessionManager {
         resetArena(player, session);
         plugin.messages().send(player, "run.restarted",
                 "arena", session.template().displayName());
-        if (plugin.pcConfig().sounds()) {
-            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.7f, 1.1f);
-        }
+        plugin.sounds().play(player, "run.restarted");
     }
 
     private void resetArena(Player player, PracticeSession session) {
         session.mode().onArenaReset(plugin, player, session);
         session.tracker().revertAll();
-        wipeContainers(session);
+        if (plugin.pcConfig().wipeContainers()) {
+            wipeContainers(session);
+        }
         clearNonPlayerEntities(session);
         session.resetTimer();
         giveKit(player, session);
@@ -850,7 +833,8 @@ public final class SessionManager {
      */
     private void releaseLater(Slot slot) {
         if (plugin.isEnabled()) {
-            Bukkit.getScheduler().runTaskLater(plugin, () -> plugin.allocator().release(slot), 60L);
+            Bukkit.getScheduler().runTaskLater(plugin, () -> plugin.allocator().release(slot),
+                    plugin.pcConfig().slotReleaseDelayTicks());
         } else {
             plugin.allocator().release(slot);
         }

@@ -30,11 +30,6 @@ import java.util.UUID;
  */
 public final class RushService {
 
-    /** Ticks between generator task passes; drop countdowns run on this beat. */
-    private static final int TICK_PERIOD = 5;
-    /** How close (blocks, squared) an item must be to a generator to count toward its cap. */
-    private static final double CAP_RADIUS_SQ = 4;
-
     private final PracticeCorePlugin plugin;
     /** Item entities allowed to spawn; value = generator id that dropped them. */
     private final NamespacedKey dropKey;
@@ -232,26 +227,21 @@ public final class RushService {
     public void launchFireball(Player player) {
         Vector direction = player.getEyeLocation().getDirection();
         org.bukkit.entity.Fireball fireball = player.launchProjectile(
-                org.bukkit.entity.Fireball.class, direction.multiply(1.5));
+                org.bukkit.entity.Fireball.class,
+                direction.multiply(plugin.pcConfig().rushFireballSpeed()));
         fireball.setIsIncendiary(false);
-        fireball.setYield(3.0f);
-        if (plugin.pcConfig().sounds()) {
-            player.getWorld().playSound(player.getLocation(),
-                    org.bukkit.Sound.ENTITY_GHAST_SHOOT, 0.8f, 1.0f);
-        }
+        fireball.setYield((float) plugin.pcConfig().rushFireballPower());
+        plugin.sounds().playAt(player.getLocation(), "rush.fireball");
     }
 
     /** MBedwars-style auto-ignited TNT: no block, just the primed entity. */
     public void primeTnt(Player player, Location blockLocation) {
         blockLocation.getWorld().spawn(blockLocation.toCenterLocation(),
                 org.bukkit.entity.TNTPrimed.class, tnt -> {
-                    tnt.setFuseTicks(60);
+                    tnt.setFuseTicks(plugin.pcConfig().rushTntFuseTicks());
                     tnt.setSource(player);
                 });
-        if (plugin.pcConfig().sounds()) {
-            blockLocation.getWorld().playSound(blockLocation,
-                    org.bukkit.Sound.ENTITY_TNT_PRIMED, 1.0f, 1.0f);
-        }
+        plugin.sounds().playAt(blockLocation, "rush.tnt-primed");
     }
 
     /**
@@ -260,7 +250,11 @@ public final class RushService {
      * directly. Strength falls off linearly to nothing at {@code radius}.
      */
     public void applyExplosionKnockback(Location center) {
-        double radius = 5.0;
+        double radius = plugin.pcConfig().rushExplosionRadius();
+        if (radius <= 0) {
+            return;
+        }
+        double power = plugin.pcConfig().rushExplosionStrength();
         for (Entity entity : center.getWorld()
                 .getNearbyEntities(center, radius, radius, radius)) {
             if (!(entity instanceof Player player)
@@ -272,7 +266,7 @@ public final class RushService {
             if (distance > radius) {
                 continue;
             }
-            double strength = 1.6 * (1.0 - distance / radius);
+            double strength = power * (1.0 - distance / radius);
             Vector push = eye.toVector().subtract(center.toVector());
             if (push.lengthSquared() < 0.01) {
                 push = new Vector(0, 1, 0);
@@ -290,21 +284,21 @@ public final class RushService {
      */
     public void throwBridgeEgg(Player player, PracticeSession session) {
         org.bukkit.entity.Egg egg = player.launchProjectile(org.bukkit.entity.Egg.class,
-                player.getEyeLocation().getDirection().multiply(1.4));
-        if (plugin.pcConfig().sounds()) {
-            player.getWorld().playSound(player.getLocation(),
-                    org.bukkit.Sound.ENTITY_EGG_THROW, 0.8f, 0.9f);
-        }
+                player.getEyeLocation().getDirection()
+                        .multiply(plugin.pcConfig().rushBridgeEggSpeed()));
+        plugin.sounds().playAt(player.getLocation(), "rush.bridge-egg");
         Material wool = bridgeWool(player);
+        int lifetime = plugin.pcConfig().rushBridgeEggLifetimeTicks();
+        int below = plugin.pcConfig().rushBridgeEggDropBelow();
         BukkitTask[] builder = new BukkitTask[1];
         builder[0] = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (!egg.isValid() || plugin.sessions().get(player.getUniqueId()) != session
-                    || egg.getTicksLived() > 60) {
+                    || egg.getTicksLived() > lifetime) {
                 egg.remove();
                 builder[0].cancel();
                 return;
             }
-            Location spot = egg.getLocation().subtract(0, 2, 0);
+            Location spot = egg.getLocation().subtract(0, below, 0);
             placeTracked(session, spot.getBlock(), wool);
         }, 1L, 1L);
     }
@@ -316,19 +310,22 @@ public final class RushService {
      * @return false when nothing could be built (entirely out of bounds)
      */
     public boolean buildRescuePlatform(Player player, PracticeSession session) {
-        Location center = player.getLocation().subtract(0, 2, 0);
+        int radius = plugin.pcConfig().rushRescuePlatformRadius();
+        Material material = plugin.pcConfig().rushRescuePlatformMaterial();
+        Location center = player.getLocation()
+                .subtract(0, plugin.pcConfig().rushRescuePlatformDepth(), 0);
         boolean built = false;
-        for (int dx = -2; dx <= 2; dx++) {
-            for (int dz = -2; dz <= 2; dz++) {
-                if (Math.abs(dx) == 2 && Math.abs(dz) == 2) {
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                if (radius > 0 && Math.abs(dx) == radius && Math.abs(dz) == radius) {
                     continue; // rounded corners, like the MBedwars platform
                 }
                 built |= placeTracked(session,
-                        center.clone().add(dx, 0, dz).getBlock(), Material.SLIME_BLOCK);
+                        center.clone().add(dx, 0, dz).getBlock(), material);
             }
         }
-        if (built && plugin.pcConfig().sounds()) {
-            player.getWorld().playSound(center, org.bukkit.Sound.BLOCK_SLIME_BLOCK_PLACE, 1.0f, 0.9f);
+        if (built) {
+            plugin.sounds().playAt(center, "rush.rescue-platform");
         }
         return built;
     }
@@ -363,8 +360,27 @@ public final class RushService {
             villager.setCollidable(false);
             villager.setPersistent(true);
             villager.setRemoveWhenFarAway(false);
-            villager.setProfession(Villager.Profession.LIBRARIAN);
+            villager.setProfession(dealerProfession());
         });
+    }
+
+    /**
+     * The villager profession dealers wear. Resolved through the registry
+     * rather than the enum, so a profession added by a later release works and
+     * an unknown name degrades to a plain villager instead of throwing.
+     */
+    private Villager.Profession dealerProfession() {
+        String name = plugin.pcConfig().rushDealerProfession();
+        org.bukkit.NamespacedKey key = org.bukkit.NamespacedKey
+                .fromString(name.trim().toLowerCase(java.util.Locale.ROOT));
+        Villager.Profession profession = key == null ? null
+                : org.bukkit.Registry.VILLAGER_PROFESSION.get(key);
+        if (profession == null) {
+            plugin.getLogger().warning("config.yml: rush.dealer-profession '" + name
+                    + "' is not a villager profession this server knows — using NONE.");
+            return Villager.Profession.NONE;
+        }
+        return profession;
     }
 
     public boolean isDealer(Entity entity) {
@@ -398,16 +414,15 @@ public final class RushService {
             plugin.messages().send(player, "rush.shop-empty");
             return;
         }
-        if (plugin.pcConfig().sounds()) {
-            player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_TRADE, 0.7f, 1.0f);
-        }
+        plugin.sounds().play(player, "rush.shop-open");
         new me.beekrbonkr.practicecore.gui.RushShopMenu(plugin, player, shop).open();
     }
 
     // ----------------------------------------------------- generator ticking
 
     public void startTask() {
-        task = Bukkit.getScheduler().runTaskTimer(plugin, this::tickAll, TICK_PERIOD, TICK_PERIOD);
+        long period = plugin.pcConfig().rushGeneratorTickPeriod();
+        task = Bukkit.getScheduler().runTaskTimer(plugin, this::tickAll, period, period);
     }
 
     public void restartTask() {
@@ -424,6 +439,7 @@ public final class RushService {
     }
 
     private void tickAll() {
+        int period = plugin.pcConfig().rushGeneratorTickPeriod();
         for (PracticeSession session : plugin.sessions().all()) {
             if (!(session.mode() instanceof RushMode)
                     || !(session.modeState() instanceof RushState state)) {
@@ -435,7 +451,7 @@ public final class RushService {
                 continue;
             }
             for (RushState.ActiveGenerator generator : state.generators()) {
-                generator.countdown -= TICK_PERIOD;
+                generator.countdown -= period;
                 if (generator.countdown > 0) {
                     continue;
                 }
@@ -450,10 +466,12 @@ public final class RushService {
     }
 
     private int nearbyDrops(Location spot, Material material) {
+        double radius = plugin.pcConfig().rushGeneratorCapRadius();
+        double radiusSq = radius * radius;
         int total = 0;
-        for (Entity entity : spot.getWorld().getNearbyEntities(spot, 2, 2, 2)) {
+        for (Entity entity : spot.getWorld().getNearbyEntities(spot, radius, radius, radius)) {
             if (entity instanceof Item item && item.getItemStack().getType() == material
-                    && spot.distanceSquared(item.getLocation()) <= CAP_RADIUS_SQ) {
+                    && spot.distanceSquared(item.getLocation()) <= radiusSq) {
                 total += item.getItemStack().getAmount();
             }
         }

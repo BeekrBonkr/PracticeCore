@@ -11,13 +11,19 @@ package me.beekrbonkr.practicecore.config;
 public final class Versions {
 
     /** config.yml — admin-editable. */
-    public static final int CONFIG = 3;
+    public static final int CONFIG = 4;
 
     /** messages.yml — admin-editable. */
     public static final int MESSAGES = 5;
 
     /** guis.yml — admin-editable menu layout. */
     public static final int GUIS = 1;
+
+    /** sounds.yml — admin-editable sound cues. */
+    public static final int SOUNDS = 1;
+
+    /** pvpbot.yml — admin-editable bot tuning and PvP kits. */
+    public static final int PVPBOT = 1;
 
     /** templates/[&lt;category&gt;/]&lt;name&gt;/arena.yml — admin-editable. */
     public static final int ARENA = 3;

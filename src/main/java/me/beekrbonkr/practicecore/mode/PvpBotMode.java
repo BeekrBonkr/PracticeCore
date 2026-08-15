@@ -114,7 +114,10 @@ public final class PvpBotMode implements Mode {
     @Override
     public Map<Integer, ItemStack> arrangeKit(PracticeCorePlugin plugin, Player player,
                                               me.beekrbonkr.practicecore.template.ArenaTemplate template) {
-        BotSettings settings = BotSettings.load(plugin.stats(), player.getUniqueId());
+        BotSettings settings = BotSettings.load(plugin, player.getUniqueId());
+        if (settings.kit() == null) {
+            return Map.of(); // pvpbot.yml defines no kits — nothing to hand out
+        }
         Map<Integer, ItemStack> kit = settings.kit().kit();
         Map<Integer, String> saved = plugin.stats().kitLayout(player.getUniqueId(),
                 PvpBotService.layoutKey(settings.kit()));
@@ -166,15 +169,18 @@ public final class PvpBotMode implements Mode {
         if (fight == null) {
             return null;
         }
-        BotSettings.Preset preset = fight.settings.matchingPreset();
+        me.beekrbonkr.practicecore.pvpbot.BotPreset preset = fight.settings.matchingPreset();
+        String difficultyKey = preset == null
+                ? "gui.pvpbot.preset.short.custom" : preset.messageKey("short");
+        Component difficulty = plugin.messages().raw(difficultyKey).isEmpty()
+                ? Component.text(preset == null ? "Custom" : preset.configuredName())
+                : plugin.messages().component(difficultyKey);
         return plugin.messages().lore("board.pvpbot-lines",
                 // The difficulty label carries its own color, so it goes in as
                 // a rendered reference rather than as literal text.
-                plugin.messages().ref("difficulty", "gui.pvpbot.preset.short."
-                        + (preset == null ? "custom" : preset.name().toLowerCase(Locale.ROOT))),
+                plugin.messages().ref("difficulty", difficulty),
                 "arena", session.template().displayName(),
-                "kit", plugin.messages().raw("gui.pvpbot.kit.option."
-                        + fight.settings.kit().name().toLowerCase(Locale.ROOT)),
+                "kit", plugin.botTuning().kits().displayName(fight.settings.kit()),
                 "kills", String.valueOf(fight.kills),
                 "deaths", String.valueOf(fight.deaths),
                 "hits", String.valueOf(fight.hitsLanded),

@@ -953,7 +953,8 @@ public final class SetupManager {
         }
         if (plugin.isEnabled()) {
             Slot slot = session.slot;
-            Bukkit.getScheduler().runTaskLater(plugin, () -> plugin.allocator().release(slot), 60L);
+            Bukkit.getScheduler().runTaskLater(plugin, () -> plugin.allocator().release(slot),
+                    plugin.pcConfig().slotReleaseDelayTicks());
         } else {
             plugin.allocator().release(session.slot);
         }

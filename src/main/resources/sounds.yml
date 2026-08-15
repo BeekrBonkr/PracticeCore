@@ -1,0 +1,92 @@
+# PracticeCore sound cues
+#
+# Every sound the plugin plays, named by what it means rather than by which
+# sound it is. One line per cue:
+#
+#   <cue>: '<SOUND> [volume] [pitch]'
+#
+#   run.finish-pb: 'ENTITY_PLAYER_LEVELUP 0.8 1.4'
+#
+# - Volume defaults to 1.0, pitch to 1.0. Pitch is clamped to 0.5-2.0 by the
+#   game; volume above 1.0 only widens the radius others hear it from.
+# - Set a cue to '' to silence just that one.
+# - `effects.sounds: false` in config.yml silences all of them at once.
+# - Names may be written either way: ENTITY_PLAYER_LEVELUP or the registry key
+#   minecraft:entity.player.levelup. Anything this server does not know is
+#   reported in the console once and then stays quiet.
+#
+# Do not edit config-version by hand; PracticeCore uses it to migrate this file
+# across upgrades (backups land in backups/).
+config-version: 1
+
+# --------------------------------------------------------------------- menus
+menu:
+  # Every menu opening. refresh() after a click is deliberately silent.
+  open: 'BLOCK_NOTE_BLOCK_HAT 0.4 1.7'
+  # Any button that did something.
+  click: 'UI_BUTTON_CLICK 0.6 1.4'
+  # A button that refused — locked arena, unaffordable purchase.
+  deny: 'BLOCK_NOTE_BLOCK_BASS 0.7 0.7'
+  # A sidebar/settings toggle turning on, and turning off.
+  toggle-on: 'UI_BUTTON_CLICK 0.6 1.6'
+  toggle-off: 'UI_BUTTON_CLICK 0.6 1.0'
+  # Picking a kit or an arena tile out of a gallery.
+  select: 'BLOCK_NOTE_BLOCK_PLING 0.7 0.8'
+
+# ------------------------------------------------------------------ sessions
+session:
+  # Arena entered and ready to run.
+  ready: 'BLOCK_NOTE_BLOCK_PLING 0.7 1.5'
+  # A kit item that failed to arrive was put back.
+  kit-restored: 'ENTITY_ITEM_PICKUP 0.7 1.0'
+
+run:
+  # Crossing the line: an ordinary finish, and one that set a personal best.
+  finish: 'ENTITY_EXPERIENCE_ORB_PICKUP 0.8 1.8'
+  finish-pb: 'ENTITY_PLAYER_LEVELUP 0.8 1.4'
+  # Failing (void, hard landing) and restarting by hand.
+  failed: 'BLOCK_NOTE_BLOCK_BASS 0.7 0.6'
+  restarted: 'BLOCK_NOTE_BLOCK_PLING 0.7 1.1'
+  # The server-wide chime when someone takes the #1 spot on an arena.
+  # Every online player hears it — turn it down before turning it off.
+  record-broadcast: 'BLOCK_NOTE_BLOCK_BELL 0.5 1.6'
+
+# ---------------------------------------------------------------------- modes
+mlg:
+  # The glass platform breaking away as the player commits to the fall.
+  platform-break: 'BLOCK_GLASS_BREAK 0.8 1.0'
+  # Touching the clutch water.
+  success: 'ENTITY_PLAYER_LEVELUP 0.8 1.4'
+
+rush:
+  # Opening the mirrored MBedwars shop at a dealer.
+  shop-open: 'ENTITY_VILLAGER_TRADE 0.7 1.0'
+  # A completed purchase.
+  purchase: 'ENTITY_ITEM_PICKUP 0.8 1.2'
+  # The emulated special items.
+  fireball: 'ENTITY_GHAST_SHOOT 0.8 1.0'
+  tnt-primed: 'ENTITY_TNT_PRIMED 1.0 1.0'
+  bridge-egg: 'ENTITY_EGG_THROW 0.8 0.9'
+  rescue-platform: 'BLOCK_SLIME_BLOCK_PLACE 1.0 0.9'
+  # A shop special this practice mode cannot emulate.
+  special-unsupported: 'BLOCK_NOTE_BLOCK_BASS 0.7 0.7'
+
+pvpbot:
+  # The player losing a stock, and taking one.
+  player-death: 'ENTITY_PLAYER_DEATH 0.7 1.0'
+  bot-death: 'ENTITY_PLAYER_LEVELUP 0.8 1.2'
+  # Both fighters being put back on their spawns after a stock.
+  player-respawn: 'ENTITY_ENDERMAN_TELEPORT 0.5 1.4'
+  bot-respawn: 'ENTITY_ENDERMAN_TELEPORT 0.5 1.0'
+  # A hit landing on the bot's raised 1.8 sword block.
+  block-hit: 'ITEM_SHIELD_BLOCK 0.6 1.4'
+  # The bot's ranged options.
+  rod-cast: 'ENTITY_FISHING_BOBBER_THROW 0.6 1.0'
+  bow-shot: 'ENTITY_SKELETON_SHOOT 0.7 1.1'
+
+# ------------------------------------------------------------------ spectating
+spectate:
+  # Starting to watch someone.
+  start: 'BLOCK_NOTE_BLOCK_PLING 0.7 1.5'
+  # The compass tool snapping back to the target.
+  teleport: 'ENTITY_ENDERMAN_TELEPORT 0.5 1.4'

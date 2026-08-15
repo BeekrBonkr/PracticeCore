@@ -68,23 +68,80 @@ public final class PracticeWorldService {
         if (world == null) {
             throw new IllegalStateException("Failed to create practice world '" + name + "'");
         }
-        world.setGameRule(GameRule.DO_MOB_SPAWNING, false);
-        world.setGameRule(GameRule.DO_INSOMNIA, false); // phantoms spawn even in void worlds
-        world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
-        world.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
-        world.setGameRule(GameRule.DO_FIRE_TICK, false);
-        world.setGameRule(GameRule.RANDOM_TICK_SPEED, 0);
-        world.setGameRule(GameRule.DO_IMMEDIATE_RESPAWN, true);
-        world.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
-        world.setGameRule(GameRule.KEEP_INVENTORY, true);
-        world.setGameRule(GameRule.SPAWN_RADIUS, 0);
-        world.setTime(6000L);
-        // NORMAL, not PEACEFUL: peaceful removes hostile mobs on the spot and
-        // zeroes their damage — the PvP bot (a husk) needs both to exist.
-        // Natural spawning stays off via DO_MOB_SPAWNING; only plugin-spawned
-        // entities (bots, dealers) ever appear.
-        world.setDifficulty(Difficulty.NORMAL);
+        applyWorldSettings();
         world.setAutoSave(false);
+    }
+
+    /**
+     * Pushes the configured gamerules, difficulty and time onto the live
+     * world. Called when the world is built and again after every reload, so
+     * changing any of them is a {@code /practice reload} rather than a world
+     * regeneration — let alone a restart.
+     */
+    public void applyWorldSettings() {
+        if (world == null) {
+            return;
+        }
+        applyGameRules(world);
+        world.setTime(plugin.pcConfig().worldTime());
+        // NORMAL by default, not PEACEFUL: peaceful removes hostile mobs on
+        // the spot and zeroes their damage — the PvP bot (a husk) needs both
+        // to exist. Natural spawning stays off via doMobSpawning; only
+        // plugin-spawned entities (bots, dealers) ever appear.
+        world.setDifficulty(difficulty());
+    }
+
+    /**
+     * Applies the gamerules from config.yml. Names are matched against the
+     * server's own registry rather than a fixed list, so a rule added by a
+     * later Minecraft release can be set without a plugin update — and one
+     * this server does not have is reported instead of silently ignored.
+     */
+    private void applyGameRules(World world) {
+        plugin.pcConfig().worldGameRuleFlags().forEach((name, value) -> {
+            GameRule<Boolean> rule = booleanRule(name);
+            if (rule == null) {
+                warnUnknownRule(name, "a true/false rule");
+            } else {
+                world.setGameRule(rule, value);
+            }
+        });
+        plugin.pcConfig().worldGameRuleNumbers().forEach((name, value) -> {
+            GameRule<Integer> rule = integerRule(name);
+            if (rule == null) {
+                warnUnknownRule(name, "a numeric rule");
+            } else {
+                world.setGameRule(rule, value);
+            }
+        });
+    }
+
+    @SuppressWarnings("unchecked")
+    private static GameRule<Boolean> booleanRule(String name) {
+        GameRule<?> rule = GameRule.getByName(name);
+        return rule != null && rule.getType() == Boolean.class ? (GameRule<Boolean>) rule : null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static GameRule<Integer> integerRule(String name) {
+        GameRule<?> rule = GameRule.getByName(name);
+        return rule != null && rule.getType() == Integer.class ? (GameRule<Integer>) rule : null;
+    }
+
+    private void warnUnknownRule(String name, String expected) {
+        plugin.getLogger().warning("config.yml: world.gamerules." + name
+                + " is not " + expected + " this server knows — skipped.");
+    }
+
+    private Difficulty difficulty() {
+        String name = plugin.pcConfig().worldDifficulty();
+        try {
+            return Difficulty.valueOf(name.trim().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("config.yml: world.difficulty '" + name
+                    + "' is not a difficulty — using NORMAL.");
+            return Difficulty.NORMAL;
+        }
     }
 
     /**

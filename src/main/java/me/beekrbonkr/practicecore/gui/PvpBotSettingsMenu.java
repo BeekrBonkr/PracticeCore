@@ -1,7 +1,9 @@
 package me.beekrbonkr.practicecore.gui;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
+import me.beekrbonkr.practicecore.pvpbot.BotPreset;
 import me.beekrbonkr.practicecore.pvpbot.BotSettings;
+import me.beekrbonkr.practicecore.pvpbot.PvpKit;
 import me.beekrbonkr.practicecore.session.PracticeSession;
 import me.beekrbonkr.practicecore.util.ItemBuilder;
 import net.kyori.adventure.text.Component;
@@ -30,7 +32,7 @@ public final class PvpBotSettingsMenu extends Menu {
                               PracticeSession session) {
         super(plugin, viewer, parent);
         this.session = session;
-        this.settings = BotSettings.load(plugin.stats(), viewer.getUniqueId());
+        this.settings = BotSettings.load(plugin, viewer.getUniqueId());
     }
 
     @Override
@@ -74,10 +76,14 @@ public final class PvpBotSettingsMenu extends Menu {
     // -------------------------------------------------------------- buttons
 
     private void kitButton(int slot) {
-        set(slot, ItemBuilder.of(settings.kit().icon())
+        PvpKit kit = settings.kit();
+        if (kit == null) {
+            return; // pvpbot.yml defines no kits; the gallery would be empty
+        }
+        set(slot, ItemBuilder.of(kit.icon())
                 .name(name("gui.pvpbot.kit.name"))
-                .lore(lore("gui.pvpbot.kit.lore", plugin.messages().ref("kit",
-                        "gui.pvpbot.kit.option." + lower(settings.kit().name()))))
+                .lore(lore("gui.pvpbot.kit.lore",
+                        "kit", plugin.botTuning().kits().displayName(kit)))
                 .glow(true)
                 .hideAttributes()
                 .build(), event -> {
@@ -87,27 +93,46 @@ public final class PvpBotSettingsMenu extends Menu {
     }
 
     /**
-     * The named difficulty presets — one click configures all six AI knobs
-     * at once. A hand-tuned mix that matches no preset reads as Custom, and
-     * clicking from Custom starts back at Rookie.
+     * The named difficulty presets — one click configures every AI knob at
+     * once. A hand-tuned mix that matches no preset reads as Custom, and
+     * clicking from Custom starts back at the first one in pvpbot.yml.
      */
     private void presetButton(int slot) {
-        BotSettings.Preset current = settings.matchingPreset();
-        String label = current == null ? "custom" : lower(current.name());
+        BotPreset current = settings.matchingPreset();
+        if (plugin.botTuning().presets().isEmpty()) {
+            return; // no presets configured — the individual knobs still work
+        }
         set(slot, ItemBuilder.of(
                         plugin.guis().buttonMaterial("pvpbot.buttons.preset", Material.NETHER_STAR))
                 .name(name("gui.pvpbot.preset.name"))
-                .lore(lore("gui.pvpbot.preset.lore", plugin.messages().ref("level",
-                        "gui.pvpbot.preset.option." + label)))
+                .lore(lore("gui.pvpbot.preset.lore",
+                        plugin.messages().ref("level", presetLabel(current, "option"))))
                 .glow(current != null)
                 .build(), event -> {
             click();
-            BotSettings.Preset next = current == null
-                    ? BotSettings.Preset.ROOKIE : current.next();
+            BotPreset next = plugin.botTuning().nextPreset(current);
+            if (next == null) {
+                return;
+            }
             plugin.stats().setPrefs(viewer.getUniqueId(), next.prefs());
-            settings = BotSettings.load(plugin.stats(), viewer.getUniqueId());
+            settings = BotSettings.load(plugin, viewer.getUniqueId());
             refresh();
         });
+    }
+
+    /**
+     * A preset's label, in the requested style. messages.yml wins so the
+     * bundled presets keep their taglines and colors; one an admin invented
+     * falls back to its own configured name.
+     */
+    private Component presetLabel(BotPreset preset, String style) {
+        String key = preset == null
+                ? "gui.pvpbot.preset." + style + ".custom" : preset.messageKey(style);
+        if (!plugin.messages().raw(key).isEmpty()) {
+            return plugin.messages().component(key);
+        }
+        return net.kyori.adventure.text.Component.text(preset == null ? "Custom"
+                : preset.configuredName().isEmpty() ? preset.id() : preset.configuredName());
     }
 
     private void gearButton(int slot) {
@@ -131,8 +156,8 @@ public final class PvpBotSettingsMenu extends Menu {
         set(slot, ItemBuilder.of(
                         plugin.guis().buttonMaterial("pvpbot.buttons.cps", Material.CLOCK))
                 .name(name("gui.pvpbot.cps.name"))
-                .lore(lore("gui.pvpbot.cps.lore",
-                        "cps", String.valueOf(settings.cps().clicks())))
+                .lore(lore("gui.pvpbot.cps.lore", "cps",
+                        String.valueOf(plugin.botTuning().clicksPerSecond(settings.cps()))))
                 .build(), event -> save("cps", settings.cps().next().name()));
     }
 
@@ -162,7 +187,7 @@ public final class PvpBotSettingsMenu extends Menu {
     private void save(String key, Object value) {
         click();
         plugin.stats().setPref(viewer.getUniqueId(), "pvpbot." + key, value);
-        settings = BotSettings.load(plugin.stats(), viewer.getUniqueId());
+        settings = BotSettings.load(plugin, viewer.getUniqueId());
         refresh();
     }
 

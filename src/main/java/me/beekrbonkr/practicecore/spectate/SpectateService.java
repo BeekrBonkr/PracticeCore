@@ -11,7 +11,6 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.Sound;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -48,11 +47,6 @@ public final class SpectateService {
     public static final String ITEM_MENU = "menu";
     public static final String ITEM_LEAVE = "leave";
 
-    /** Blocks past the target's arena walls a spectator may drift. */
-    private static final double LEASH_MARGIN = 12;
-    /** Ticks between leash/validity sweeps. */
-    private static final long TICK_PERIOD = 20L;
-
     private final PracticeCorePlugin plugin;
     private final NamespacedKey itemKey;
     /** Spectator → the player they are watching. */
@@ -67,13 +61,16 @@ public final class SpectateService {
     // ------------------------------------------------------------ lifecycle
 
     public void startTask() {
-        task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, TICK_PERIOD, TICK_PERIOD);
+        if (!plugin.pcConfig().spectateEnabled()) {
+            return;
+        }
+        long period = plugin.pcConfig().spectateTicks();
+        task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, period, period);
     }
 
+    /** Picks up a changed spectate.update-ticks after /practice reload. */
     public void restartTask() {
-        if (task != null) {
-            task.cancel();
-        }
+        shutdown();
         startTask();
     }
 
@@ -129,6 +126,10 @@ public final class SpectateService {
     public void start(Player spectator, Player target) {
         Messages msg = plugin.messages();
         UUID id = spectator.getUniqueId();
+        if (!plugin.pcConfig().spectateEnabled()) {
+            msg.send(spectator, "spectate.disabled");
+            return;
+        }
         if (spectator.equals(target)) {
             msg.send(spectator, "spectate.self");
             return;
@@ -186,9 +187,7 @@ public final class SpectateService {
                 "target", target.getName(),
                 "arena", targetSession.template().displayName());
         msg.send(target, "spectate.watcher-joined", "player", spectator.getName());
-        if (plugin.pcConfig().sounds()) {
-            spectator.playSound(spectator.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.7f, 1.5f);
-        }
+        plugin.sounds().play(spectator, "spectate.start");
     }
 
     // ----------------------------------------------------------------- stop
@@ -242,7 +241,8 @@ public final class SpectateService {
         if (!stop(spectator, true, messageKey)) {
             return false;
         }
-        if (!spectator.hasPermission("practicecore.use")) {
+        if (!plugin.pcConfig().spectateJoinDefaultArena()
+                || !spectator.hasPermission("practicecore.use")) {
             return true;
         }
         me.beekrbonkr.practicecore.template.ArenaTemplate arena =
@@ -284,9 +284,7 @@ public final class SpectateService {
             return;
         }
         spectator.teleport(perch(target));
-        if (plugin.pcConfig().sounds()) {
-            spectator.playSound(spectator.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 0.5f, 1.4f);
-        }
+        plugin.sounds().play(spectator, "spectate.teleport");
     }
 
     // ----------------------------------------------------------- the sweep
@@ -317,7 +315,8 @@ public final class SpectateService {
                 continue; // mid arena-switch — the next pass leashes to the new bounds
             }
             Location loc = spectator.getLocation();
-            BoundingBox leash = session.bounds().clone().expand(LEASH_MARGIN);
+            BoundingBox leash = session.bounds().clone()
+                    .expand(plugin.pcConfig().spectateLeashMargin());
             if (!plugin.worldService().isPracticeWorld(loc.getWorld())) {
                 continue; // an outbound teleport — the teleport listener owns it
             }
@@ -385,13 +384,17 @@ public final class SpectateService {
     }
 
     private void giveItems(Player spectator, Player target) {
+        var config = plugin.pcConfig();
         PlayerInventory inv = spectator.getInventory();
         inv.clear();
-        inv.setItem(0, tool(Material.COMPASS, "spectate.item.teleport", ITEM_TELEPORT,
-                "target", target.getName()));
-        inv.setItem(4, tool(Material.SPYGLASS, "spectate.item.menu", ITEM_MENU));
-        inv.setItem(8, tool(Material.RED_BED, "spectate.item.leave", ITEM_LEAVE));
-        inv.setHeldItemSlot(0);
+        inv.setItem(config.spectateItemSlot(ITEM_TELEPORT),
+                tool(config.spectateItemMaterial(ITEM_TELEPORT), "spectate.item.teleport",
+                        ITEM_TELEPORT, "target", target.getName()));
+        inv.setItem(config.spectateItemSlot(ITEM_MENU),
+                tool(config.spectateItemMaterial(ITEM_MENU), "spectate.item.menu", ITEM_MENU));
+        inv.setItem(config.spectateItemSlot(ITEM_LEAVE),
+                tool(config.spectateItemMaterial(ITEM_LEAVE), "spectate.item.leave", ITEM_LEAVE));
+        inv.setHeldItemSlot(config.spectateItemSlot(ITEM_TELEPORT));
     }
 
     private ItemStack tool(Material material, String key, String type, String... placeholders) {

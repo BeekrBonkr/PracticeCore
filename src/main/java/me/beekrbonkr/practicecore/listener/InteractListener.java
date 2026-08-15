@@ -15,8 +15,6 @@ import org.bukkit.inventory.EquipmentSlot;
 
 public final class InteractListener implements Listener {
 
-    private static final double MAX_TRIGGER_DISTANCE_SQ = 36; // 6 blocks
-
     private final PracticeCorePlugin plugin;
 
     public InteractListener(PracticeCorePlugin plugin) {
@@ -112,8 +110,9 @@ public final class InteractListener implements Listener {
             }
             return;
         }
+        double reach = plugin.pcConfig().triggerReach();
         if (player.getLocation().distanceSquared(block.getLocation().toCenterLocation())
-                > MAX_TRIGGER_DISTANCE_SQ) {
+                > reach * reach) {
             return;
         }
         plugin.sessions().finish(player, session);

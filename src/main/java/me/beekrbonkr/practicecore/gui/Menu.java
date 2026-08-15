@@ -6,7 +6,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
@@ -60,7 +59,7 @@ public abstract class Menu implements InventoryHolder {
         redraw();
         viewer.openInventory(inventory);
         // One consistent open cue across every menu; refresh() stays silent.
-        sound(Sound.BLOCK_NOTE_BLOCK_HAT, 0.4f, 1.7f);
+        sound("menu.open");
     }
 
     /** Rebuilds contents in place — used after a menu action changes state. */
@@ -188,17 +187,16 @@ public abstract class Menu implements InventoryHolder {
     }
 
     protected void click() {
-        sound(Sound.UI_BUTTON_CLICK, 0.6f, 1.4f);
+        sound("menu.click");
     }
 
     protected void deny() {
-        sound(Sound.BLOCK_NOTE_BLOCK_BASS, 0.7f, 0.7f);
+        sound("menu.deny");
     }
 
-    protected void sound(Sound sound, float volume, float pitch) {
-        if (plugin.pcConfig().sounds()) {
-            viewer.playSound(viewer.getLocation(), sound, volume, pitch);
-        }
+    /** Plays one of the cues named in sounds.yml to this menu's viewer. */
+    protected void sound(String cue) {
+        plugin.sounds().play(viewer, cue);
     }
 
     protected Menu parent() {

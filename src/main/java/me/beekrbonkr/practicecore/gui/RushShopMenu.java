@@ -194,7 +194,7 @@ public final class RushShopMenu extends Menu {
         if (overflow) {
             plugin.messages().actionBar(viewer, "rush.shop-inventory-full");
         }
-        sound(org.bukkit.Sound.ENTITY_ITEM_PICKUP, 0.8f, 1.2f);
+        sound("rush.purchase");
         refresh(); // afford states may have flipped
     }
 

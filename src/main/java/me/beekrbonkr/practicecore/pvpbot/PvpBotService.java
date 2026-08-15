@@ -49,24 +49,13 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public final class PvpBotService {
 
-    /** Ticks of top-up cadence for kit consumables. */
-    private static final int REFILL_TICKS = 60;
-    /** Ticks between health-name refreshes over the bot's head. */
-    private static final int NAME_TICKS = 5;
-    /** Ticks either fighter stays dead before respawning (the 3-second timer). */
-    private static final int RESPAWN_TICKS = 60;
-    /** How much of the incoming knockback a crouching bot still takes. */
-    public static final double CROUCH_KNOCKBACK_FACTOR = 0.6;
-    /** How much of it an s-tapping bot takes — the backward tap, not a stance. */
-    public static final double STAP_KNOCKBACK_FACTOR = 0.75;
-
     private final PracticeCorePlugin plugin;
     /** Bot entities; value = owning player's UUID. */
     private final NamespacedKey botKey;
     /** Packet-level player-model disguise; null without ProtocolLib. */
     private PlayerDisguise disguise;
     private BukkitTask task;
-    private int refillCountdown = REFILL_TICKS;
+    private int refillCountdown = 1;
 
     public PvpBotService(PracticeCorePlugin plugin) {
         this.plugin = plugin;
@@ -82,6 +71,10 @@ public final class PvpBotService {
     }
 
     // ------------------------------------------------------------ lifecycle
+
+    private BotTuning tuning() {
+        return plugin.botTuning();
+    }
 
     public void startTask() {
         task = Bukkit.getScheduler().runTaskTimer(plugin, this::tickAll, 1L, 1L);
@@ -119,10 +112,11 @@ public final class PvpBotService {
     /** Builds the fight for a fresh READY session and spawns the bot. */
     public void beginFight(Player player, PracticeSession session) {
         BotFight fight = new BotFight();
-        fight.settings = BotSettings.load(plugin.stats(), session.playerId());
+        fight.settings = BotSettings.load(plugin, session.playerId());
         fight.playerSpawn = session.spawn().clone();
         fight.botSpawn = resolveBotSpawn(session);
-        fight.resetStock();
+        fight.resetStock(tuning().stockGraceTicks(),
+                tuning().flatTicks("behavior.feint.initial-cooldown", 60));
         session.setModeState(fight);
         // A restart in the middle of a death hold must not carry the corpse's
         // blindness and slowness into the fresh fight.
@@ -171,7 +165,7 @@ public final class PvpBotService {
         if (ahead.lengthSquared() < 0.01) {
             ahead = new Vector(0, 0, 1);
         }
-        Location loc = spawn.clone().add(ahead.normalize().multiply(5));
+        Location loc = spawn.clone().add(ahead.normalize().multiply(tuning().spawnDistance()));
         if (!session.containsBlock(loc)) {
             loc = spawn.clone();
         }
@@ -195,7 +189,7 @@ public final class PvpBotService {
             // near a real player's sword damage instead of a zombie's maul.
             AttributeInstance attack = husk.getAttribute(attackDamageAttribute());
             if (attack != null) {
-                attack.setBaseValue(1.0);
+                attack.setBaseValue(tuning().baseAttackDamage());
             }
             // Zombies roll a little random knockback resistance — zero it so
             // hits launch the bot exactly like a player and combos connect.
@@ -208,7 +202,7 @@ public final class PvpBotService {
             // long leash lets the bot spot and chase the player from anywhere.
             AttributeInstance follow = husk.getAttribute(followRangeAttribute());
             if (follow != null) {
-                follow.setBaseValue(128.0);
+                follow.setBaseValue(tuning().followRange());
             }
             // The disguise must be registered before the entity tracker sends
             // the spawn packet, i.e. inside the spawn consumer.
@@ -219,7 +213,7 @@ public final class PvpBotService {
                 // (husks are 1.95 tall, players 1.8).
                 AttributeInstance scale = husk.getAttribute(scaleAttribute());
                 if (scale != null) {
-                    scale.setBaseValue(0.925);
+                    scale.setBaseValue(tuning().undisguisedScale());
                 }
             }
         });
@@ -251,8 +245,8 @@ public final class PvpBotService {
     }
 
     /** Where the floating tag sits: where a nameplate would (the real one is hidden). */
-    private static Location tagLocation(Husk bot) {
-        return bot.getLocation().add(0, bot.getHeight() + 0.35, 0);
+    private Location tagLocation(Husk bot) {
+        return bot.getLocation().add(0, bot.getHeight() + tuning().nameTagOffset(), 0);
     }
 
     /** Dresses the bot per the settings (kit mirror or gear-tier override). */
@@ -332,8 +326,11 @@ public final class PvpBotService {
      * knobs simply take effect on the next tick.
      */
     public void applySettings(Player player, PracticeSession session, BotFight fight) {
-        BotSettings fresh = BotSettings.load(plugin.stats(), session.playerId());
-        boolean kitChanged = fresh.kit() != fight.settings.kit();
+        BotSettings fresh = BotSettings.load(plugin, session.playerId());
+        // Compared by id, not identity: a /practice reload rebuilds every kit
+        // object, and re-dealing an unchanged loadout mid-fight would rip the
+        // player's inventory out from under them.
+        boolean kitChanged = !sameKit(fresh.kit(), fight.settings.kit());
         boolean gearChanged = kitChanged || fresh.gear() != fight.settings.gear();
         if (kitChanged) {
             captureLayout(player, fight); // the outgoing kit's arrangement
@@ -348,11 +345,15 @@ public final class PvpBotService {
         }
     }
 
+    private static boolean sameKit(PvpKit a, PvpKit b) {
+        return a == null ? b == null : b != null && a.id().equals(b.id());
+    }
+
     // ----------------------------------------------------------- kit layout
 
     /** The kit-layout storage key for one preset: shared across every arena. */
     public static String layoutKey(PvpKit kit) {
-        return "pvpbot-" + kit.name().toLowerCase(java.util.Locale.ROOT);
+        return "pvpbot-" + kit.id();
     }
 
     /**
@@ -361,7 +362,8 @@ public final class PvpBotService {
      * Armor slots are excluded; they always go back on the body.
      */
     public void captureLayout(Player player, BotFight fight) {
-        if (player == null || !player.isOnline() || fight == null || fight.settings == null) {
+        if (player == null || !player.isOnline() || fight == null
+                || fight.settings == null || fight.settings.kit() == null) {
             return;
         }
         var kitTypes = new java.util.HashSet<Material>();
@@ -427,22 +429,21 @@ public final class PvpBotService {
         fight.deaths++;
         plugin.messages().send(player, "pvpbot.chat.bot-killed-player", "hearts",
                 healthPoints(fight.bot != null && fight.bot.isValid() ? fight.bot.getHealth() : 0));
-        if (plugin.pcConfig().sounds()) {
-            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_DEATH, 0.7f, 1.0f);
-        }
+        plugin.sounds().play(player, "pvpbot.player-death");
         fight.deathAnchor = anchorFor(player, session, fight);
         holdAtAnchor(player, fight);
-        fight.playerRespawnTicks = RESPAWN_TICKS;
+        int hold = tuning().respawnTicks();
+        fight.playerRespawnTicks = hold;
         // A shade longer than the hold so they never flicker out early; the
         // respawn removes them explicitly. Slowness pins the corpse without
         // rubber-banding it — the anchor teleport only has to undo gravity.
         player.addPotionEffect(new PotionEffect(
                 org.bukkit.potion.PotionEffectType.BLINDNESS,
-                RESPAWN_TICKS + 20, 0, false, false));
+                hold + 20, 0, false, false));
         player.addPotionEffect(new PotionEffect(
                 org.bukkit.potion.PotionEffectType.SLOWNESS,
-                RESPAWN_TICKS + 20, 6, false, false));
-        sendDeathCountdown(player, RESPAWN_TICKS / 20);
+                hold + 20, 6, false, false));
+        sendDeathCountdown(player, secondsLeft(hold));
     }
 
     /**
@@ -473,6 +474,15 @@ public final class PvpBotService {
     }
 
     /**
+     * Whole seconds left on a hold, rounded up — a countdown must never show
+     * "0" while the player is still pinned, which a hold that is not a round
+     * number of seconds would otherwise do.
+     */
+    private static int secondsLeft(int ticks) {
+        return Math.max(1, (ticks + 19) / 20);
+    }
+
+    /**
      * The bot dropped — a kill on the board, and its body is gone for the
      * 3-second respawn timer, counted down above the player's hotbar.
      */
@@ -486,29 +496,26 @@ public final class PvpBotService {
                 "deaths", String.valueOf(fight.deaths));
         plugin.messages().send(player, "pvpbot.chat.player-killed-bot",
                 "hearts", healthPoints(player.getHealth()));
-        if (plugin.pcConfig().sounds()) {
-            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 1.2f);
-        }
+        plugin.sounds().play(player, "pvpbot.bot-death");
         // Health and kit refresh in place; the bot's body disappears until the
         // timer brings it back at its spawn — and the winner goes back to
         // their own spawn with it, so a kill can never become a spawn camp.
         resetStock(player, session, fight, false);
         despawn(fight);
-        fight.botRespawnTicks = RESPAWN_TICKS;
+        fight.botRespawnTicks = tuning().respawnTicks();
         plugin.messages().actionBar(player, "pvpbot.respawn-bar",
-                "seconds", String.valueOf(RESPAWN_TICKS / 20));
+                "seconds", String.valueOf(secondsLeft(fight.botRespawnTicks)));
     }
 
     private void resetStock(Player player, PracticeSession session, BotFight fight,
                             boolean respawnPlayer) {
         captureLayout(player, fight); // keep mid-fight rearrangements
-        fight.resetStock();
+        fight.resetStock(tuning().stockGraceTicks(),
+                tuning().flatTicks("behavior.feint.initial-cooldown", 60));
         session.tracker().revertAll(); // block kits: the arena resets each stock
         if (respawnPlayer) {
             plugin.sessions().teleportInternal(player, fight.playerSpawn);
-            if (plugin.pcConfig().sounds()) {
-                player.playSound(fight.playerSpawn, Sound.ENTITY_ENDERMAN_TELEPORT, 0.5f, 1.4f);
-            }
+            plugin.sounds().play(player, "pvpbot.player-respawn", fight.playerSpawn);
         }
         AttributeInstance maxHealth = player.getAttribute(PlayerSnapshot.maxHealthAttribute());
         player.setHealth(maxHealth != null ? maxHealth.getValue() : 20.0);
@@ -542,7 +549,7 @@ public final class PvpBotService {
     private void tickAll() {
         boolean refill = --refillCountdown <= 0;
         if (refill) {
-            refillCountdown = REFILL_TICKS;
+            refillCountdown = tuning().refillTicks();
         }
         for (PracticeSession session : plugin.sessions().all()) {
             BotFight fight = fightOf(session);
@@ -566,6 +573,9 @@ public final class PvpBotService {
 
     /** Keeps kit consumables in stock and clears drained bottles and bowls. */
     private void topUp(Player player, BotFight fight) {
+        if (fight.settings.kit() == null) {
+            return;
+        }
         for (Map.Entry<ItemStack, Integer> entry : fight.settings.kit().refills().entrySet()) {
             // Recolor first: a wool kit's refill must count and hand out the
             // player's chosen wool color, not pile white on top of it.
@@ -585,8 +595,11 @@ public final class PvpBotService {
                 missing -= size;
             }
         }
-        player.getInventory().remove(Material.GLASS_BOTTLE);
-        player.getInventory().remove(Material.BOWL);
+        // Drained bottles and bowls pile up over an endless spar; they are
+        // never part of a kit, so they simply go.
+        for (Material empty : tuning().discardedEmpties()) {
+            player.getInventory().remove(empty);
+        }
     }
 
     // ------------------------------------------------------------ the brain
@@ -609,7 +622,7 @@ public final class PvpBotService {
                 resetStock(player, session, fight, true);
                 plugin.messages().title(player, "pvpbot.title.respawned",
                         "pvpbot.title.respawned-sub");
-                fight.graceTicks = Math.max(fight.graceTicks, 10);
+                fight.graceTicks = Math.max(fight.graceTicks, tuning().shortGraceTicks());
             } else {
                 // The body doesn't wander: gravity, leftover momentum and a
                 // blind player's own input are all undone at the anchor.
@@ -619,7 +632,7 @@ public final class PvpBotService {
                     holdAtAnchor(player, fight);
                 }
                 if (fight.playerRespawnTicks % 20 == 0) {
-                    sendDeathCountdown(player, fight.playerRespawnTicks / 20);
+                    sendDeathCountdown(player, secondsLeft(fight.playerRespawnTicks));
                 }
             }
         }
@@ -632,13 +645,11 @@ public final class PvpBotService {
                 if (!fight.playerDead()) {
                     plugin.sessions().teleportInternal(player, fight.playerSpawn);
                 }
-                fight.graceTicks = Math.max(fight.graceTicks, 10);
-                if (plugin.pcConfig().sounds()) {
-                    player.playSound(fight.botSpawn, Sound.ENTITY_ENDERMAN_TELEPORT, 0.5f, 1.0f);
-                }
+                fight.graceTicks = Math.max(fight.graceTicks, tuning().shortGraceTicks());
+                plugin.sounds().play(player, "pvpbot.bot-respawn", fight.botSpawn);
             } else if (fight.botRespawnTicks % 20 == 0) {
                 plugin.messages().actionBar(player, "pvpbot.respawn-bar",
-                        "seconds", String.valueOf(fight.botRespawnTicks / 20));
+                        "seconds", String.valueOf(secondsLeft(fight.botRespawnTicks)));
             }
             return; // no body to drive yet
         }
@@ -676,7 +687,7 @@ public final class PvpBotService {
         }
         fight.nameTag.teleport(tagLocation(bot));
         if (--fight.nameTicks <= 0) {
-            fight.nameTicks = NAME_TICKS;
+            fight.nameTicks = tuning().nameRefreshTicks();
             fight.nameTag.text(botName(bot.getHealth()));
         }
 
@@ -716,16 +727,16 @@ public final class PvpBotService {
                 bot.lookAt(player);
                 BotSettings settings = fight.settings;
                 if (fight.attackCooldown == 0 && bot.getEyeLocation()
-                        .distance(player.getEyeLocation()) <= settings.reach().blocks()) {
+                        .distance(player.getEyeLocation()) <= settings.reachBlocks()) {
                     if (settings.cerebral() && immune(player)) {
                         // Save the real click for the tick the window opens.
-                        if (chance(0.3)) {
+                        if (settings.chance("mime-swing-chance", 0.3)) {
                             bot.swingMainHand();
                         }
                     } else {
-                        fight.attackCooldown =
-                                settings.cps().intervalTicks() + (chance(0.4) ? 1 : 0);
-                        if (chance(settings.accuracy().chance())) {
+                        fight.attackCooldown = settings.attackIntervalTicks()
+                                + (settings.chance("attack-jitter-chance", 0.4) ? 1 : 0);
+                        if (chance(settings.hitChance())) {
                             strike(bot, player);
                         } else {
                             bot.swingMainHand();
@@ -733,27 +744,31 @@ public final class PvpBotService {
                     }
                 }
                 // An unfair bot slips combos a hit earlier and more reliably —
-                // chains still land, but never carry it across the arena.
-                double escapeChance = settings.suffer() ? 0.9 : settings.unfair() ? 0.8
-                        : settings.evasiveness().ordinal()
-                                >= BotSettings.Evasiveness.EXTREME.ordinal() ? 0.65 : 0.4;
-                if (fight.combo >= (settings.unfair() ? 2 : 3)
+                // chains still land, but never carry it across the arena. A
+                // very evasive bot manages it without the thinking layers.
+                double escapeChance = settings.knob("combo-escape.chance", 0.4);
+                if (tuning().evasiveAtLeast("behavior.combo-escape.evasive-from",
+                        settings.evasiveness(), BotSettings.Evasiveness.EXTREME)) {
+                    escapeChance = Math.max(escapeChance,
+                            tuning().flat("behavior.combo-escape.evasive-chance", 0.65));
+                }
+                if (fight.combo >= settings.knobTicks("combo-escape.after-hits", 3)
                         && bot.isOnGround() && chance(escapeChance)) {
                     Vector along = player.getLocation().toVector()
                             .subtract(bot.getLocation().toVector());
                     along.setY(0);
-                    Vector escape = perpendicular(along)
-                            .multiply(fight.strafeSign).multiply(0.5);
+                    Vector escape = perpendicular(along).multiply(fight.strafeSign)
+                            .multiply(settings.knob("combo-escape.leap-strength", 0.5));
                     // Never leap out of a combo straight over the rim.
-                    escape = steerInside(bot.getLocation(), escape, session.bounds());
+                    escape = steerInside(bot.getLocation(), escape, session.bounds(), settings);
                     endCrouch(fight); // can't leap out of a crouch
-                    bot.setVelocity(escape.setY(0.42));
+                    bot.setVelocity(escape.setY(tuning().jumpVelocity()));
                     fight.hitstunTicks = 0;
                     // Suffer doesn't just escape the combo — it turns the
                     // slip into an immediate counter-offensive.
                     if (settings.suffer()) {
                         fight.stance = BotFight.PRESSURE;
-                        fight.stanceTicks = 30;
+                        fight.stanceTicks = settings.knobTicks("combo-escape.counter-ticks", 30);
                     }
                 }
             }
@@ -804,16 +819,19 @@ public final class PvpBotService {
         // waits, resuming (after a short mercy beat) the moment anything
         // stirs. Swings count as activity too, via the animation listener.
         Location playerNow = player.getLocation();
+        double moveThreshold = tuning().afkMoveThreshold();
+        double lookThreshold = tuning().afkLookThreshold();
+        int afkTicks = tuning().afkTicks();
         if (fight.afkLoc == null || fight.afkLoc.getWorld() != playerNow.getWorld()
-                || fight.afkLoc.distanceSquared(playerNow) > 0.0004
-                || Math.abs(fight.afkLoc.getYaw() - playerNow.getYaw()) > 0.5
-                || Math.abs(fight.afkLoc.getPitch() - playerNow.getPitch()) > 0.5) {
+                || fight.afkLoc.distanceSquared(playerNow) > moveThreshold
+                || Math.abs(fight.afkLoc.getYaw() - playerNow.getYaw()) > lookThreshold
+                || Math.abs(fight.afkLoc.getPitch() - playerNow.getPitch()) > lookThreshold) {
             fight.afkLoc = playerNow;
-            fight.wake();
-        } else if (fight.afkTicks < BotFight.AFK_TICKS) {
+            fight.wake(tuning().wakeGraceTicks(), afkTicks);
+        } else if (fight.afkTicks < afkTicks) {
             fight.afkTicks++;
         }
-        if (fight.afk()) {
+        if (fight.afk(afkTicks)) {
             bot.getPathfinder().stopPathfinding();
             bot.lookAt(player);
             return;
@@ -851,11 +869,12 @@ public final class PvpBotService {
         // patterns get punished. (whiffHabit is fed by the swing listener.)
         if (fight.playerWasOnGround && !playerOnGround
                 && player.getVelocity().getY() > 0.2) {
-            fight.jumpHabit = Math.min(8, fight.jumpHabit + 1);
+            fight.jumpHabit = Math.min(s.knob("whiff-punish.habit-cap", 8), fight.jumpHabit + 1);
         }
         fight.playerWasOnGround = playerOnGround;
-        fight.jumpHabit *= 0.995;
-        fight.whiffHabit *= 0.995;
+        double decay = s.knob("habit-decay", 0.995);
+        fight.jumpHabit *= decay;
+        fight.whiffHabit *= decay;
         if (fight.punishTicks > 0) {
             fight.punishTicks--;
         }
@@ -879,21 +898,23 @@ public final class PvpBotService {
             // Unfair re-reads the fight almost twice as often and starts
             // saving itself before it is actually desperate; suffer reads
             // it near-continuously.
-            fight.stanceTicks = s.suffer() ? 4 : s.unfair() ? 6 : 10;
-            boolean losing = s.cerebral() && bot.getHealth() <= (s.suffer() ? 10 : s.unfair() ? 9 : 7)
-                    && player.getHealth() - bot.getHealth() >= (s.suffer() ? 2 : s.unfair() ? 3 : 4);
+            fight.stanceTicks = s.knobTicks("stance.review-ticks", 10);
+            boolean losing = s.cerebral()
+                    && bot.getHealth() <= s.knob("stance.reset-health", 7)
+                    && player.getHealth() - bot.getHealth() >= s.knob("stance.reset-deficit", 4);
             if (fight.stance == BotFight.RESET) {
                 if (fight.resetBudget <= 0 || !losing) {
                     // Kite spent: wheel around and attack, committed for a
                     // couple of seconds before the next review.
                     fight.stance = BotFight.PRESSURE;
-                    fight.stanceTicks = 40;
-                    fight.resetLockout = 200 + rnd(200);
+                    fight.stanceTicks = s.knobTicks("stance.commit-ticks", 40);
+                    fight.resetLockout = s.knobRoll("stance.reset-lockout", 200, 400);
                 }
             } else if (losing && fight.resetLockout == 0) {
                 fight.stance = BotFight.RESET;
-                fight.resetBudget = 100 + rnd(100); // 5-10s of running
-            } else if (fight.combo >= 2 || player.getHealth() <= 6
+                fight.resetBudget = s.knobRoll("stance.reset-budget", 100, 200);
+            } else if (fight.combo >= s.knobTicks("stance.pressure-combo", 2)
+                    || player.getHealth() <= s.knob("stance.pressure-health", 6)
                     || fight.punishTicks > 0) {
                 fight.stance = BotFight.PRESSURE;
             } else {
@@ -904,7 +925,8 @@ public final class PvpBotService {
         // A jump-crit in progress strikes when its fall window arrives.
         if (fight.critTicks >= 0) {
             fight.critTicks--;
-            if (fight.critTicks < 0 && eyeDist <= s.reach().blocks() + 0.5) {
+            if (fight.critTicks < 0
+                    && eyeDist <= s.reachBlocks() + s.knob("jump-crit.window", 0.5)) {
                 fight.critBonusNextHit = true;
                 strike(bot, player);
             }
@@ -914,22 +936,29 @@ public final class PvpBotService {
         // A resetting bot leans on them: the rod is its space-maker.
         if (fight.graceTicks == 0 && !fight.blocking()) {
             boolean resetting = fight.stance == BotFight.RESET;
-            if (s.rod() && fight.rodCooldown == 0 && dist > (resetting ? 3.0 : 3.5)
-                    && dist < 8
-                    && chance(resetting ? 0.22 : s.suffer() ? 0.18 : s.unfair() ? 0.12 : 0.06)) {
-                castRod(bot, player, fight);
-            } else if (s.bow() && fight.bowCooldown == 0 && dist >= (resetting ? 7 : 8)
-                    && chance(resetting ? 0.15 : s.suffer() ? 0.18 : s.unfair() ? 0.14 : 0.08)) {
+            if (s.rod() && fight.rodCooldown == 0
+                    && dist > s.knob(resetting ? "rod.reset-min-distance" : "rod.min-distance",
+                            resetting ? 3.0 : 3.5)
+                    && dist < s.knob("rod.max-distance", 8)
+                    && chance(resetting ? s.knob("rod.reset-chance", 0.22)
+                            : s.knob("rod.chance", 0.06))) {
+                castRod(bot, player, fight, s);
+            } else if (s.bow() && fight.bowCooldown == 0
+                    && dist >= s.knob(resetting ? "bow.reset-min-distance" : "bow.min-distance",
+                            resetting ? 7 : 8)
+                    && chance(resetting ? s.knob("bow.reset-chance", 0.15)
+                            : s.knob("bow.chance", 0.08))) {
                 shootBow(bot, player, fight, s);
             }
         }
 
         // Spacing target by stance: pressure crowds in, a reset kites far out.
-        double gap = s.aggression().gap();
+        double gap = s.spacingGap();
         if (fight.stance == BotFight.PRESSURE) {
-            gap = Math.max(1.6, gap - 0.6);
+            gap = Math.max(s.knob("spacing.pressure-min", 1.6),
+                    gap - s.knob("spacing.pressure-close", 0.6));
         } else if (fight.stance == BotFight.RESET) {
-            gap = 6.5;
+            gap = s.knob("spacing.reset-gap", 6.5);
         }
         // Reach discipline, the duellist tiers' spacing game: instead of
         // hugging the player they hold the tip of their own reach — close
@@ -942,9 +971,9 @@ public final class PvpBotService {
         // back at the tip of its reach by the time the window reopens, or the
         // dance turns into standing off at arm's length doing nothing.
         if (s.duellist() && fight.stance != BotFight.RESET) {
-            gap = Math.max(gap, s.reach().blocks() - (s.unfair() ? 0.35 : 0.7));
-            if (immunityLeft(player) > 5) {
-                gap += s.suffer() ? 0.9 : s.unfair() ? 0.7 : 0.35;
+            gap = Math.max(gap, s.reachBlocks() - s.knob("spacing.reach-margin", 0.7));
+            if (immunityLeft(player) > s.knob("spacing.step-out-window", 5)) {
+                gap += s.knob("spacing.step-out", 0.35);
             }
         }
 
@@ -954,44 +983,47 @@ public final class PvpBotService {
         if (fight.feintTicks > 0) {
             fight.feintTicks--;
             bot.getPathfinder().stopPathfinding();
-            Vector back = toBot.clone().normalize().multiply(0.22);
+            Vector back = toBot.clone().normalize().multiply(s.knob("feint.backpedal", 0.22));
             bot.setVelocity(new Vector(back.getX(), bot.getVelocity().getY(), back.getZ()));
-            boolean bit = eyeDist <= s.reach().blocks() && fight.attackCooldown == 0
+            boolean bit = eyeDist <= s.reachBlocks() && fight.attackCooldown == 0
                     && !immune(player)
-                    && player.getVelocity().dot(toBot.clone().normalize()) > 0.1;
+                    && player.getVelocity().dot(toBot.clone().normalize())
+                            > s.knob("feint.bite-approach", 0.1);
             if (bit) {
                 fight.feintTicks = 0;
-                fight.attackCooldown = s.cps().intervalTicks();
+                fight.attackCooldown = s.attackIntervalTicks();
                 strike(bot, player);
-                shove(player, botLoc, session, s, 0.3);
+                shove(player, botLoc, session, s, s.knob("feint.counter-shove", 0.3));
                 fight.stance = BotFight.PRESSURE;
-                fight.stanceTicks = 20;
+                fight.stanceTicks = s.knobTicks("feint.pressure-ticks", 20);
             }
             if (fight.feintTicks == 0) {
-                fight.feintCooldown = 100 + rnd(60);
+                fight.feintCooldown = s.knobRoll("feint.cooldown", 100, 160);
             }
             fight.lastX = botLoc.getX();
             fight.lastZ = botLoc.getZ();
             return;
         }
         if (fight.stance == BotFight.NEUTRAL && s.cerebral()
-                && s.combos().chance() > 0 && fight.feintCooldown == 0
-                && dist > gap - 0.3 && dist < gap + 1.5
-                && chance(s.suffer() ? 0.05 : s.unfair() ? 0.03 : 0.012)) {
-            fight.feintTicks = 12 + rnd(8);
+                && s.comboChance() > 0 && fight.feintCooldown == 0
+                && dist > gap - s.knob("feint.window-near", 0.3)
+                && dist < gap + s.knob("feint.window-far", 1.5)
+                && s.chance("feint.chance", 0.012)) {
+            fight.feintTicks = s.knobRoll("feint.duration", 12, 19);
         }
 
         // Movement: kite when resetting, pathfind in from far out, strafe
         // once in the fight.
         if (fight.stance == BotFight.RESET) {
             if (--fight.repathTicks <= 0) {
-                fight.repathTicks = 4;
+                fight.repathTicks = s.knobTicks("reset.repath-ticks", 4);
                 bot.getPathfinder().moveTo(
-                        fleeTarget(botLoc, perceived, session.bounds()),
-                        s.aggression().speed() * 1.15);
+                        fleeTarget(botLoc, perceived, session.bounds(), s),
+                        s.approachSpeed() * s.knob("reset.speed-multiplier", 1.15));
             }
-            if (s.block() && !fight.blocking() && dist < 3.2 && chance(0.2)) {
-                fight.blockTicks = 10 + rnd(6);
+            if (s.block() && !fight.blocking() && dist < s.knob("reset.block-distance", 3.2)
+                    && s.chance("reset.block-chance", 0.2)) {
+                fight.blockTicks = s.knobRoll("reset.block-ticks", 10, 15);
             }
         } else if (fight.comboFollowTicks > 0 && dist > gap && !fight.blocking()) {
             // Chasing its own knockback. A combo only continues if the bot
@@ -1001,19 +1033,23 @@ public final class PvpBotService {
             fight.repathTicks = 0;
             bot.getPathfinder().stopPathfinding();
             Vector chase = toBot.clone().multiply(-1).normalize()
-                    .multiply(s.suffer() ? 0.33 : s.unfair() ? 0.30 : 0.27);
-            chase = steerInside(botLoc, chase, session.bounds());
+                    .multiply(s.knob("combo-follow.speed", 0.27));
+            chase = steerInside(botLoc, chase, session.bounds(), s);
             double chaseY = bot.getVelocity().getY();
-            if (bot.isOnGround() && !fight.crouching() && dist > gap + 1.5 && chance(0.2)) {
-                chaseY = 0.42; // sprint-jump to keep up with the knockback
+            if (bot.isOnGround() && !fight.crouching()
+                    && dist > gap + s.knob("combo-follow.jump-gap", 1.5)
+                    && s.chance("combo-follow.jump-chance", 0.2)) {
+                chaseY = tuning().jumpVelocity(); // sprint-jump to keep up with the knockback
             }
             bot.setVelocity(new Vector(chase.getX(), chaseY, chase.getZ()));
-        } else if (dist > gap + 1.2) {
+        } else if (dist > gap + s.knob("approach.engage-margin", 1.2)) {
             if (--fight.repathTicks <= 0) {
-                fight.repathTicks = s.aggression().ordinal()
-                        >= BotSettings.Aggression.FRENZIED.ordinal() ? 3 : 5;
-                bot.getPathfinder().moveTo(player,
-                        s.aggression().speed() * (fight.blocking() ? 0.5 : 1.0));
+                fight.repathTicks = tuning().aggressiveAtLeast("behavior.approach.fast-from",
+                        s.aggression(), BotSettings.Aggression.FRENZIED)
+                        ? s.knobTicks("approach.repath-ticks-fast", 3)
+                        : s.knobTicks("approach.repath-ticks", 5);
+                bot.getPathfinder().moveTo(player, s.approachSpeed()
+                        * (fight.blocking() ? s.knob("approach.blocking-speed", 0.5) : 1.0));
             }
             // Nobody good walks a straight line in: the duellist tiers weave
             // across the approach so closing the distance stays a moving shot.
@@ -1024,19 +1060,23 @@ public final class PvpBotService {
             if (s.duellist() && !fight.blocking() && !fight.crouching()) {
                 if (fight.strafeFlipTicks == 0) {
                     fight.strafeSign = -fight.strafeSign;
-                    fight.strafeFlipTicks = 10 + rnd(8);
+                    fight.strafeFlipTicks = s.knobRoll("approach.weave-flip", 10, 17);
                 }
                 bot.setVelocity(bot.getVelocity().add(perpendicular(toBot)
-                        .multiply(fight.strafeSign * (s.unfair() ? 0.11 : 0.07))));
+                        .multiply(fight.strafeSign * s.knob("approach.weave-strength", 0.07))));
             }
             // Sprint-jumping: closing like a player holding W and spamming
             // space — always under frenzy, and under pressure or a punish.
-            if ((s.aggression().ordinal() >= BotSettings.Aggression.FRENZIED.ordinal()
+            if ((tuning().aggressiveAtLeast("behavior.approach.fast-from", s.aggression(),
+                        BotSettings.Aggression.FRENZIED)
                     || fight.stance == BotFight.PRESSURE || fight.punishTicks > 0)
-                    && bot.isOnGround() && dist > gap + 2
-                    && !fight.blocking() && !fight.crouching() && chance(0.15)) {
+                    && bot.isOnGround() && dist > gap + s.knob("approach.sprint-jump.gap", 2)
+                    && !fight.blocking() && !fight.crouching()
+                    && s.chance("approach.sprint-jump.chance", 0.15)) {
                 Vector forward = toBot.clone().multiply(-1).normalize();
-                bot.setVelocity(bot.getVelocity().add(forward.multiply(0.35)).setY(0.42));
+                bot.setVelocity(bot.getVelocity()
+                        .add(forward.multiply(s.knob("approach.sprint-jump.strength", 0.35)))
+                        .setY(tuning().jumpVelocity()));
             }
         } else {
             fight.repathTicks = 0;
@@ -1047,19 +1087,23 @@ public final class PvpBotService {
         // Whiff-punish: the player has been clicking at air just out of
         // range — lunge through the gap behind a wasted swing, arriving
         // before the next click is loaded.
-        if (fight.punishTicks > 0 && bot.isOnGround() && dist > 1.8
+        if (fight.punishTicks > 0 && bot.isOnGround()
+                && dist > s.knob("whiff-punish.min-distance", 1.8)
                 && !fight.blocking() && !fight.crouching()
-                && chance(s.suffer() ? 0.85 : s.unfair() ? 0.7 : 0.5)) {
+                && s.chance("whiff-punish.chance", 0.5)) {
             Vector lunge = toBot.clone().multiply(-1).normalize();
-            bot.setVelocity(bot.getVelocity().add(lunge.multiply(0.4)).setY(0.25));
+            bot.setVelocity(bot.getVelocity()
+                    .add(lunge.multiply(s.knob("whiff-punish.strength", 0.4)))
+                    .setY(s.knob("whiff-punish.lift", 0.25)));
         }
 
         // Hop over lips and out of corners when movement stalls.
-        if (bot.isOnGround() && dist > s.reach().blocks() && !fight.crouching()
-                && Math.abs(botLoc.getX() - fight.lastX) < 0.01
-                && Math.abs(botLoc.getZ() - fight.lastZ) < 0.01
-                && chance(0.5)) {
-            bot.setVelocity(bot.getVelocity().setY(0.42));
+        double stallThreshold = s.knob("unstick.threshold", 0.01);
+        if (bot.isOnGround() && dist > s.reachBlocks() && !fight.crouching()
+                && Math.abs(botLoc.getX() - fight.lastX) < stallThreshold
+                && Math.abs(botLoc.getZ() - fight.lastZ) < stallThreshold
+                && s.chance("unstick.chance", 0.5)) {
+            bot.setVelocity(bot.getVelocity().setY(tuning().jumpVelocity()));
         }
         fight.lastX = botLoc.getX();
         fight.lastZ = botLoc.getZ();
@@ -1071,22 +1115,22 @@ public final class PvpBotService {
         // that unlocks the offensive edge-shoves; the unfair tiers read the
         // danger faster.
         if (s.cerebral() && !fight.crouching() && fight.crouchCooldown == 0
-                && !fight.blocking() && dist < 4
-                && rimDistance(botLoc, session.bounds()) < 2.5
-                && chance(s.suffer() ? 0.5 : s.unfair() ? 0.35 : 0.2)) {
-            startCrouch(fight, 15 + rnd(10));
+                && !fight.blocking() && dist < s.knob("edge-crouch.distance", 4)
+                && rimDistance(botLoc, session.bounds()) < s.knob("edge-crouch.rim", 2.5)
+                && s.chance("edge-crouch.chance", 0.2)) {
+            startCrouch(fight, s.knobRoll("edge-crouch.ticks", 15, 24));
         }
 
         // A jumpy player gets crit-fished: as they rise, the bot leaves the
         // ground too, timed so its falling strike meets them on the way down.
-        if (s.cerebral() && fight.jumpHabit >= (s.unfair() ? 2 : 3)
+        if (s.cerebral() && fight.jumpHabit >= s.knob("crit-fish.habit", 3)
                 && !playerOnGround && player.getVelocity().getY() > 0.1
                 && fight.critTicks < 0 && bot.isOnGround() && fight.graceTicks == 0
                 && !fight.blocking() && !fight.crouching()
-                && dist < s.reach().blocks() + 1.5
-                && chance(s.suffer() ? 0.6 : s.unfair() ? 0.45 : 0.3)) {
-            bot.setVelocity(bot.getVelocity().setY(0.42));
-            fight.critTicks = 6;
+                && dist < s.reachBlocks() + s.knob("crit-fish.range-bonus", 1.5)
+                && s.chance("crit-fish.chance", 0.3)) {
+            bot.setVelocity(bot.getVelocity().setY(tuning().jumpVelocity()));
+            fight.critTicks = s.knobTicks("jump-crit.fall-ticks", 6);
         }
 
         // Melee. A cerebral bot never wastes the click: while the player's
@@ -1100,48 +1144,50 @@ public final class PvpBotService {
         boolean blockHits = s.duellist() && s.block();
         boolean mayHit = fight.graceTicks == 0 && (blockHits || !fight.blocking())
                 && fight.critTicks < 0 && fight.attackCooldown == 0
-                && eyeDist <= s.reach().blocks();
+                && eyeDist <= s.reachBlocks();
         if (mayHit && s.cerebral() && immune(player)) {
-            if (chance(0.3)) {
+            if (s.chance("mime-swing-chance", 0.3)) {
                 bot.swingMainHand(); // keeps the spam-click look
             }
         } else if (mayHit) {
-            fight.attackCooldown = s.cps().intervalTicks() + (chance(0.4) ? 1 : 0);
+            fight.attackCooldown = s.attackIntervalTicks()
+                    + (s.chance("attack-jitter-chance", 0.4) ? 1 : 0);
             boolean airPunish = s.cerebral() && !playerOnGround
                     && player.getVelocity().getY() < 0;
-            if (!airPunish && !chance(s.accuracy().chance())) {
+            if (!airPunish && !chance(s.hitChance())) {
                 bot.swingMainHand(); // a whiff, like a real missed click
-            } else if (!airPunish && s.combos().chance() > 0 && bot.isOnGround()
+            } else if (!airPunish && s.comboChance() > 0 && bot.isOnGround()
                     && !fight.crouching() && !fight.blocking()
-                    && chance(s.combos().chance() * 0.5)) {
+                    && chance(s.comboChance() * s.knob("jump-crit.combo-factor", 0.5))) {
                 // Jump-crit: leave the ground now, strike mid-fall.
-                bot.setVelocity(bot.getVelocity().setY(0.42));
-                fight.critTicks = 6;
+                bot.setVelocity(bot.getVelocity().setY(tuning().jumpVelocity()));
+                fight.critTicks = s.knobTicks("jump-crit.fall-ticks", 6);
             } else {
                 strike(bot, player);
                 // W-tap: the sprint-reset shove right after a clean hit,
                 // thrown more freely while pressing an advantage.
-                if (chance(s.combos().chance()
-                        + (fight.stance == BotFight.PRESSURE ? 0.2 : 0))) {
-                    shove(player, botLoc, session, s, 0.22);
+                if (chance(s.comboChance() + (fight.stance == BotFight.PRESSURE
+                        ? s.knob("wtap.pressure-bonus", 0.2) : 0))) {
+                    shove(player, botLoc, session, s, s.knob("wtap.strength", 0.22));
                 }
                 // ...then straight back behind the sword: the player's answer
                 // to a clean hit arrives inside exactly this window.
-                if (blockHits && !fight.blocking()
-                        && chance(s.suffer() ? 0.6 : s.unfair() ? 0.4 : 0.25)) {
-                    fight.blockTicks = 6 + rnd(4);
+                if (blockHits && !fight.blocking() && s.chance("block-hit.chance", 0.25)) {
+                    fight.blockTicks = s.knobRoll("block-hit.ticks", 6, 9);
                 }
             }
         } else if (s.cerebral() && fight.stance == BotFight.NEUTRAL
-                && fight.attackCooldown == 0 && eyeDist > s.reach().blocks()
-                && eyeDist < s.reach().blocks() + 1
-                && chance(s.suffer() ? 0.1 : s.unfair() ? 0.06 : 0.03)) {
+                && fight.attackCooldown == 0 && eyeDist > s.reachBlocks()
+                && eyeDist < s.reachBlocks() + s.knob("bait-click.range", 1)
+                && s.chance("bait-click.chance", 0.03)) {
             bot.swingMainHand(); // max-range bait click, inviting a counter
         }
 
         // Getting comboed? Raise the 1.8 sword block for a moment.
-        if (s.block() && !fight.blocking() && fight.recentHitsTaken >= 2 && chance(0.15)) {
-            fight.blockTicks = 12 + rnd(8);
+        if (s.block() && !fight.blocking()
+                && fight.recentHitsTaken >= s.knobTicks("defensive-block.after-hits", 2)
+                && s.chance("defensive-block.chance", 0.15)) {
+            fight.blockTicks = s.knobRoll("defensive-block.ticks", 12, 19);
             fight.recentHitsTaken = 0;
         }
     }
@@ -1175,29 +1221,23 @@ public final class PvpBotService {
                 // changes on a short, unpredictable beat, so a crosshair that
                 // has learned the rhythm is already wrong.
                 if (fight.strafeFlipTicks == 0) {
-                    if (chance(s.suffer() ? 0.6 : s.unfair() ? 0.5
-                            : s.duellist() ? 0.4 : 0.35)) {
+                    if (s.chance("strafe.flip-chance", 0.35)) {
                         fight.strafeSign = -fight.strafeSign;
                     }
-                    fight.strafeFlipTicks = s.unfair() ? 8 + rnd(10)
-                            : s.duellist() ? 14 + rnd(12) : 20 + rnd(20);
+                    fight.strafeFlipTicks = s.knobRoll("strafe.flip-interval", 20, 39);
                 }
                 // A cerebral bot cuts the corner instead: it matches the
                 // player's own lateral drift, so orbiting away never works.
                 if (s.cerebral() && fight.seenVel != null) {
                     double lateral = fight.seenVel.dot(perpendicular(toBot));
-                    if (Math.abs(lateral) > 0.08) {
+                    if (Math.abs(lateral) > s.knob("strafe.lateral-threshold", 0.08)) {
                         fight.strafeSign = lateral > 0 ? 1 : -1;
                     }
                 }
                 strafeDir = perpendicular(toBot).multiply(fight.strafeSign);
                 // The unfair tiers don't drift off the crosshair — they dart:
                 // a burst sidestep the instant the aim settles dead-on.
-                if (s.evasiveness() == BotSettings.Evasiveness.SUFFER) {
-                    burst = 1.45;
-                } else if (s.evasiveness() == BotSettings.Evasiveness.UNFAIR) {
-                    burst = 1.3;
-                }
+                burst = tuning().byEvasiveness("behavior.strafe.burst", s.evasiveness(), 1.0);
             } else {
                 strafeDir = away.normalize();
             }
@@ -1213,9 +1253,8 @@ public final class PvpBotService {
             fight.cutbackTicks--;
             strafeDir = perpendicular(toBot).multiply(-fight.orbitSense);
         } else if (sense == fight.orbitSense) {
-            int patience = s.unfair() ? 16 : s.duellist() ? 24 : 34;
-            if (++fight.orbitTicks > patience) {
-                fight.cutbackTicks = 8 + rnd(8);
+            if (++fight.orbitTicks > s.knobTicks("strafe.orbit-patience", 34)) {
+                fight.cutbackTicks = s.knobRoll("strafe.cutback", 8, 15);
                 fight.orbitTicks = 0;
                 fight.strafeSign = -sense;
             }
@@ -1223,24 +1262,27 @@ public final class PvpBotService {
             fight.orbitSense = sense;
             fight.orbitTicks = 0;
         }
-        Vector velocity = strafeDir.multiply(
-                s.evasiveness().speed() * burst
-                        * (fight.blocking() ? 0.4 : fight.crouching() ? 0.6 : 1.0));
+        Vector velocity = strafeDir.multiply(s.strafeSpeed() * burst
+                * (fight.blocking() ? s.knob("strafe.blocking-speed", 0.4)
+                        : fight.crouching() ? s.knob("strafe.crouching-speed", 0.6) : 1.0));
         // Radial correction toward the spacing target, proportional to how far
         // off it is. A flat nudge was too slow for the reach dance: a bot that
         // steps out of range while the immunity window burns has to be able to
         // step back in before the window reopens, or it just circles at arm's
         // length never throwing a punch.
         double error = dist - gap;
-        if (Math.abs(error) > 0.25) {
-            double urgency = fight.stance == BotFight.PRESSURE ? 0.22 : 0.16;
-            double pull = Math.min(0.28, Math.abs(error) * urgency + 0.06);
+        if (Math.abs(error) > s.knob("strafe.correction.deadzone", 0.25)) {
+            double urgency = fight.stance == BotFight.PRESSURE
+                    ? s.knob("strafe.correction.pressure-urgency", 0.22)
+                    : s.knob("strafe.correction.urgency", 0.16);
+            double pull = Math.min(s.knob("strafe.correction.max-pull", 0.28),
+                    Math.abs(error) * urgency + s.knob("strafe.correction.base-pull", 0.06));
             velocity.add(toBot.clone().normalize().multiply(error > 0 ? -pull : pull));
         }
         // Never strafe over the rim: a drift that would carry the bot off the
         // arena is bent back toward the middle, and the held side flips so
         // the next dodge works with the bend instead of fighting it.
-        Vector steered = steerInside(bot.getLocation(), velocity, bounds);
+        Vector steered = steerInside(bot.getLocation(), velocity, bounds, s);
         if (steered != velocity) {
             fight.strafeSign = -fight.strafeSign;
             velocity = steered;
@@ -1248,14 +1290,12 @@ public final class PvpBotService {
         // An extreme strafer also hops mid-fight the way real 1.8 duellers
         // bounce around — vertical motion the crosshair has to chase too.
         double y = bot.getVelocity().getY();
-        if (s.evasiveness().ordinal() >= BotSettings.Evasiveness.EXTREME.ordinal()
+        if (tuning().evasiveAtLeast("behavior.strafe.hop.from", s.evasiveness(),
+                    BotSettings.Evasiveness.EXTREME)
                 && bot.isOnGround() && !fight.blocking() && !fight.crouching()
-                && chance(switch (s.evasiveness()) {
-                    case SUFFER -> 0.16;
-                    case UNFAIR -> 0.12;
-                    default -> 0.06;
-                })) {
-            y = 0.42;
+                && chance(tuning().byEvasiveness("behavior.strafe.hop.chance",
+                        s.evasiveness(), 0.06))) {
+            y = tuning().jumpVelocity();
         }
         bot.setVelocity(new Vector(velocity.getX(), y, velocity.getZ()));
     }
@@ -1281,7 +1321,7 @@ public final class PvpBotService {
      */
     public void startCrouch(BotFight fight, int ticks) {
         fight.crouchTicks = ticks;
-        fight.crouchCooldown = 60 + rnd(40);
+        fight.crouchCooldown = tuning().roll("behavior.crouch.cooldown", 60, 99);
         if (fight.bot != null && fight.bot.isValid()) {
             fight.bot.setPose(org.bukkit.entity.Pose.SNEAKING, true);
         }
@@ -1321,23 +1361,28 @@ public final class PvpBotService {
                     player.getLocation().getZ() - (b.getMinZ() + b.getMaxZ()) / 2);
             if (outward.lengthSquared() > 0.01) {
                 shove.add(outward.normalize()
-                        .multiply(s.suffer() ? 0.6 : s.unfair() ? 0.5 : 0.35)).normalize();
+                        .multiply(s.knob("shove.rim-lean", 0.35))).normalize();
             }
         }
-        player.setVelocity(player.getVelocity().add(shove.multiply(strength).setY(0.05)));
+        player.setVelocity(player.getVelocity()
+                .add(shove.multiply(strength).setY(s.knob("shove.lift", 0.05))));
     }
 
     /** A kite waypoint: straight away from the player, held inside the rim. */
     private static Location fleeTarget(Location botLoc, Location playerLoc,
-                                       BoundingBox bounds) {
+                                       BoundingBox bounds, BotSettings s) {
         Vector away = botLoc.toVector().subtract(playerLoc.toVector());
         away.setY(0);
         if (away.lengthSquared() < 0.01) {
             away = new Vector(1, 0, 0);
         }
-        Location target = botLoc.clone().add(away.normalize().multiply(6));
-        target.setX(Math.min(bounds.getMaxX() - 2, Math.max(bounds.getMinX() + 2, target.getX())));
-        target.setZ(Math.min(bounds.getMaxZ() - 2, Math.max(bounds.getMinZ() + 2, target.getZ())));
+        double margin = s.knob("reset.flee-margin", 2);
+        Location target = botLoc.clone()
+                .add(away.normalize().multiply(s.knob("reset.flee-distance", 6)));
+        target.setX(Math.min(bounds.getMaxX() - margin,
+                Math.max(bounds.getMinX() + margin, target.getX())));
+        target.setZ(Math.min(bounds.getMaxZ() - margin,
+                Math.max(bounds.getMinZ() + margin, target.getZ())));
         return target;
     }
 
@@ -1346,11 +1391,14 @@ public final class PvpBotService {
      * continuation would carry the entity over the rim. Returns the input
      * object untouched when the move is safe — callers compare identity.
      */
-    private static Vector steerInside(Location from, Vector velocity, BoundingBox bounds) {
-        double aheadX = from.getX() + velocity.getX() * 6;
-        double aheadZ = from.getZ() + velocity.getZ() * 6;
-        if (aheadX > bounds.getMinX() + 1.5 && aheadX < bounds.getMaxX() - 1.5
-                && aheadZ > bounds.getMinZ() + 1.5 && aheadZ < bounds.getMaxZ() - 1.5) {
+    private static Vector steerInside(Location from, Vector velocity, BoundingBox bounds,
+                                      BotSettings s) {
+        double lookahead = s.knob("steer.lookahead", 6);
+        double margin = s.knob("steer.margin", 1.5);
+        double aheadX = from.getX() + velocity.getX() * lookahead;
+        double aheadZ = from.getZ() + velocity.getZ() * lookahead;
+        if (aheadX > bounds.getMinX() + margin && aheadX < bounds.getMaxX() - margin
+                && aheadZ > bounds.getMinZ() + margin && aheadZ < bounds.getMaxZ() - margin) {
             return velocity;
         }
         Vector inward = new Vector(
@@ -1370,46 +1418,42 @@ public final class PvpBotService {
      * player's combo rhythm at range, the classic 1.8 duel move. The bot
      * flourishes a rod in hand for a few ticks so the cast reads.
      */
-    private void castRod(Husk bot, Player player, BotFight fight) {
-        fight.rodCooldown = 50 + rnd(30);
+    private void castRod(Husk bot, Player player, BotFight fight, BotSettings s) {
+        fight.rodCooldown = s.knobRoll("rod.cooldown", 50, 79);
         bot.getEquipment().setItemInMainHand(new ItemStack(Material.FISHING_ROD));
-        fight.heldRevertTicks = 8;
+        fight.heldRevertTicks = s.knobTicks("rod.flourish-ticks", 8);
         bot.swingMainHand();
-        Vector lead = player.getVelocity().clone().multiply(3);
+        Vector lead = player.getVelocity().clone().multiply(s.knob("rod.lead", 3));
         Vector direction = player.getEyeLocation().toVector().add(lead)
                 .subtract(bot.getEyeLocation().toVector());
         if (direction.lengthSquared() < 0.01) {
             return;
         }
-        Snowball hook = bot.launchProjectile(Snowball.class, direction.normalize().multiply(1.7));
+        Snowball hook = bot.launchProjectile(Snowball.class,
+                direction.normalize().multiply(s.knob("rod.speed", 1.7)));
         hook.setItem(new ItemStack(Material.SNOWBALL));
-        if (plugin.pcConfig().sounds()) {
-            bot.getWorld().playSound(bot.getLocation(),
-                    Sound.ENTITY_FISHING_BOBBER_THROW, 0.6f, 1.0f);
-        }
+        plugin.sounds().playAt(bot.getLocation(), "pvpbot.rod-cast");
     }
 
     private void shootBow(Husk bot, Player player, BotFight fight, BotSettings s) {
-        fight.bowCooldown = 60 + rnd(30);
+        fight.bowCooldown = s.knobRoll("bow.cooldown", 60, 89);
         bot.getEquipment().setItemInMainHand(new ItemStack(Material.BOW));
-        fight.heldRevertTicks = 14;
-        Vector lead = player.getVelocity().clone().multiply(4);
+        fight.heldRevertTicks = s.knobTicks("bow.flourish-ticks", 14);
+        Vector lead = player.getVelocity().clone().multiply(s.knob("bow.lead", 4));
         Vector direction = player.getEyeLocation().toVector().add(lead)
                 .subtract(bot.getEyeLocation().toVector());
         if (direction.lengthSquared() < 0.01) {
             return;
         }
-        double spread = (1.0 - s.accuracy().chance()) * 0.3;
-        direction.normalize().multiply(2.3).add(new Vector(
+        double spread = (1.0 - s.hitChance()) * s.knob("bow.spread", 0.3);
+        direction.normalize().multiply(s.knob("bow.speed", 2.3)).add(new Vector(
                 (ThreadLocalRandom.current().nextDouble() - 0.5) * spread,
                 (ThreadLocalRandom.current().nextDouble() - 0.5) * spread * 0.5,
                 (ThreadLocalRandom.current().nextDouble() - 0.5) * spread));
         Arrow arrow = bot.launchProjectile(Arrow.class, direction);
         arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
         arrow.setCritical(false);
-        if (plugin.pcConfig().sounds()) {
-            bot.getWorld().playSound(bot.getLocation(), Sound.ENTITY_SKELETON_SHOOT, 0.7f, 1.1f);
-        }
+        plugin.sounds().playAt(bot.getLocation(), "pvpbot.bow-shot");
     }
 
     /** Crit flair for the listener: particles over the player, like a real crit. */
@@ -1444,6 +1488,9 @@ public final class PvpBotService {
      * and nothing can be picked up.
      */
     public void spawnDamageIndicator(org.bukkit.entity.LivingEntity victim, double damage) {
+        if (!tuning().damageIndicators()) {
+            return;
+        }
         Location loc = victim.getLocation().add(
                 (ThreadLocalRandom.current().nextDouble() - 0.5) * 0.8,
                 victim.getHeight() * (0.6 + ThreadLocalRandom.current().nextDouble() * 0.3),
@@ -1459,12 +1506,14 @@ public final class PvpBotService {
                     text.setPersistent(false);
                     text.setTeleportDuration(12); // glide, don't jump
                 });
+        double rise = tuning().damageIndicatorRise();
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (display.isValid()) {
-                display.teleport(loc.clone().add(0, 0.7, 0));
+                display.teleport(loc.clone().add(0, rise, 0));
             }
         });
-        Bukkit.getScheduler().runTaskLater(plugin, display::remove, 16L);
+        Bukkit.getScheduler().runTaskLater(plugin, display::remove,
+                tuning().damageIndicatorTicks());
     }
 
     // -------------------------------------------------------------- helpers

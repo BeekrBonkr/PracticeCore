@@ -52,6 +52,22 @@ public final class BoardService {
         boards.put(player.getUniqueId(), board);
     }
 
+    /**
+     * Rebuilds every live sidebar after a reload: the title is only set when a
+     * board is created, so without this a running session would keep showing
+     * the old messages.yml title until it ended.
+     */
+    public void refreshAll() {
+        for (UUID id : java.util.List.copyOf(boards.keySet())) {
+            Player player = Bukkit.getPlayer(id);
+            if (player != null && player.isOnline()) {
+                create(player);
+            } else {
+                remove(id);
+            }
+        }
+    }
+
     /** Re-evaluates the player's sidebar preference (menu toggle, /practice sidebar). */
     public void applyPreference(Player player) {
         if (plugin.sessions().get(player.getUniqueId()) == null
@@ -63,7 +79,11 @@ public final class BoardService {
     }
 
     public void remove(Player player) {
-        FastBoard board = boards.remove(player.getUniqueId());
+        remove(player.getUniqueId());
+    }
+
+    private void remove(UUID player) {
+        FastBoard board = boards.remove(player);
         if (board != null && !board.isDeleted()) {
             board.delete();
         }
