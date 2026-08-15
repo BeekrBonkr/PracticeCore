@@ -69,6 +69,12 @@ public final class BotFight {
     public int stapCooldown;
     /** Ticks the bot chases its own knockback to keep a combo alive. */
     public int comboFollowTicks;
+    /** +1 / -1: which way around the player the strafe is currently carrying it. */
+    public int orbitSense;
+    /** How long the strafe has been carrying it the same way around. */
+    public int orbitTicks;
+    /** Ticks left of a deliberate cut back the other way through the crosshair. */
+    public int cutbackTicks;
 
     // ------------------------------------------------------- respawn timers
     /** Ticks the player stays "dead" (blind, untouchable) before respawning. */
@@ -175,6 +181,9 @@ public final class BotFight {
         stapTicks = 0;
         stapCooldown = 0;
         comboFollowTicks = 0;
+        orbitSense = 0;
+        orbitTicks = 0;
+        cutbackTicks = 0;
         attackCooldown = 20;
         graceTicks = 20;
         critTicks = -1;

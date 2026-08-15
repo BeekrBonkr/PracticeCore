@@ -305,6 +305,20 @@ sooner and escapes long combos more often) and **frenzied** aggression
 a player holding W and spamming space) — every tier cycles like any other
 value, so they can be mixed into custom setups too.
 
+Demon is also where the bot stops swinging like a mob and starts duelling
+like a person. Its perfect accuracy switches on the **duellist layer**:
+**reach discipline** (it holds the tip of its own reach instead of hugging
+you, and gives ground while your immunity window burns), a **combo
+follow-up** (a clean hit opens a short window where it travels with its own
+knockback at a sprint rather than waiting for you to drift back into
+range), **s-tapping** (the backward tap as a hit lands, eating part of the
+knockback and shortening its own hitstun), **block-hitting** (with the block
+toggle on, swinging with the sword still raised and dropping back behind it
+after a clean hit), and **jukes** — the strafe side flips on its own beat
+and the approach weaves instead of walking a straight line in. Every one of
+these is honest at Demon: enough that spamming clicks stops working, not
+enough to be unfair. Which is the next tier's job.
+
 Above Demon sits **Unfair**, for the insane: four knobs gain an **unfair**
 tier and the accuracy knob's unfair setting switches on a gloves-off layer
 above cerebral. It strafes faster than Demon and *darts* sideways the
@@ -314,21 +328,13 @@ kiting before it is actually desperate, feints, whiff-punishes and
 crit-fishes far more freely, leans on the rod harder in neutral, w-taps or
 crits on most clean hits, and angles every shove harder toward the rim.
 
-It also brings the techniques a good duellist brings, none of which exist
-below this tier. **Reach discipline**: it stops hugging you and holds the
-tip of its own reach instead — close enough to land, far enough that your
-three-block swing has to be timed — and slides back out of range entirely
-while your immunity window burns, so a wasted click is thrown at air.
-**Combo starting**: a clean melee hit opens a follow window in which it
-travels with its own knockback at a sprint (sprint-jumping to keep up)
-rather than waiting for you to drift back into range. **S-tapping**: the
-backward tap thrown in as a hit lands, eating part of the knockback and
-shortening its own hitstun, so your chain never carries it anywhere.
-**Block-hitting**: with the block toggle on, it swings with the sword still
-raised and drops back behind it right after a clean hit — the answer you
-throw lands at half. And it **jukes** instead of drifting, flipping its
-strafe side on a short unpredictable beat and weaving across its own
-approach instead of walking a straight line in.
+It takes every technique of Demon's duellist layer past honest. Its **reach
+discipline** holds a full block further out and steps clean out of *your*
+range while your immunity burns, so a wasted click is thrown at air; its
+**combo follow** runs half again as long; it **s-taps** most of the hits it
+takes rather than a third of them; it **block-hits** more freely; and it
+**jukes** on a beat roughly twice as fast, so a crosshair that has learned
+the rhythm is already wrong.
 
 What it deliberately does **not** do is cheat the numbers: reach stays
 capped at long (3.4), CPS is still tick-capped, its accuracy is Demon's
@@ -351,10 +357,10 @@ and starts kiting the moment the trade math tips, slips combos at 90% and
 turns every slip into an immediate counter-offensive, darts harder off a
 settled crosshair and hops constantly, whiff-punishes almost every wasted
 click, crit-fishes and feints and max-range-baits at will, w-taps or crits
-on nearly every clean hit, and shoves hardest of all toward the rim. Every
-Unfair technique is dialed up with it: it s-taps almost every hit it takes,
-block-hits more often, chases its combos a beat longer, jukes more, and
-steps a little further out of your reach while your immunity runs. It is
+on nearly every clean hit, and shoves hardest of all toward the rim. The
+duellist layer is dialed to its ceiling with it: it s-taps almost every hit
+it takes, block-hits more often, chases its combos a beat longer, and steps
+a little further out of your reach while your immunity runs. It is
 the honest ceiling of the engine: everything Suffer does, a human could do
 once — it does all of it, every exchange, forever.
 
