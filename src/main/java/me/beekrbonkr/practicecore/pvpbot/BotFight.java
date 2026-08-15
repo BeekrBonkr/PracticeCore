@@ -59,6 +59,28 @@ public final class BotFight {
     public int nameTicks;
     /** Ticks the bot rides incoming knockback without fighting it — combos. */
     public int hitstunTicks;
+    /** Ticks left of a defensive crouch; incoming knockback is scaled down. */
+    public int crouchTicks;
+    /** Ticks before the bot may crouch again. */
+    public int crouchCooldown;
+
+    // ------------------------------------------------------- respawn timers
+    /** Ticks the player stays "dead" (blind, untouchable) before respawning. */
+    public int playerRespawnTicks;
+    /** Ticks the bot stays despawned before its body comes back. */
+    public int botRespawnTicks;
+
+    public boolean playerDead() {
+        return playerRespawnTicks > 0;
+    }
+
+    public boolean botDead() {
+        return botRespawnTicks > 0;
+    }
+
+    public boolean crouching() {
+        return crouchTicks > 0;
+    }
 
     // ------------------------------------------------------------- AFK watch
     /** Ticks of a frozen player (no move, no aim, no swing) before the bot holds fire. */
@@ -135,6 +157,8 @@ public final class BotFight {
     public void resetStock() {
         combo = 0;
         hitstunTicks = 0;
+        crouchTicks = 0;
+        crouchCooldown = 0;
         attackCooldown = 20;
         graceTicks = 20;
         critTicks = -1;

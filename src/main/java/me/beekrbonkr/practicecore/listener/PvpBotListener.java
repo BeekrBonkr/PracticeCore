@@ -94,6 +94,12 @@ public final class PvpBotListener implements Listener {
         if (fight == null) {
             return;
         }
+        if (fight.playerDead()) {
+            // Dead players are untouchable: a projectile still in flight when
+            // the fatal blow landed must not hit the "corpse" at spawn.
+            event.setCancelled(true);
+            return;
+        }
         if (event.getFinalDamage() >= player.getHealth()) {
             event.setCancelled(true);
             plugin.pvpBot().playerDied(player, session, fight);
@@ -121,7 +127,7 @@ public final class PvpBotListener implements Listener {
         BotFight fight = owner == null ? null
                 : PvpBotService.fightOf(plugin.sessions().get(owner));
         if (fight == null || !event.getEntity().equals(fight.bot)
-                || fight.paused
+                || fight.paused || fight.playerDead()
                 || !(event instanceof EntityDamageByEntityEvent byEntity)
                 || !isFromOwner(byEntity.getDamager(), owner)) {
             event.setCancelled(true);
@@ -178,9 +184,40 @@ public final class PvpBotListener implements Listener {
             default -> 10;
         };
         fight.hitstunTicks = fight.combo >= 3 ? stun / 2 : stun;
+        // The unfair tiers answer a building combo with a shift-anchor: a
+        // short crouch that scales down the knockback of the hits still to
+        // come, so the chain never carries them far. Deliberately absent from
+        // every tier below UNFAIR — combos staying earnable is the point.
+        if (fight.settings != null && fight.settings.unfair() && fight.combo >= 2
+                && !fight.crouching() && fight.crouchCooldown == 0
+                && java.util.concurrent.ThreadLocalRandom.current().nextDouble()
+                        < (fight.settings.suffer() ? 0.45 : 0.3)) {
+            plugin.pvpBot().startCrouch(fight, 12);
+        }
         if (event.getFinalDamage() >= fight.bot.getHealth()) {
             event.setCancelled(true);
             plugin.pvpBot().botDied(player, session, fight);
+        }
+    }
+
+    /**
+     * The crouch's mechanical payoff: while the bot is sneaking, the
+     * knockback of hits (and rod tags) that land on it is scaled down —
+     * vanilla gives players no such lever, but the bot's whole moveset is
+     * hand-rolled, and "crouching anchors you" reads instantly to the player
+     * watching the model sink into a sneak.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onBotKnockback(io.papermc.paper.event.entity.EntityKnockbackEvent event) {
+        if (!plugin.pvpBot().isBot(event.getEntity())) {
+            return;
+        }
+        UUID owner = plugin.pvpBot().ownerOf(event.getEntity());
+        BotFight fight = owner == null ? null
+                : PvpBotService.fightOf(plugin.sessions().get(owner));
+        if (fight != null && event.getEntity().equals(fight.bot) && fight.crouching()) {
+            event.setKnockback(event.getKnockback()
+                    .multiply(PvpBotService.CROUCH_KNOCKBACK_FACTOR));
         }
     }
 
