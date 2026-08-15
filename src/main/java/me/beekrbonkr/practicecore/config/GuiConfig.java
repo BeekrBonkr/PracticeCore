@@ -2,12 +2,7 @@ package me.beekrbonkr.practicecore.config;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import org.bukkit.Material;
-import org.bukkit.configuration.InvalidConfigurationException;
-import org.bukkit.configuration.file.YamlConfiguration;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -16,45 +11,29 @@ import java.util.Locale;
  * icon material, row counts, filler and nav items. All display <em>text</em>
  * stays in messages.yml — this file is layout only.
  *
- * Like messages.yml, the jar's copy is the safety net: the user's file is
- * loaded with the bundled defaults underneath, so a missing key can never
- * leave a menu without a slot or material.
+ * Like every admin-editable file, the jar's copy is the safety net: the user's
+ * file is loaded with the bundled defaults underneath, so a missing key can
+ * never leave a menu without a slot or material.
  */
 public final class GuiConfig {
 
     private static final String RESOURCE = "guis.yml";
 
-    private final PracticeCorePlugin plugin;
-    private final File file;
-    private YamlConfiguration cfg = new YamlConfiguration();
+    private final ConfigFile file;
 
     public GuiConfig(PracticeCorePlugin plugin) {
-        this.plugin = plugin;
-        this.file = new File(plugin.getDataFolder(), RESOURCE);
+        this.file = new ConfigFile(plugin, "guis", RESOURCE, Versions.GUIS, GuiConfig::steps,
+                java.util.Set.of("categories.entries"));
+    }
+
+    /** @return null when the file parses, or the problem to report otherwise */
+    public String probe() {
+        return file.probe();
     }
 
     /** @return notes worth showing an admin (migrations, parse failures) */
     public List<String> load() {
-        List<String> notes = new ArrayList<>();
-        YamlConfiguration bundled = Backups.jarDefaults(plugin, RESOURCE);
-        if (!file.exists()) {
-            plugin.saveResource(RESOURCE, false);
-        }
-        YamlConfiguration user = new YamlConfiguration();
-        try {
-            user.load(file);
-            notes.addAll(new YamlMigrator(plugin, "guis", RESOURCE, file,
-                    Versions.GUIS, GuiConfig::steps).run(user));
-        } catch (IOException | InvalidConfigurationException e) {
-            notes.add(RESOURCE + " could not be parsed: " + e.getMessage()
-                    + " — falling back to the built-in layout.");
-            user = new YamlConfiguration();
-        }
-        if (bundled != null) {
-            user.setDefaults(bundled);
-        }
-        cfg = user;
-        return notes;
+        return file.load();
     }
 
     /** Reshapes an older guis.yml. See {@link Versions#GUIS}. */
@@ -65,24 +44,19 @@ public final class GuiConfig {
     // ------------------------------------------------------------- lookups
 
     public int slot(String path, int def) {
-        return cfg.getInt(path + ".slot", def);
+        return file.integer(path + ".slot", def);
     }
 
     public boolean buttonEnabled(String path) {
-        return cfg.getBoolean(path + ".enabled", true) && cfg.getInt(path + ".slot", 0) >= 0;
+        return file.bool(path + ".enabled", true) && file.integer(path + ".slot", 0) >= 0;
     }
 
     public int rows(String path, int def) {
-        return Math.clamp(cfg.getInt(path + ".rows", def), 1, 6);
+        return file.integer(path + ".rows", def, 1, 6);
     }
 
     public Material material(String path, Material def) {
-        String name = cfg.getString(path);
-        if (name == null || name.isBlank()) {
-            return def;
-        }
-        Material parsed = Material.matchMaterial(name);
-        return parsed != null && parsed.isItem() ? parsed : def;
+        return file.material(path, def);
     }
 
     /** A button's icon material ({@code <path>.material}). */
@@ -94,8 +68,8 @@ public final class GuiConfig {
 
     /** Admin-configured display name for a category, or a tidied fallback. */
     public String categoryName(String category) {
-        String configured = cfg.getString("categories.entries." + category + ".name");
-        if (configured != null && !configured.isBlank()) {
+        String configured = file.string("categories.entries." + category + ".name", "");
+        if (!configured.isBlank()) {
             return configured;
         }
         String cleaned = category.replace('_', ' ').replace('-', ' ');
@@ -109,6 +83,6 @@ public final class GuiConfig {
     }
 
     public boolean categoriesEnabled() {
-        return cfg.getBoolean("categories.enabled", true);
+        return file.bool("categories.enabled", true);
     }
 }

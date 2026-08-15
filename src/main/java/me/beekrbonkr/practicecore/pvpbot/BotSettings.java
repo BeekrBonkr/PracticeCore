@@ -1,7 +1,8 @@
 package me.beekrbonkr.practicecore.pvpbot;
 
-import me.beekrbonkr.practicecore.stats.StatsStore;
+import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.Locale;
 import java.util.UUID;
@@ -11,26 +12,21 @@ import java.util.UUID;
  * ({@code prefs.pvpbot.*}). Immutable snapshot: the settings GUI writes each
  * change straight to prefs and re-loads, so there are no wither methods —
  * {@link #load} is the single source of truth.
+ *
+ * The tiers below are <em>names</em>, not numbers. What EXTREME evasiveness or
+ * TWELVE cps actually mean lives in pvpbot.yml and is resolved through
+ * {@link BotTuning}, which is why every accessor here takes the detour through
+ * {@link #tuning()}: retuning a difficulty must never invalidate the
+ * preferences players already saved.
  */
-public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
+public record BotSettings(BotTuning tuning, PvpKit kit, GearTier gear, Evasiveness evasiveness,
                           Cps cps, Accuracy accuracy, Combos combos,
                           Reach reach, Aggression aggression,
                           boolean rod, boolean bow, boolean block) {
 
-    /** How fast the bot strafes out of the player's crosshair, blocks/tick. */
+    /** How hard the bot works to stay out of the player's crosshair. */
     public enum Evasiveness {
-        LOW(0.12), MEDIUM(0.18), HIGH(0.26), EXTREME(0.34), UNFAIR(0.45),
-        SUFFER(0.48);
-
-        private final double speed;
-
-        Evasiveness(double speed) {
-            this.speed = speed;
-        }
-
-        public double speed() {
-            return speed;
-        }
+        LOW, MEDIUM, HIGH, EXTREME, UNFAIR, SUFFER;
 
         public Evasiveness next() {
             return values()[(ordinal() + 1) % values().length];
@@ -39,28 +35,7 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
 
     /** Attack rate. Tick resolution caps the real rate near the top end. */
     public enum Cps {
-        FOUR(4), SIX(6), EIGHT(8), TWELVE(12);
-
-        private final int clicks;
-
-        Cps(int clicks) {
-            this.clicks = clicks;
-        }
-
-        public int clicks() {
-            return clicks;
-        }
-
-        /**
-         * Ticks between swings, never below one. Floored, not rounded: the
-         * service's 40%-chance extra tick supplies the fraction, so each tier
-         * averages out near its nominal rate. TWELVE floors to a single tick —
-         * the swing lands the instant the target's immunity expires, which is
-         * exactly what a 1.8-style spam-clicker feels like.
-         */
-        public int intervalTicks() {
-            return Math.max(1, 20 / clicks);
-        }
+        FOUR, SIX, EIGHT, TWELVE;
 
         public Cps next() {
             return values()[(ordinal() + 1) % values().length];
@@ -68,25 +43,12 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
     }
 
     /**
-     * Chance each swing in range actually connects. UNFAIR and SUFFER land
-     * like PERFECT — there is no headroom above 1.0 — but the accuracy knob
-     * has always been where the brain lives (reaction time, the cerebral
-     * layer), and these tiers unlock its dirtiest layers: see
-     * {@link #unfair()} and {@link #suffer()}.
+     * How often a swing in range connects — and, above all, how well the bot
+     * thinks: the accuracy tier is what unlocks the cerebral, duellist, unfair
+     * and suffer layers (see {@link BotTuning#cerebral}).
      */
     public enum Accuracy {
-        LOW(0.5), MEDIUM(0.7), HIGH(0.85), PERFECT(1.0), UNFAIR(1.0),
-        SUFFER(1.0);
-
-        private final double chance;
-
-        Accuracy(double chance) {
-            this.chance = chance;
-        }
-
-        public double chance() {
-            return chance;
-        }
+        LOW, MEDIUM, HIGH, PERFECT, UNFAIR, SUFFER;
 
         public Accuracy next() {
             return values()[(ordinal() + 1) % values().length];
@@ -95,17 +57,7 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
 
     /** How often the bot goes for jump-crits and W-tap knockback resets. */
     public enum Combos {
-        OFF(0), SOME(0.2), FULL(0.4), UNFAIR(0.65), SUFFER(0.85);
-
-        private final double chance;
-
-        Combos(double chance) {
-            this.chance = chance;
-        }
-
-        public double chance() {
-            return chance;
-        }
+        OFF, SOME, FULL, UNFAIR, SUFFER;
 
         public Combos next() {
             return values()[(ordinal() + 1) % values().length];
@@ -113,17 +65,7 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
     }
 
     public enum Reach {
-        SHORT(2.6), NORMAL(3.0), LONG(3.4);
-
-        private final double blocks;
-
-        Reach(double blocks) {
-            this.blocks = blocks;
-        }
-
-        public double blocks() {
-            return blocks;
-        }
+        SHORT, NORMAL, LONG;
 
         public Reach next() {
             return values()[(ordinal() + 1) % values().length];
@@ -132,102 +74,57 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
 
     /** Approach speed and the spacing the bot tries to hold while strafing. */
     public enum Aggression {
-        PASSIVE(1.0, 3.2), BALANCED(1.2, 2.8), RELENTLESS(1.4, 2.3),
-        FRENZIED(1.6, 2.0), UNFAIR(1.8, 1.7), SUFFER(1.85, 1.5);
-
-        private final double speed;
-        private final double gap;
-
-        Aggression(double speed, double gap) {
-            this.speed = speed;
-            this.gap = gap;
-        }
-
-        public double speed() {
-            return speed;
-        }
-
-        public double gap() {
-            return gap;
-        }
+        PASSIVE, BALANCED, RELENTLESS, FRENZIED, UNFAIR, SUFFER;
 
         public Aggression next() {
             return values()[(ordinal() + 1) % values().length];
         }
     }
 
-    /**
-     * Named difficulty presets: one click sets all six AI knobs. The knobs
-     * stay individually editable afterward — a settings mix matching no
-     * preset reads as "Custom" in the GUI.
-     */
-    public enum Preset {
-        ROOKIE(Evasiveness.LOW, Cps.FOUR, Accuracy.LOW,
-                Combos.OFF, Reach.SHORT, Aggression.PASSIVE),
-        BRAWLER(Evasiveness.MEDIUM, Cps.SIX, Accuracy.MEDIUM,
-                Combos.SOME, Reach.NORMAL, Aggression.BALANCED),
-        VETERAN(Evasiveness.HIGH, Cps.EIGHT, Accuracy.HIGH,
-                Combos.SOME, Reach.NORMAL, Aggression.RELENTLESS),
-        DEMON(Evasiveness.EXTREME, Cps.TWELVE, Accuracy.PERFECT,
-                Combos.FULL, Reach.LONG, Aggression.FRENZIED),
-        // Deliberately no reach cheat past LONG on the top presets: they must
-        // stay beatable by comboing and edge play, not turn into an aimbot
-        // with a lightsaber.
-        UNFAIR(Evasiveness.UNFAIR, Cps.TWELVE, Accuracy.UNFAIR,
-                Combos.UNFAIR, Reach.LONG, Aggression.UNFAIR),
-        // Everything UNFAIR does, done meaner and read faster — but still
-        // inside a player's movement envelope: no extra reach, no extra CPS,
-        // barely any extra speed. The cruelty is all in the brain.
-        SUFFER(Evasiveness.SUFFER, Cps.TWELVE, Accuracy.SUFFER,
-                Combos.SUFFER, Reach.LONG, Aggression.SUFFER);
+    /** Bot gear override; MIRROR wears whatever the player's kit wears. */
+    public enum GearTier {
+        MIRROR, NONE, LEATHER, IRON, DIAMOND;
 
-        private final Evasiveness evasiveness;
-        private final Cps cps;
-        private final Accuracy accuracy;
-        private final Combos combos;
-        private final Reach reach;
-        private final Aggression aggression;
-
-        Preset(Evasiveness evasiveness, Cps cps, Accuracy accuracy,
-               Combos combos, Reach reach, Aggression aggression) {
-            this.evasiveness = evasiveness;
-            this.cps = cps;
-            this.accuracy = accuracy;
-            this.combos = combos;
-            this.reach = reach;
-            this.aggression = aggression;
-        }
-
-        /** The prefs this preset writes, ready for one batched save. */
-        public java.util.Map<String, Object> prefs() {
-            return java.util.Map.of(
-                    "pvpbot.evasiveness", evasiveness.name(),
-                    "pvpbot.cps", cps.name(),
-                    "pvpbot.accuracy", accuracy.name(),
-                    "pvpbot.combos", combos.name(),
-                    "pvpbot.reach", reach.name(),
-                    "pvpbot.aggression", aggression.name());
-        }
-
-        public boolean matches(BotSettings settings) {
-            return settings.evasiveness() == evasiveness && settings.cps() == cps
-                    && settings.accuracy() == accuracy && settings.combos() == combos
-                    && settings.reach() == reach && settings.aggression() == aggression;
-        }
-
-        public Preset next() {
+        public GearTier next() {
             return values()[(ordinal() + 1) % values().length];
         }
     }
 
-    /** The preset these settings currently equal, or null for a custom mix. */
-    public Preset matchingPreset() {
-        for (Preset preset : Preset.values()) {
-            if (preset.matches(this)) {
-                return preset;
-            }
-        }
-        return null;
+    // ------------------------------------------------------- resolved values
+
+    /** Strafe speed in blocks per tick. */
+    public double strafeSpeed() {
+        return tuning.strafeSpeed(evasiveness);
+    }
+
+    /** Ticks between swings. */
+    public int attackIntervalTicks() {
+        return tuning.attackIntervalTicks(cps);
+    }
+
+    /** Chance a swing inside reach connects. */
+    public double hitChance() {
+        return tuning.hitChance(accuracy);
+    }
+
+    /** How readily the bot goes for jump-crits and W-taps. */
+    public double comboChance() {
+        return tuning.comboChance(combos);
+    }
+
+    /** Melee range in blocks. */
+    public double reachBlocks() {
+        return tuning.reachBlocks(reach);
+    }
+
+    /** Pathfinder speed multiplier while closing. */
+    public double approachSpeed() {
+        return tuning.approachSpeed(aggression);
+    }
+
+    /** The spacing the bot holds while strafing. */
+    public double spacingGap() {
+        return tuning.spacingGap(aggression);
     }
 
     /**
@@ -235,12 +132,12 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
      * position and motion may be. The top tiers effectively see live.
      */
     public int reactionTicks() {
-        return switch (accuracy) {
-            case LOW -> 6;
-            case MEDIUM -> 4;
-            case HIGH -> 2;
-            case PERFECT, UNFAIR, SUFFER -> 0;
-        };
+        return tuning.reactionTicks(accuracy);
+    }
+
+    /** Ticks the bot rides incoming knockback — the window combos live in. */
+    public int hitstunTicks() {
+        return tuning.hitstunTicks(evasiveness);
     }
 
     /**
@@ -250,108 +147,110 @@ public record BotSettings(PvpKit kit, GearTier gear, Evasiveness evasiveness,
      * not by hitting harder.
      */
     public boolean cerebral() {
-        return accuracy.ordinal() >= Accuracy.HIGH.ordinal();
+        return tuning.cerebral(accuracy);
     }
 
     /**
      * The duellist layer, one step above cerebral: reach discipline, combo
      * follow-ups, s-taps, block-hits and strafe jukes — the techniques a good
-     * 1.8 player has in their hands rather than in their head. Demon fights
-     * with the honest version of each; {@link #unfair()} turns every one of
-     * them up rather than adding new ones.
+     * 1.8 player has in their hands rather than in their head.
      */
     public boolean duellist() {
-        return accuracy.ordinal() >= Accuracy.PERFECT.ordinal();
+        return tuning.duellist(accuracy);
     }
 
     /**
-     * The gloves-off layer above cerebral: faster stance reads, earlier
-     * combo escapes, sidestep bursts off the crosshair, freer feints,
-     * whiff-punishes, crit-fishing and rod pressure, and shoves that lean
-     * harder toward the rim. Everything it does a human could do on a
-     * blessed day — it just does all of it, every exchange.
+     * The gloves-off layer: faster stance reads, earlier combo escapes,
+     * sidestep bursts off the crosshair, freer feints, whiff-punishes,
+     * crit-fishing and rod pressure. Everything a human could do on a blessed
+     * day — it just does all of it, every exchange.
      */
     public boolean unfair() {
-        return accuracy.ordinal() >= Accuracy.UNFAIR.ordinal();
+        return tuning.unfair(accuracy);
     }
 
-    /**
-     * The tier above unfair: the same dirty playbook with every dial at its
-     * ceiling — near-instant stance reads, immediate retaliation out of a
-     * slipped combo, relentless crit-fishing and rod pressure. Movement and
-     * combat stay inside what a player could physically do; only the
-     * decisions are inhuman.
-     */
+    /** The tier above unfair: the same playbook with every dial at its ceiling. */
     public boolean suffer() {
-        return accuracy == Accuracy.SUFFER;
+        return tuning.suffer(accuracy);
     }
 
-    /** Bot gear override; MIRROR wears whatever the player's kit preset wears. */
-    public enum GearTier {
-        MIRROR(null, null),
-        NONE(null, Material.WOODEN_SWORD),
-        LEATHER(Material.LEATHER_HELMET, Material.STONE_SWORD),
-        IRON(Material.IRON_HELMET, Material.IRON_SWORD),
-        DIAMOND(Material.DIAMOND_HELMET, Material.DIAMOND_SWORD);
+    /** A layer-scaled knob from pvpbot.yml's {@code behavior} section. */
+    public double knob(String path, double fallback) {
+        return tuning.scaled("behavior." + path, this, fallback);
+    }
 
-        private final Material helmet;
-        private final Material sword;
+    /** The same, rounded to whole ticks. */
+    public int knobTicks(String path, int fallback) {
+        return tuning.scaledTicks("behavior." + path, this, fallback);
+    }
 
-        GearTier(Material helmet, Material sword) {
-            this.helmet = helmet;
-            this.sword = sword;
-        }
+    /** A layer-scaled {@code {min, max}} window, rolled fresh. */
+    public int knobRoll(String path, int minFallback, int maxFallback) {
+        return tuning.scaledRoll("behavior." + path, this, minFallback, maxFallback);
+    }
 
-        /** [helmet, chestplate, leggings, boots, sword], nulls for bare slots. */
-        public Material[] pieces() {
-            if (helmet == null) {
-                return new Material[]{null, null, null, null, sword};
+    /** True on this tick with the probability the named knob resolves to. */
+    public boolean chance(String path, double fallback) {
+        return java.util.concurrent.ThreadLocalRandom.current().nextDouble()
+                < knob(path, fallback);
+    }
+
+    // -------------------------------------------------------------- presets
+
+    /** The preset these settings currently equal, or null for a custom mix. */
+    public BotPreset matchingPreset() {
+        for (BotPreset preset : tuning.presets()) {
+            if (preset.matches(this)) {
+                return preset;
             }
-            String prefix = helmet.name().replace("_HELMET", "");
-            return new Material[]{
-                    helmet,
-                    Material.valueOf(prefix + "_CHESTPLATE"),
-                    Material.valueOf(prefix + "_LEGGINGS"),
-                    Material.valueOf(prefix + "_BOOTS"),
-                    sword};
         }
-
-        public GearTier next() {
-            return values()[(ordinal() + 1) % values().length];
-        }
+        return null;
     }
 
-    public static BotSettings load(StatsStore stats, UUID player) {
-        return new BotSettings(
-                enumOr(PvpKit.class, stats.pref(player, "pvpbot.kit", null), PvpKit.SWORD),
-                enumOr(GearTier.class, stats.pref(player, "pvpbot.gear", null), GearTier.MIRROR),
-                enumOr(Evasiveness.class, stats.pref(player, "pvpbot.evasiveness", null),
-                        Evasiveness.MEDIUM),
-                enumOr(Cps.class, stats.pref(player, "pvpbot.cps", null), Cps.EIGHT),
-                enumOr(Accuracy.class, stats.pref(player, "pvpbot.accuracy", null),
-                        Accuracy.MEDIUM),
-                enumOr(Combos.class, stats.pref(player, "pvpbot.combos", null), Combos.SOME),
-                enumOr(Reach.class, stats.pref(player, "pvpbot.reach", null), Reach.NORMAL),
-                enumOr(Aggression.class, stats.pref(player, "pvpbot.aggression", null),
-                        Aggression.BALANCED),
-                stats.prefBool(player, "pvpbot.rod", false),
-                stats.prefBool(player, "pvpbot.bow", false),
-                stats.prefBool(player, "pvpbot.block", false));
-    }
+    // ---------------------------------------------------------------- gear
 
     /** The armor+sword the bot actually wears under these settings. */
-    public org.bukkit.inventory.ItemStack[] botGear() {
+    public ItemStack[] botGear() {
         if (gear == GearTier.MIRROR) {
-            return kit.botGear();
+            return kit == null ? new ItemStack[5] : kit.botGear();
         }
-        Material[] pieces = gear.pieces();
-        org.bukkit.inventory.ItemStack[] stacks = new org.bukkit.inventory.ItemStack[5];
-        for (int i = 0; i < pieces.length; i++) {
+        Material[] pieces = tuning.gearPieces(gear);
+        ItemStack[] stacks = new ItemStack[5];
+        for (int i = 0; i < pieces.length && i < stacks.length; i++) {
             if (pieces[i] != null) {
-                stacks[i] = new org.bukkit.inventory.ItemStack(pieces[i]);
+                stacks[i] = new ItemStack(pieces[i]);
             }
         }
         return stacks;
+    }
+
+    // --------------------------------------------------------------- loading
+
+    public static BotSettings load(PracticeCorePlugin plugin, UUID player) {
+        BotTuning tuning = plugin.botTuning();
+        var stats = plugin.stats();
+        PvpKit kit = tuning.kits().get(stats.pref(player, "pvpbot.kit", null));
+        if (kit == null) {
+            kit = tuning.defaultKit();
+        }
+        return new BotSettings(tuning, kit,
+                enumOr(GearTier.class, stats.pref(player, "pvpbot.gear", null),
+                        tuning.defaultTier("gear", GearTier.class, GearTier.MIRROR)),
+                enumOr(Evasiveness.class, stats.pref(player, "pvpbot.evasiveness", null),
+                        tuning.defaultTier("evasiveness", Evasiveness.class, Evasiveness.MEDIUM)),
+                enumOr(Cps.class, stats.pref(player, "pvpbot.cps", null),
+                        tuning.defaultTier("cps", Cps.class, Cps.EIGHT)),
+                enumOr(Accuracy.class, stats.pref(player, "pvpbot.accuracy", null),
+                        tuning.defaultTier("accuracy", Accuracy.class, Accuracy.MEDIUM)),
+                enumOr(Combos.class, stats.pref(player, "pvpbot.combos", null),
+                        tuning.defaultTier("combos", Combos.class, Combos.SOME)),
+                enumOr(Reach.class, stats.pref(player, "pvpbot.reach", null),
+                        tuning.defaultTier("reach", Reach.class, Reach.NORMAL)),
+                enumOr(Aggression.class, stats.pref(player, "pvpbot.aggression", null),
+                        tuning.defaultTier("aggression", Aggression.class, Aggression.BALANCED)),
+                stats.prefBool(player, "pvpbot.rod", tuning.defaultToggle("rod", false)),
+                stats.prefBool(player, "pvpbot.bow", tuning.defaultToggle("bow", false)),
+                stats.prefBool(player, "pvpbot.block", tuning.defaultToggle("block", false)));
     }
 
     private static <E extends Enum<E>> E enumOr(Class<E> type, String name, E def) {

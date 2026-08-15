@@ -180,10 +180,7 @@ public final class RushListener implements Listener {
             // run doesn't have.
             default -> {
                 plugin.messages().actionBar(player, "rush.special-unsupported");
-                if (plugin.pcConfig().sounds()) {
-                    player.playSound(player.getLocation(),
-                            org.bukkit.Sound.BLOCK_NOTE_BLOCK_BASS, 0.7f, 0.7f);
-                }
+                plugin.sounds().play(player, "rush.special-unsupported");
             }
         }
     }

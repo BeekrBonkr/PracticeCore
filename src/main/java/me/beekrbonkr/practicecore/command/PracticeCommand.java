@@ -137,6 +137,10 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
             msg().send(player, "permission.spectate");
             return;
         }
+        if (!plugin.pcConfig().spectateEnabled()) {
+            msg().send(player, "spectate.disabled");
+            return;
+        }
         if (args.length < 2) {
             new me.beekrbonkr.practicecore.gui.SpectateMenu(plugin, player, null).open();
             return;

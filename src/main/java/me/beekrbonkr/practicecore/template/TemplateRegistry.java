@@ -229,6 +229,29 @@ public final class TemplateRegistry {
         return notes;
     }
 
+    /**
+     * A cheap summary of what the arena folder holds right now: every arena
+     * file's path, size and last-modified stamp.
+     *
+     * A reload compares this against the previous one to decide whether the
+     * arenas themselves changed — which is the difference between a reload
+     * that can be applied under running sessions and one that has to end them
+     * first, because an edited arena.yml no longer describes the copy of the
+     * arena already pasted into the world.
+     */
+    public String fingerprint() {
+        StringBuilder digest = new StringBuilder();
+        for (ArenaFolder folder : arenaFolders(new ArrayList<>())) {
+            for (String name : new String[]{"arena.yml", "arena.schem"}) {
+                File entry = new File(folder.dir(), name);
+                digest.append(relative(folder.dir())).append('/').append(name).append(':')
+                        .append(entry.length()).append('@')
+                        .append(entry.lastModified()).append(';');
+            }
+        }
+        return digest.toString();
+    }
+
     public ArenaTemplate get(String name) {
         return name == null ? null : templates.get(name.toLowerCase(Locale.ROOT));
     }

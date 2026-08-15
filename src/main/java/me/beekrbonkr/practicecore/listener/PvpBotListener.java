@@ -3,10 +3,10 @@ package me.beekrbonkr.practicecore.listener;
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.gui.Menu;
 import me.beekrbonkr.practicecore.pvpbot.BotFight;
+import me.beekrbonkr.practicecore.pvpbot.BotSettings;
 import me.beekrbonkr.practicecore.pvpbot.PvpBotService;
 import me.beekrbonkr.practicecore.session.PracticeSession;
 import org.bukkit.Bukkit;
-import org.bukkit.Sound;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -48,15 +48,14 @@ public final class PvpBotListener implements Listener {
         }
         if (fight.critBonusNextHit) {
             fight.critBonusNextHit = false;
-            event.setDamage(event.getDamage() * 1.5);
+            event.setDamage(event.getDamage() * plugin.botTuning().critMultiplier());
             plugin.pvpBot().playCritEffect(player);
         }
         // A clean melee hit opens a combo, and the duellist tiers know what to
         // do with one: they travel with their own knockback for the next
         // second instead of letting the player drift back out of range.
         if (fight.settings != null && fight.settings.duellist()) {
-            fight.comboFollowTicks = fight.settings.suffer() ? 16
-                    : fight.settings.unfair() ? 12 : 8;
+            fight.comboFollowTicks = fight.settings.knobTicks("combo-follow.ticks", 8);
         }
     }
 
@@ -81,7 +80,8 @@ public final class PvpBotListener implements Listener {
         event.setDamage(EntityDamageEvent.DamageModifier.BLOCKING, 0);
         if (!Bukkit.getPluginManager().isPluginEnabled("vanilla-sword-blocking")) {
             event.setDamage(EntityDamageEvent.DamageModifier.BASE,
-                    event.getDamage(EntityDamageEvent.DamageModifier.BASE) * 0.5);
+                    event.getDamage(EntityDamageEvent.DamageModifier.BASE)
+                            * plugin.botTuning().swordBlockDamageFactor());
         }
     }
 
@@ -113,7 +113,8 @@ public final class PvpBotListener implements Listener {
             return;
         }
         if (event.getFinalDamage() > 0) { // rod shoves knock, but aren't hits
-            fight.countHitTaken();
+            fight.countHitTaken(fight.settings == null ? 30
+                    : fight.settings.knobTicks("defensive-block.window", 30));
         }
     }
 
@@ -141,9 +142,8 @@ public final class PvpBotListener implements Listener {
             return;
         }
         if (fight.blocking()) {
-            event.setDamage(event.getDamage() * 0.5);
-            event.getEntity().getWorld().playSound(event.getEntity().getLocation(),
-                    Sound.ITEM_SHIELD_BLOCK, 0.6f, 1.4f);
+            event.setDamage(event.getDamage() * plugin.botTuning().swordBlockDamageFactor());
+            plugin.sounds().playAt(event.getEntity().getLocation(), "pvpbot.block-hit");
         }
     }
 
@@ -176,43 +176,40 @@ public final class PvpBotListener implements Listener {
             fight.countHitLanded();
             plugin.pvpBot().spawnDamageIndicator(fight.bot, event.getFinalDamage());
         }
+        BotSettings settings = fight.settings;
         // Ride the knockback instead of instantly strafing out of it — the
         // window that makes real 1.8-style combos possible. Deep in a combo
         // the stun shortens so the bot gets chances to fight back instead of
         // being carried helplessly across the arena, and an extreme-evasive
         // bot rides less of it to begin with — combos still land, but each
         // one has to be earned.
-        int stun = switch (fight.settings == null
-                ? me.beekrbonkr.practicecore.pvpbot.BotSettings.Evasiveness.MEDIUM
-                : fight.settings.evasiveness()) {
-            case SUFFER -> 6;
-            case UNFAIR -> 7;
-            case EXTREME -> 8;
-            default -> 10;
-        };
-        fight.hitstunTicks = fight.combo >= 3 ? stun / 2 : stun;
-        // S-tapping: the backward tap a good 1.8 player throws in as the hit
-        // lands, eating part of the knockback so the chain never carries them
-        // anywhere — and shortening the stun with it, because a player who
-        // taps back is already moving again. Demon lands it on about a third
-        // of the hits it takes; the unfair tiers almost never miss it.
-        if (fight.settings != null && fight.settings.duellist() && fight.stapCooldown == 0
-                && java.util.concurrent.ThreadLocalRandom.current().nextDouble()
-                        < (fight.settings.suffer() ? 0.85
-                                : fight.settings.unfair() ? 0.6 : 0.35)) {
-            fight.stapTicks = 5;
-            fight.stapCooldown = 12;
-            fight.hitstunTicks = Math.max(2, fight.hitstunTicks - 2);
-        }
-        // The unfair tiers answer a building combo with a shift-anchor: a
-        // short crouch that scales down the knockback of the hits still to
-        // come, so the chain never carries them far. Deliberately absent from
-        // every tier below UNFAIR — combos staying earnable is the point.
-        if (fight.settings != null && fight.settings.unfair() && fight.combo >= 2
-                && !fight.crouching() && fight.crouchCooldown == 0
-                && java.util.concurrent.ThreadLocalRandom.current().nextDouble()
-                        < (fight.settings.suffer() ? 0.45 : 0.3)) {
-            plugin.pvpBot().startCrouch(fight, 12);
+        if (settings != null) {
+            int stun = settings.hitstunTicks();
+            fight.hitstunTicks = fight.combo >= settings.knobTicks("hitstun.combo-shorten-at", 3)
+                    ? (int) Math.round(stun * settings.knob("hitstun.combo-factor", 0.5))
+                    : stun;
+            // S-tapping: the backward tap a good 1.8 player throws in as the
+            // hit lands, eating part of the knockback so the chain never
+            // carries them anywhere — and shortening the stun with it, because
+            // a player who taps back is already moving again. Demon lands it on
+            // about a third of the hits it takes; unfair almost never misses.
+            if (settings.duellist() && fight.stapCooldown == 0
+                    && settings.chance("stap.chance", 0.35)) {
+                fight.stapTicks = settings.knobTicks("stap.ticks", 5);
+                fight.stapCooldown = settings.knobTicks("stap.cooldown", 12);
+                fight.hitstunTicks = Math.max(2,
+                        fight.hitstunTicks - settings.knobTicks("stap.hitstun-reduction", 2));
+            }
+            // The unfair tiers answer a building combo with a shift-anchor: a
+            // short crouch that scales down the knockback of the hits still to
+            // come, so the chain never carries them far. Deliberately absent
+            // below UNFAIR — combos staying earnable is the point.
+            if (settings.unfair()
+                    && fight.combo >= settings.knobTicks("shift-anchor.after-hits", 2)
+                    && !fight.crouching() && fight.crouchCooldown == 0
+                    && settings.chance("shift-anchor.chance", 0.3)) {
+                plugin.pvpBot().startCrouch(fight, settings.knobTicks("shift-anchor.ticks", 12));
+            }
         }
         if (event.getFinalDamage() >= fight.bot.getHealth()) {
             event.setCancelled(true);
@@ -241,10 +238,10 @@ public final class PvpBotListener implements Listener {
         }
         double factor = 1.0;
         if (fight.crouching()) {
-            factor *= PvpBotService.CROUCH_KNOCKBACK_FACTOR;
+            factor *= plugin.botTuning().crouchKnockbackFactor();
         }
         if (fight.stapping()) {
-            factor *= PvpBotService.STAP_KNOCKBACK_FACTOR;
+            factor *= plugin.botTuning().stapKnockbackFactor();
         }
         if (factor < 1.0) {
             event.setKnockback(event.getKnockback().multiply(factor));
@@ -272,12 +269,16 @@ public final class PvpBotListener implements Listener {
             return;
         }
         // Clicking counts as being at the keyboard, even standing still.
-        fight.wake();
+        BotSettings settings = fight.settings;
+        fight.wake(plugin.botTuning().wakeGraceTicks(), plugin.botTuning().afkTicks());
         double dist = player.getEyeLocation().distance(fight.bot.getEyeLocation());
-        if (dist > 3.4 && dist < 8) {
-            fight.whiffHabit = Math.min(8, fight.whiffHabit + 1);
-            if (fight.whiffHabit >= 3 && fight.settings.cerebral()) {
-                fight.punishTicks = 10;
+        if (dist > settings.knob("whiff-punish.detect-min", 3.4)
+                && dist < settings.knob("whiff-punish.detect-max", 8)) {
+            fight.whiffHabit = Math.min(settings.knob("whiff-punish.habit-cap", 8),
+                    fight.whiffHabit + 1);
+            if (fight.whiffHabit >= settings.knob("whiff-punish.habit", 3)
+                    && settings.cerebral()) {
+                fight.punishTicks = settings.knobTicks("whiff-punish.ticks", 10);
             }
         }
     }
@@ -309,7 +310,8 @@ public final class PvpBotListener implements Listener {
             return;
         }
         fight.paused = false;
-        fight.graceTicks = Math.max(fight.graceTicks, 10); // a beat to re-orient
+        // A beat to re-orient.
+        fight.graceTicks = Math.max(fight.graceTicks, plugin.botTuning().shortGraceTicks());
         // Any of our menus may have changed a pref (the kit gallery, the
         // settings knobs) — re-reading is cheap and always correct.
         plugin.pvpBot().applySettings(player, session, fight);

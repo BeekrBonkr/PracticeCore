@@ -102,22 +102,20 @@ public final class BotFight {
     }
 
     // ------------------------------------------------------------- AFK watch
-    /** Ticks of a frozen player (no move, no aim, no swing) before the bot holds fire. */
-    public static final int AFK_TICKS = 60;
-    /** How long the player has been completely still, capped at AFK_TICKS. */
+    /** How long the player has been completely still, capped at the AFK limit. */
     public int afkTicks;
     /** The player's position and aim last tick, for the stillness check. */
     public Location afkLoc;
 
     /** The player stepped away — the bot stands down and waits. */
-    public boolean afk() {
-        return afkTicks >= AFK_TICKS;
+    public boolean afk(int limit) {
+        return afkTicks >= limit;
     }
 
     /** Any player activity: ends an AFK hold, with a beat of mercy on the wake. */
-    public void wake() {
-        if (afk()) {
-            graceTicks = Math.max(graceTicks, 15);
+    public void wake(int wakeGrace, int limit) {
+        if (afk(limit)) {
+            graceTicks = Math.max(graceTicks, wakeGrace);
         }
         afkTicks = 0;
     }
@@ -165,15 +163,15 @@ public final class BotFight {
         longestCombo = Math.max(longestCombo, combo);
     }
 
-    public void countHitTaken() {
+    public void countHitTaken(int window) {
         hitsTaken++;
         combo = 0;
         recentHitsTaken++;
-        recentHitsWindow = 30;
+        recentHitsWindow = window;
     }
 
     /** Fresh stock: full AI reset, stats keep counting. */
-    public void resetStock() {
+    public void resetStock(int graceTicks, int feintCooldown) {
         combo = 0;
         hitstunTicks = 0;
         crouchTicks = 0;
@@ -184,8 +182,8 @@ public final class BotFight {
         orbitSense = 0;
         orbitTicks = 0;
         cutbackTicks = 0;
-        attackCooldown = 20;
-        graceTicks = 20;
+        attackCooldown = graceTicks;
+        this.graceTicks = graceTicks;
         critTicks = -1;
         critBonusNextHit = false;
         blockTicks = 0;
@@ -203,7 +201,7 @@ public final class BotFight {
         seenIn = 0;
         punishTicks = 0;
         feintTicks = 0;
-        feintCooldown = 60;
+        this.feintCooldown = feintCooldown;
         playerWasOnGround = true;
         afkTicks = 0;
         afkLoc = null;

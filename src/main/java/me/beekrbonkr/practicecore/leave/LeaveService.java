@@ -50,7 +50,7 @@ public final class LeaveService {
                 if (player.isOnline()) {
                     connect(player, server);
                 }
-            }, 2L);
+            }, plugin.pcConfig().leaveTransferDelayTicks());
             return true;
         }
         if (wasPracticing || inPracticeWorld) {

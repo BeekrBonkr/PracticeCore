@@ -1,0 +1,782 @@
+# PracticeCore — the PvP sparring bot
+#
+# Everything about the bot that used to be a number in the source: the
+# difficulty tiers, the presets they add up to, how the brain behaves, what its
+# body is made of, and the kit gallery.
+#
+# ---------------------------------------------------------------------------
+# TIERS KEEP THEIR NAMES, NOT THEIR NUMBERS
+#
+# EXTREME evasiveness is always called EXTREME — player preferences and message
+# keys never move — but how fast it actually strafes is a line in `tiers` below.
+# That is what makes retuning a difficulty safe while people are playing: change
+# a value, run /practice reload, and every live fight picks it up.
+#
+# The tier NAMES are fixed (they are what the GUI cycles through and what
+# playerdata stores). To rename what players see, edit gui.pvpbot.* in
+# messages.yml; to change what a tier means, edit its number here.
+#
+# ---------------------------------------------------------------------------
+# BEHAVIORS SCALE BY LAYER
+#
+# The bot's brain has four layers on top of its plain behavior, unlocked by the
+# accuracy tier (see `layers`). Any knob under `behavior` may be written as one
+# value, or as a block that scales:
+#
+#   combo-escape:
+#     chance:
+#       base: 0.4        # every bot
+#       duellist: 0.65   # …unless it has the duellist layer
+#       unfair: 0.8      # …or the unfair one
+#       suffer: 0.9      # …or suffer
+#
+# The best layer a bot qualifies for wins. Delete a layer line and that bot
+# simply keeps the value below it; write the knob as a single number and it
+# stops scaling at all.
+#
+# Windows written as {min: x, max: y} are rolled fresh every time they are
+# used — that is deliberate, and it is why the bot does not fall into a rhythm.
+#
+# Do not edit config-version by hand; PracticeCore uses it to migrate this file
+# across upgrades (backups land in backups/).
+config-version: 1
+
+# ===========================================================================
+# The bot's body and the fight's shape
+# ===========================================================================
+bot:
+  # Ticks either fighter stays down before respawning (60 = the 3-second hold).
+  respawn-ticks: 60
+  # Ticks between top-ups of the kit's consumables.
+  refill-ticks: 60
+  # Ticks between refreshes of the health text floating over the bot.
+  name-refresh-ticks: 5
+  # Height above the bot that text sits.
+  name-tag-offset: 0.35
+  # Ticks of a completely motionless player (no move, no aim, no swing) before
+  # the bot stands down and waits. 60 = three seconds.
+  afk-ticks: 60
+  afk:
+    # How much movement and aim drift still counts as standing perfectly still.
+    move-threshold: 0.0004
+    look-threshold: 0.5
+  # Ticks the bot stays passive after each kind of interruption.
+  grace-ticks:
+    stock: 20   # a fresh stock
+    short: 10   # a respawn, a menu closing
+    wake: 15    # the player coming back from AFK
+  # Blocks ahead of the player spawn the bot appears when the arena has no
+  # `settings.pvpbot.bot-spawn` marker.
+  spawn-distance: 5.0
+  # How far the pathfinder may plan. A zombie's own 35 is too short for a big
+  # arena — the bot would lose the player and wander.
+  follow-range: 128.0
+  # Base melee damage before the held weapon's own attribute is added. A husk's
+  # vanilla maul is far above a player's, so this lands it near a real one.
+  base-attack-damage: 1.0
+  # Body height when no ProtocolLib player-model disguise is available (husks
+  # are 1.95 tall, players 1.8).
+  undisguised-scale: 0.925
+  # The upward kick behind every hop, jump-crit and combo-escape leap.
+  # 0.42 is exactly a vanilla jump; raising it makes the bot visibly inhuman.
+  jump-velocity: 0.42
+  # Multiplier on the bot's own jump-crit hits (vanilla crits are 1.5).
+  crit-multiplier: 1.5
+  # Damage that gets through the bot's raised 1.8 sword block.
+  sword-block-damage-factor: 0.5
+  knockback:
+    # How much of an incoming hit's knockback a crouching bot still takes…
+    crouch-factor: 0.6
+    # …and how much it takes inside the s-tap window it opened as the hit landed.
+    stap-factor: 0.75
+  # Floating hearts-dealt numbers at the hit spot, DeluxeCombat style.
+  damage-indicators:
+    enabled: true
+    lifetime-ticks: 16
+    rise: 0.7
+
+# ===========================================================================
+# What each tier is worth
+# ===========================================================================
+tiers:
+  # Strafe speed in blocks per tick. A sprinting player covers about 0.28.
+  evasiveness:
+    LOW: 0.12
+    MEDIUM: 0.18
+    HIGH: 0.26
+    EXTREME: 0.30
+    UNFAIR: 0.38
+    SUFFER: 0.48
+  # Clicks per second. Tick resolution caps the real rate near the top: 12 and
+  # up all floor to one swing per tick, which is what 1.8 spam-clicking feels
+  # like. Set a name to any rate you like — TWELVE: 16 is perfectly valid.
+  cps:
+    FOUR: 4
+    SIX: 6
+    EIGHT: 8
+    TWELVE: 12
+  # Chance a swing inside reach actually connects. Above PERFECT there is no
+  # headroom left, which is why the top tiers pay for themselves in the brain
+  # layers below rather than in raw aim.
+  accuracy:
+    LOW: 0.5
+    MEDIUM: 0.7
+    HIGH: 0.85
+    PERFECT: 0.95
+    UNFAIR: 0.97
+    SUFFER: 1.0
+  # How readily the bot goes for jump-crits and W-tap knockback resets.
+  combos:
+    OFF: 0.0
+    SOME: 0.2
+    FULL: 0.32
+    UNFAIR: 0.5
+    SUFFER: 0.85
+  # Melee range in blocks. 3.0 is a player's. Going past ~3.4 turns the bot
+  # into an aimbot with a lightsaber rather than a harder opponent.
+  reach:
+    SHORT: 2.6
+    NORMAL: 3.0
+    LONG: 3.4
+  # Approach speed (pathfinder multiplier) and the spacing the bot holds while
+  # strafing, per aggression tier.
+  aggression:
+    passive: {speed: 1.0, gap: 3.2}
+    balanced: {speed: 1.2, gap: 2.8}
+    relentless: {speed: 1.4, gap: 2.3}
+    frenzied: {speed: 1.45, gap: 2.3}
+    unfair: {speed: 1.6, gap: 2.0}
+    suffer: {speed: 1.85, gap: 1.5}
+  # Perception lag in ticks: how stale the bot's picture of where you are and
+  # where you are going may be. 0 means it sees live.
+  reaction-ticks:
+    LOW: 6
+    MEDIUM: 4
+    HIGH: 2
+    PERFECT: 1
+    UNFAIR: 1
+    SUFFER: 0
+  # Ticks the bot rides incoming knockback instead of instantly steering out of
+  # it. This window is what makes combos possible at all — shortening it makes
+  # the bot much harder to chain.
+  hitstun-ticks:
+    LOW: 10
+    MEDIUM: 10
+    HIGH: 10
+    EXTREME: 9
+    UNFAIR: 8
+    SUFFER: 6
+
+# Which accuracy tier unlocks each brain layer. Hand them to a lower tier for a
+# meaner bot at every difficulty, or set one to `never` to switch that whole
+# layer off across the server.
+layers:
+  # Immunity-timed hits, motion prediction, habit reads, feints, kiting, edge play.
+  cerebral: HIGH
+  # Reach discipline, combo follow-ups, s-taps, block-hits, strafe jukes.
+  duellist: PERFECT
+  # The same playbook, thrown every exchange instead of now and then.
+  unfair: UNFAIR
+  # Every dial at its ceiling.
+  suffer: SUFFER
+
+# What the bot wears when the gear button overrides the kit mirror. `armor` is
+# a shorthand that fills all four slots; per-slot keys (helmet, chestplate,
+# leggings, boots) override it.
+gear-tiers:
+  mirror: {}                                 # wears whatever the player's kit does
+  none: {armor: none, weapon: WOODEN_SWORD}
+  leather: {armor: LEATHER, weapon: STONE_SWORD}
+  iron: {armor: IRON, weapon: IRON_SWORD}
+  diamond: {armor: DIAMOND, weapon: DIAMOND_SWORD}
+
+# What a player's bot is set to before they ever open the settings menu.
+defaults:
+  kit: sword
+  gear: MIRROR
+  evasiveness: MEDIUM
+  cps: EIGHT
+  accuracy: MEDIUM
+  combos: SOME
+  reach: NORMAL
+  aggression: BALANCED
+  rod: false
+  bow: false
+  block: false
+
+# ===========================================================================
+# Named difficulties — one click sets every knob
+# ===========================================================================
+#
+# The order here is the order the Difficulty button cycles through. A knob you
+# leave out is left alone by that preset (and ignored when deciding whether the
+# player's current mix "is" this preset). Labels come from
+# gui.pvpbot.preset.option.<id> in messages.yml; a preset you invent falls back
+# to the `name` below.
+presets:
+  rookie:
+    name: 'Rookie'
+    evasiveness: LOW
+    cps: FOUR
+    accuracy: LOW
+    combos: OFF
+    reach: SHORT
+    aggression: PASSIVE
+  brawler:
+    name: 'Brawler'
+    evasiveness: MEDIUM
+    cps: SIX
+    accuracy: MEDIUM
+    combos: SOME
+    reach: NORMAL
+    aggression: BALANCED
+  veteran:
+    name: 'Veteran'
+    evasiveness: HIGH
+    cps: EIGHT
+    accuracy: HIGH
+    combos: SOME
+    reach: NORMAL
+    aggression: RELENTLESS
+  demon:
+    name: 'Demon'
+    evasiveness: EXTREME
+    cps: TWELVE
+    accuracy: PERFECT
+    combos: FULL
+    reach: LONG
+    aggression: FRENZIED
+  unfair:
+    name: 'Unfair'
+    evasiveness: UNFAIR
+    cps: TWELVE
+    accuracy: UNFAIR
+    combos: UNFAIR
+    reach: LONG
+    aggression: UNFAIR
+  suffer:
+    name: 'Suffer'
+    evasiveness: SUFFER
+    cps: TWELVE
+    accuracy: SUFFER
+    combos: SUFFER
+    reach: LONG
+    aggression: SUFFER
+
+# ===========================================================================
+# The brain
+# ===========================================================================
+behavior:
+
+  # How fast the reads on the player's habits fade. 1.0 would never forget.
+  habit-decay: 0.995
+
+  # A cerebral bot never wastes a click: while your immunity window is up it
+  # only mimes the clicking, saving the real swing for the tick it expires.
+  # This is how often it mimes.
+  mime-swing-chance: 0.3
+  # Chance a swing waits one extra tick, so a CPS tier averages out near its
+  # nominal rate instead of landing on a metronome.
+  attack-jitter-chance: 0.4
+
+  # --- getting out of a combo ---------------------------------------------
+  combo-escape:
+    # How readily the bot slips a chain the moment it touches ground.
+    chance:
+      base: 0.4
+      unfair: 0.6
+      suffer: 0.9
+    # An evasive bot slips combos well even without the thinking layers.
+    evasive-from: EXTREME
+    evasive-chance: 0.55
+    # Hits taken in a row before it starts trying.
+    after-hits:
+      base: 3
+      suffer: 2
+    # Sideways push of the escape leap.
+    leap-strength: 0.5
+    # Suffer does not just escape — it turns the slip into a counter-attack,
+    # committing to pressure for this many ticks.
+    counter-ticks: 30
+
+  # --- riding and answering knockback --------------------------------------
+  hitstun:
+    # Deep in a combo the stun is cut by this factor, so the bot gets chances
+    # to fight back instead of being carried across the arena.
+    combo-shorten-at: 3
+    combo-factor: 0.5
+  # The backward tap a good 1.8 player throws in as the hit lands, eating part
+  # of the knockback. Duellist layer and up.
+  stap:
+    chance:
+      base: 0.25
+      unfair: 0.45
+      suffer: 0.85
+    ticks: 5
+    cooldown: 12
+    hitstun-reduction: 2
+  # The unfair tiers answer a building combo with a short crouch, which scales
+  # down the knockback of the hits still to come. Deliberately absent below
+  # the unfair layer — combos staying earnable is the point.
+  shift-anchor:
+    after-hits: 2
+    chance:
+      unfair: 0.2
+      suffer: 0.45
+    ticks: 12
+
+  # --- reading the fight ----------------------------------------------------
+  stance:
+    # Ticks between reviews of the whole fight. Lower = quicker to react to a
+    # turning exchange.
+    review-ticks:
+      base: 10
+      unfair: 8
+      suffer: 4
+    # Health at or below which the bot may decide it is losing…
+    reset-health:
+      base: 7
+      unfair: 8
+      suffer: 10
+    # …and how far behind the player it must be to agree.
+    reset-deficit:
+      base: 4
+      unfair: 3
+      suffer: 2
+    # Ticks of kiting before it must wheel around and commit.
+    reset-budget: {min: 100, max: 200}
+    # Ticks before it may turn tail again.
+    reset-lockout: {min: 200, max: 400}
+    # Ticks it stays committed after wheeling around.
+    commit-ticks: 40
+    # A combo this long, or the player this hurt, means press the advantage.
+    pressure-combo: 2
+    pressure-health: 6
+
+  # --- spacing --------------------------------------------------------------
+  spacing:
+    # Pressure crowds in by this much, never inside this.
+    pressure-close: 0.6
+    pressure-min: 1.6
+    # A resetting bot kites out to here.
+    reset-gap: 6.5
+    # Reach discipline: the duellist tiers hold the tip of their own reach
+    # rather than hugging you. This is how far inside it they sit.
+    reach-margin:
+      base: 0.85
+      unfair: 0.5
+      suffer: 0.35
+    # While this many ticks of your immunity window remain, they step back out
+    # of range by `step-out` — so a wasted click meets empty air.
+    step-out-window: 5
+    step-out:
+      base: 0.28
+      unfair: 0.5
+      suffer: 0.9
+
+  # --- closing the distance -------------------------------------------------
+  approach:
+    # How far past the spacing target counts as "too far — walk in".
+    engage-margin: 1.2
+    # Ticks between path recomputes; A* every tick is waste.
+    repath-ticks: 5
+    repath-ticks-fast: 3
+    fast-from: FRENZIED
+    # Pathfinder speed while holding a sword block up.
+    blocking-speed: 0.5
+    # Nobody good walks a straight line in: the duellist tiers weave across
+    # the approach. Sideways push, and how long each side is held.
+    weave-strength:
+      base: 0.07
+      unfair: 0.09
+      suffer: 0.11
+    weave-flip: {min: 10, max: 17}
+    # Sprint-jumping in, like a player holding W and spamming space.
+    sprint-jump:
+      gap: 2.0
+      chance: 0.15
+      strength: 0.35
+  # Chasing its own knockback so a combo continues instead of waiting for you
+  # to drift back into range.
+  combo-follow:
+    ticks:
+      base: 6
+      unfair: 10
+      suffer: 16
+    speed:
+      base: 0.25
+      unfair: 0.28
+      suffer: 0.33
+    jump-gap: 1.5
+    jump-chance: 0.2
+  # Kiting away when the fight has gone badly.
+  reset:
+    repath-ticks: 4
+    speed-multiplier: 1.15
+    flee-distance: 6.0
+    flee-margin: 2.0
+    block-distance: 3.2
+    block-chance: 0.2
+    block-ticks: {min: 10, max: 15}
+  # Bending a move back toward the middle when it would carry the bot over the
+  # rim: how far ahead it looks, and how close to the edge is too close.
+  steer:
+    lookahead: 6.0
+    margin: 1.5
+  # Hopping out of a corner when movement has stalled.
+  unstick:
+    chance: 0.5
+    threshold: 0.01
+
+  # --- strafing -------------------------------------------------------------
+  strafe:
+    # Aimed at dead-on, how often the held side flips…
+    flip-chance:
+      base: 0.35
+      duellist: 0.37
+      unfair: 0.45
+      suffer: 0.6
+    # …and how long a side is held before it may flip again. The unfair tiers
+    # juke on a short unpredictable beat; a crosshair that learned the rhythm
+    # is already wrong.
+    flip-interval:
+      base: {min: 20, max: 39}
+      duellist: {min: 18, max: 29}
+      unfair: {min: 12, max: 21}
+      suffer: {min: 8, max: 17}
+    # A cerebral bot matches your lateral drift instead of drifting off, so
+    # orbiting away never works. This is how much drift it bothers to match.
+    lateral-threshold: 0.08
+    # A burst sidestep the instant your aim settles dead-on, per evasiveness.
+    burst:
+      default: 1.0
+      UNFAIR: 1.18
+      SUFFER: 1.45
+    # Anti-orbit: how long the strafe may carry the bot the same way around
+    # before it deliberately cuts back through the aim line, and for how long.
+    orbit-patience:
+      base: 34
+      duellist: 28
+      unfair: 20
+      suffer: 16
+    cutback: {min: 8, max: 15}
+    # Strafe speed multipliers while blocking or crouching.
+    blocking-speed: 0.4
+    crouching-speed: 0.6
+    # How hard the bot corrects back toward its spacing target.
+    correction:
+      deadzone: 0.25
+      urgency: 0.16
+      pressure-urgency: 0.22
+      base-pull: 0.06
+      max-pull: 0.28
+    # Bouncing mid-fight the way real 1.8 duellers do — vertical motion the
+    # crosshair has to chase too.
+    hop:
+      from: EXTREME
+      chance:
+        default: 0.06
+        UNFAIR: 0.09
+        SUFFER: 0.16
+
+  # --- offense --------------------------------------------------------------
+  # The sprint-reset shove right after a clean hit.
+  wtap:
+    strength: 0.22
+    pressure-bonus: 0.2
+  shove:
+    # A cerebral bot leans its shoves toward the rim: knockback with a
+    # destination, walking you toward the edge one trade at a time.
+    rim-lean:
+      base: 0.35
+      unfair: 0.42
+      suffer: 0.6
+    lift: 0.05
+  # Leaving the ground to meet you mid-fall.
+  jump-crit:
+    fall-ticks: 6
+    window: 0.5
+    # Fraction of the combos knob that goes into jump-crits specifically.
+    combo-factor: 0.5
+  # A jumpy player gets crit-fished.
+  crit-fish:
+    habit:
+      base: 3
+      suffer: 2
+    range-bonus: 1.5
+    chance:
+      base: 0.3
+      unfair: 0.38
+      suffer: 0.6
+  # A player clicking at air just out of range gets lunged at.
+  whiff-punish:
+    detect-min: 3.4
+    detect-max: 8.0
+    habit: 3
+    habit-cap: 8
+    ticks: 10
+    min-distance: 1.8
+    chance:
+      base: 0.5
+      unfair: 0.6
+      suffer: 0.85
+    strength: 0.4
+    lift: 0.25
+  # Backing off as if disengaging. A player who takes the bait and charges eats
+  # a timed counter and a shove.
+  feint:
+    chance:
+      base: 0.012
+      unfair: 0.022
+      suffer: 0.05
+    duration: {min: 12, max: 19}
+    cooldown: {min: 100, max: 160}
+    # How long after a fresh stock the bot waits before its first feint.
+    initial-cooldown: 60
+    window-near: 0.3
+    window-far: 1.5
+    backpedal: 0.22
+    bite-approach: 0.1
+    counter-shove: 0.3
+    pressure-ticks: 20
+  # A max-range click that invites a counter.
+  bait-click:
+    range: 1.0
+    chance:
+      base: 0.03
+      unfair: 0.06
+      suffer: 0.1
+
+  # --- defense --------------------------------------------------------------
+  # Going straight back behind the sword after landing a clean hit — your
+  # answer arrives inside exactly that window.
+  block-hit:
+    chance:
+      base: 0.18
+      unfair: 0.32
+      suffer: 0.6
+    ticks: {min: 6, max: 9}
+  # Raising the sword after taking a few hits in a row.
+  defensive-block:
+    after-hits: 2
+    window: 30
+    chance: 0.15
+    ticks: {min: 12, max: 19}
+  # Crouching with its back to the rim, trading strafe speed for ground it
+  # cannot afford to give.
+  edge-crouch:
+    distance: 4.0
+    rim: 2.5
+    chance:
+      base: 0.2
+      unfair: 0.35
+      suffer: 0.5
+    ticks: {min: 15, max: 24}
+  crouch:
+    cooldown: {min: 60, max: 99}
+
+  # --- ranged ---------------------------------------------------------------
+  # The rod: a short-lived projectile that shoves like a hook, resetting your
+  # combo rhythm at range. A kiting bot leans on it as its space-maker.
+  rod:
+    min-distance: 3.5
+    reset-min-distance: 3.0
+    max-distance: 8.0
+    chance:
+      base: 0.06
+      unfair: 0.09
+      suffer: 0.18
+    reset-chance: 0.22
+    cooldown: {min: 50, max: 79}
+    speed: 1.7
+    lead: 3.0
+    flourish-ticks: 8
+  bow:
+    min-distance: 8.0
+    reset-min-distance: 7.0
+    chance:
+      base: 0.08
+      unfair: 0.11
+      suffer: 0.18
+    reset-chance: 0.15
+    cooldown: {min: 60, max: 89}
+    speed: 2.3
+    lead: 4.0
+    # How wide a miss an imperfect aim scatters the arrow by.
+    spread: 0.3
+    flourish-ticks: 14
+
+# ===========================================================================
+# The kit gallery
+# ===========================================================================
+#
+# Each entry is one tile in the kit menu, in the order written here.
+#
+#   <id>:
+#     name: 'Shown in the menu'   # messages.yml gui.pvpbot.kit.option.<id> wins
+#     icon: DIAMOND_SWORD         # the tile's material
+#     armor: IRON                 # fills slots 36-39 with IRON_HELMET…IRON_BOOTS
+#     unbreakable: true           # gear never wears out (an endless spar would grind it away)
+#     blocks: true                # advertise "comes with blocks"; guessed if omitted
+#     bot-weapon: IRON_SWORD      # what the bot swings; defaults to your slot 0
+#     items:
+#       0: 'DIAMOND_SWORD'                    # MATERIAL
+#       1: 'GOLDEN_APPLE 8'                   # MATERIAL amount
+#       18-26: 'SPLASH_POTION 1 STRONG_HEALING'   # a slot range, and a potion type
+#       4: {material: COBBLESTONE, amount: 64}    # long form, when you need it
+#     refill:
+#       GOLDEN_APPLE: 8           # keep this many in the inventory at all times
+#
+# Slots are inventory indices: 0-8 hotbar, 9-35 storage, 36 boots, 37 leggings,
+# 38 chestplate, 39 helmet. Slot 8 is left free in every kit below so the
+# practice menu item keeps its hotbar home — take it if you would rather have
+# the slot, and the menu item falls back to the first free one.
+#
+# The `id` is what player preferences and remembered kit layouts are stored
+# under: renaming a kit's display text is free, changing its id starts those
+# players over.
+kits:
+  sword:
+    name: 'Sword'
+    icon: DIAMOND_SWORD
+    armor: IRON
+    items:
+      0: 'DIAMOND_SWORD'
+      1: 'GOLDEN_APPLE 8'
+    refill:
+      GOLDEN_APPLE: 8
+  nodebuff:
+    name: 'NoDebuff'
+    icon: SPLASH_POTION
+    armor: DIAMOND
+    items:
+      0: 'DIAMOND_SWORD'
+      1-7: 'SPLASH_POTION 1 STRONG_HEALING'
+      18-26: 'SPLASH_POTION 1 STRONG_HEALING'
+      27-28: 'POTION 1 SWIFTNESS'
+    refill:
+      SPLASH_POTION: 16
+      POTION: 2
+  boxing:
+    name: 'Boxing'
+    icon: IRON_SWORD
+    armor: none
+    items:
+      0: 'IRON_SWORD'
+  builduhc:
+    name: 'BuildUHC'
+    icon: COBBLESTONE
+    armor: IRON
+    items:
+      0: 'DIAMOND_SWORD'
+      1: 'FISHING_ROD'
+      2: 'BOW'
+      3: 'GOLDEN_APPLE 6'
+      4: 'COBBLESTONE 64'
+      9: 'ARROW 16'
+      10: 'COBBLESTONE 64'
+    refill:
+      GOLDEN_APPLE: 6
+      ARROW: 16
+      COBBLESTONE: 128
+  combo:
+    name: 'Combo'
+    icon: SLIME_BALL
+    armor: none
+    items:
+      0: 'STONE_SWORD'
+      1: 'GOLDEN_APPLE 4'
+    refill:
+      GOLDEN_APPLE: 4
+  gapple:
+    name: 'Gapple'
+    icon: GOLDEN_APPLE
+    armor: DIAMOND
+    items:
+      0: 'DIAMOND_SWORD'
+      1: 'GOLDEN_APPLE 64'
+    refill:
+      GOLDEN_APPLE: 64
+  iron:
+    name: 'Iron'
+    icon: IRON_CHESTPLATE
+    armor: IRON
+    items:
+      0: 'IRON_SWORD'
+      1: 'GOLDEN_APPLE 3'
+    refill:
+      GOLDEN_APPLE: 3
+  diamond:
+    name: 'Diamond'
+    icon: DIAMOND_CHESTPLATE
+    armor: DIAMOND
+    items:
+      0: 'DIAMOND_SWORD'
+      1: 'GOLDEN_APPLE 3'
+    refill:
+      GOLDEN_APPLE: 3
+  classic:
+    name: 'Classic'
+    icon: LEATHER_CHESTPLATE
+    armor: LEATHER
+    items:
+      0: 'STONE_SWORD'
+      1: 'BOW'
+      9: 'ARROW 16'
+    refill:
+      ARROW: 16
+  soup:
+    name: 'Soup'
+    icon: MUSHROOM_STEW
+    armor: IRON
+    items:
+      0: 'IRON_SWORD'
+      1-7: 'MUSHROOM_STEW'
+      9-26: 'MUSHROOM_STEW'
+    refill:
+      MUSHROOM_STEW: 25
+  archer:
+    name: 'Archer'
+    icon: BOW
+    armor: LEATHER
+    bot-weapon: STONE_SWORD
+    items:
+      0: 'BOW'
+      1: 'STONE_SWORD'
+      2: 'ARROW 64'
+    refill:
+      ARROW: 64
+  axe:
+    name: 'Axe'
+    icon: IRON_AXE
+    armor: CHAINMAIL
+    items:
+      0: 'IRON_AXE'
+      1: 'GOLDEN_APPLE 4'
+    refill:
+      GOLDEN_APPLE: 4
+  bedwars:
+    name: 'Bedwars'
+    icon: WHITE_WOOL
+    armor: LEATHER
+    blocks: true
+    items:
+      0: 'STONE_SWORD'
+      1-2: 'WHITE_WOOL 64'
+      3: 'SHEARS'
+    refill:
+      WHITE_WOOL: 128
+  skywars:
+    name: 'Skywars'
+    icon: SANDSTONE
+    armor: IRON
+    blocks: true
+    items:
+      0: 'STONE_SWORD'
+      1: 'SANDSTONE 64'
+      2: 'SNOWBALL 16'
+      3: 'GOLDEN_APPLE 2'
+    refill:
+      SANDSTONE: 64
+      SNOWBALL: 16
+      GOLDEN_APPLE: 2

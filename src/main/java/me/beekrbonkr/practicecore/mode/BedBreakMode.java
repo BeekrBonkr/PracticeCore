@@ -165,15 +165,18 @@ public final class BedBreakMode implements Mode {
             state.facing = BlockFace.NORTH;
         }
         try {
-            state.orientation = Orientation.valueOf(cfg.getString("orientation", "VERTICAL")
-                    .toUpperCase(java.util.Locale.ROOT));
+            state.orientation = Orientation.valueOf(
+                    cfg.getString("orientation", plugin.pcConfig().bedbreakOrientation())
+                            .toUpperCase(java.util.Locale.ROOT));
         } catch (IllegalArgumentException e) {
             state.orientation = Orientation.VERTICAL;
         }
         state.bedFoot = state.bedHead.getBlock()
                 .getRelative(state.facing.getOppositeFace()).getLocation();
-        Material bed = Material.matchMaterial(cfg.getString("bed-material", "RED_BED"));
-        state.bedMaterial = bed != null && Tag.BEDS.isTagged(bed) ? bed : Material.RED_BED;
+        Material configured = plugin.pcConfig().bedbreakBedMaterial();
+        Material bed = Material.matchMaterial(cfg.getString("bed-material", configured.name()));
+        state.bedMaterial = bed != null && Tag.BEDS.isTagged(bed) ? bed
+                : Tag.BEDS.isTagged(configured) ? configured : Material.RED_BED;
 
         List<Material> composition = new ArrayList<>();
         ConfigurationSection blocks = cfg.getConfigurationSection("blocks");
@@ -315,7 +318,7 @@ public final class BedBreakMode implements Mode {
             return;
         }
         if (--state.stepRemaining[step] == 0 && step + 1 < state.breakOrder.size()) {
-            armReaction(player, session, state, step);
+            armReaction(plugin, player, session, state, step);
         }
     }
 
@@ -331,8 +334,12 @@ public final class BedBreakMode implements Mode {
      * a switch the player simply skipped can't surface later as one giant
      * sample.
      */
-    private void armReaction(Player player, PracticeSession session, State state, int step) {
+    private void armReaction(PracticeCorePlugin plugin, Player player, PracticeSession session,
+                             State state, int step) {
         state.pendingTool = null;
+        if (!plugin.pcConfig().bedbreakMeasureReaction()) {
+            return;
+        }
         Material current = state.breakOrder.get(step);
         Material next = state.breakOrder.get(step + 1);
         if (current == next) {

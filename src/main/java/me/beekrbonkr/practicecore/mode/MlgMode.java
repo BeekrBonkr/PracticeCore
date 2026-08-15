@@ -8,7 +8,6 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Waterlogged;
@@ -53,6 +52,7 @@ public final class MlgMode implements Mode {
 
     private static final class State {
         int platformRadius = 1;
+        Material platformMaterial = Material.GLASS;
         int padRadius = 5;
         Material padMaterial = Material.GRASS_BLOCK;
         int minDrop = 20;
@@ -120,7 +120,7 @@ public final class MlgMode implements Mode {
         State state = state(session);
         state.airborne = false;
         state.finishing = false;
-        parse(session, state);
+        parse(plugin, session, state);
         if (!state.streakLoaded) {
             state.streak = plugin.stats().streak(session.playerId(), session.template().name());
             state.streakLoaded = true;
@@ -131,14 +131,32 @@ public final class MlgMode implements Mode {
         player.setRotation(player.getLocation().getYaw(), 90f);
     }
 
-    private void parse(PracticeSession session, State state) {
+    /**
+     * The round's shape: the arena's own settings.mlg wins where it says
+     * something, and config.yml's mlg section supplies the server default for
+     * every key it leaves out.
+     */
+    private void parse(PracticeCorePlugin plugin, PracticeSession session, State state) {
+        var defaults = plugin.pcConfig();
         ConfigurationSection cfg = session.template().settingsSection();
-        state.platformRadius = Math.max(0, cfg.getInt("mlg.platform-radius", 1));
-        state.padRadius = Math.max(0, cfg.getInt("mlg.pad-radius", 5));
-        Material pad = Material.matchMaterial(cfg.getString("mlg.pad-material", "GRASS_BLOCK"));
-        state.padMaterial = pad != null && pad.isBlock() && pad.isSolid() ? pad : Material.GRASS_BLOCK;
-        state.minDrop = Math.max(2, cfg.getInt("mlg.min-drop", 20));
-        state.maxDrop = Math.max(state.minDrop, cfg.getInt("mlg.max-drop", 100));
+        state.platformRadius =
+                Math.max(0, cfg.getInt("mlg.platform-radius", defaults.mlgPlatformRadius()));
+        state.platformMaterial = block(cfg.getString("mlg.platform-material"),
+                defaults.mlgPlatformMaterial());
+        state.padRadius = Math.max(0, cfg.getInt("mlg.pad-radius", defaults.mlgPadRadius()));
+        state.padMaterial = block(cfg.getString("mlg.pad-material"), defaults.mlgPadMaterial());
+        state.minDrop = Math.max(2, cfg.getInt("mlg.min-drop", defaults.mlgMinDrop()));
+        state.maxDrop = Math.max(state.minDrop,
+                cfg.getInt("mlg.max-drop", defaults.mlgMaxDrop()));
+    }
+
+    /** A solid block to build with; anything else falls back. */
+    private static Material block(String name, Material fallback) {
+        if (name == null || name.isBlank()) {
+            return fallback;
+        }
+        Material parsed = Material.matchMaterial(name);
+        return parsed != null && parsed.isBlock() && parsed.isSolid() ? parsed : fallback;
     }
 
     /** Rebuilds the glass platform and rolls the pad depth. */
@@ -157,7 +175,7 @@ public final class MlgMode implements Mode {
             for (int z = -state.platformRadius; z <= state.platformRadius; z++) {
                 Location loc = new Location(world, centerX + x, platformY, centerZ + z);
                 if (session.containsBlock(loc) && world.getBlockAt(loc).getType().isAir()) {
-                    world.getBlockAt(loc).setType(Material.GLASS, false);
+                    world.getBlockAt(loc).setType(state.platformMaterial, false);
                     state.platformBlocks.add(loc);
                 }
             }
@@ -187,9 +205,7 @@ public final class MlgMode implements Mode {
             loc.getWorld().getBlockAt(loc).setType(Material.AIR, false);
         }
         state.platformBlocks.clear();
-        if (player.isOnline() && plugin.pcConfig().sounds()) {
-            player.playSound(player.getLocation(), Sound.BLOCK_GLASS_BREAK, 0.8f, 1.0f);
-        }
+        plugin.sounds().play(player, "mlg.platform-break");
     }
 
     /** Returns the mode-built blocks to air; the next round rebuilds fresh. */
@@ -240,9 +256,7 @@ public final class MlgMode implements Mode {
         plugin.messages().send(player,
                 state.streak > previousBest ? "mlg.success-best" : "mlg.success",
                 "streak", String.valueOf(state.streak));
-        if (plugin.pcConfig().sounds()) {
-            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 1.4f);
-        }
+        plugin.sounds().play(player, "mlg.success");
         // Reset a tick later: teleporting out of a move event mid-unwind is
         // asking for trouble.
         Bukkit.getScheduler().runTask(plugin, () -> {

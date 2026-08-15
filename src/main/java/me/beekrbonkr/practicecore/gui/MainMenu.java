@@ -7,7 +7,6 @@ import me.beekrbonkr.practicecore.template.ArenaTemplate;
 import me.beekrbonkr.practicecore.util.ItemBuilder;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -88,7 +87,8 @@ public final class MainMenu extends Menu {
                 later(() -> new PvpBotSettingsMenu(plugin, viewer, this, session).open());
             });
         }
-        if (shown("spectate") && viewer.hasPermission("practicecore.spectate")) {
+        if (shown("spectate") && plugin.pcConfig().spectateEnabled()
+                && viewer.hasPermission("practicecore.spectate")) {
             set(slot("spectate", 19), spectateIcon(), event -> {
                 click();
                 later(() -> new SpectateMenu(plugin, viewer, this).open());
@@ -114,7 +114,7 @@ public final class MainMenu extends Menu {
         }
         if (shown("leave") && session != null) {
             set(slot("leave", 23), leaveIcon(), event -> {
-                sound(Sound.BLOCK_NOTE_BLOCK_PLING, 0.7f, 0.8f);
+                sound("menu.select");
                 later(() -> {
                     viewer.closeInventory();
                     plugin.leaveService().leave(viewer);
@@ -261,7 +261,7 @@ public final class MainMenu extends Menu {
         boolean on = !plugin.stats().scoreboardEnabled(viewer.getUniqueId());
         plugin.stats().setScoreboardEnabled(viewer.getUniqueId(), on);
         plugin.boards().applyPreference(viewer);
-        sound(Sound.UI_BUTTON_CLICK, 0.6f, on ? 1.6f : 1.0f);
+        sound(on ? "menu.toggle-on" : "menu.toggle-off");
         refresh();
     }
 }

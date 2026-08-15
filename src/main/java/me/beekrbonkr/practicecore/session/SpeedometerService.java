@@ -21,12 +21,6 @@ import java.util.UUID;
  */
 public final class SpeedometerService {
 
-    private static final double SMOOTHING = 0.55; // weight of the previous reading
-    /** A per-sample jump this large is a teleport, not running — rebase, don't count. */
-    private static final double TELEPORT_DISTANCE = 10;
-    /** How long other action-bar text keeps the speedometer quiet. */
-    private static final long HOLD_NANOS = 2_500_000_000L;
-
     private static final class Sample {
         PracticeSession session;
         Location last;
@@ -76,7 +70,7 @@ public final class SpeedometerService {
      * a few ticks.
      */
     public void yieldActionBar(UUID player) {
-        heldUntil.put(player, System.nanoTime() + HOLD_NANOS);
+        heldUntil.put(player, System.nanoTime() + plugin.pcConfig().speedometerHoldNanos());
     }
 
     /**
@@ -90,6 +84,8 @@ public final class SpeedometerService {
     }
 
     private void updateAll() {
+        double smoothing = plugin.pcConfig().speedometerSmoothing();
+        double teleportDistance = plugin.pcConfig().speedometerTeleportDistance();
         // Drop trackers whose session is gone (leave, quit, switch).
         for (Iterator<Map.Entry<UUID, Sample>> it = samples.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<UUID, Sample> entry = it.next();
@@ -129,10 +125,10 @@ public final class SpeedometerService {
                     double dx = loc.getX() - sample.last.getX();
                     double dz = loc.getZ() - sample.last.getZ();
                     double distance = Math.sqrt(dx * dx + dz * dz);
-                    if (distance < TELEPORT_DISTANCE) {
+                    if (distance < teleportDistance) {
                         sample.traveled += distance;
-                        sample.speed = SMOOTHING * sample.speed
-                                + (1 - SMOOTHING) * (distance / seconds);
+                        sample.speed = smoothing * sample.speed
+                                + (1 - smoothing) * (distance / seconds);
                     }
                 }
                 sample.last = loc;

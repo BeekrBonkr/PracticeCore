@@ -40,21 +40,38 @@ public final class KitsMenu extends Menu {
     protected void render() {
         border();
         PvpKit selected = selectedKit();
-        PvpKit[] kits = PvpKit.values();
-        for (int i = 0; i < kits.length && i < CONTENT_SLOTS.length; i++) {
-            PvpKit kit = kits[i];
-            set(CONTENT_SLOTS[i], tile(kit, kit == selected), event -> {
+        List<PvpKit> kits = plugin.botTuning().kits().all();
+        // CONTENT_SLOTS is laid out for a six-row menu; a shorter one has
+        // fewer cells inside its border, and writing into the bottom row would
+        // land tiles on top of the nav buttons.
+        int lastUsable = rows() * 9 - 10;
+        int capacity = 0;
+        while (capacity < CONTENT_SLOTS.length && CONTENT_SLOTS[capacity] <= lastUsable) {
+            capacity++;
+        }
+        // More kits than the gallery has cells is a config choice, not a bug —
+        // say which ones are unreachable rather than dropping them silently.
+        if (kits.size() > capacity) {
+            plugin.getLogger().warning("pvpbot.yml defines " + kits.size()
+                    + " kits but this gallery has room for " + capacity
+                    + " — the rest are not shown. Raise pvpbot-kits.rows in guis.yml.");
+        }
+        for (int i = 0; i < kits.size() && i < capacity; i++) {
+            PvpKit kit = kits.get(i);
+            set(CONTENT_SLOTS[i], tile(kit, selected != null && kit.id().equals(selected.id())),
+                    event -> {
                 if (event.isRightClick()) {
                     click();
                     later(() -> new KitPreviewMenu(plugin, viewer, this, kit).open());
                     return;
                 }
-                if (kit == selectedKit()) {
+                PvpKit current = selectedKit();
+                if (current != null && kit.id().equals(current.id())) {
                     deny();
                     return;
                 }
                 click();
-                plugin.stats().setPref(viewer.getUniqueId(), "pvpbot.kit", kit.name());
+                plugin.stats().setPref(viewer.getUniqueId(), "pvpbot.kit", kit.id());
                 refresh();
             });
         }
@@ -63,12 +80,9 @@ public final class KitsMenu extends Menu {
     }
 
     private PvpKit selectedKit() {
-        String saved = plugin.stats().pref(viewer.getUniqueId(), "pvpbot.kit", null);
-        try {
-            return saved == null ? PvpKit.SWORD : PvpKit.valueOf(saved.toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            return PvpKit.SWORD;
-        }
+        PvpKit saved = plugin.botTuning().kits()
+                .get(plugin.stats().pref(viewer.getUniqueId(), "pvpbot.kit", null));
+        return saved != null ? saved : plugin.botTuning().defaultKit();
     }
 
     private ItemStack tile(PvpKit kit, boolean selected) {
@@ -117,10 +131,8 @@ public final class KitsMenu extends Menu {
         return lines;
     }
 
-    /** The kit's display name from messages.yml — plain text, no tags. */
     static String kitName(PracticeCorePlugin plugin, PvpKit kit) {
-        return plugin.messages().raw("gui.pvpbot.kit.option."
-                + kit.name().toLowerCase(Locale.ROOT));
+        return plugin.botTuning().kits().displayName(kit);
     }
 
     static String pretty(String materialName) {

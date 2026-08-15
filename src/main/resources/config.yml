@@ -5,13 +5,45 @@
 # your values and comments) and applies any renames, taking a copy into
 # backups/ first whenever the version actually changes.
 #
-# Player-facing text lives in messages.yml, not here.
-config-version: 3
+# Everything here is re-read by /practice reload, and almost all of it applies
+# to running sessions on the spot. Only four keys describe arenas that are
+# already standing in the world — world.name and the three under grid — so
+# only those (and edits to the arena files themselves) make a reload ask for
+# confirmation first.
+#
+# Other files, all reloaded the same way:
+#   messages.yml — every piece of text the plugin shows
+#   guis.yml     — menu layout: slots, icons, rows
+#   sounds.yml   — every sound cue
+#   pvpbot.yml   — the PvP bot's difficulty tuning and its kits
+config-version: 4
 
 world:
   # Name of the ephemeral practice world. Its folder is DELETED and recreated
   # on every server start / plugin load — never point this at a real world.
   name: practice_world
+  # Gamerules applied to the world each time it is built. Any rule this server
+  # knows may be listed; one it does not is reported in the console and
+  # skipped, so a rule from a newer Minecraft release can be set here without
+  # waiting for a plugin update.
+  gamerules:
+    doMobSpawning: false
+    doInsomnia: false          # phantoms spawn even in void worlds
+    doDaylightCycle: false
+    doWeatherCycle: false
+    doFireTick: false
+    randomTickSpeed: 0
+    doImmediateRespawn: true
+    announceAdvancements: false
+    keepInventory: true
+    spawnRadius: 0
+  # Fixed time of day (the daylight cycle above is off). 6000 = noon.
+  time: 6000
+  # NORMAL, not PEACEFUL: peaceful removes hostile mobs on the spot and zeroes
+  # their damage, and the PvP bot is a husk that needs both. Natural spawning
+  # is off via doMobSpawning either way — only the plugin's own entities (bots,
+  # rush dealers) ever appear.
+  difficulty: NORMAL
 
 grid:
   # Distance in blocks between arena slots on the square spiral grid.
@@ -21,6 +53,10 @@ grid:
   # Largest allowed schematic dimension (X or Z). Must stay comfortably under
   # grid spacing so neighboring arenas can never overlap.
   max-schematic-size: 800
+  # Ticks before a freed slot may be handed out again. The erase that empties
+  # it can still be flushing off-thread, and a fresh paste must never race the
+  # wipe — raise this on a slow disk if arenas ever come back half-erased.
+  slot-release-delay-ticks: 60
 
 timer:
   # MOVE        — timer starts when the player first leaves their spawn block.
@@ -45,10 +81,43 @@ session:
   allow-buckets: false
   # Strip anything from a practicing player's inventory that is not exactly a
   # kit item (other plugins' giveaways, /give, crafted items). The menu item
-  # is always allowed. Crafting is blocked during sessions either way.
+  # is always allowed.
   validate-inventory: true
   # How often (in ticks) inventories are checked.
   validate-inventory-ticks: 20
+  # Ticks after every spawn at which a kit that failed to arrive is put back.
+  # A single give occasionally does not stick — another plugin clearing the
+  # inventory on teleport, or a client missing the packet mid-teleport — so it
+  # is checked again over the first couple of seconds.
+  kit-verify-ticks: [5, 20, 40]
+  # How close (in blocks) a player must stand to a finish button or plate for
+  # pressing it to end the run. Stops a redstone reach exploit ending runs
+  # from across the arena.
+  trigger-reach: 6.0
+  # The rules that keep the practice world inert. Turn one off only if you
+  # know what it was protecting against — each comment says.
+  #
+  # Pistons could push blocks over an arena boundary, where neither the revert
+  # nor the end-of-session erase reaches them: permanent litter.
+  block-pistons: true
+  # Empty every chest, barrel and furnace in the arena on each reset. Block
+  # reverts restore the shape but not container contents, so anything stashed
+  # would survive a death and leak into the next run.
+  wipe-containers: true
+  # Ender chest contents are real player data living outside the arena — a
+  # snapshot never captures them, so items stashed there escape practice.
+  block-ender-chests: true
+  # Kits are exact; crafting could mint items no kit contains.
+  block-crafting: true
+  # Vehicle movement bypasses PlayerMoveEvent, which would blind the arena
+  # bounds check.
+  block-vehicles: true
+  block-elytra: true
+  # Hunger would eventually break sprint-bridging.
+  freeze-hunger: true
+  # Dropping items inside the practice world (admins in the setup wizard are
+  # always exempt).
+  block-item-drops: true
 
 # Action-bar speedometer shown above the hotbar during bridging runs: current
 # speed in m/s plus blocks moved and placed. The text itself is configurable
@@ -57,6 +126,34 @@ speedometer:
   enabled: true
   # How often (in ticks) the reading refreshes. 5 = twice a second.
   update-ticks: 5
+  # Weight given to the previous reading, 0.0-0.99. Higher is steadier and
+  # slower to react; lower follows every knot in the player's path.
+  smoothing: 0.55
+  # A jump larger than this between two samples is a teleport, not running —
+  # the reading rebases instead of spiking.
+  teleport-distance: 10
+  # How long any other action-bar message keeps the speedometer quiet, so it
+  # does not wipe something the player was meant to read.
+  message-hold-seconds: 2.5
+
+# Watching someone else's run from inside their arena. Spectators hold no grid
+# slot, kit or timer — they fly, are invisible to everyone but other
+# spectators, and are leashed to the arena they are watching.
+spectate:
+  enabled: true
+  # Blocks past the arena walls a spectator may drift before being pulled back.
+  leash-margin: 12
+  # Ticks between leash and validity sweeps.
+  update-ticks: 20
+  # Drop a spectator into the default arena when they stop watching. Suits a
+  # practice-only server; turn off to simply restore them where they were.
+  join-default-arena-on-stop: true
+  # The three hotbar tools a spectator carries. Text lives in messages.yml
+  # under spectate.item.*.
+  items:
+    teleport: {material: COMPASS, slot: 0}
+    menu: {material: SPYGLASS, slot: 4}
+    leave: {material: RED_BED, slot: 8}
 
 # Rush practice: an empty bedwars map where the player races one objective
 # (enemy bed, emerald or diamond). Maps come from /practice rush import
@@ -66,14 +163,67 @@ rush:
   # Ticks between drops at the player's base generators (20 ticks = 1s).
   iron-interval-ticks: 25
   gold-interval-ticks: 120
-  # Items lying on a generator before it pauses dropping more.
+  # Items lying on a generator before it pauses dropping more…
   generator-item-cap: 48
+  # …and how close (in blocks) they must lie to count toward that cap.
+  generator-cap-radius: 2.0
+  # Ticks between generator passes. Drop countdowns run on this beat, so keep
+  # the intervals above a multiple of it or they drift.
+  generator-tick-period: 5
   # Whether base generators run for players who have not toggled them yet.
   base-generators-default: true
   # Bed defense preset every competitive run races under: NONE, WOOL,
   # ENDSTONE (wool + end stone) or OBSIDIAN (end stone + obsidian). Fixed so
   # competitive times stay comparable between players.
   competitive-defense: ENDSTONE
+  # The emulated MBedwars combat items.
+  tnt-fuse-ticks: 60
+  fireball-power: 3.0
+  fireball-speed: 1.5
+  # Explosions cannot damage players here (damage is cancelled world-wide), so
+  # the knockback bedwars players expect from TNT and fireball jumps is applied
+  # by hand. Strength falls off linearly to nothing at the radius.
+  explosion-knockback-radius: 5.0
+  explosion-knockback-strength: 1.6
+  bridge-egg:
+    speed: 1.4
+    lifetime-ticks: 60
+    # How far under the egg's flight path the wool trail is laid.
+    drop-below: 2
+  rescue-platform:
+    material: SLIME_BLOCK
+    # 2 gives the 5x5-minus-corners disc MBedwars builds.
+    radius: 2
+    # Blocks below the player's feet it appears.
+    depth: 2
+  # The villager profession shop dealers wear.
+  dealer-profession: LIBRARIAN
+
+# MLG water-bucket practice. These are the server-wide defaults; any arena's
+# own settings.mlg in its arena.yml overrides the keys it names.
+mlg:
+  # Glass start platform half-size (1 → 3x3).
+  platform-radius: 1
+  platform-material: GLASS
+  # Landing pad half-size (5 → 11x11).
+  pad-radius: 5
+  pad-material: GRASS_BLOCK
+  # The platform-to-pad distance is re-rolled from this range every reset, so
+  # the fall's length cannot be learned by muscle memory.
+  min-drop: 20
+  max-drop: 100
+
+# Bed-breaking practice. Server-wide defaults; an arena's own settings.bedbreak
+# overrides the keys it names (including its blocks: composition, which has no
+# default — an arena without one can never finish).
+bedbreak:
+  # VERTICAL (dig straight down a shaft) or HORIZONTAL (dig forward along a
+  # sealed 2-high corridor).
+  orientation: VERTICAL
+  bed-material: RED_BED
+  # Measure how long the player takes to switch to the right tool between
+  # steps, and record the run's average as its own stat.
+  measure-reaction: true
 
 # A ready-to-play bridging arena ships inside the jar so the plugin works with
 # no setup at all. It is unpacked to templates/<name>/ the first time the
@@ -138,6 +288,10 @@ leave:
   # Where to send someone who leaves with no saved return location (e.g. they
   # used the menu item outside a session). Empty = main world spawn.
   fallback-world: ''
+  # Ticks between restoring a player and handing them to the proxy above. The
+  # gap is what makes their restored inventory — rather than the arena kit —
+  # the state the hand-off persists. Raise it on a slow server.
+  transfer-delay-ticks: 2
 
 # The hotbar GUI item. Admins get one with /practice item, drop it into the
 # right hotbar slot, then run /practice setup kit so every player receives it.
@@ -167,6 +321,8 @@ leaderboard:
 effects:
   # Title + subtitle on finishing a run.
   finish-title: true
+  # Master switch for every sound cue. Individual cues live in sounds.yml and
+  # can be silenced one at a time by setting them to ''.
   sounds: true
   # Announce server-wide when a player takes the #1 spot on an arena, with a
   # small chime for everyone online (chime obeys `sounds` above).
@@ -175,3 +331,7 @@ effects:
   # Suppressed when the record announcement already fired for the same run;
   # first-ever finishes are not announced.
   broadcast-pbs: true
+  # How long every title the plugin shows fades in, holds and fades out.
+  title-fade-in-ms: 50
+  title-stay-ms: 1200
+  title-fade-out-ms: 400

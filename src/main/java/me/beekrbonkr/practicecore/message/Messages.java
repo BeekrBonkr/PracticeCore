@@ -46,6 +46,24 @@ public final class Messages {
         this.file = new File(plugin.getDataFolder(), RESOURCE);
     }
 
+    /**
+     * Parses messages.yml on a throwaway object without touching the live
+     * index, so a reload can refuse a syntax error before replacing anything.
+     *
+     * @return null when it parses, or the problem to report otherwise
+     */
+    public String probe() {
+        if (!file.isFile()) {
+            return null; // load() writes a fresh copy from the jar
+        }
+        try {
+            new YamlConfiguration().load(file);
+            return null;
+        } catch (IOException | InvalidConfigurationException e) {
+            return RESOURCE + " could not be parsed: " + e.getMessage();
+        }
+    }
+
     /** @return notes worth showing an admin (migrations, parse failures) */
     public List<String> load() {
         List<String> notes = new ArrayList<>();
@@ -219,10 +237,14 @@ public final class Messages {
 
     public void title(Player to, String titleKey, String subtitleKey, String... placeholders) {
         TagResolver resolver = resolver(placeholders);
+        var config = plugin.pcConfig();
         to.showTitle(Title.title(
                 Text.parse(raw(titleKey), resolver),
                 Text.parse(raw(subtitleKey), resolver),
-                Title.Times.times(Duration.ofMillis(50), Duration.ofMillis(1200), Duration.ofMillis(400))));
+                Title.Times.times(
+                        Duration.ofMillis(config.titleFadeInMs()),
+                        Duration.ofMillis(config.titleStayMs()),
+                        Duration.ofMillis(config.titleFadeOutMs()))));
     }
 
     // ---------------------------------------------------------- components
