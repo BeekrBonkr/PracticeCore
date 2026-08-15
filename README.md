@@ -261,19 +261,22 @@ down to player height. Either way its floating tag shows its **live
 health**, and its brain is entirely this plugin's — no NPC dependencies.
 
 There is **no timer and no leaderboard** — the sidebar keeps session stats
-instead: kills, deaths, hits landed/taken, current and best combo, and the
-bot's **name tag doubles as its health bar**. Every real hit on the bot pops
+instead: the arena, your kit, the **bot's difficulty**, kills, deaths, hits
+landed/taken, current and best combo, and the bot's **name tag doubles as
+its health bar**. Every real hit on the bot pops
 a **floating damage indicator** (a DeluxeCombat-style hologram showing the
 health points dealt, drifting upward before vanishing). Dying never shows a death
-screen: the fatal hit is intercepted, it costs a **stock**, and you snap
-back to your spawn for a **3-second respawn hold** — blind, untouchable,
-the **"YOU DIED" title counting the respawn down**, sight and a "FIGHT"
-title returning the moment you come alive. Killing the bot gets its own
-title with your K/D; its body vanishes for its own 3-second timer, **counted
-down above your hotbar**, and you keep your ground — health and kit
-refreshed in place. Either way a **chat line sums up the exchange** with the
-health the survivor had left (in health points — half-hearts, out of a
-normal max of 20). Getting knocked off the arena is a
+screen: the fatal hit is intercepted, it costs a **stock**, and you spend a
+**3-second respawn hold** pinned where you fell — blind, untouchable and
+unable to walk, the **"YOU DIED" title counting the respawn down**. The
+**teleport to your spawn is the respawn itself**: it lands as the countdown
+hits zero, together with the heal, the fresh kit, the bot's own reset and a
+"FIGHT" title. Killing the bot gets its own title with your K/D; its body
+vanishes for its own 3-second timer, **counted down above your hotbar**, and
+when it comes back **you are put back on your spawn with it** — so a kill
+can never be turned into a spawn camp. Either way a **chat line sums up the
+exchange** with the health the survivor had left (in health points —
+half-hearts, out of a normal max of 20). Getting knocked off the arena is a
 **ring-out** — same thing.
 
 Kits come from the **kit gallery**: fourteen built-in presets — Sword,
@@ -310,6 +313,23 @@ combos a hit earlier, re-reads the fight almost twice as often and starts
 kiting before it is actually desperate, feints, whiff-punishes and
 crit-fishes far more freely, leans on the rod harder in neutral, w-taps or
 crits on most clean hits, and angles every shove harder toward the rim.
+
+It also brings the techniques a good duellist brings, none of which exist
+below this tier. **Reach discipline**: it stops hugging you and holds the
+tip of its own reach instead — close enough to land, far enough that your
+three-block swing has to be timed — and slides back out of range entirely
+while your immunity window burns, so a wasted click is thrown at air.
+**Combo starting**: a clean melee hit opens a follow window in which it
+travels with its own knockback at a sprint (sprint-jumping to keep up)
+rather than waiting for you to drift back into range. **S-tapping**: the
+backward tap thrown in as a hit lands, eating part of the knockback and
+shortening its own hitstun, so your chain never carries it anywhere.
+**Block-hitting**: with the block toggle on, it swings with the sword still
+raised and drops back behind it right after a clean hit — the answer you
+throw lands at half. And it **jukes** instead of drifting, flipping its
+strafe side on a short unpredictable beat and weaving across its own
+approach instead of walking a straight line in.
+
 What it deliberately does **not** do is cheat the numbers: reach stays
 capped at long (3.4), CPS is still tick-capped, its accuracy is Demon's
 same perfect 1.0, and hitstun still applies — so wall combos, rod resets
@@ -331,7 +351,10 @@ and starts kiting the moment the trade math tips, slips combos at 90% and
 turns every slip into an immediate counter-offensive, darts harder off a
 settled crosshair and hops constantly, whiff-punishes almost every wasted
 click, crit-fishes and feints and max-range-baits at will, w-taps or crits
-on nearly every clean hit, and shoves hardest of all toward the rim. It is
+on nearly every clean hit, and shoves hardest of all toward the rim. Every
+Unfair technique is dialed up with it: it s-taps almost every hit it takes,
+block-hits more often, chases its combos a beat longer, jukes more, and
+steps a little further out of your reach while your immunity runs. It is
 the honest ceiling of the engine: everything Suffer does, a human could do
 once — it does all of it, every exchange, forever.
 

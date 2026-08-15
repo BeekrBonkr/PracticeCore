@@ -12,7 +12,7 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 3
+config-version: 5
 
 prefix: '<gold>Practice <dark_gray>» '
 
@@ -228,12 +228,15 @@ board:
     - '<gray>Drop: <white><drop> blocks'
     - '<gray>Streak: <white><streak>'
     - '<gray>Best: <white><best>'
-  # The PvP bot spar board: session stats, no timer.
-  # <arena> <kit> <kills> <deaths> <hits> <taken> <combo> <best-combo>
+  # The PvP bot spar board: session stats, no timer. <difficulty> is the
+  # named preset the bot's knobs currently add up to (gui.pvpbot.preset.short),
+  # or Custom for a hand-tuned mix.
+  # <arena> <kit> <difficulty> <kills> <deaths> <hits> <taken> <combo> <best-combo>
   pvpbot-lines:
     - ''
     - '<gray>Arena: <white><arena>'
     - '<gray>Kit: <white><kit>'
+    - '<gray>Difficulty: <difficulty>'
     - ''
     - '<gray>Kills: <green><kills> <dark_gray>/ <gray>Deaths: <red><deaths>'
     - '<gray>Hits: <white><hits> <dark_gray>/ <gray>Taken: <white><taken>'
@@ -963,6 +966,15 @@ gui:
         unfair: '<dark_purple><bold>Unfair</bold> <dark_gray>— it read your habits before you had them'
         suffer: '<red><bold>Suffer</bold> <dark_gray>— nothing it does is impossible; all of it is'
         custom: '<light_purple>Custom <dark_gray>— your own mix'
+      # The same names without their tagline, for the sidebar's Difficulty line.
+      short:
+        rookie: '<green>Rookie'
+        brawler: '<yellow>Brawler'
+        veteran: '<red>Veteran'
+        demon: '<dark_red>Demon'
+        unfair: '<dark_purple><bold>Unfair'
+        suffer: '<red><bold>Suffer'
+        custom: '<light_purple>Custom'
     # The kit gallery.
     kits:
       title: '<dark_gray><bold>Kits'

@@ -93,6 +93,24 @@ public final class Messages {
             cfg.set("pvpbot.bot-health", null);
             cfg.set("pvpbot.bot-name", null);
         }
+        if (from < 5) {
+            // v5 puts the bot's difficulty on the sidebar under the kit. The
+            // board is a list, which top-up cannot reach into, so the line is
+            // spliced in — unless the admin already placed one themselves.
+            List<String> board = cfg.getStringList("board.pvpbot-lines");
+            if (!board.isEmpty() && board.stream().noneMatch(l -> l.contains("<difficulty>"))) {
+                List<String> updated = new ArrayList<>(board);
+                int kit = -1;
+                for (int i = 0; i < updated.size(); i++) {
+                    if (updated.get(i).contains("<kit>")) {
+                        kit = i;
+                    }
+                }
+                updated.add(kit < 0 ? updated.size() : kit + 1,
+                        "<gray>Difficulty: <difficulty>");
+                cfg.set("board.pvpbot-lines", updated);
+            }
+        }
     }
 
     private void index(FileConfiguration cfg) {
