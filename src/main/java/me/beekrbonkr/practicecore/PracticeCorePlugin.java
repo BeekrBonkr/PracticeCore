@@ -87,6 +87,18 @@ public final class PracticeCorePlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        // A config.yml that does not parse is invisible through getConfig() —
+        // Bukkit quietly hands back an empty one — so the syntax check runs
+        // first, loudly. (The ConfigFile-backed files report their own.)
+        File configFile = new File(getDataFolder(), "config.yml");
+        if (configFile.isFile()) {
+            try {
+                new YamlConfiguration().load(configFile);
+            } catch (IOException | InvalidConfigurationException e) {
+                getLogger().severe("config.yml could not be parsed — running on the"
+                        + " built-in defaults until it is fixed: " + e.getMessage());
+            }
+        }
         saveDefaultConfig();
         migrateConfig().forEach(note -> getLogger().info(note));
         pcConfig = new PCConfig(this, getConfig());
@@ -98,6 +110,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         sounds.load().forEach(note -> getLogger().info(note));
         botTuning = new BotTuning(this);
         botTuning.load().forEach(note -> getLogger().info(note));
+        reportValidation();
 
         modes = new ModeRegistry();
         modes.register(new BridgingMode());
@@ -200,6 +213,26 @@ public final class PracticeCorePlugin extends JavaPlugin {
         if (stats != null) {
             stats.flushSync();
         }
+    }
+
+    /**
+     * The value sweep behind start-time and reload-time config validation:
+     * every loaded file checked for values that will not resolve in game.
+     * Findings are warnings, never refusals — each one falls back safely.
+     */
+    public List<String> validateConfigs() {
+        return new me.beekrbonkr.practicecore.config.ConfigValidator(this).validate();
+    }
+
+    private void reportValidation() {
+        List<String> problems = validateConfigs();
+        if (problems.isEmpty()) {
+            getLogger().info("Configuration validated — no problems found.");
+            return;
+        }
+        getLogger().warning(problems.size() + " configuration problem(s) found —"
+                + " each value falls back to its default until fixed:");
+        problems.forEach(problem -> getLogger().warning("  - " + problem));
     }
 
     private List<String> migrateConfig() {
@@ -319,6 +352,14 @@ public final class PracticeCorePlugin extends JavaPlugin {
         } catch (RuntimeException e) {
             notes.add("Arenas could not be reloaded: " + e);
             return ReloadResult.failed(notes);
+        }
+        // The value sweep: names and numbers that parsed as YAML but will not
+        // resolve in game. Warnings, not refusals — every one falls back.
+        List<String> problems = validateConfigs();
+        if (!problems.isEmpty()) {
+            notes.add(problems.size() + " value problem(s) found — each falls back"
+                    + " to its default:");
+            problems.forEach(problem -> notes.add("  • " + problem));
         }
         // loadAll may have written arenas of its own (bundled/generated
         // installs, arena.yml upgrades), so the fingerprint is taken again

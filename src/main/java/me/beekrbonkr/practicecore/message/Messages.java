@@ -152,6 +152,31 @@ public final class Messages {
         prefix = lines == null || lines.isEmpty() ? Component.empty() : Text.parse(lines.get(0));
     }
 
+    // ----------------------------------------------------------- validation
+
+    /**
+     * Every line run through the same MiniMessage parser the renderer uses,
+     * eagerly. At play time a broken line degrades to raw text ({@link
+     * Text#parse} swallows the failure), which is exactly why the validation
+     * sweep has to surface it here instead.
+     */
+    public List<String> validate() {
+        List<String> problems = new ArrayList<>();
+        for (Map.Entry<String, List<String>> entry : values.entrySet()) {
+            if (entry.getKey().equals(Versions.KEY)) {
+                continue;
+            }
+            for (String line : entry.getValue()) {
+                String problem = me.beekrbonkr.practicecore.util.Text.problem(line);
+                if (problem != null) {
+                    problems.add(RESOURCE + ": " + entry.getKey()
+                            + " would show as raw text — " + problem);
+                }
+            }
+        }
+        return problems;
+    }
+
     // ------------------------------------------------------------- lookups
 
     private List<String> lines(String key) {

@@ -85,4 +85,49 @@ public final class GuiConfig {
     public boolean categoriesEnabled() {
         return file.bool("categories.enabled", true);
     }
+
+    // ------------------------------------------------------------ validation
+
+    /**
+     * The whole layout swept eagerly: every material and icon must resolve,
+     * every slot fit a menu, every row count fit a chest. Play time falls
+     * back per lookup; this reports the typos all at once instead.
+     */
+    public List<String> validate() {
+        List<String> problems = new java.util.ArrayList<>();
+        var raw = file.raw();
+        for (String key : raw.getKeys(true)) {
+            if (raw.isConfigurationSection(key) || key.equals(Versions.KEY)) {
+                continue;
+            }
+            String leaf = key.substring(key.lastIndexOf('.') + 1);
+            switch (leaf) {
+                case "material", "empty-material", "icon" -> {
+                    String name = raw.getString(key, "");
+                    if (!name.isBlank() && (Material.matchMaterial(name) == null
+                            || !Material.matchMaterial(name).isItem())) {
+                        problems.add(RESOURCE + ": '" + name + "' at " + key
+                                + " is not an item this server knows.");
+                    }
+                }
+                case "slot" -> {
+                    int slot = raw.getInt(key, 0);
+                    if (slot < -1 || slot > 53) { // -1 hides the button on purpose
+                        problems.add(RESOURCE + ": slot " + slot + " at " + key
+                                + " is outside a menu (0-53, or -1 to hide).");
+                    }
+                }
+                case "rows" -> {
+                    int rows = raw.getInt(key, 1);
+                    if (rows < 1 || rows > 6) {
+                        problems.add(RESOURCE + ": " + rows + " rows at " + key
+                                + " does not fit a chest menu (1-6).");
+                    }
+                }
+                default -> {
+                }
+            }
+        }
+        return problems;
+    }
 }
