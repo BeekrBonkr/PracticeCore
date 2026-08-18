@@ -67,6 +67,40 @@ public final class SoundConfig {
         return notes;
     }
 
+    // ------------------------------------------------------------ validation
+
+    /**
+     * Every cue parsed eagerly. Play time already warns about a bad cue, but
+     * only the first time that cue fires — which for a rare one can be days
+     * in; the validation sweep surfaces all of them at start and reload.
+     */
+    public List<String> validate() {
+        List<String> problems = new java.util.ArrayList<>();
+        for (String key : file.raw().getKeys(true)) {
+            if (file.raw().isConfigurationSection(key) || key.equals(Versions.KEY)) {
+                continue;
+            }
+            String spec = file.string(key, "");
+            if (spec.isBlank()) {
+                continue; // a deliberate silence
+            }
+            String[] parts = spec.trim().split("\\s+");
+            if (resolve(parts[0]) == null) {
+                problems.add("sounds.yml: '" + parts[0] + "' at " + key
+                        + " is not a sound this server knows — that cue stays silent.");
+            }
+            for (int i = 1; i < Math.min(parts.length, 3); i++) {
+                try {
+                    Float.parseFloat(parts[i]);
+                } catch (NumberFormatException e) {
+                    problems.add("sounds.yml: '" + parts[i] + "' at " + key
+                            + " is not a number — 1.0 is used instead.");
+                }
+            }
+        }
+        return problems;
+    }
+
     // --------------------------------------------------------------- playing
 
     /** Plays a cue to one player, at their own position. */

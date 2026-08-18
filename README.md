@@ -843,6 +843,29 @@ still standing in the world is moved to `leave.fallback-world` (or the main
 world). Arenas, kits and leaderboards are untouched. `/practice world info`
 shows the world, session count, allocated slots and loaded chunks.
 
+## Config validation
+
+Syntax and versions are only half of a config file being *right*. On every
+server start and every `/practice reload`, PracticeCore also sweeps the loaded
+files for values that parse as YAML but will not resolve in game:
+
+- materials, sounds and villager professions the server does not know;
+- misspelled mode, tier and layer names (`timer.start-mode`, the pvpbot tier
+  tables, `layers`, `defaults`, the gear sets);
+- menu slots outside a chest and row counts that do not fit one;
+- MiniMessage that would render as raw text (at play time a broken line
+  deliberately degrades to its raw text so nothing breaks — the validation
+  sweep is where you actually hear about it);
+- numbers a silent clamp would rewrite, and cross-checks no single key can
+  see (`grid.max-schematic-size` vs `grid.spacing`, `mlg.min-drop` vs
+  `mlg.max-drop`).
+
+Every finding is a warning, never a refusal: each value falls back to its
+shipped default either way. The sweep just makes sure that happens as a
+console line at boot — and a chat line on reload — instead of as a surprise
+discovered mid-fight. Only values you actually wrote are checked, so a clean
+install validates clean.
+
 ## Config versioning
 
 Every file an admin can edit carries a `config-version`, and every file the
