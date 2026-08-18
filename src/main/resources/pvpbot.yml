@@ -118,14 +118,17 @@ bot:
 # What each tier is worth
 # ===========================================================================
 tiers:
-  # Strafe speed in blocks per tick. A sprinting player covers about 0.28.
+  # Strafe speed in blocks per tick. A walking player covers about 0.22, a
+  # sprinting one about 0.28 — so LOW walks, EXTREME (the Demon preset) sits
+  # exactly at the human ceiling, and only the unfair tiers move past it:
+  # cracked is a speed, unnatural is a statement.
   evasiveness:
-    LOW: 0.12
-    MEDIUM: 0.18
+    LOW: 0.17
+    MEDIUM: 0.21
     HIGH: 0.26
-    EXTREME: 0.30
-    UNFAIR: 0.38
-    SUFFER: 0.48
+    EXTREME: 0.28
+    UNFAIR: 0.34
+    SUFFER: 0.44
   # Clicks per second. Tick resolution caps the real rate near the top: 12 and
   # up all floor to one swing per tick, which is what 1.8 spam-clicking feels
   # like. Set a name to any rate you like — TWELVE: 16 is perfectly valid.
@@ -137,11 +140,13 @@ tiers:
   # Chance a swing inside reach actually connects. Above PERFECT there is no
   # headroom left, which is why the top tiers pay for themselves in the brain
   # layers below rather than in raw aim.
+  # PERFECT (the Demon preset) is "cracked", not aim-locked: it still whiffs
+  # like a human on a great day. The unfair tiers stop missing.
   accuracy:
     LOW: 0.5
     MEDIUM: 0.7
     HIGH: 0.85
-    PERFECT: 0.95
+    PERFECT: 0.92
     UNFAIR: 0.97
     SUFFER: 1.0
   # How readily the bot goes for jump-crits and W-tap knockback resets.
@@ -149,7 +154,7 @@ tiers:
     OFF: 0.0
     SOME: 0.2
     FULL: 0.32
-    UNFAIR: 0.5
+    UNFAIR: 0.45
     SUFFER: 0.85
   # Melee range in blocks. 3.0 is a player's. Going past ~3.4 turns the bot
   # into an aimbot with a lightsaber rather than a harder opponent.
@@ -160,11 +165,11 @@ tiers:
   # Approach speed (pathfinder multiplier) and the spacing the bot holds while
   # strafing, per aggression tier.
   aggression:
-    passive: {speed: 1.0, gap: 3.2}
+    passive: {speed: 1.1, gap: 3.0}
     balanced: {speed: 1.2, gap: 2.8}
     relentless: {speed: 1.4, gap: 2.3}
-    frenzied: {speed: 1.45, gap: 2.3}
-    unfair: {speed: 1.6, gap: 2.0}
+    frenzied: {speed: 1.45, gap: 2.2}
+    unfair: {speed: 1.55, gap: 1.9}
     suffer: {speed: 1.85, gap: 1.5}
   # Perception lag in ticks: how stale the bot's picture of where you are and
   # where you are going may be. 0 means it sees live.
@@ -471,6 +476,24 @@ behavior:
       default: 1.0
       UNFAIR: 1.18
       SUFFER: 1.45
+    # In sword range the dodge runs damped — the full-speed juke is saved for
+    # a real projectile threat (a drawn bow, crossbow or trident, a loaded
+    # crossbow, or a throwable in hand), which is when sidestepping is honest.
+    # The unfair layer ignores the damping: unnatural movement is its whole
+    # identity.
+    melee-dodge-factor:
+      base: 0.7
+      unfair: 1.0
+    # What counts as a projectile threat when simply held in the main hand
+    # (drawn bows, crossbows and tridents are always threats).
+    projectile-threats:
+      - SNOWBALL
+      - EGG
+      - ENDER_PEARL
+      - SPLASH_POTION
+      - LINGERING_POTION
+      - FISHING_ROD
+      - TRIDENT
     # Anti-orbit: how long the strafe may carry the bot the same way around
     # before it deliberately cuts back through the aim line, and for how long.
     orbit-patience:
@@ -657,10 +680,20 @@ behavior:
       ticks: 7   # the heal itself is bot.soup-heal-hearts, same as the player's
     gapple:
       ticks: 32  # a real golden apple takes ~1.6 seconds to chew
-      # A gapple is best started with some space; under pressure the bot only
-      # sometimes commits to it, like anyone desperate.
-      min-distance: 2.5
-      pressured-chance: 0.3
+      # A gapple is a commitment a player never makes in someone's face: the
+      # bot first breaks away — kiting, rodding for space — and only starts
+      # chewing once it has opened this much room.
+      min-distance: 6.0
+      # How long it keeps trying to shake the player before giving up and
+      # fighting on with what it has.
+      retreat-ticks: 60
+      # Chew finished (or skipped for the kill): how long it stays committed
+      # to pressure as it wheels straight back in.
+      recommit-ticks: 40
+      # The kill-first read: low enough to want the gapple, but the player is
+      # hurt at least as badly — smell blood and go for the finish instead of
+      # giving the fight time to reset.
+      risky-finish: true
       # The vanilla payoff: Regeneration II and Absorption.
       regen-ticks: 100
       regen-amplifier: 1

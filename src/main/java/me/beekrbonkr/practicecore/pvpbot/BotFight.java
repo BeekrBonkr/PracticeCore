@@ -56,6 +56,9 @@ public final class BotFight {
     public int consumeTicks;
     /** Ticks before the bot may reach for another consumable. */
     public int consumeCooldown;
+    /** Ticks left of the break-away before a gapple; the chew starts when
+     * the gap is open, or the bot gives up when this runs out. */
+    public int gappleRetreatTicks;
     /** The bot's own supply of its kit's consumables, spent as it heals. */
     public int botGapples;
     public int botPots;
@@ -218,6 +221,7 @@ public final class BotFight {
         consumeItem = null;
         consumeTicks = 0;
         consumeCooldown = 0;
+        gappleRetreatTicks = 0;
         restockConsumables();
         stance = NEUTRAL;
         stanceTicks = 0;
