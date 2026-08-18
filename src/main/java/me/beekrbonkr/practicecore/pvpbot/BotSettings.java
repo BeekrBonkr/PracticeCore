@@ -174,6 +174,19 @@ public record BotSettings(BotTuning tuning, PvpKit kit, GearTier gear, Evasivene
         return tuning.suffer(accuracy);
     }
 
+    /**
+     * The bot rods whenever its kit actually carries one — a BuildUHC bot
+     * never leaves its rod in its pocket. The {@code rod} toggle remains as a
+     * way to force the option onto kits that lack the item.
+     */
+    public boolean usesRod() {
+        return rod || (kit != null && kit.carries(Material.FISHING_ROD));
+    }
+
+    public boolean usesBow() {
+        return bow || (kit != null && kit.carries(Material.BOW));
+    }
+
     /** A layer-scaled knob from pvpbot.yml's {@code behavior} section. */
     public double knob(String path, double fallback) {
         return tuning.scaled("behavior." + path, this, fallback);

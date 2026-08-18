@@ -42,8 +42,9 @@ import java.util.concurrent.ThreadLocalRandom;
  *
  * The bot is a plain husk with its vanilla goals stripped; everything it does
  * — strafing out of the player's crosshair, spacing, spam-clicking at the
- * configured CPS, jump-crits, W-tap shoves, rod casts, bow shots and 1.8
- * sword blocks — is driven from {@link #tick} using only Paper API. Combat
+ * configured CPS, jump-crits, W-tap shoves, rod casts, bow shots, 1.8 sword
+ * blocks and healing with its kit's own pots, stew and gapples — is driven
+ * from {@link #tick} using only Paper API. Combat
  * *mechanics* (attack cooldowns, knockback shaping) are deliberately left to
  * the server's own plugins (OldCombatMechanics, vanilla-sword-blocking).
  */
@@ -337,6 +338,7 @@ public final class PvpBotService {
         }
         fight.settings = fresh;
         if (kitChanged) {
+            fight.restockConsumables(); // the new kit brings its own supply
             plugin.sessions().regiveKit(player, session);
             syncSwordComponents(player);
         }
@@ -600,6 +602,8 @@ public final class PvpBotService {
         for (Material empty : tuning().discardedEmpties()) {
             player.getInventory().remove(empty);
         }
+        // The bot's own supply refreshes on the same beat the player's does.
+        fight.restockConsumables();
     }
 
     // ------------------------------------------------------------ the brain
@@ -691,6 +695,12 @@ public final class PvpBotService {
             fight.nameTag.text(botName(bot.getHealth()));
         }
 
+        // A consumable in progress keeps ticking through everything — real
+        // players finish their pot mid-combo too. The heal lands at zero.
+        if (fight.consuming() && --fight.consumeTicks <= 0) {
+            finishConsume(bot, fight);
+        }
+
         // Crouch bookkeeping runs even through hitstun — riding knockback is
         // exactly when the reduced-knockback crouch earns its keep.
         if (fight.crouchCooldown > 0) {
@@ -723,7 +733,7 @@ public final class PvpBotService {
             if (fight.attackCooldown > 0) {
                 fight.attackCooldown--;
             }
-            if (!fight.paused && fight.graceTicks == 0) {
+            if (!fight.paused && fight.graceTicks == 0 && !fight.consuming()) {
                 bot.lookAt(player);
                 BotSettings settings = fight.settings;
                 if (fight.attackCooldown == 0 && bot.getEyeLocation()
@@ -791,6 +801,9 @@ public final class PvpBotService {
         }
         if (fight.blockTicks > 0) {
             fight.blockTicks--;
+        }
+        if (fight.consumeCooldown > 0) {
+            fight.consumeCooldown--;
         }
         if (fight.strafeFlipTicks > 0) {
             fight.strafeFlipTicks--;
@@ -932,18 +945,30 @@ public final class PvpBotService {
             }
         }
 
+        // Hurt and holding a kit with heals in it? Use them — pots splash
+        // fast, stew is a quick slurp, a gapple is a long committed chew.
+        if (tuning().consumablesEnabled() && !fight.consuming()
+                && fight.consumeCooldown == 0 && fight.graceTicks == 0
+                && !fight.blocking() && !fight.crouching() && fight.critTicks < 0
+                && bot.getHealth() <= s.knob("consumables.heal-at", 12)
+                && s.chance("consumables.chance", 0.15)) {
+            tryConsume(bot, fight, s, dist);
+        }
+
         // Ranged options fire from spacing the melee brain won't close fast.
-        // A resetting bot leans on them: the rod is its space-maker.
-        if (fight.graceTicks == 0 && !fight.blocking()) {
+        // A resetting bot leans on them: the rod is its space-maker. The kit
+        // decides what's available (a BuildUHC bot always rods and shoots);
+        // the settings toggles force the option onto kits that lack the item.
+        if (fight.graceTicks == 0 && !fight.blocking() && !fight.consuming()) {
             boolean resetting = fight.stance == BotFight.RESET;
-            if (s.rod() && fight.rodCooldown == 0
+            if (s.usesRod() && fight.rodCooldown == 0
                     && dist > s.knob(resetting ? "rod.reset-min-distance" : "rod.min-distance",
                             resetting ? 3.0 : 3.5)
                     && dist < s.knob("rod.max-distance", 8)
                     && chance(resetting ? s.knob("rod.reset-chance", 0.22)
                             : s.knob("rod.chance", 0.06))) {
                 castRod(bot, player, fight, s);
-            } else if (s.bow() && fight.bowCooldown == 0
+            } else if (s.usesBow() && fight.bowCooldown == 0
                     && dist >= s.knob(resetting ? "bow.reset-min-distance" : "bow.min-distance",
                             resetting ? 7 : 8)
                     && chance(resetting ? s.knob("bow.reset-chance", 0.15)
@@ -1004,7 +1029,7 @@ public final class PvpBotService {
             fight.lastZ = botLoc.getZ();
             return;
         }
-        if (fight.stance == BotFight.NEUTRAL && s.cerebral()
+        if (fight.stance == BotFight.NEUTRAL && s.cerebral() && !fight.consuming()
                 && s.comboChance() > 0 && fight.feintCooldown == 0
                 && dist > gap - s.knob("feint.window-near", 0.3)
                 && dist < gap + s.knob("feint.window-far", 1.5)
@@ -1021,7 +1046,8 @@ public final class PvpBotService {
                         fleeTarget(botLoc, perceived, session.bounds(), s),
                         s.approachSpeed() * s.knob("reset.speed-multiplier", 1.15));
             }
-            if (s.block() && !fight.blocking() && dist < s.knob("reset.block-distance", 3.2)
+            if (s.block() && !fight.blocking() && !fight.consuming()
+                    && dist < s.knob("reset.block-distance", 3.2)
                     && s.chance("reset.block-chance", 0.2)) {
                 fight.blockTicks = s.knobRoll("reset.block-ticks", 10, 15);
             }
@@ -1049,7 +1075,8 @@ public final class PvpBotService {
                         ? s.knobTicks("approach.repath-ticks-fast", 3)
                         : s.knobTicks("approach.repath-ticks", 5);
                 bot.getPathfinder().moveTo(player, s.approachSpeed()
-                        * (fight.blocking() ? s.knob("approach.blocking-speed", 0.5) : 1.0));
+                        * (fight.blocking() || fight.consuming()
+                                ? s.knob("approach.blocking-speed", 0.5) : 1.0));
             }
             // Nobody good walks a straight line in: the duellist tiers weave
             // across the approach so closing the distance stays a moving shot.
@@ -1057,7 +1084,8 @@ public final class PvpBotService {
             // what normally flips it, and a lateral push that never changes
             // sign curves the whole approach into an orbit the bot never
             // closes.
-            if (s.duellist() && !fight.blocking() && !fight.crouching()) {
+            if (s.duellist() && !fight.blocking() && !fight.crouching()
+                    && !fight.consuming()) {
                 if (fight.strafeFlipTicks == 0) {
                     fight.strafeSign = -fight.strafeSign;
                     fight.strafeFlipTicks = s.knobRoll("approach.weave-flip", 10, 17);
@@ -1071,7 +1099,7 @@ public final class PvpBotService {
                         BotSettings.Aggression.FRENZIED)
                     || fight.stance == BotFight.PRESSURE || fight.punishTicks > 0)
                     && bot.isOnGround() && dist > gap + s.knob("approach.sprint-jump.gap", 2)
-                    && !fight.blocking() && !fight.crouching()
+                    && !fight.blocking() && !fight.crouching() && !fight.consuming()
                     && s.chance("approach.sprint-jump.chance", 0.15)) {
                 Vector forward = toBot.clone().multiply(-1).normalize();
                 bot.setVelocity(bot.getVelocity()
@@ -1089,7 +1117,7 @@ public final class PvpBotService {
         // before the next click is loaded.
         if (fight.punishTicks > 0 && bot.isOnGround()
                 && dist > s.knob("whiff-punish.min-distance", 1.8)
-                && !fight.blocking() && !fight.crouching()
+                && !fight.blocking() && !fight.crouching() && !fight.consuming()
                 && s.chance("whiff-punish.chance", 0.5)) {
             Vector lunge = toBot.clone().multiply(-1).normalize();
             bot.setVelocity(bot.getVelocity()
@@ -1115,7 +1143,8 @@ public final class PvpBotService {
         // that unlocks the offensive edge-shoves; the unfair tiers read the
         // danger faster.
         if (s.cerebral() && !fight.crouching() && fight.crouchCooldown == 0
-                && !fight.blocking() && dist < s.knob("edge-crouch.distance", 4)
+                && !fight.blocking() && !fight.consuming()
+                && dist < s.knob("edge-crouch.distance", 4)
                 && rimDistance(botLoc, session.bounds()) < s.knob("edge-crouch.rim", 2.5)
                 && s.chance("edge-crouch.chance", 0.2)) {
             startCrouch(fight, s.knobRoll("edge-crouch.ticks", 15, 24));
@@ -1126,7 +1155,7 @@ public final class PvpBotService {
         if (s.cerebral() && fight.jumpHabit >= s.knob("crit-fish.habit", 3)
                 && !playerOnGround && player.getVelocity().getY() > 0.1
                 && fight.critTicks < 0 && bot.isOnGround() && fight.graceTicks == 0
-                && !fight.blocking() && !fight.crouching()
+                && !fight.blocking() && !fight.crouching() && !fight.consuming()
                 && dist < s.reachBlocks() + s.knob("crit-fish.range-bonus", 1.5)
                 && s.chance("crit-fish.chance", 0.3)) {
             bot.setVelocity(bot.getVelocity().setY(tuning().jumpVelocity()));
@@ -1143,6 +1172,7 @@ public final class PvpBotService {
         // when the player armed the bot with sword blocking at all.
         boolean blockHits = s.duellist() && s.block();
         boolean mayHit = fight.graceTicks == 0 && (blockHits || !fight.blocking())
+                && !fight.consuming()
                 && fight.critTicks < 0 && fight.attackCooldown == 0
                 && eyeDist <= s.reachBlocks();
         if (mayHit && s.cerebral() && immune(player)) {
@@ -1177,6 +1207,7 @@ public final class PvpBotService {
                 }
             }
         } else if (s.cerebral() && fight.stance == BotFight.NEUTRAL
+                && !fight.consuming()
                 && fight.attackCooldown == 0 && eyeDist > s.reachBlocks()
                 && eyeDist < s.reachBlocks() + s.knob("bait-click.range", 1)
                 && s.chance("bait-click.chance", 0.03)) {
@@ -1184,7 +1215,7 @@ public final class PvpBotService {
         }
 
         // Getting comboed? Raise the 1.8 sword block for a moment.
-        if (s.block() && !fight.blocking()
+        if (s.block() && !fight.blocking() && !fight.consuming()
                 && fight.recentHitsTaken >= s.knobTicks("defensive-block.after-hits", 2)
                 && s.chance("defensive-block.chance", 0.15)) {
             fight.blockTicks = s.knobRoll("defensive-block.ticks", 12, 19);
@@ -1264,7 +1295,8 @@ public final class PvpBotService {
         }
         Vector velocity = strafeDir.multiply(s.strafeSpeed() * burst
                 * (fight.blocking() ? s.knob("strafe.blocking-speed", 0.4)
-                        : fight.crouching() ? s.knob("strafe.crouching-speed", 0.6) : 1.0));
+                        : fight.crouching() ? s.knob("strafe.crouching-speed", 0.6)
+                        : fight.consuming() ? s.knob("strafe.eating-speed", 0.5) : 1.0));
         // Radial correction toward the spacing target, proportional to how far
         // off it is. A flat nudge was too slow for the reach dance: a bot that
         // steps out of range while the immunity window burns has to be able to
@@ -1293,6 +1325,7 @@ public final class PvpBotService {
         if (tuning().evasiveAtLeast("behavior.strafe.hop.from", s.evasiveness(),
                     BotSettings.Evasiveness.EXTREME)
                 && bot.isOnGround() && !fight.blocking() && !fight.crouching()
+                && !fight.consuming()
                 && chance(tuning().byEvasiveness("behavior.strafe.hop.chance",
                         s.evasiveness(), 0.06))) {
             y = tuning().jumpVelocity();
@@ -1454,6 +1487,95 @@ public final class PvpBotService {
         arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
         arrow.setCritical(false);
         plugin.sounds().playAt(bot.getLocation(), "pvpbot.bow-shot");
+    }
+
+    // ---------------------------------------------------------- consumables
+
+    /**
+     * The bot reaching for its kit's own heals, mirroring what the player
+     * has: a splash pot is a quick throw, stew a quick slurp, a golden apple
+     * a long committed chew. While one is in progress the bot holds the item,
+     * stops attacking and moves at eating speed; the effect lands when the
+     * countdown runs out. Stock mirrors the kit's numbers and refreshes on
+     * the same beat as the player's refill.
+     */
+    private void tryConsume(Husk bot, BotFight fight, BotSettings s, double dist) {
+        if (fight.botPots > 0) {
+            fight.botPots--;
+            startConsume(bot, fight, Material.SPLASH_POTION,
+                    s.knobTicks("consumables.pot.ticks", 8));
+        } else if (fight.botStews > 0 && tuning().soupHealHearts() > 0) {
+            fight.botStews--;
+            startConsume(bot, fight, Material.MUSHROOM_STEW,
+                    s.knobTicks("consumables.stew.ticks", 7));
+        } else if (fight.botGapples > 0
+                && !bot.hasPotionEffect(org.bukkit.potion.PotionEffectType.REGENERATION)
+                && (dist > s.knob("consumables.gapple.min-distance", 2.5)
+                        || fight.stance == BotFight.RESET
+                        || s.chance("consumables.gapple.pressured-chance", 0.3))) {
+            // The long chew is best started with some space; sometimes the
+            // bot commits to it under pressure anyway, like anyone desperate.
+            fight.botGapples--;
+            startConsume(bot, fight, Material.GOLDEN_APPLE,
+                    s.knobTicks("consumables.gapple.ticks", 32));
+        }
+    }
+
+    private void startConsume(Husk bot, BotFight fight, Material item, int ticks) {
+        fight.consumeItem = item;
+        fight.consumeTicks = Math.max(1, ticks);
+        fight.heldRevertTicks = 0; // the consumable owns the hand now
+        bot.getEquipment().setItemInMainHand(new ItemStack(item));
+        if (item != Material.SPLASH_POTION) {
+            plugin.sounds().playAt(bot.getLocation(), "pvpbot.bot-eat");
+        }
+    }
+
+    /** The countdown ran out: the consumable's effect lands and the sword returns. */
+    private void finishConsume(Husk bot, BotFight fight) {
+        Material item = fight.consumeItem;
+        fight.consumeItem = null;
+        fight.consumeTicks = 0;
+        fight.consumeCooldown = fight.settings == null ? 30
+                : fight.settings.knobRoll("consumables.cooldown", 30, 49);
+        equipSword(fight);
+        if (item == null || !bot.isValid()) {
+            return;
+        }
+        BotSettings s = fight.settings;
+        switch (item) {
+            case SPLASH_POTION -> {
+                // Instant Health II at the feet, applied directly — a real
+                // splash potion would harm the bot, since husks are undead.
+                heal(bot, s.knob("consumables.pot.heal", 8));
+                plugin.sounds().playAt(bot.getLocation(), "pvpbot.bot-pot");
+                bot.getWorld().spawnParticle(Particle.HEART,
+                        bot.getLocation().add(0, 1, 0), 6, 0.4, 0.5, 0.4, 0);
+            }
+            case MUSHROOM_STEW -> {
+                // Same instant heal the player's soup gives (bot.soup-heal-hearts).
+                heal(bot, tuning().soupHealHearts() * 2);
+                plugin.sounds().playAt(bot.getLocation(), "pvpbot.bot-burp");
+            }
+            case GOLDEN_APPLE -> {
+                bot.addPotionEffect(new PotionEffect(
+                        org.bukkit.potion.PotionEffectType.REGENERATION,
+                        s.knobTicks("consumables.gapple.regen-ticks", 100),
+                        s.knobTicks("consumables.gapple.regen-amplifier", 1)));
+                bot.addPotionEffect(new PotionEffect(
+                        org.bukkit.potion.PotionEffectType.ABSORPTION,
+                        s.knobTicks("consumables.gapple.absorption-ticks", 2400), 0));
+                plugin.sounds().playAt(bot.getLocation(), "pvpbot.bot-burp");
+            }
+            default -> {
+            }
+        }
+    }
+
+    private static void heal(Husk bot, double amount) {
+        AttributeInstance max = bot.getAttribute(PlayerSnapshot.maxHealthAttribute());
+        bot.setHealth(Math.min(max != null ? max.getValue() : 20.0,
+                Math.max(0, bot.getHealth() + amount)));
     }
 
     /** Crit flair for the listener: particles over the player, like a real crit. */

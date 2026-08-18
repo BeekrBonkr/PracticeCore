@@ -205,6 +205,40 @@ public final class BotTuning {
         return file.number("bot.jump-velocity", 0.42, 0.0, 2.0);
     }
 
+    /**
+     * Hearts a mushroom stew heals instantly on right-click — classic soup
+     * PvP, for the player and the bot alike. 0 disables soup healing.
+     */
+    public double soupHealHearts() {
+        return file.number("bot.soup-heal-hearts", 3.5, 0.0, 10.0);
+    }
+
+    /** Whether the bot heals with its kit's own pots, stew and gapples. */
+    public boolean consumablesEnabled() {
+        return file.bool("behavior.consumables.enabled", true);
+    }
+
+    /**
+     * The classic 1.8 rod hit for the player's hook against the bot —
+     * OldCombatMechanics' fishing knockback only covers hooked players.
+     */
+    public boolean rodKnockback() {
+        return file.bool("bot.rod-knockback.enabled", true);
+    }
+
+    public double rodKnockbackStrength() {
+        return file.number("bot.rod-knockback.strength", 0.4, 0.0, 2.0);
+    }
+
+    public double rodKnockbackLift() {
+        return file.number("bot.rod-knockback.lift", 0.3, 0.0, 2.0);
+    }
+
+    /** Ticks of steering a landed hook knocks out of the bot. */
+    public int rodKnockbackHitstun() {
+        return file.integer("bot.rod-knockback.hitstun-ticks", 4, 0, 40);
+    }
+
     // ------------------------------------------------------------- the tiers
 
     public double strafeSpeed(BotSettings.Evasiveness tier) {

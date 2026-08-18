@@ -243,7 +243,9 @@ board:
     - '<gray>Kills: <green><kills> <dark_gray>/ <gray>Deaths: <red><deaths>'
     - '<gray>Hits: <white><hits> <dark_gray>/ <gray>Taken: <white><taken>'
     - '<gray>Combo: <white><combo> <dark_gray>(best <best-combo>)'
-  # The spectator sidebar: who you watch and their live run.
+  # The spectator sidebar summary: who you watch and their live run. Only
+  # used when scoreboard.spectators-see-player-board is false in config.yml —
+  # by default spectators see the watched player's own board instead.
   # <target> <arena> <mode> <time>
   spectate-lines:
     - ''
@@ -1108,6 +1110,9 @@ gui:
       lore:
         - '<gray>The bot hooks you at range'
         - '<gray>to reset your combos.'
+        - '<gray>Kits carrying a rod always'
+        - '<gray>use it; this adds one to'
+        - '<gray>every other kit.'
         - ''
         - '<gray>Currently: <state>'
         - '<yellow>Click to toggle'
@@ -1117,6 +1122,9 @@ gui:
       lore:
         - '<gray>The bot takes potshots'
         - '<gray>before closing in.'
+        - '<gray>Kits carrying a bow always'
+        - '<gray>use it; this adds one to'
+        - '<gray>every other kit.'
         - ''
         - '<gray>Currently: <state>'
         - '<yellow>Click to toggle'
