@@ -946,21 +946,27 @@ public final class PvpBotService {
         }
 
         // Hurt and holding a kit with heals in it? Use them — pots splash
-        // fast, stew is a quick slurp, a gapple is a long committed chew.
-        if (tuning().consumablesEnabled() && !fight.consuming()
+        // fast, stew is a quick slurp. The gapple is different: a long chew
+        // a player never starts in someone's face, so it runs through the
+        // retreat dance in tickGappleRetreat instead of firing point-blank.
+        if (fight.gappleRetreatTicks > 0) {
+            tickGappleRetreat(bot, player, fight, s, dist);
+        } else if (tuning().consumablesEnabled() && !fight.consuming()
                 && fight.consumeCooldown == 0 && fight.graceTicks == 0
                 && !fight.blocking() && !fight.crouching() && fight.critTicks < 0
                 && bot.getHealth() <= s.knob("consumables.heal-at", 12)
                 && s.chance("consumables.chance", 0.15)) {
-            tryConsume(bot, fight, s, dist);
+            tryConsume(bot, player, fight, s, dist);
         }
 
         // Ranged options fire from spacing the melee brain won't close fast.
-        // A resetting bot leans on them: the rod is its space-maker. The kit
+        // A resetting bot leans on them: the rod is its space-maker — and the
+        // gapple retreat borrows the same trick to buy room to chew. The kit
         // decides what's available (a BuildUHC bot always rods and shoots);
         // the settings toggles force the option onto kits that lack the item.
         if (fight.graceTicks == 0 && !fight.blocking() && !fight.consuming()) {
-            boolean resetting = fight.stance == BotFight.RESET;
+            boolean resetting = fight.stance == BotFight.RESET
+                    || fight.gappleRetreatTicks > 0;
             if (s.usesRod() && fight.rodCooldown == 0
                     && dist > s.knob(resetting ? "rod.reset-min-distance" : "rod.min-distance",
                             resetting ? 3.0 : 3.5)
@@ -1030,6 +1036,7 @@ public final class PvpBotService {
             return;
         }
         if (fight.stance == BotFight.NEUTRAL && s.cerebral() && !fight.consuming()
+                && fight.gappleRetreatTicks == 0
                 && s.comboChance() > 0 && fight.feintCooldown == 0
                 && dist > gap - s.knob("feint.window-near", 0.3)
                 && dist < gap + s.knob("feint.window-far", 1.5)
@@ -1037,14 +1044,22 @@ public final class PvpBotService {
             fight.feintTicks = s.knobRoll("feint.duration", 12, 19);
         }
 
-        // Movement: kite when resetting, pathfind in from far out, strafe
-        // once in the fight.
-        if (fight.stance == BotFight.RESET) {
+        // Movement: kite when resetting — or when backing off to chew a
+        // gapple, which is the same run with a different payoff (the chew
+        // itself keeps fleeing too, at eating speed, so the bot heals moving
+        // away from you rather than strolling into your sword) — pathfind in
+        // from far out, strafe once in the fight.
+        boolean fleeing = fight.stance == BotFight.RESET
+                || fight.gappleRetreatTicks > 0
+                || (fight.consuming() && fight.consumeItem == Material.GOLDEN_APPLE);
+        if (fleeing) {
             if (--fight.repathTicks <= 0) {
                 fight.repathTicks = s.knobTicks("reset.repath-ticks", 4);
                 bot.getPathfinder().moveTo(
                         fleeTarget(botLoc, perceived, session.bounds(), s),
-                        s.approachSpeed() * s.knob("reset.speed-multiplier", 1.15));
+                        s.approachSpeed() * s.knob("reset.speed-multiplier", 1.15)
+                                * (fight.consuming()
+                                        ? s.knob("approach.blocking-speed", 0.5) : 1.0));
             }
             if (s.block() && !fight.blocking() && !fight.consuming()
                     && dist < s.knob("reset.block-distance", 3.2)
@@ -1293,7 +1308,20 @@ public final class PvpBotService {
             fight.orbitSense = sense;
             fight.orbitTicks = 0;
         }
-        Vector velocity = strafeDir.multiply(s.strafeSpeed() * burst
+        // The full-speed juke is honest against a drawn bow — sidestepping an
+        // arrow is exactly what strafing is for. In sword range the same dart
+        // reads as teleporty, so without a projectile threat the dodge runs
+        // damped. The unfair layer keeps every bit of it either way (the
+        // melee-dodge-factor knob scales to 1.0 there): unnatural movement is
+        // that tier's whole identity.
+        double dodge = s.strafeSpeed();
+        if (!projectileThreat(player)) {
+            dodge *= s.knob("strafe.melee-dodge-factor", 0.7);
+            if (!s.unfair()) {
+                burst = 1.0; // the dead-on dart is a projectile answer too
+            }
+        }
+        Vector velocity = strafeDir.multiply(dodge * burst
                 * (fight.blocking() ? s.knob("strafe.blocking-speed", 0.4)
                         : fight.crouching() ? s.knob("strafe.crouching-speed", 0.6)
                         : fight.consuming() ? s.knob("strafe.eating-speed", 0.5) : 1.0));
@@ -1493,13 +1521,16 @@ public final class PvpBotService {
 
     /**
      * The bot reaching for its kit's own heals, mirroring what the player
-     * has: a splash pot is a quick throw, stew a quick slurp, a golden apple
-     * a long committed chew. While one is in progress the bot holds the item,
-     * stops attacking and moves at eating speed; the effect lands when the
-     * countdown runs out. Stock mirrors the kit's numbers and refreshes on
-     * the same beat as the player's refill.
+     * has: a splash pot is a quick throw, stew a quick slurp — both fine in
+     * close. The golden apple is a long committed chew a player never starts
+     * in someone's face, so it goes through a break-away first: run, open the
+     * gap, chew on the move, then wheel straight back in. While anything is
+     * in progress the bot holds the item, stops attacking and moves at eating
+     * speed; the effect lands when the countdown runs out. Stock mirrors the
+     * kit's numbers and refreshes on the same beat as the player's refill.
      */
-    private void tryConsume(Husk bot, BotFight fight, BotSettings s, double dist) {
+    private void tryConsume(Husk bot, Player player, BotFight fight, BotSettings s,
+                            double dist) {
         if (fight.botPots > 0) {
             fight.botPots--;
             startConsume(bot, fight, Material.SPLASH_POTION,
@@ -1510,15 +1541,87 @@ public final class PvpBotService {
                     s.knobTicks("consumables.stew.ticks", 7));
         } else if (fight.botGapples > 0
                 && !bot.hasPotionEffect(org.bukkit.potion.PotionEffectType.REGENERATION)
-                && (dist > s.knob("consumables.gapple.min-distance", 2.5)
-                        || fight.stance == BotFight.RESET
-                        || s.chance("consumables.gapple.pressured-chance", 0.3))) {
-            // The long chew is best started with some space; sometimes the
-            // bot commits to it under pressure anyway, like anyone desperate.
+                && !riskyFinish(bot, player, fight, s)) {
+            if (dist >= s.knob("consumables.gapple.min-distance", 6.0)) {
+                fight.botGapples--;
+                startConsume(bot, fight, Material.GOLDEN_APPLE,
+                        s.knobTicks("consumables.gapple.ticks", 32));
+            } else {
+                // Too close to chew — break away first, like a player would.
+                fight.gappleRetreatTicks =
+                        s.knobTicks("consumables.gapple.retreat-ticks", 60);
+            }
+        }
+    }
+
+    /**
+     * The disengage before a gapple. The bot is low and wants to chew, but
+     * chewing next to the player is how you die mid-bite: it kites (the
+     * movement branch treats the retreat exactly like a RESET, rod included)
+     * until the gap is open, starts the chew the moment it is, and gives up
+     * and fights on with what it has when it cannot shake the player in time.
+     */
+    private void tickGappleRetreat(Husk bot, Player player, BotFight fight,
+                                   BotSettings s, double dist) {
+        if (fight.consuming() || fight.botGapples <= 0
+                || bot.getHealth() > s.knob("consumables.heal-at", 12)) {
+            fight.gappleRetreatTicks = 0; // already chewing, or healed another way
+            return;
+        }
+        if (riskyFinish(bot, player, fight, s)) {
+            return; // mid-retreat the player got hurt worse — turn and take it
+        }
+        if (dist >= s.knob("consumables.gapple.min-distance", 6.0)
+                && !fight.blocking() && !fight.crouching()) {
+            fight.gappleRetreatTicks = 0;
             fight.botGapples--;
             startConsume(bot, fight, Material.GOLDEN_APPLE,
                     s.knobTicks("consumables.gapple.ticks", 32));
+        } else if (--fight.gappleRetreatTicks == 0) {
+            // Could not shake the player — fight on and try again later.
+            fight.consumeCooldown = s.knobRoll("consumables.cooldown", 30, 49);
         }
+    }
+
+    /**
+     * The kill-first read: low enough to want the gapple, but the player is
+     * hurt at least as badly — a player smells blood there and goes for the
+     * finish instead of giving the fight time to reset. Skips (or aborts)
+     * the heal and commits to pressure instead.
+     */
+    private boolean riskyFinish(Husk bot, Player player, BotFight fight, BotSettings s) {
+        if (!tuning().gappleRiskyFinish() || bot.getHealth() < player.getHealth()) {
+            return false;
+        }
+        fight.gappleRetreatTicks = 0;
+        fight.stance = BotFight.PRESSURE;
+        fight.stanceTicks = Math.max(fight.stanceTicks,
+                s.knobTicks("consumables.gapple.recommit-ticks", 40));
+        fight.consumeCooldown = Math.max(fight.consumeCooldown,
+                s.knobRoll("consumables.cooldown", 30, 49));
+        return true;
+    }
+
+    /**
+     * Whether the player is lining up a projectile: drawing a bow, crossbow
+     * or trident, carrying a loaded crossbow, or holding a throwable. This is
+     * what unlocks the full-speed crosshair dodge — sidestepping a shot is
+     * honest; doing it against a sword swing reads as teleporting.
+     */
+    private boolean projectileThreat(Player player) {
+        ItemStack inUse = player.getActiveItem(); // empty unless mid-draw
+        if (inUse.getType() == Material.BOW
+                || inUse.getType() == Material.CROSSBOW
+                || inUse.getType() == Material.TRIDENT) {
+            return true;
+        }
+        ItemStack held = player.getInventory().getItemInMainHand();
+        if (held.getType() == Material.CROSSBOW
+                && held.getItemMeta() instanceof org.bukkit.inventory.meta.CrossbowMeta meta
+                && !meta.getChargedProjectiles().isEmpty()) {
+            return true;
+        }
+        return tuning().projectileThreats().contains(held.getType());
     }
 
     private void startConsume(Husk bot, BotFight fight, Material item, int ticks) {
@@ -1566,6 +1669,10 @@ public final class PvpBotService {
                         org.bukkit.potion.PotionEffectType.ABSORPTION,
                         s.knobTicks("consumables.gapple.absorption-ticks", 2400), 0));
                 plugin.sounds().playAt(bot.getLocation(), "pvpbot.bot-burp");
+                // Healed — wheel straight back in, the way a player rushes
+                // back the moment the chew lands.
+                fight.stance = BotFight.PRESSURE;
+                fight.stanceTicks = s.knobTicks("consumables.gapple.recommit-ticks", 40);
             }
             default -> {
             }

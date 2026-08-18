@@ -22,8 +22,11 @@ public final class Versions {
     /** sounds.yml — admin-editable sound cues. */
     public static final int SOUNDS = 1;
 
-    /** pvpbot.yml — admin-editable bot tuning and PvP kits. */
-    public static final int PVPBOT = 1;
+    /**
+     * pvpbot.yml — admin-editable bot tuning and PvP kits. v2 smoothed the
+     * difficulty ladder and reworked the gapple into a retreat-chew-recommit.
+     */
+    public static final int PVPBOT = 2;
 
     /** templates/[&lt;category&gt;/]&lt;name&gt;/arena.yml — admin-editable. */
     public static final int ARENA = 3;

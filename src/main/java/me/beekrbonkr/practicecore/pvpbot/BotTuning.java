@@ -70,6 +70,36 @@ public final class BotTuning {
     /** Reshapes an older pvpbot.yml. See {@link Versions#PVPBOT}. */
     private static void steps(org.bukkit.configuration.file.FileConfiguration cfg, int from) {
         // v0 → v1 is the first versioned layout; nothing moved.
+        if (from < 2) {
+            // v2 smooths the difficulty ladder (Rookie walks instead of
+            // crawling, Demon caps at a cracked human, the unfair tiers grade
+            // in rather than leaping) and reworks the gapple into the
+            // retreat-chew-recommit dance. Only values still at their old
+            // shipped defaults are retuned — an admin's own numbers stand.
+            retune(cfg, "tiers.evasiveness.LOW", 0.12, 0.17);
+            retune(cfg, "tiers.evasiveness.MEDIUM", 0.18, 0.21);
+            retune(cfg, "tiers.evasiveness.EXTREME", 0.30, 0.28);
+            retune(cfg, "tiers.evasiveness.UNFAIR", 0.38, 0.34);
+            retune(cfg, "tiers.evasiveness.SUFFER", 0.48, 0.44);
+            retune(cfg, "tiers.accuracy.PERFECT", 0.95, 0.92);
+            retune(cfg, "tiers.combos.UNFAIR", 0.5, 0.45);
+            retune(cfg, "tiers.aggression.passive.speed", 1.0, 1.1);
+            retune(cfg, "tiers.aggression.passive.gap", 3.2, 3.0);
+            retune(cfg, "tiers.aggression.frenzied.gap", 2.3, 2.2);
+            retune(cfg, "tiers.aggression.unfair.speed", 1.6, 1.55);
+            retune(cfg, "tiers.aggression.unfair.gap", 2.0, 1.9);
+            retune(cfg, "behavior.consumables.gapple.min-distance", 2.5, 6.0);
+            // The in-your-face chew is gone; the retreat dance replaced it.
+            cfg.set("behavior.consumables.gapple.pressured-chance", null);
+        }
+    }
+
+    /** Rewrites a value only while it still says what v(n-1) shipped. */
+    private static void retune(org.bukkit.configuration.file.FileConfiguration cfg,
+                               String path, double old, double now) {
+        if (cfg.isSet(path) && Math.abs(cfg.getDouble(path, old) - old) < 1e-9) {
+            cfg.set(path, now);
+        }
     }
 
     public String probe() {
@@ -219,6 +249,26 @@ public final class BotTuning {
     }
 
     /**
+     * The kill-first read: low enough to want a gapple, but the player is
+     * hurt at least as badly — go for the finish instead of healing.
+     */
+    public boolean gappleRiskyFinish() {
+        return file.bool("behavior.consumables.gapple.risky-finish", true);
+    }
+
+    /**
+     * Main-hand items that count as a projectile threat — what unlocks the
+     * full-speed crosshair dodge. Drawn bows, crossbows and tridents always
+     * count; this list covers the throwables that need no draw.
+     */
+    public List<Material> projectileThreats() {
+        return file.materials("behavior.strafe.projectile-threats", List.of(
+                Material.SNOWBALL, Material.EGG, Material.ENDER_PEARL,
+                Material.SPLASH_POTION, Material.LINGERING_POTION,
+                Material.FISHING_ROD, Material.TRIDENT));
+    }
+
+    /**
      * The classic 1.8 rod hit for the player's hook against the bot —
      * OldCombatMechanics' fishing knockback only covers hooked players.
      */
@@ -243,12 +293,12 @@ public final class BotTuning {
 
     public double strafeSpeed(BotSettings.Evasiveness tier) {
         return tierValue("tiers.evasiveness", tier.name(), switch (tier) {
-            case LOW -> 0.12;
-            case MEDIUM -> 0.18;
+            case LOW -> 0.17;
+            case MEDIUM -> 0.21;
             case HIGH -> 0.26;
-            case EXTREME -> 0.34;
-            case UNFAIR -> 0.45;
-            case SUFFER -> 0.48;
+            case EXTREME -> 0.28;
+            case UNFAIR -> 0.34;
+            case SUFFER -> 0.44;
         });
     }
 
@@ -276,7 +326,9 @@ public final class BotTuning {
             case LOW -> 0.5;
             case MEDIUM -> 0.7;
             case HIGH -> 0.85;
-            case PERFECT, UNFAIR, SUFFER -> 1.0;
+            case PERFECT -> 0.92;
+            case UNFAIR -> 0.97;
+            case SUFFER -> 1.0;
         });
     }
 
@@ -284,8 +336,8 @@ public final class BotTuning {
         return tierValue("tiers.combos", tier.name(), switch (tier) {
             case OFF -> 0.0;
             case SOME -> 0.2;
-            case FULL -> 0.4;
-            case UNFAIR -> 0.65;
+            case FULL -> 0.32;
+            case UNFAIR -> 0.45;
             case SUFFER -> 0.85;
         });
     }
@@ -301,11 +353,11 @@ public final class BotTuning {
     public double approachSpeed(BotSettings.Aggression tier) {
         return tierValue("tiers.aggression." + tier.name().toLowerCase(Locale.ROOT) + ".speed",
                 null, switch (tier) {
-                    case PASSIVE -> 1.0;
+                    case PASSIVE -> 1.1;
                     case BALANCED -> 1.2;
                     case RELENTLESS -> 1.4;
-                    case FRENZIED -> 1.6;
-                    case UNFAIR -> 1.8;
+                    case FRENZIED -> 1.45;
+                    case UNFAIR -> 1.55;
                     case SUFFER -> 1.85;
                 });
     }
@@ -314,11 +366,11 @@ public final class BotTuning {
     public double spacingGap(BotSettings.Aggression tier) {
         return tierValue("tiers.aggression." + tier.name().toLowerCase(Locale.ROOT) + ".gap",
                 null, switch (tier) {
-                    case PASSIVE -> 3.2;
+                    case PASSIVE -> 3.0;
                     case BALANCED -> 2.8;
                     case RELENTLESS -> 2.3;
-                    case FRENZIED -> 2.0;
-                    case UNFAIR -> 1.7;
+                    case FRENZIED -> 2.2;
+                    case UNFAIR -> 1.9;
                     case SUFFER -> 1.5;
                 });
     }
@@ -658,6 +710,194 @@ public final class BotTuning {
         }
         int index = presets.indexOf(current);
         return presets.get(index < 0 ? 0 : (index + 1) % presets.size());
+    }
+
+    // ------------------------------------------------------------ validation
+
+    /**
+     * The whole file swept eagerly for names that will not resolve: tier
+     * tables keyed by misspelled constants, layer blocks with a typo'd layer,
+     * defaults naming a kit or tier that does not exist, gear built from
+     * unknown materials. Every one of these already degrades safely at play
+     * time — to the shipped value — which is exactly why it deserves a line
+     * at start and reload instead of silence.
+     */
+    public List<String> validate() {
+        List<String> problems = new ArrayList<>();
+        tierTable(problems, "tiers.evasiveness", BotSettings.Evasiveness.class);
+        tierTable(problems, "tiers.cps", BotSettings.Cps.class);
+        tierTable(problems, "tiers.accuracy", BotSettings.Accuracy.class);
+        tierTable(problems, "tiers.combos", BotSettings.Combos.class);
+        tierTable(problems, "tiers.reach", BotSettings.Reach.class);
+        tierTable(problems, "tiers.reaction-ticks", BotSettings.Accuracy.class);
+        tierTable(problems, "tiers.hitstun-ticks", BotSettings.Evasiveness.class);
+        aggressionTable(problems);
+        for (String layer : new String[]{"cerebral", "duellist", "unfair", "suffer"}) {
+            constantOrNever(problems, "layers." + layer, BotSettings.Accuracy.class);
+        }
+        validateDefaults(problems);
+        validateGearTiers(problems);
+        validateBehavior(problems);
+        return problems;
+    }
+
+    private <E extends Enum<E>> void tierTable(List<String> problems, String path,
+                                               Class<E> type) {
+        ConfigurationSection section = file.section(path);
+        if (section == null) {
+            return;
+        }
+        for (String key : section.getKeys(false)) {
+            if (!isConstant(key, type)) {
+                problems.add("pvpbot.yml: '" + key + "' under " + path + " is not a "
+                        + type.getSimpleName().toLowerCase(Locale.ROOT) + " tier — ignored.");
+            } else if (!(section.get(key) instanceof Number)) {
+                problems.add("pvpbot.yml: " + path + "." + key
+                        + " is not a number — the built-in value is used.");
+            }
+        }
+    }
+
+    private void aggressionTable(List<String> problems) {
+        ConfigurationSection section = file.section("tiers.aggression");
+        if (section == null) {
+            return;
+        }
+        for (String key : section.getKeys(false)) {
+            if (!isConstant(key, BotSettings.Aggression.class)) {
+                problems.add("pvpbot.yml: '" + key
+                        + "' under tiers.aggression is not an aggression tier — ignored.");
+                continue;
+            }
+            ConfigurationSection entry = section.getConfigurationSection(key);
+            if (entry == null) {
+                problems.add("pvpbot.yml: tiers.aggression." + key
+                        + " must be a {speed, gap} block — the built-in values are used.");
+                continue;
+            }
+            for (String part : new String[]{"speed", "gap"}) {
+                if (entry.isSet(part) && !(entry.get(part) instanceof Number)) {
+                    problems.add("pvpbot.yml: tiers.aggression." + key + "." + part
+                            + " is not a number — the built-in value is used.");
+                }
+            }
+        }
+    }
+
+    private void validateDefaults(List<String> problems) {
+        if (file.contains("defaults.kit")) {
+            String kit = file.string("defaults.kit", "");
+            if (!kit.isBlank() && kits.get(kit) == null) {
+                problems.add("pvpbot.yml: defaults.kit '" + kit
+                        + "' is not a kit defined under kits: — the first kit is used.");
+            }
+        }
+        constantCheck(problems, "defaults.gear", BotSettings.GearTier.class);
+        constantCheck(problems, "defaults.evasiveness", BotSettings.Evasiveness.class);
+        constantCheck(problems, "defaults.cps", BotSettings.Cps.class);
+        constantCheck(problems, "defaults.accuracy", BotSettings.Accuracy.class);
+        constantCheck(problems, "defaults.combos", BotSettings.Combos.class);
+        constantCheck(problems, "defaults.reach", BotSettings.Reach.class);
+        constantCheck(problems, "defaults.aggression", BotSettings.Aggression.class);
+    }
+
+    private void validateGearTiers(List<String> problems) {
+        ConfigurationSection section = file.section("gear-tiers");
+        if (section == null) {
+            return;
+        }
+        for (String tier : section.getKeys(false)) {
+            String path = "gear-tiers." + tier;
+            String armor = file.string(path + ".armor", "");
+            if (!armor.isBlank() && !armor.equalsIgnoreCase("none")
+                    && Material.matchMaterial(
+                            armor.trim().toUpperCase(Locale.ROOT) + "_HELMET") == null) {
+                problems.add("pvpbot.yml: " + path + ".armor '" + armor
+                        + "' is not an armor set (LEATHER, CHAINMAIL, IRON, GOLDEN,"
+                        + " DIAMOND, NETHERITE) — that tier goes bare.");
+            }
+            for (String slot : new String[]{"weapon", "helmet", "chestplate",
+                    "leggings", "boots"}) {
+                String name = file.string(path + "." + slot, "");
+                if (!name.isBlank() && Material.matchMaterial(name) == null) {
+                    problems.add("pvpbot.yml: '" + name + "' at " + path + "." + slot
+                            + " is not an item this server knows.");
+                }
+            }
+        }
+    }
+
+    /** The layer-block typo sweep, plus the handful of named thresholds. */
+    private void validateBehavior(List<String> problems) {
+        ConfigurationSection behavior = file.section("behavior");
+        if (behavior != null) {
+            java.util.Set<String> allowed = java.util.Set.of(
+                    "base", "cerebral", "duellist", "unfair", "suffer", "min", "max");
+            for (String key : behavior.getKeys(true)) {
+                ConfigurationSection section = behavior.getConfigurationSection(key);
+                if (section == null || !section.isSet("base")) {
+                    continue; // only blocks that scale by layer have a fixed key set
+                }
+                for (String layer : section.getKeys(false)) {
+                    if (!allowed.contains(layer.toLowerCase(Locale.ROOT))) {
+                        problems.add("pvpbot.yml: '" + layer + "' under behavior." + key
+                                + " is not a brain layer (base, cerebral, duellist,"
+                                + " unfair, suffer) — ignored.");
+                    }
+                }
+            }
+        }
+        evasivenessTable(problems, "behavior.strafe.burst");
+        evasivenessTable(problems, "behavior.strafe.hop.chance");
+        constantOrNever(problems, "behavior.strafe.hop.from", BotSettings.Evasiveness.class);
+        constantOrNever(problems, "behavior.combo-escape.evasive-from",
+                BotSettings.Evasiveness.class);
+        constantOrNever(problems, "behavior.approach.fast-from", BotSettings.Aggression.class);
+    }
+
+    /** A {default, TIER: …} table keyed by evasiveness. */
+    private void evasivenessTable(List<String> problems, String path) {
+        ConfigurationSection section = file.section(path);
+        if (section == null) {
+            return;
+        }
+        for (String key : section.getKeys(false)) {
+            if (!key.equalsIgnoreCase("default")
+                    && !isConstant(key, BotSettings.Evasiveness.class)) {
+                problems.add("pvpbot.yml: '" + key + "' under " + path
+                        + " is not an evasiveness tier — ignored.");
+            }
+        }
+    }
+
+    private <E extends Enum<E>> void constantCheck(List<String> problems, String path,
+                                                   Class<E> type) {
+        String name = file.string(path, "");
+        if (!name.isBlank() && !isConstant(name, type)) {
+            problems.add("pvpbot.yml: " + path + " '" + name + "' is not a "
+                    + type.getSimpleName().toLowerCase(Locale.ROOT)
+                    + " tier — the built-in default is used.");
+        }
+    }
+
+    private <E extends Enum<E>> void constantOrNever(List<String> problems, String path,
+                                                     Class<E> type) {
+        String name = file.string(path, "").trim();
+        if (!name.isBlank() && !name.equalsIgnoreCase("never")
+                && !name.equalsIgnoreCase("off") && !isConstant(name, type)) {
+            problems.add("pvpbot.yml: " + path + " '" + name + "' is not a "
+                    + type.getSimpleName().toLowerCase(Locale.ROOT)
+                    + " tier (or 'never') — the built-in default is used.");
+        }
+    }
+
+    private static <E extends Enum<E>> boolean isConstant(String name, Class<E> type) {
+        for (E constant : type.getEnumConstants()) {
+            if (constant.name().equalsIgnoreCase(name.trim())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void loadPresets() {
