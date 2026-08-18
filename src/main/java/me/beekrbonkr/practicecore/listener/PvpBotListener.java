@@ -248,6 +248,94 @@ public final class PvpBotListener implements Listener {
         }
     }
 
+    // ------------------------------------------------------------- soup pvp
+
+    /**
+     * Classic soup healing: hunger is frozen at full during sessions, so a
+     * mushroom stew can never be eaten the vanilla way — right-clicking one
+     * heals instantly (bot.soup-heal-hearts in pvpbot.yml) and leaves the
+     * empty bowl, which the refill sweep clears. Works in any session whose
+     * kit carries stew, not just the soup preset.
+     */
+    @EventHandler
+    public void onSoup(org.bukkit.event.player.PlayerInteractEvent event) {
+        if (event.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_AIR
+                && event.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) {
+            return;
+        }
+        org.bukkit.inventory.ItemStack item = event.getItem();
+        if (item == null || item.getType() != org.bukkit.Material.MUSHROOM_STEW) {
+            return;
+        }
+        Player player = event.getPlayer();
+        PracticeSession session = plugin.sessions().get(player.getUniqueId());
+        if (session == null) {
+            return;
+        }
+        event.setCancelled(true); // never vanilla-eaten, never placed at a block
+        BotFight fight = PvpBotService.fightOf(session);
+        if (fight != null && fight.playerDead()) {
+            return; // no souping through the death hold
+        }
+        double heal = plugin.botTuning().soupHealHearts() * 2;
+        if (heal <= 0) {
+            return;
+        }
+        var maxHealth = player.getAttribute(
+                me.beekrbonkr.practicecore.snapshot.PlayerSnapshot.maxHealthAttribute());
+        double max = maxHealth != null ? maxHealth.getValue() : 20.0;
+        if (player.getHealth() >= max) {
+            return; // full — don't waste the stew
+        }
+        player.setHealth(Math.min(max, player.getHealth() + heal));
+        player.getInventory().setItem(event.getHand(),
+                new org.bukkit.inventory.ItemStack(org.bukkit.Material.BOWL));
+        plugin.sounds().play(player, "pvpbot.soup");
+    }
+
+    // -------------------------------------------------------- rod knockback
+
+    /**
+     * The player's fishing rod against the bot. OldCombatMechanics'
+     * old-fishing-knockback module only covers hooked <em>players</em> (its
+     * knockback-non-player-entities option is off by default) and the bot is
+     * a husk, so a landed hook did nothing at all. This applies the classic
+     * 1.8 rod hit — knockback, a hurt flash, a beat of hitstun, no damage —
+     * whenever the owner's hook tags their own bot. bot.rod-knockback in
+     * pvpbot.yml tunes it, or turns it off for servers where OCM covers mobs.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onRodHook(org.bukkit.event.entity.ProjectileHitEvent event) {
+        if (!(event.getEntity() instanceof org.bukkit.entity.FishHook hook)
+                || event.getHitEntity() == null
+                || !plugin.botTuning().rodKnockback()
+                || !plugin.pvpBot().isBot(event.getHitEntity())
+                || !(hook.getShooter() instanceof Player player)) {
+            return;
+        }
+        BotFight fight = PvpBotService.fightOf(plugin.sessions().get(player.getUniqueId()));
+        if (fight == null || fight.paused || fight.playerDead()
+                || !event.getHitEntity().equals(fight.bot)) {
+            return;
+        }
+        org.bukkit.util.Vector away = fight.bot.getLocation().toVector()
+                .subtract(player.getLocation().toVector());
+        away.setY(0);
+        if (away.lengthSquared() < 0.01) {
+            return;
+        }
+        fight.bot.setVelocity(fight.bot.getVelocity()
+                .add(away.normalize()
+                        .multiply(plugin.botTuning().rodKnockbackStrength())
+                        .setY(plugin.botTuning().rodKnockbackLift())));
+        // Ride the shove like a real hit would be ridden — that's what makes
+        // rodding actually reset the bot's rhythm. Not counted as a hit.
+        fight.hitstunTicks = Math.max(fight.hitstunTicks,
+                plugin.botTuning().rodKnockbackHitstun());
+        fight.bot.playHurtAnimation(0);
+        plugin.sounds().playAt(fight.bot.getLocation(), "pvpbot.rod-hit");
+    }
+
     // -------------------------------------------------------- habit reading
 
     /**

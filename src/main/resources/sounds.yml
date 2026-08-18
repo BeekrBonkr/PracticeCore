@@ -83,6 +83,15 @@ pvpbot:
   # The bot's ranged options.
   rod-cast: 'ENTITY_FISHING_BOBBER_THROW 0.6 1.0'
   bow-shot: 'ENTITY_SKELETON_SHOOT 0.7 1.1'
+  # The player's rod hook tagging the bot.
+  rod-hit: 'ENTITY_FISHING_BOBBER_RETRIEVE 0.6 1.0'
+  # A mushroom stew slurped for the classic soup heal (player or bot).
+  soup: 'ENTITY_GENERIC_EAT 0.8 1.0'
+  # The bot's own heals: starting to chew, the pot shattering at its feet,
+  # and the finished gapple or stew.
+  bot-eat: 'ENTITY_GENERIC_EAT 0.7 1.0'
+  bot-pot: 'ENTITY_SPLASH_POTION_BREAK 0.8 1.0'
+  bot-burp: 'ENTITY_PLAYER_BURP 0.6 1.0'
 
 # ------------------------------------------------------------------ spectating
 spectate:

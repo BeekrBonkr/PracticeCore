@@ -42,6 +42,7 @@ public final class PCConfig {
     private final TimerStartMode timerStartMode;
     private final int scoreboardTicks;
     private final String serverIp;
+    private final boolean spectatorsSeePlayerBoard;
 
     private final int failYOffset;
     private final boolean allowPearls;
@@ -177,6 +178,8 @@ public final class PCConfig {
         this.timerStartMode = mode;
         this.scoreboardTicks = Math.max(1, cfg.getInt("scoreboard.update-ticks", 2));
         this.serverIp = cfg.getString("scoreboard.server-ip", "").trim();
+        this.spectatorsSeePlayerBoard =
+                cfg.getBoolean("scoreboard.spectators-see-player-board", true);
 
         this.failYOffset = cfg.getInt("session.fail-y-offset", 0);
         this.allowPearls = cfg.getBoolean("session.allow-pearls", false);
@@ -394,6 +397,11 @@ public final class PCConfig {
     /** Server address for the sidebar footer; empty hides the footer. */
     public String serverIp() {
         return serverIp;
+    }
+
+    /** Spectators mirror the watched player's exact board instead of a summary. */
+    public boolean spectatorsSeePlayerBoard() {
+        return spectatorsSeePlayerBoard;
     }
 
     public int scoreboardTicks() {

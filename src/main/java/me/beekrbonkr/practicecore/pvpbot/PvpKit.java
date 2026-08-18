@@ -94,6 +94,34 @@ public record PvpKit(String id, String configuredName, Material icon, boolean ha
         return item == null ? null : item.clone();
     }
 
+    /** Whether the kit carries this material anywhere in its loadout. */
+    public boolean carries(Material material) {
+        for (ItemStack item : contents.values()) {
+            if (item.getType() == material) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The bot's per-stock supply of a consumable: the refill target when the
+     * kit keeps that material topped up, otherwise what the dealt kit holds.
+     */
+    public int stockOf(Material material) {
+        int target = refillTargets.getOrDefault(material, 0);
+        if (target > 0) {
+            return target;
+        }
+        int total = 0;
+        for (ItemStack item : contents.values()) {
+            if (item.getType() == material) {
+                total += item.getAmount();
+            }
+        }
+        return total;
+    }
+
     /** A readable name for a kit with no configured or translated one. */
     public String prettyId() {
         String cleaned = id.replace('_', ' ').replace('-', ' ');

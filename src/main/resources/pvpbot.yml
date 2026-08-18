@@ -94,6 +94,25 @@ bot:
     enabled: true
     lifetime-ticks: 16
     rise: 0.7
+  # Classic soup PvP: hearts healed instantly when a mushroom stew is
+  # right-clicked during a fight. Hunger is frozen at full during sessions, so
+  # stew could never be eaten the vanilla way — this is what makes the soup
+  # kit work. The empty bowl is cleared by the refill sweep, and the bot's own
+  # stew heals the same amount. 0 disables soup healing for both of them.
+  soup-heal-hearts: 3.5
+  # The player's fishing rod against the bot — the classic 1.8 rod hit:
+  # knockback, a hurt flash, a beat of hitstun, no damage. Without this a
+  # landed hook does nothing at all: OldCombatMechanics' old-fishing-knockback
+  # module only covers hooked *players* (the bot is a mob) unless its
+  # knockback-non-player-entities option is on. Turn `enabled` off only if you
+  # enable that OCM option, or the bot gets knocked back twice.
+  rod-knockback:
+    enabled: true
+    # Horizontal shove (0.4 feels like vanilla 1.8) and the upward kick.
+    strength: 0.4
+    lift: 0.3
+    # Ticks of steering the hook knocks out of the bot.
+    hitstun-ticks: 4
 
 # ===========================================================================
 # What each tier is worth
@@ -460,9 +479,10 @@ behavior:
       unfair: 20
       suffer: 16
     cutback: {min: 8, max: 15}
-    # Strafe speed multipliers while blocking or crouching.
+    # Strafe speed multipliers while blocking, crouching or mid-consumable.
     blocking-speed: 0.4
     crouching-speed: 0.6
+    eating-speed: 0.5
     # How hard the bot corrects back toward its spacing target.
     correction:
       deadzone: 0.25
@@ -576,6 +596,9 @@ behavior:
     cooldown: {min: 60, max: 99}
 
   # --- ranged ---------------------------------------------------------------
+  # The kit decides what is available here: a bot whose kit carries a rod or
+  # bow always uses it, and the GUI toggles force the option onto kits that
+  # lack the item.
   # The rod: a short-lived projectile that shoves like a hook, resetting your
   # combo rhythm at range. A kiting bot leans on it as its space-maker.
   rod:
@@ -605,6 +628,43 @@ behavior:
     # How wide a miss an imperfect aim scatters the arrow by.
     spread: 0.3
     flourish-ticks: 14
+
+  # --- healing ---------------------------------------------------------------
+  # The bot drinks and eats what its kit actually carries — splash health
+  # pots, mushroom stew, golden apples — from the same stock the kit gives the
+  # player, topped up on the same beat. A pot is a quick throw at its own
+  # feet, stew a quick slurp, a gapple a long committed chew; while one is in
+  # progress the bot holds the item, stops attacking and moves at eating
+  # speed, so a heal is a window you can punish.
+  consumables:
+    enabled: true
+    # Bot health, in health points (the 0-20 scale), at or below which it
+    # reaches for a heal.
+    heal-at: 12
+    # Chance per tick it commits once hurt enough — the human hesitation.
+    chance:
+      base: 0.15
+      unfair: 0.3
+      suffer: 0.45
+    # Ticks between one heal and the next.
+    cooldown: {min: 30, max: 49}
+    pot:
+      ticks: 8
+      # Health restored by the splash — 8 is an Instant Health II pot landing
+      # clean. Applied directly: a real splash would harm an undead husk.
+      heal: 8.0
+    stew:
+      ticks: 7   # the heal itself is bot.soup-heal-hearts, same as the player's
+    gapple:
+      ticks: 32  # a real golden apple takes ~1.6 seconds to chew
+      # A gapple is best started with some space; under pressure the bot only
+      # sometimes commits to it, like anyone desperate.
+      min-distance: 2.5
+      pressured-chance: 0.3
+      # The vanilla payoff: Regeneration II and Absorption.
+      regen-ticks: 100
+      regen-amplifier: 1
+      absorption-ticks: 2400
 
 # ===========================================================================
 # The kit gallery

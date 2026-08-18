@@ -102,57 +102,72 @@ public final class BoardService {
     }
 
     private void updateAll() {
+        if (boards.isEmpty()) {
+            return;
+        }
         // Loop invariants: parsed once per pass, not once per player.
-        Component ready = null;
-        String none = null;
+        Component ready = plugin.messages().component("board.timer-ready");
+        String none = plugin.messages().raw("gui.none");
         for (Map.Entry<UUID, FastBoard> entry : boards.entrySet()) {
             PracticeSession session = plugin.sessions().get(entry.getKey());
             if (session == null) {
-                updateSpectator(entry.getKey(), entry.getValue());
+                updateSpectator(entry.getKey(), entry.getValue(), ready, none);
                 continue;
             }
-            if (none == null) {
-                ready = plugin.messages().component("board.timer-ready");
-                none = plugin.messages().raw("gui.none");
-            }
-            // Modes that rank something other than the plain timer draw their
-            // own board (streak counters, course progress, blocks left).
-            java.util.List<Component> custom = session.mode().boardLines(plugin, session);
-            if (custom != null) {
-                entry.getValue().updateLines(withFooter(custom).toArray(Component[]::new));
-                continue;
-            }
-            int rank = plugin.leaderboards().rank(session.template().name(), entry.getKey());
-            var msg = plugin.messages();
-            Component timer = session.state() == SessionState.ACTIVE
-                    ? msg.component("board.timer-running",
-                            "time", TimeFormat.tenths(session.elapsedMs()))
-                    : ready;
-            java.util.List<Component> lines = msg.lore("board.lines",
-                    net.kyori.adventure.text.minimessage.tag.resolver.TagResolver.resolver(
-                            msg.ref("time", timer)),
-                    "arena", session.template().displayName(),
-                    "last", time(session.lastTimeMs(), none),
-                    "best", time(session.bestTimeMs(), none),
-                    "rank", rank > 0 ? "#" + rank : none,
-                    "blocks", String.valueOf(session.tracker().count()));
-            entry.getValue().updateLines(withFooter(lines).toArray(Component[]::new));
+            entry.getValue().updateLines(
+                    sessionLines(entry.getKey(), session, ready, none).toArray(Component[]::new));
         }
     }
 
-    /** A spectator's sidebar mirrors the watched run: target, arena, live timer. */
-    private void updateSpectator(UUID spectator, FastBoard board) {
+    /** The board a practicing player sees; spectators mirror it when configured. */
+    private java.util.List<Component> sessionLines(UUID playerId, PracticeSession session,
+                                                   Component ready, String none) {
+        // Modes that rank something other than the plain timer draw their
+        // own board (streak counters, course progress, blocks left).
+        java.util.List<Component> custom = session.mode().boardLines(plugin, session);
+        if (custom != null) {
+            return withFooter(custom);
+        }
+        int rank = plugin.leaderboards().rank(session.template().name(), playerId);
+        var msg = plugin.messages();
+        Component timer = session.state() == SessionState.ACTIVE
+                ? msg.component("board.timer-running",
+                        "time", TimeFormat.tenths(session.elapsedMs()))
+                : ready;
+        java.util.List<Component> lines = msg.lore("board.lines",
+                net.kyori.adventure.text.minimessage.tag.resolver.TagResolver.resolver(
+                        msg.ref("time", timer)),
+                "arena", session.template().displayName(),
+                "last", time(session.lastTimeMs(), none),
+                "best", time(session.bestTimeMs(), none),
+                "rank", rank > 0 ? "#" + rank : none,
+                "blocks", String.valueOf(session.tracker().count()));
+        return withFooter(lines);
+    }
+
+    /**
+     * A spectator's sidebar: by default the exact board the watched player
+     * sees — mode stats, live timer and all
+     * (scoreboard.spectators-see-player-board in config.yml). Set false there
+     * for the old summary instead: target, arena, mode.
+     */
+    private void updateSpectator(UUID spectator, FastBoard board, Component ready, String none) {
         UUID targetId = plugin.spectate().targetOf(spectator);
         PracticeSession session = targetId == null ? null : plugin.sessions().get(targetId);
         Player target = targetId == null ? null : Bukkit.getPlayer(targetId);
         if (session == null || target == null) {
             return; // mid-transition — the spectate sweep will settle it
         }
+        if (plugin.pcConfig().spectatorsSeePlayerBoard()) {
+            board.updateLines(
+                    sessionLines(targetId, session, ready, none).toArray(Component[]::new));
+            return;
+        }
         var msg = plugin.messages();
         Component timer = session.state() == SessionState.ACTIVE
                 ? msg.component("board.timer-running",
                         "time", TimeFormat.tenths(session.elapsedMs()))
-                : msg.component("board.timer-ready");
+                : ready;
         java.util.List<Component> lines = msg.lore("board.spectate-lines",
                 net.kyori.adventure.text.minimessage.tag.resolver.TagResolver.resolver(
                         msg.ref("time", timer)),

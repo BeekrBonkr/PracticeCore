@@ -70,6 +70,10 @@ scoreboard:
   # Your server's address, shown as the sidebar's bottom line on every board
   # (the board.footer lines in messages.yml style it). '' hides the footer.
   server-ip: ''
+  # Spectators see the exact board the player they are watching sees (mode
+  # stats, live timer, everything). Set false for the old spectate summary
+  # (who, arena, mode — the board.spectate-lines in messages.yml).
+  spectators-see-player-board: true
 
 session:
   # A run fails when the player's Y drops below (arena bottom + this offset).

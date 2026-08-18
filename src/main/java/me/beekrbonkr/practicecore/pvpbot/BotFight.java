@@ -50,6 +50,16 @@ public final class BotFight {
     /** Recent hits taken in a short window — triggers defensive blocking. */
     public int recentHitsTaken;
     public int recentHitsWindow;
+    /** The consumable the bot is mid-way through using, or null. */
+    public org.bukkit.Material consumeItem;
+    /** Ticks left of that use; the effect lands when it reaches zero. */
+    public int consumeTicks;
+    /** Ticks before the bot may reach for another consumable. */
+    public int consumeCooldown;
+    /** The bot's own supply of its kit's consumables, spent as it heals. */
+    public int botGapples;
+    public int botPots;
+    public int botStews;
     /** Last bot position, to spot being stuck against a wall and hop. */
     public double lastX;
     public double lastZ;
@@ -157,6 +167,19 @@ public final class BotFight {
         return blockTicks > 0;
     }
 
+    /** Mid-pot, mid-stew or mid-gapple: no offense, slowed movement. */
+    public boolean consuming() {
+        return consumeItem != null;
+    }
+
+    /** Tops the bot's supply back up to the kit's own numbers. */
+    public void restockConsumables() {
+        PvpKit kit = settings == null ? null : settings.kit();
+        botGapples = kit == null ? 0 : kit.stockOf(org.bukkit.Material.GOLDEN_APPLE);
+        botPots = kit == null ? 0 : kit.stockOf(org.bukkit.Material.SPLASH_POTION);
+        botStews = kit == null ? 0 : kit.stockOf(org.bukkit.Material.MUSHROOM_STEW);
+    }
+
     public void countHitLanded() {
         hitsLanded++;
         combo++;
@@ -192,6 +215,10 @@ public final class BotFight {
         heldRevertTicks = 0;
         recentHitsTaken = 0;
         recentHitsWindow = 0;
+        consumeItem = null;
+        consumeTicks = 0;
+        consumeCooldown = 0;
+        restockConsumables();
         stance = NEUTRAL;
         stanceTicks = 0;
         resetBudget = 0;
