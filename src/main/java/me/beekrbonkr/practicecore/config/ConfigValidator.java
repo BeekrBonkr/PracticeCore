@@ -72,6 +72,15 @@ public final class ConfigValidator {
         material(problems, cfg, "mlg.pad-material", true);
         material(problems, cfg, "rush.rescue-platform.material", true);
         material(problems, cfg, "rush.starter-sword", false);
+        if (set(cfg, "rush.deposit-items")) {
+            for (String name : cfg.getStringList("rush.deposit-items")) {
+                Material parsed = Material.matchMaterial(name);
+                if (parsed == null || !parsed.isItem()) {
+                    problems.add("config.yml: '" + name + "' under rush.deposit-items"
+                            + " is not an item this server knows — skipped.");
+                }
+            }
+        }
         material(problems, cfg, "bedbreak.bed-material", true);
         for (String tool : new String[]{"teleport", "menu", "leave"}) {
             material(problems, cfg, "spectate.items." + tool + ".material", false);

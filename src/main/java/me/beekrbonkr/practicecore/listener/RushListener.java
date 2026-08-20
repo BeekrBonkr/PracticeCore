@@ -155,10 +155,12 @@ public final class RushListener implements Listener {
             return;
         }
         // A chest click opens the chest, like in a real game — the item only
-        // fires on air or plain blocks (or when sneaking).
+        // fires on air or plain blocks (or when sneaking). Ender chests count:
+        // their block state is no Container, but they open the run's chest.
         if (event.getAction() == Action.RIGHT_CLICK_BLOCK
                 && event.getClickedBlock() != null && !event.getPlayer().isSneaking()
-                && event.getClickedBlock().getState() instanceof org.bukkit.block.Container) {
+                && (event.getClickedBlock().getState() instanceof org.bukkit.block.Container
+                    || event.getClickedBlock().getType() == Material.ENDER_CHEST)) {
             return;
         }
         event.setCancelled(true); // never the vanilla use (fire, thrown egg, …)
@@ -222,6 +224,60 @@ public final class RushListener implements Listener {
     private static String normalizeSpecial(String type) {
         return type == null ? null
                 : type.toLowerCase(java.util.Locale.ROOT).replace("_", "").replace("-", "");
+    }
+
+    /**
+     * Chests, the bedwars way. Right-clicking an ender chest opens the run's
+     * own 27-slot chest — survives combat respawns, wiped by the next reset,
+     * never the player's real ender chest — from any ender chest block on
+     * the map. Punching a chest or ender chest deposits the configured
+     * resources into it in one hit; sneak-punch bypasses the deposit, so a
+     * player-placed chest can still be broken.
+     */
+    @EventHandler
+    public void onChestClick(PlayerInteractEvent event) {
+        org.bukkit.block.Block block = event.getClickedBlock();
+        if (block == null) {
+            return;
+        }
+        boolean enderChest = block.getType() == Material.ENDER_CHEST;
+        boolean container = block.getState() instanceof org.bukkit.block.Container;
+        if (!enderChest && !container) {
+            return;
+        }
+        Player player = event.getPlayer();
+        PracticeSession session = plugin.sessions().get(player.getUniqueId());
+        if (session == null || !(session.mode() instanceof RushMode)
+                || !(session.modeState()
+                        instanceof me.beekrbonkr.practicecore.rush.RushState state)
+                || !session.containsBlock(block.getLocation())) {
+            return;
+        }
+        SessionState sessionState = session.state();
+        if (sessionState != SessionState.READY && sessionState != SessionState.ACTIVE) {
+            return;
+        }
+        if (event.getAction() == Action.RIGHT_CLICK_BLOCK && enderChest) {
+            // The event fires once per hand — one open per click.
+            if (event.getHand() != EquipmentSlot.HAND) {
+                event.setCancelled(true);
+                return;
+            }
+            // Sneaking with a block in hand places against the chest, vanilla-style.
+            if (player.isSneaking() && event.getItem() != null) {
+                return;
+            }
+            event.setCancelled(true); // never the real ender chest
+            player.openInventory(state.enderChest(plugin));
+            plugin.sounds().playAt(block.getLocation(), "rush.ender-chest-open");
+        } else if (event.getAction() == Action.LEFT_CLICK_BLOCK
+                && plugin.pcConfig().rushPunchToDeposit() && !player.isSneaking()) {
+            event.setCancelled(true);
+            org.bukkit.inventory.Inventory target = enderChest
+                    ? state.enderChest(plugin)
+                    : ((org.bukkit.block.Container) block.getState()).getInventory();
+            plugin.rush().depositResources(player, target);
+        }
     }
 
     /**

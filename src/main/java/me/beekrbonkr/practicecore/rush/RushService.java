@@ -375,6 +375,45 @@ public final class RushService {
         return built;
     }
 
+    // ---------------------------------------------------- punch to deposit
+
+    /**
+     * The classic bedwars quick-deposit: punching a chest dumps every
+     * configured resource (iron, gold, diamonds, emeralds by default) from
+     * the player's inventory into it in one hit. Whatever the chest has no
+     * room for stays with the player.
+     */
+    public void depositResources(Player player, org.bukkit.inventory.Inventory target) {
+        List<Material> currencies = plugin.pcConfig().rushDepositItems();
+        ItemStack[] storage = player.getInventory().getStorageContents();
+        int moved = 0;
+        boolean full = false;
+        for (int slot = 0; slot < storage.length; slot++) {
+            ItemStack stack = storage[slot];
+            if (stack == null || !currencies.contains(stack.getType())
+                    || specialTypeOf(stack) != null) {
+                continue;
+            }
+            int amount = stack.getAmount();
+            ItemStack leftover = target.addItem(stack.clone()).get(0);
+            int kept = leftover == null ? 0 : leftover.getAmount();
+            moved += amount - kept;
+            if (kept > 0) {
+                stack.setAmount(kept);
+                full = true;
+            } else {
+                player.getInventory().setItem(slot, null);
+            }
+        }
+        if (moved == 0) {
+            plugin.messages().actionBar(player, "rush.deposit-nothing");
+            return;
+        }
+        plugin.messages().actionBar(player, full ? "rush.deposit-full" : "rush.deposited",
+                "count", String.valueOf(moved));
+        plugin.sounds().play(player, "rush.deposit");
+    }
+
     // ------------------------------------------------- more special items
 
     /** Live teleporter channels; value = the countdown task. */

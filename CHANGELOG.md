@@ -3,6 +3,21 @@
 Notable changes to PracticeCore. Versions follow the plugin's own numbering;
 config file format versions (`config-version`) migrate automatically on start.
 
+## 0.7.4
+
+- **Ender chests work in rush practice.** Right-clicking any ender chest
+  block on the map opens the run's own 27-slot chest — it survives combat
+  respawns, is wiped by the next reset, and is never the player's real ender
+  chest (which stays guarded everywhere, as before). Special items held in
+  hand no longer fire when clicking an ender chest — the chest opens, like
+  any other container.
+- **Punch-to-deposit.** Punching a chest or ender chest sweeps the
+  configured resources (`rush.deposit-items`, default iron/gold/diamonds/
+  emeralds) from the inventory into it in one hit, with an action-bar tally;
+  what the chest has no room for stays with the player. Sneak-punch
+  bypasses it so a player-placed chest can still be broken;
+  `rush.punch-to-deposit: false` turns the whole mechanic off.
+
 ## 0.7.3
 
 - **Every rush spawn now carries a starter sword** in the first hotbar slot,
