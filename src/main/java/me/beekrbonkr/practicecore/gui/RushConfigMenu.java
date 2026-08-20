@@ -46,7 +46,7 @@ public final class RushConfigMenu extends Menu {
 
     @Override
     protected int rows() {
-        return plugin.guis().rows("rush", 4);
+        return plugin.guis().rows("rush", 5);
     }
 
     private int slot(String button, int def) {
@@ -64,8 +64,15 @@ public final class RushConfigMenu extends Menu {
         pickaxeButton(slot("pickaxe", 21));
         defenseButton(slot("defense", 22));
         generatorsButton(slot("generators", 23));
-        backButton(plugin.guis().slot("rush.back", 27));
-        closeButton(plugin.guis().slot("rush.close", 35));
+        botsButton(slot("bots", 28));
+        // The lineup knobs only appear once there is a lineup to shape.
+        if (selection.bots() > 0) {
+            botDifficultyButton(slot("bot-difficulty", 29));
+            botArmorButton(slot("bot-armor", 30));
+            botSwordButton(slot("bot-sword", 31));
+        }
+        backButton(plugin.guis().slot("rush.back", 36));
+        closeButton(plugin.guis().slot("rush.close", 44));
     }
 
     // ----------------------------------------------------------------- team
@@ -200,6 +207,96 @@ public final class RushConfigMenu extends Menu {
                 .build(), event -> {
             click();
             selection = selection.withBaseGenerators(!on);
+            plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+            refresh();
+        });
+    }
+
+    // ------------------------------------------------------------- defenders
+
+    /** Bots per enemy team, 0 (classic race) up to the configured ceiling. */
+    private void botsButton(int slot) {
+        int bots = selection.bots();
+        int max = plugin.pcConfig().rushBotsMaxPerTeam();
+        set(slot, ItemBuilder.of(
+                        plugin.guis().buttonMaterial("rush.buttons.bots", Material.ZOMBIE_HEAD),
+                        Math.max(1, bots))
+                .name(name("gui.rush.bots.name"))
+                .lore(lore("gui.rush.bots.lore", "count",
+                        bots == 0 ? raw("gui.none") : String.valueOf(bots)))
+                .glow(bots > 0)
+                .build(), event -> {
+            click();
+            int next = event.isRightClick()
+                    ? Math.floorMod(bots - 1, max + 1) : (bots + 1) % (max + 1);
+            selection = selection.withBots(next);
+            plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+            refresh();
+        });
+    }
+
+    /** The pvpbot.yml preset the defenders fight at, cycled in file order. */
+    private void botDifficultyButton(int slot) {
+        var presets = plugin.botTuning().presets();
+        var current = plugin.rushBots().presetOf(selection.botDifficulty());
+        Component label = current == null
+                ? name("gui.rush.bot-difficulty.default")
+                : presetLabel(current);
+        set(slot, ItemBuilder.of(
+                        plugin.guis().buttonMaterial("rush.buttons.bot-difficulty",
+                                Material.NETHER_STAR))
+                .name(name("gui.rush.bot-difficulty.name"))
+                .lore(lore("gui.rush.bot-difficulty.lore",
+                        plugin.messages().ref("level", label)))
+                .build(), event -> {
+            if (presets.isEmpty()) {
+                deny();
+                return;
+            }
+            click();
+            var next = plugin.botTuning().nextPreset(current);
+            selection = selection.withBotDifficulty(next == null ? "" : next.id());
+            plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+            refresh();
+        });
+    }
+
+    /** A preset's short label, reusing the PvP bot's own difficulty names. */
+    private Component presetLabel(me.beekrbonkr.practicecore.pvpbot.BotPreset preset) {
+        String key = preset.messageKey("short");
+        if (!plugin.messages().raw(key).isEmpty()) {
+            return plugin.messages().component(key);
+        }
+        return Component.text(preset.configuredName().isEmpty()
+                ? preset.id() : preset.configuredName());
+    }
+
+    private void botArmorButton(int slot) {
+        RushSelection.BotArmor armor = selection.botArmor();
+        Material icon = armor.piece("CHESTPLATE");
+        set(slot, ItemBuilder.of(icon != null ? icon : Material.LEATHER_CHESTPLATE)
+                .name(name("gui.rush.bot-armor.name"))
+                .lore(lore("gui.rush.bot-armor.lore", plugin.messages().ref("tier",
+                        "gui.rush.bot-armor.option." + armor.name().toLowerCase(Locale.ROOT))))
+                .hideAttributes()
+                .build(), event -> {
+            click();
+            selection = selection.withBotArmor(armor.next());
+            plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+            refresh();
+        });
+    }
+
+    private void botSwordButton(int slot) {
+        RushSelection.BotSword sword = selection.botSword();
+        set(slot, ItemBuilder.of(sword.item())
+                .name(name("gui.rush.bot-sword.name"))
+                .lore(lore("gui.rush.bot-sword.lore", plugin.messages().ref("tier",
+                        "gui.rush.bot-sword.option." + sword.name().toLowerCase(Locale.ROOT))))
+                .hideAttributes()
+                .build(), event -> {
+            click();
+            selection = selection.withBotSword(sword.next());
             plugin.rush().saveSelection(viewer.getUniqueId(), selection);
             refresh();
         });

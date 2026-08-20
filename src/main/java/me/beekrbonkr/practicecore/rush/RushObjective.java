@@ -16,7 +16,13 @@ public enum RushObjective {
     /** Pick up an emerald from an emerald generator. */
     EMERALD(Material.EMERALD),
     /** Pick up a diamond from a diamond generator. */
-    DIAMOND(Material.DIAMOND);
+    DIAMOND(Material.DIAMOND),
+    /**
+     * Eliminate one enemy team outright: break their bed, then take out every
+     * defender bot once nothing brings them back. Armed instead of the other
+     * objectives when defender bots are enabled.
+     */
+    TEAM_WIPE(Material.IRON_SWORD);
 
     private final Material icon;
 

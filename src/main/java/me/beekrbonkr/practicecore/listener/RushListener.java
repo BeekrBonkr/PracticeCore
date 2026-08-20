@@ -51,6 +51,12 @@ public final class RushListener implements Listener {
             event.setCancelled(true); // someone else's objective, or no session
             return;
         }
+        // Combat runs: generator items are just resources, exactly like a
+        // real game — pick them up, spend them at the shop.
+        if (session.modeState() instanceof me.beekrbonkr.practicecore.rush.RushState state
+                && state.combat()) {
+            return;
+        }
         RushObjective objective = switch (type) {
             case "emerald" -> RushObjective.EMERALD;
             case "diamond" -> RushObjective.DIAMOND;
@@ -138,7 +144,13 @@ public final class RushListener implements Listener {
             return;
         }
         ItemStack item = event.getItem();
-        String type = plugin.rush().specialTypeOf(item);
+        String type = normalizeSpecial(plugin.rush().specialTypeOf(item));
+        // A shop fireball configured as a plain item product carries no
+        // special tag at all — but a fire charge in a rush session is a
+        // fireball in every bedwars there is.
+        if (type == null && item != null && item.getType() == Material.FIRE_CHARGE) {
+            type = "fireball";
+        }
         if (type == null) {
             return;
         }
@@ -168,21 +180,48 @@ public final class RushListener implements Listener {
                 plugin.rush().consumeHand(player, EquipmentSlot.HAND);
                 plugin.rush().throwBridgeEgg(player, session);
             }
-            case "rescue_platform" -> {
+            case "rescueplatform" -> {
                 if (plugin.rush().buildRescuePlatform(player, session)) {
                     plugin.rush().consumeHand(player, EquipmentSlot.HAND);
                 } else {
                     plugin.messages().actionBar(player, "build.out-of-bounds");
                 }
             }
-            case "mini_shop" -> plugin.rush().openShop(player);
-            // Trackers, guard dogs, traps, … need enemies a solo practice
-            // run doesn't have.
+            case "minishop" -> plugin.rush().openShop(player);
+            case "teleporter" -> plugin.rush().startTeleporter(player, session,
+                    () -> plugin.rush().consumeHand(player, EquipmentSlot.HAND));
+            case "tracker" -> {
+                // Not consumed — a tracker is a compass you keep checking.
+                if (!plugin.rush().useTracker(player, session)) {
+                    plugin.messages().actionBar(player, "rush.tracker-nothing");
+                }
+            }
+            case "tntsheep" -> {
+                plugin.rush().consumeHand(player, EquipmentSlot.HAND);
+                plugin.rush().spawnTntSheep(player, session);
+            }
+            case "guarddog" -> {
+                plugin.rush().consumeHand(player, EquipmentSlot.HAND);
+                plugin.rush().spawnGuardDog(player, session);
+            }
+            // Traps, magic milk, magnet shoes, … genuinely need a real
+            // multiplayer game around them.
             default -> {
                 plugin.messages().actionBar(player, "rush.special-unsupported");
                 plugin.sounds().play(player, "rush.special-unsupported");
             }
         }
+    }
+
+    /**
+     * MBedwars type ids arrive CamelCase ("Fireball", "RescuePlatform");
+     * older purchases were tagged with those raw spellings. Everything is
+     * matched lowercase with separators stripped, so both generations of tag
+     * — and hand-configured ids like "rescue_platform" — resolve the same.
+     */
+    private static String normalizeSpecial(String type) {
+        return type == null ? null
+                : type.toLowerCase(java.util.Locale.ROOT).replace("_", "").replace("-", "");
     }
 
     /**

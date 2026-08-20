@@ -74,5 +74,6 @@ public final class ConnectionListener implements Listener {
             plugin.setup().handleQuit(player);
         }
         plugin.sessions().handleQuit(player);
+        plugin.rush().forgetQuickBuy(player.getUniqueId());
     }
 }

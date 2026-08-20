@@ -81,6 +81,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
     private ChatPrompts prompts;
     private RushService rush;
     private PvpBotService pvpBot;
+    private me.beekrbonkr.practicecore.rushbot.RushBotService rushBots;
     private SpectateService spectate;
     private SoundConfig sounds;
     private BotTuning botTuning;
@@ -141,6 +142,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         prompts = new ChatPrompts(this);
         rush = new RushService(this);
         pvpBot = new PvpBotService(this);
+        rushBots = new me.beekrbonkr.practicecore.rushbot.RushBotService(this);
         spectate = new SpectateService(this);
 
         // Builds the name index and every leaderboard from disk, off-thread.
@@ -158,6 +160,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         pm.registerEvents(new RushListener(this), this);
         pm.registerEvents(new MlgListener(this), this);
         pm.registerEvents(new PvpBotListener(this), this);
+        pm.registerEvents(new me.beekrbonkr.practicecore.rushbot.RushBotListener(this), this);
         pm.registerEvents(new SpectateListener(this), this);
         pm.registerEvents(prompts, this);
 
@@ -170,12 +173,20 @@ public final class PracticeCorePlugin extends JavaPlugin {
             pluginCommand.setExecutor(command);
             pluginCommand.setTabCompleter(command);
         }
+        // /spectate <player>: the /practice spectate flow, one word shorter.
+        var spectateCommand = new me.beekrbonkr.practicecore.command.SpectateCommand(this);
+        PluginCommand spectatePluginCommand = getCommand("spectate");
+        if (spectatePluginCommand != null) {
+            spectatePluginCommand.setExecutor(spectateCommand);
+            spectatePluginCommand.setTabCompleter(spectateCommand);
+        }
 
         boards.startTask();
         speedometer.startTask();
         inventoryValidator.startTask();
         rush.startTask();
         pvpBot.startTask();
+        rushBots.startTask();
         spectate.startTask();
         getLogger().info("PracticeCore enabled — practice world '" + pcConfig.worldName() + "' ready.");
     }
@@ -209,6 +220,9 @@ public final class PracticeCorePlugin extends JavaPlugin {
         }
         if (pvpBot != null) {
             pvpBot.shutdown();
+        }
+        if (rushBots != null) {
+            rushBots.shutdown();
         }
         if (stats != null) {
             stats.flushSync();
@@ -258,6 +272,15 @@ public final class PracticeCorePlugin extends JavaPlugin {
         // v3 added scoreboard.server-ip and v4 a great many new sections —
         // both purely additive, so the migrator's top-up writes them (with
         // their comments) into older files by itself.
+        if (from < 5) {
+            // v5 sets the gold generator to the 4:1 forge ratio (one gold per
+            // four iron). Only a value still at the old shipped default moves;
+            // an admin's own interval stands.
+            if (cfg.isSet("rush.gold-interval-ticks")
+                    && cfg.getInt("rush.gold-interval-ticks", 120) == 120) {
+                cfg.set("rush.gold-interval-ticks", 100);
+            }
+        }
     }
 
     /**
@@ -390,6 +413,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         inventoryValidator.restartTask();
         rush.restartTask();
         pvpBot.restartTask();
+        rushBots.restartTask();
         spectate.restartTask();
         // Sidebars are rebuilt from the freshly loaded text rather than left
         // showing the old title until their next natural teardown.
@@ -550,6 +574,10 @@ public final class PracticeCorePlugin extends JavaPlugin {
 
     public PvpBotService pvpBot() {
         return pvpBot;
+    }
+
+    public me.beekrbonkr.practicecore.rushbot.RushBotService rushBots() {
+        return rushBots;
     }
 
     public SpectateService spectate() {

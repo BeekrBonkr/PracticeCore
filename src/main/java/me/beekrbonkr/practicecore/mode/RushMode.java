@@ -103,7 +103,9 @@ public final class RushMode implements Mode {
     @Override
     public String validateJoin(PracticeCorePlugin plugin, Player player, ArenaTemplate template) {
         RushMapData data = RushMapData.parse(template);
-        if (!data.playable() || plugin.rush().supportedObjectives(data).isEmpty()) {
+        RushSelection selection = plugin.rush().selection(player.getUniqueId(), template, data);
+        if (!data.playable()
+                || plugin.rush().supportedObjectives(data, selection).isEmpty()) {
             return "rush.not-configured";
         }
         return null;
@@ -151,8 +153,10 @@ public final class RushMode implements Mode {
 
     private static RushObjective objectiveOf(PracticeSession session) {
         RushState state = state(session);
-        return state != null && state.completed() != null
-                ? state.completed() : RushObjective.BED;
+        if (state != null && state.completed() != null) {
+            return state.completed();
+        }
+        return state != null && state.combat() ? RushObjective.TEAM_WIPE : RushObjective.BED;
     }
 
     // --------------------------------------------------------------- rounds
@@ -167,10 +171,43 @@ public final class RushMode implements Mode {
         // rebuilds — the selection may have changed between runs.
         if (session.modeState() instanceof RushState previous) {
             previous.removeDefenses(session.origin().getWorld());
+            plugin.rushBots().cleanup(session);
+        }
+        // A death hold from the previous round must not blind the fresh one.
+        if (player != null) {
+            player.removePotionEffect(org.bukkit.potion.PotionEffectType.BLINDNESS);
+            player.removePotionEffect(org.bukkit.potion.PotionEffectType.SLOWNESS);
         }
         RushState state = new RushState();
         session.setModeState(state);
         state.rebuild(plugin, session);
+    }
+
+    @Override
+    public void onArenaReset(PracticeCorePlugin plugin, Player player, PracticeSession session) {
+        // The entity wipe removes the bodies; the disguise bookkeeping and
+        // tags have to be released deliberately.
+        plugin.rushBots().cleanup(session);
+    }
+
+    @Override
+    public void onSessionEnd(PracticeCorePlugin plugin, Player player, PracticeSession session) {
+        plugin.rushBots().cleanup(session);
+    }
+
+    /**
+     * Combat runs treat a fall as a bedwars death — back to base, kit reset —
+     * because the player's own bed still stands. Race runs keep the standard
+     * fail-and-reset.
+     */
+    @Override
+    public boolean onVoidFall(PracticeCorePlugin plugin, Player player, PracticeSession session) {
+        RushState state = state(session);
+        if (state == null || !state.combat()) {
+            return false;
+        }
+        plugin.rushBots().killPlayer(player, session, state);
+        return true;
     }
 
     /**
@@ -210,6 +247,10 @@ public final class RushMode implements Mode {
         if (state.isDefenseBlock(loc)) {
             event.setDropItems(false);
             event.setExpToDrop(0);
+            if (state.combat()) {
+                // Chipping at a bed's shell wakes the defenders guarding it.
+                plugin.rushBots().alertNear(state, loc, 12);
+            }
             return;
         }
         if (!state.isEnemyBedBlock(loc)) {
@@ -223,7 +264,35 @@ public final class RushMode implements Mode {
             session.setState(SessionState.ACTIVE);
             session.startTimer();
         }
+        if (state.combat()) {
+            // Combat runs: the bed is a step, not the finish. Its team stops
+            // respawning — the wipe becomes possible — and its defenders come
+            // for the intruder.
+            String team = state.markBedBroken(loc);
+            if (team != null) {
+                plugin.messages().send(player, "rush.bots.bed-destroyed",
+                        "team", prettyTeam(team));
+                plugin.sounds().play(player, "rush.bed-destroyed");
+                plugin.rushBots().alertNear(state, loc, 24);
+                plugin.rushBots().checkTeamWipe(player, session, state);
+            }
+            return;
+        }
         finishAs(plugin, player, session, state, RushObjective.BED);
+    }
+
+    /** Combat runs end here: one enemy team fully out — bed gone, all defenders down. */
+    public void completeTeamWipe(PracticeCorePlugin plugin, Player player,
+                                 PracticeSession session) {
+        RushState state = state(session);
+        if (state == null) {
+            return;
+        }
+        if (session.state() == SessionState.READY) {
+            session.setState(SessionState.ACTIVE);
+            session.startTimer();
+        }
+        finishAs(plugin, player, session, state, RushObjective.TEAM_WIPE);
     }
 
     /** Objective item picked up (called by RushListener with a matching type). */
@@ -321,11 +390,18 @@ public final class RushMode implements Mode {
                 TagResolver.resolver(msg.ref("time", timer), msg.ref("mode", mode)),
                 "arena", session.template().displayName(),
                 "team", prettyTeam(state.base().name())));
-        for (RushObjective objective : plugin.rush().supportedObjectives(state.data())) {
+        for (RushObjective objective : plugin.rush()
+                .supportedObjectives(state.data(), state.selection())) {
             lines.add(msg.component("board.rush.objective-line",
                     "objective", plugin.rush().objectiveName(objective),
                     "best", value(plugin.stats().bestMs(session.playerId(),
                             objective.statsKey(arena)), none)));
+        }
+        if (state.combat()) {
+            lines.add(msg.component("board.rush.combat-line",
+                    "beds", String.valueOf(state.bedsStanding()),
+                    "defenders", String.valueOf(plugin.rushBots().aliveDefenders(state)),
+                    "deaths", String.valueOf(state.playerDeaths())));
         }
         if (!competitive) {
             lines.add(msg.component("board.rush.casual-line"));

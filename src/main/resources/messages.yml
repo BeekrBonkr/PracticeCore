@@ -12,7 +12,7 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 5
+config-version: 6
 
 prefix: '<gold>Practice <dark_gray>» '
 
@@ -143,9 +143,34 @@ rush:
   shop-empty: '<prefix><red>The MBedwars shop has nothing usable in practice.'
   shop-cannot-afford: '<red>You cannot afford that'
   shop-inventory-full: '<yellow>Your inventory is full — the rest was dropped at your feet'
-  # Action bar when using a special item that needs enemies or a real game
-  # (tracker, guard dog, trap, …) — it was bought, but does nothing here.
+  # Action bar when using a special item that genuinely needs a real
+  # multiplayer game around it (trap, magic milk, magnet shoes, …).
   special-unsupported: '<yellow>This item has no effect in solo practice'
+  # Quick-buy pinning in the shop (mirrored into your MBedwars profile).
+  quickbuy-pinned: '<green>Pinned to Quick Buy'
+  quickbuy-unpinned: '<yellow>Removed from Quick Buy'
+  quickbuy-full: '<red>Quick Buy is full — remove something first'
+  # The teleporter special item: channel, cancel, land. <seconds>
+  teleporter-channel: '<gray>Teleporting in <yellow><seconds>s<gray>… stand still'
+  teleporter-cancelled: '<red>Teleport cancelled — you moved'
+  teleporter-done: '<gray>Back at your base'
+  # The tracker special item. <team> <distance>
+  tracker: '<gray>Nearest target: <white><team> <dark_gray>— <yellow><distance>m <gray>(compass set)'
+  tracker-nothing: '<yellow>Nothing left to track'
+  # Defender bots (combat runs).
+  bots:
+    # Floats over each defender's head. <team> <health>
+    tag: '<red><team> Defender <dark_red>♥ <white><health>'
+    # A defender fell but its bed still stands — it will be back. <team>
+    defender-down: '<yellow><team> defender down — it respawns while their bed stands'
+    # A defender fell after its bed was gone: out for good. <team>
+    defender-eliminated: '<prefix><green>A <white><team></white> defender is eliminated — no bed, no respawn.'
+    # The player broke a team's bed on a combat run. <team>
+    bed-destroyed: '<prefix><gold>Bed destroyed! <gray><white><team></white> defenders can no longer respawn.'
+    # One enemy team fully out — the wipe that ends the run. <team>
+    team-wiped: '<prefix><gold><bold>TEAM WIPE!</bold> <gray>Team <white><team></white> is out — bed gone, every defender down.'
+    # A defender killed the player: a bedwars respawn, not a failed run.
+    player-died: '<prefix><red>You were slain — your bed still stands, so you respawn at your base. Bought items are lost.'
 
 # The PvP bot spar: an endless fight against an AI opponent. No timer, no
 # leaderboard — kills, deaths and combos live on the sidebar.
@@ -172,6 +197,13 @@ pvpbot:
   chat:
     bot-killed-player: '<prefix><red>Bot killed player <dark_gray>(<gray>bot had <red><hearts>❤<gray> left<dark_gray>)'
     player-killed-bot: '<prefix><green>Player killed bot <dark_gray>(<gray>you had <red><hearts>❤<gray> left<dark_gray>)'
+    # Round results sent to everyone spectating the fight. <player> is the
+    # practicing player; <hearts> the health the victor had left.
+    spectator-bot-killed: '<prefix><red>The bot killed <white><player> <dark_gray>(<gray>bot had <red><hearts>❤<gray> left<dark_gray>)'
+    spectator-player-killed: '<prefix><green><player> killed the bot <dark_gray>(<gray><player> had <red><hearts>❤<gray> left<dark_gray>)'
+    # The session stats were wiped because the bot's difficulty or settings
+    # changed — numbers against one opponent must not blend into another's.
+    stats-reset: '<prefix><gray>Bot settings changed — your session stats were reset.'
 
 # Action-bar speedometer shown during bridging runs.
 # <speed> — current speed in m/s, <moved> — blocks traveled this run,
@@ -232,16 +264,20 @@ board:
     - '<gray>Best: <white><best>'
   # The PvP bot spar board: session stats, no timer. <difficulty> is the
   # named preset the bot's knobs currently add up to (gui.pvpbot.preset.short),
-  # or Custom for a hand-tuned mix.
-  # <arena> <kit> <difficulty> <kills> <deaths> <hits> <taken> <combo> <best-combo>
+  # or Custom for a hand-tuned mix. Stats reset when the bot's settings
+  # change. <accuracy> is hits landed over swings thrown; <kd> kills over
+  # deaths; <dodged> bot attacks that failed to land on you.
+  # <arena> <kit> <difficulty> <kills> <deaths> <kd> <hits> <taken>
+  # <accuracy> <dodged> <combo> <best-combo>
   pvpbot-lines:
     - ''
     - '<gray>Arena: <white><arena>'
     - '<gray>Kit: <white><kit>'
     - '<gray>Difficulty: <difficulty>'
     - ''
-    - '<gray>Kills: <green><kills> <dark_gray>/ <gray>Deaths: <red><deaths>'
+    - '<gray>Kills: <green><kills> <dark_gray>/ <gray>Deaths: <red><deaths> <dark_gray>(K/D <white><kd><dark_gray>)'
     - '<gray>Hits: <white><hits> <dark_gray>/ <gray>Taken: <white><taken>'
+    - '<gray>Accuracy: <white><accuracy> <dark_gray>• <gray>Dodged: <white><dodged>'
     - '<gray>Combo: <white><combo> <dark_gray>(best <best-combo>)'
   # The spectator sidebar summary: who you watch and their live run. Only
   # used when scoreboard.spectators-see-player-board is false in config.yml —
@@ -271,6 +307,9 @@ board:
     mode-casual: '<white>Casual'
     # <objective> <best> — your best competitive time on that board
     objective-line: '<gray><objective>: <white><best>'
+    # Combat runs only: the state of the wipe. <beds> enemy beds standing,
+    # <defenders> defenders not yet eliminated, <deaths> your deaths this run.
+    combat-line: '<gray>Beds: <white><beds> <dark_gray>• <gray>Defenders: <white><defenders> <dark_gray>• <gray>Deaths: <red><deaths>'
     casual-line: '<dark_gray>Not ranked — play competitive'
 
 protect:
@@ -330,7 +369,7 @@ leaderboard:
   # <rank> <total>
   your-rank: '<dark_gray> … you are #<rank> of <total>'
   # <arena>
-  rush-pick-board: '<prefix><gray>''<arena>'' is a rush arena; pick a board: <white><arena>#bed<gray>, <white><arena>#emerald<gray> or <white><arena>#diamond<gray>.'
+  rush-pick-board: '<prefix><gray>''<arena>'' is a rush arena; pick a board: <white><arena>#bed<gray>, <white><arena>#emerald<gray>, <white><arena>#diamond<gray> or <white><arena>#team_wipe<gray>.'
   # Arenas of modes that score in-session (MLG streaks, PvP bot spars).
   not-ranked: '<prefix><gray>''<arena>'' has no time leaderboard — its mode is scored in-session, on the sidebar.'
 
@@ -361,6 +400,7 @@ help:
     - '<dark_gray> • <white>/practice top [arena] <dark_gray>— leaderboards'
     - '<dark_gray> • <white>/practice sidebar <dark_gray>— show or hide the live timer'
     - '<dark_gray> • <white>/practice spectate [player] <dark_gray>— watch someone practice'
+    - '<dark_gray> • <white>/spectate <player> <dark_gray>— the same, one word shorter'
   setup:
     - '<dark_gray> • <white>/practice setup … <dark_gray>— create an arena'
     - '<dark_gray> • <white>/practice edit <arena> <dark_gray>— reopen a saved arena'
@@ -827,6 +867,7 @@ gui:
         bed: 'Bed Rush'
         emerald: 'Emerald Rush'
         diamond: 'Diamond Rush'
+        team_wipe: 'Team Wipe'
     team:
       name: '<white><bold>Team Base'
       # <team> <count>
@@ -894,6 +935,55 @@ gui:
         - '<yellow>Click to toggle'
       state-on: '<green>running'
       state-off: '<red>off'
+    bots:
+      name: '<red><bold>Defender Bots'
+      # <count>
+      lore:
+        - '<gray>Bots guarding every enemy base.'
+        - '<gray>With defenders, the goal becomes'
+        - '<gray>the <white>team wipe<gray>: break a bed,'
+        - '<gray>then take out every defender.'
+        - ''
+        - '<gray>Per team: <white><count>'
+        - '<yellow>Click to cycle'
+        - '<yellow>Right-click to cycle back'
+    bot-difficulty:
+      name: '<gold><bold>Defender Difficulty'
+      default: 'Default'
+      # <level>
+      lore:
+        - '<gray>How hard the defenders fight —'
+        - '<gray>the PvP bot difficulty presets.'
+        - ''
+        - '<gray>Difficulty: <level>'
+        - '<yellow>Click to cycle'
+    bot-armor:
+      name: '<white><bold>Defender Armor'
+      # <tier>
+      lore:
+        - '<gray>What the defenders wear.'
+        - '<gray>Leather is dyed team colors.'
+        - ''
+        - '<gray>Tier: <white><tier>'
+        - '<yellow>Click to cycle'
+      option:
+        leather: 'leather'
+        chainmail: 'chainmail'
+        iron: 'iron'
+        diamond: 'diamond'
+    bot-sword:
+      name: '<aqua><bold>Defender Sword'
+      # <tier>
+      lore:
+        - '<gray>What the defenders swing.'
+        - ''
+        - '<gray>Tier: <white><tier>'
+        - '<yellow>Click to cycle'
+      option:
+        wooden: 'wooden'
+        stone: 'stone'
+        iron: 'iron'
+        diamond: 'diamond'
     start:
       name: '<green><bold>Start Casual'
       # <arena>
@@ -1151,6 +1241,19 @@ gui:
       - '<yellow>Click to buy'
     cannot-afford:
       - '<red>You cannot afford this'
+    # The Quick Buy tab: your MBedwars quick-buy pins, shared with real games.
+    quickbuy:
+      name: '<gold><bold>Quick Buy'
+      empty-name: '<red><bold>Empty slot'
+      empty-lore:
+        - '<gray>Sneak-click any shop item'
+        - '<gray>to pin it here.'
+      pin-hint:
+        - '<dark_gray>Sneak-click to add to Quick Buy'
+      unpin-hint:
+        - '<dark_gray>Sneak-click to remove from Quick Buy'
+      pinned:
+        - '<gold>★ Pinned to Quick Buy'
 
   rushboards:
     # <arena>

@@ -13,6 +13,11 @@ commands:
     description: PracticeCore main command
     aliases: [prac, bridge]
     usage: /practice help
+  spectate:
+    description: Spectate another player's practice session
+    aliases: [spec]
+    usage: /spectate <player>
+    permission: practicecore.spectate
 permissions:
   # The kit every normal player should hold. Granted to everyone by default;
   # revoke practicecore.user to shut the whole plugin off for a group, or

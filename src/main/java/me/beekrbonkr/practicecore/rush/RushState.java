@@ -27,16 +27,18 @@ public final class RushState {
                             Material material, BlockFace facing) {
     }
 
-    /** A live iron/gold generator at the player's base. */
+    /** A live generator: iron/gold at bases, plus diamond/emerald on combat runs. */
     public static final class ActiveGenerator {
         final Location dropSpot;
         final Material drops;
+        final String type;
         final int intervalTicks;
         int countdown;
 
-        ActiveGenerator(Location dropSpot, Material drops, int intervalTicks) {
+        ActiveGenerator(Location dropSpot, Material drops, String type, int intervalTicks) {
             this.dropSpot = dropSpot;
             this.drops = drops;
+            this.type = type;
             this.intervalTicks = Math.max(1, intervalTicks);
             this.countdown = this.intervalTicks;
         }
@@ -47,6 +49,11 @@ public final class RushState {
 
         public Material drops() {
             return drops;
+        }
+
+        /** The generator id ("iron", "gold", "diamond", "emerald"). */
+        public String type() {
+            return type;
         }
     }
 
@@ -61,9 +68,81 @@ public final class RushState {
     /** Defense blocks this mode generated over enemy beds. */
     private final Set<Location> defenseBlocks = new HashSet<>();
     private final List<ActiveGenerator> generators = new ArrayList<>();
+    /** Combat runs: enemy teams whose bed the player has destroyed. */
+    private final Set<String> bedsBroken = new HashSet<>();
+    /** Combat runs: this session's defender bots, owned by RushBotService. */
+    private final List<me.beekrbonkr.practicecore.rushbot.RushBot> bots = new ArrayList<>();
+    /** Player deaths to defenders this run — the sidebar's combat line. */
+    private int playerDeaths;
+    /** Ticks left of the blind post-death hold at the player's own base. */
+    private int playerHoldTicks;
 
     public RushSelection selection() {
         return selection;
+    }
+
+    /** Whether this run fights defender bots (team wipe) instead of racing. */
+    public boolean combat() {
+        return selection != null && selection.combat() && !enemyBeds.isEmpty();
+    }
+
+    public List<TargetBed> enemyBeds() {
+        return List.copyOf(enemyBeds);
+    }
+
+    /** The enemy bed of one team, or null. */
+    public TargetBed bedOf(String team) {
+        for (TargetBed bed : enemyBeds) {
+            if (bed.team().equals(team)) {
+                return bed;
+            }
+        }
+        return null;
+    }
+
+    public boolean isBedBroken(String team) {
+        return bedsBroken.contains(team);
+    }
+
+    /** Marks the team owning this bed block as bed-less; null if not a bed block. */
+    public String markBedBroken(Location loc) {
+        for (TargetBed bed : enemyBeds) {
+            if (bed.head().equals(loc) || bed.foot().equals(loc)) {
+                bedsBroken.add(bed.team());
+                return bed.team();
+            }
+        }
+        return null;
+    }
+
+    public int bedsStanding() {
+        return enemyBeds.size() - bedsBroken.size();
+    }
+
+    /** The live defender-bot list; RushBotService owns its contents. */
+    public List<me.beekrbonkr.practicecore.rushbot.RushBot> bots() {
+        return bots;
+    }
+
+    public int playerDeaths() {
+        return playerDeaths;
+    }
+
+    public void countPlayerDeath() {
+        playerDeaths++;
+    }
+
+    /** Combat runs: mid post-death hold — pinned at base, untouchable. */
+    public boolean playerHeld() {
+        return playerHoldTicks > 0;
+    }
+
+    public int playerHoldTicks() {
+        return playerHoldTicks;
+    }
+
+    public void setPlayerHoldTicks(int ticks) {
+        this.playerHoldTicks = Math.max(0, ticks);
     }
 
     public RushMapData data() {
@@ -129,6 +208,8 @@ public final class RushState {
         enemyBedBlocks.clear();
         defenseBlocks.clear();
         generators.clear();
+        bedsBroken.clear();
+        playerDeaths = 0;
         if (base == null) {
             plugin.getLogger().warning("Rush arena '" + session.template().name()
                     + "' has no playable team — runs can never finish.");
@@ -161,7 +242,15 @@ public final class RushState {
                     dealer.yaw(), 0);
             plugin.rush().spawnDealer(loc);
         }
-        placeObjectiveItems(plugin, origin);
+        if (combat()) {
+            // A combat run plays like a real match: the shared diamond and
+            // emerald generators produce on a cycle instead of holding one
+            // objective item, and enemy bases are defended.
+            armObjectiveGenerators(plugin, origin);
+            plugin.rushBots().spawnAll(session, this);
+        } else {
+            placeObjectiveItems(plugin, origin);
+        }
         if (selection.baseGenerators()) {
             armBaseGenerators(plugin, origin);
         }
@@ -269,7 +358,24 @@ public final class RushState {
             int interval = drops == Material.IRON_INGOT
                     ? plugin.pcConfig().rushIronIntervalTicks()
                     : plugin.pcConfig().rushGoldIntervalTicks();
-            generators.add(new ActiveGenerator(dropSpot(origin, generator), drops, interval));
+            generators.add(new ActiveGenerator(dropSpot(origin, generator), drops,
+                    generator.type(), interval));
+        }
+    }
+
+    /**
+     * Combat runs: the map's diamond and emerald generators run on their own
+     * cycle, the way a real game's shared generators do. Pickups are just
+     * resources — the run ends on the team wipe, nothing else.
+     */
+    private void armObjectiveGenerators(PracticeCorePlugin plugin, Location origin) {
+        for (RushMapData.Generator generator : data.generatorsOf("diamond")) {
+            generators.add(new ActiveGenerator(dropSpot(origin, generator),
+                    Material.DIAMOND, "diamond", plugin.pcConfig().rushDiamondIntervalTicks()));
+        }
+        for (RushMapData.Generator generator : data.generatorsOf("emerald")) {
+            generators.add(new ActiveGenerator(dropSpot(origin, generator),
+                    Material.EMERALD, "emerald", plugin.pcConfig().rushEmeraldIntervalTicks()));
         }
     }
 

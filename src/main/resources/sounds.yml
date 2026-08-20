@@ -63,13 +63,24 @@ rush:
   shop-open: 'ENTITY_VILLAGER_TRADE 0.7 1.0'
   # A completed purchase.
   purchase: 'ENTITY_ITEM_PICKUP 0.8 1.2'
+  # Pinning and unpinning a Quick Buy slot.
+  quickbuy-pin: 'UI_BUTTON_CLICK 0.6 1.6'
+  quickbuy-unpin: 'UI_BUTTON_CLICK 0.6 1.0'
   # The emulated special items.
   fireball: 'ENTITY_GHAST_SHOOT 0.8 1.0'
   tnt-primed: 'ENTITY_TNT_PRIMED 1.0 1.0'
   bridge-egg: 'ENTITY_EGG_THROW 0.8 0.9'
   rescue-platform: 'BLOCK_SLIME_BLOCK_PLACE 1.0 0.9'
+  teleporter-start: 'BLOCK_PORTAL_TRIGGER 0.3 1.8'
+  teleporter: 'ENTITY_ENDERMAN_TELEPORT 0.7 1.0'
+  tracker: 'BLOCK_NOTE_BLOCK_PLING 0.6 1.8'
+  tnt-sheep: 'ENTITY_SHEEP_AMBIENT 0.9 0.8'
+  guard-dog: 'ENTITY_WOLF_BARK 0.9 1.0'
   # A shop special this practice mode cannot emulate.
   special-unsupported: 'BLOCK_NOTE_BLOCK_BASS 0.7 0.7'
+  # Combat runs: breaking an enemy bed, and downing a defender.
+  bed-destroyed: 'ENTITY_ENDER_DRAGON_GROWL 0.5 1.4'
+  bot-death: 'ENTITY_PLAYER_LEVELUP 0.7 1.3'
 
 pvpbot:
   # The player losing a stock, and taking one.

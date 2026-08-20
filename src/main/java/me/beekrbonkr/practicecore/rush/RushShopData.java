@@ -13,8 +13,8 @@ import java.util.Map;
  */
 public final class RushShopData {
 
-    /** One shop tab. */
-    public record Page(String name, ItemStack icon, List<Entry> entries) {
+    /** One shop tab. {@code displayName} is the translated tab label. */
+    public record Page(String name, String displayName, ItemStack icon, List<Entry> entries) {
     }
 
     /**
@@ -28,10 +28,12 @@ public final class RushShopData {
     }
 
     /**
-     * One purchasable item. {@code forceSlot} is the slot MBedwars pins the
-     * item to in its own GUI (null when unset), mirrored so the layout matches.
+     * One purchasable item. {@code id} is the MBedwars shop item id, the key
+     * quick-buy pins are stored under; {@code forceSlot} is the slot MBedwars
+     * pins the item to in its own GUI (null when unset), mirrored so the
+     * layout matches.
      */
-    public record Entry(ItemStack icon, Integer forceSlot, List<Price> prices,
+    public record Entry(String id, ItemStack icon, Integer forceSlot, List<Price> prices,
                         List<Product> products) {
 
         /** True when the player's inventory covers every price line. */
@@ -73,5 +75,20 @@ public final class RushShopData {
 
     public List<Page> pages() {
         return pages;
+    }
+
+    /** The entry carrying this MBedwars shop item id, or null. */
+    public Entry entryById(String id) {
+        if (id == null) {
+            return null;
+        }
+        for (Page page : pages) {
+            for (Entry entry : page.entries()) {
+                if (id.equals(entry.id())) {
+                    return entry;
+                }
+            }
+        }
+        return null;
     }
 }

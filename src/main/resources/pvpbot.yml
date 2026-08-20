@@ -71,6 +71,12 @@ bot:
   # How far the pathfinder may plan. A zombie's own 35 is too short for a big
   # arena — the bot would lose the player and wander.
   follow-range: 128.0
+  # Blocks from which the server keeps bots (and their floating tags)
+  # rendered for clients, instead of the stock ~48-block monster tracking
+  # range that makes a bot pop into view mid-arena. Applies to the practice
+  # world only. Clients still cap at their own render distance. 0 leaves the
+  # server's spigot.yml values alone.
+  tracking-range: 96
   # Base melee damage before the held weapon's own attribute is added. A husk's
   # vanilla maul is far above a player's, so this lands it near a real one.
   base-attack-damage: 1.0

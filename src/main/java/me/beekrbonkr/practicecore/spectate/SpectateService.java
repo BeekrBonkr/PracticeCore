@@ -106,6 +106,21 @@ public final class SpectateService {
         return count;
     }
 
+    /** The online spectators currently watching this player. */
+    public List<Player> watchersOf(UUID target) {
+        List<Player> watchers = new java.util.ArrayList<>();
+        for (Map.Entry<UUID, UUID> entry : targets.entrySet()) {
+            if (!entry.getValue().equals(target)) {
+                continue;
+            }
+            Player watcher = Bukkit.getPlayer(entry.getKey());
+            if (watcher != null && watcher.isOnline()) {
+                watchers.add(watcher);
+            }
+        }
+        return watchers;
+    }
+
     /** The MBedwars-style tag on a spectate hotbar tool, or null for plain items. */
     public String itemTypeOf(ItemStack stack) {
         if (stack == null || !stack.hasItemMeta()) {

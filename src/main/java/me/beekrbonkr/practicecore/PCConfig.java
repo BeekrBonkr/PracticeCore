@@ -75,6 +75,8 @@ public final class PCConfig {
 
     private final int rushIronIntervalTicks;
     private final int rushGoldIntervalTicks;
+    private final int rushDiamondIntervalTicks;
+    private final int rushEmeraldIntervalTicks;
     private final int rushGeneratorItemCap;
     private final int rushGeneratorTickPeriod;
     private final double rushGeneratorCapRadius;
@@ -92,6 +94,19 @@ public final class PCConfig {
     private final int rushRescuePlatformRadius;
     private final int rushRescuePlatformDepth;
     private final String rushDealerProfession;
+    private final int rushTeleporterChannelTicks;
+    private final int rushTntSheepFuseTicks;
+    private final double rushTntSheepPower;
+    private final double rushTntSheepSpeed;
+    private final int rushBotsMaxPerTeam;
+    private final double rushBotsAggroRange;
+    private final double rushBotsLeashRange;
+    private final int rushBotsRespawnTicks;
+    private final int rushBotsPlayerRespawnTicks;
+    private final int rushBotsCompetitivePerTeam;
+    private final String rushBotsCompetitiveDifficulty;
+    private final me.beekrbonkr.practicecore.rush.RushSelection.BotArmor rushBotsCompetitiveArmor;
+    private final me.beekrbonkr.practicecore.rush.RushSelection.BotSword rushBotsCompetitiveSword;
 
     private final int mlgPlatformRadius;
     private final Material mlgPlatformMaterial;
@@ -223,7 +238,10 @@ public final class PCConfig {
         this.spectateItemSlots = Map.copyOf(spectateSlots);
 
         this.rushIronIntervalTicks = Math.max(1, cfg.getInt("rush.iron-interval-ticks", 25));
-        this.rushGoldIntervalTicks = Math.max(1, cfg.getInt("rush.gold-interval-ticks", 120));
+        // 4× the iron interval: one gold for every four iron.
+        this.rushGoldIntervalTicks = Math.max(1, cfg.getInt("rush.gold-interval-ticks", 100));
+        this.rushDiamondIntervalTicks = Math.max(1, cfg.getInt("rush.diamond-interval-ticks", 600));
+        this.rushEmeraldIntervalTicks = Math.max(1, cfg.getInt("rush.emerald-interval-ticks", 1300));
         this.rushGeneratorItemCap = Math.max(1, cfg.getInt("rush.generator-item-cap", 48));
         this.rushGeneratorTickPeriod = Math.max(1, cfg.getInt("rush.generator-tick-period", 5));
         this.rushGeneratorCapRadius = Math.max(0.5, cfg.getDouble("rush.generator-cap-radius", 2.0));
@@ -249,6 +267,38 @@ public final class PCConfig {
         this.rushRescuePlatformRadius = Math.clamp(cfg.getInt("rush.rescue-platform.radius", 2), 0, 8);
         this.rushRescuePlatformDepth = Math.clamp(cfg.getInt("rush.rescue-platform.depth", 2), 1, 8);
         this.rushDealerProfession = cfg.getString("rush.dealer-profession", "LIBRARIAN");
+        this.rushTeleporterChannelTicks =
+                Math.max(1, cfg.getInt("rush.teleporter-channel-ticks", 60));
+        this.rushTntSheepFuseTicks = Math.max(1, cfg.getInt("rush.tnt-sheep.fuse-ticks", 80));
+        this.rushTntSheepPower = Math.max(0, cfg.getDouble("rush.tnt-sheep.power", 2.5));
+        this.rushTntSheepSpeed = Math.max(0.1, cfg.getDouble("rush.tnt-sheep.speed", 1.2));
+        this.rushBotsMaxPerTeam = Math.clamp(cfg.getInt("rush.bots.max-per-team", 4), 0, 8);
+        this.rushBotsAggroRange = Math.max(1, cfg.getDouble("rush.bots.aggro-range", 10.0));
+        this.rushBotsLeashRange = Math.max(4, cfg.getDouble("rush.bots.leash-range", 26.0));
+        this.rushBotsRespawnTicks = Math.max(1, cfg.getInt("rush.bots.respawn-ticks", 100));
+        this.rushBotsPlayerRespawnTicks =
+                Math.max(1, cfg.getInt("rush.bots.player-respawn-ticks", 60));
+        this.rushBotsCompetitivePerTeam =
+                Math.clamp(cfg.getInt("rush.bots.competitive.per-team", 0), 0, 8);
+        this.rushBotsCompetitiveDifficulty =
+                cfg.getString("rush.bots.competitive.difficulty", "veteran")
+                        .trim().toLowerCase(Locale.ROOT);
+        me.beekrbonkr.practicecore.rush.RushSelection.BotArmor competitiveArmor;
+        try {
+            competitiveArmor = me.beekrbonkr.practicecore.rush.RushSelection.BotArmor.valueOf(
+                    cfg.getString("rush.bots.competitive.armor", "IRON").toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            competitiveArmor = me.beekrbonkr.practicecore.rush.RushSelection.BotArmor.IRON;
+        }
+        this.rushBotsCompetitiveArmor = competitiveArmor;
+        me.beekrbonkr.practicecore.rush.RushSelection.BotSword competitiveSword;
+        try {
+            competitiveSword = me.beekrbonkr.practicecore.rush.RushSelection.BotSword.valueOf(
+                    cfg.getString("rush.bots.competitive.sword", "IRON").toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            competitiveSword = me.beekrbonkr.practicecore.rush.RushSelection.BotSword.IRON;
+        }
+        this.rushBotsCompetitiveSword = competitiveSword;
 
         this.mlgPlatformRadius = Math.max(0, cfg.getInt("mlg.platform-radius", 1));
         this.mlgPlatformMaterial = material(cfg.getString("mlg.platform-material"), Material.GLASS);
@@ -535,6 +585,16 @@ public final class PCConfig {
         return rushGoldIntervalTicks;
     }
 
+    /** Combat runs only: ticks between diamond generator drops. */
+    public int rushDiamondIntervalTicks() {
+        return rushDiamondIntervalTicks;
+    }
+
+    /** Combat runs only: ticks between emerald generator drops. */
+    public int rushEmeraldIntervalTicks() {
+        return rushEmeraldIntervalTicks;
+    }
+
     /** Items lying near a generator before it pauses dropping more. */
     public int rushGeneratorItemCap() {
         return rushGeneratorItemCap;
@@ -609,6 +669,68 @@ public final class PCConfig {
 
     public String rushDealerProfession() {
         return rushDealerProfession;
+    }
+
+    /** Ticks the MBedwars-style teleporter channels before firing. */
+    public int rushTeleporterChannelTicks() {
+        return rushTeleporterChannelTicks;
+    }
+
+    public int rushTntSheepFuseTicks() {
+        return rushTntSheepFuseTicks;
+    }
+
+    public double rushTntSheepPower() {
+        return rushTntSheepPower;
+    }
+
+    /** Pathfinder speed multiplier of a walking TNT sheep. */
+    public double rushTntSheepSpeed() {
+        return rushTntSheepSpeed;
+    }
+
+    // ------------------------------------------------------------- rush bots
+
+    /** The ceiling the bots-per-team button cycles up to. */
+    public int rushBotsMaxPerTeam() {
+        return rushBotsMaxPerTeam;
+    }
+
+    /** Blocks from a defender bot at which it engages the player. */
+    public double rushBotsAggroRange() {
+        return rushBotsAggroRange;
+    }
+
+    /** Blocks from its post past which a defender breaks off and walks home. */
+    public double rushBotsLeashRange() {
+        return rushBotsLeashRange;
+    }
+
+    /** Ticks a killed defender stays down while its bed still stands. */
+    public int rushBotsRespawnTicks() {
+        return rushBotsRespawnTicks;
+    }
+
+    /** Ticks the player is held at their base after a defender kills them. */
+    public int rushBotsPlayerRespawnTicks() {
+        return rushBotsPlayerRespawnTicks;
+    }
+
+    /** Defender lineup competitive runs are pinned to; 0 = classic race. */
+    public int rushBotsCompetitivePerTeam() {
+        return rushBotsCompetitivePerTeam;
+    }
+
+    public String rushBotsCompetitiveDifficulty() {
+        return rushBotsCompetitiveDifficulty;
+    }
+
+    public me.beekrbonkr.practicecore.rush.RushSelection.BotArmor rushBotsCompetitiveArmor() {
+        return rushBotsCompetitiveArmor;
+    }
+
+    public me.beekrbonkr.practicecore.rush.RushSelection.BotSword rushBotsCompetitiveSword() {
+        return rushBotsCompetitiveSword;
     }
 
     // ------------------------------------------------------------------- mlg

@@ -186,6 +186,25 @@ public final class PvpBotMode implements Mode {
                 "hits", String.valueOf(fight.hitsLanded),
                 "taken", String.valueOf(fight.hitsTaken),
                 "combo", String.valueOf(fight.combo),
-                "best-combo", String.valueOf(fight.longestCombo));
+                "best-combo", String.valueOf(fight.longestCombo),
+                "accuracy", accuracy(fight),
+                "kd", kdRatio(fight),
+                "dodged", String.valueOf(Math.max(0, fight.botAttacks - fight.hitsTaken)));
+    }
+
+    /** Hits landed over swings thrown, as a percentage. */
+    private static String accuracy(BotFight fight) {
+        if (fight.playerSwings <= 0) {
+            return "0%";
+        }
+        return Math.round(fight.hitsLanded * 100.0 / fight.playerSwings) + "%";
+    }
+
+    /** Kills over deaths, one decimal; a deathless session shows the kills. */
+    private static String kdRatio(BotFight fight) {
+        if (fight.deaths == 0) {
+            return String.valueOf(fight.kills);
+        }
+        return String.format(Locale.ROOT, "%.1f", fight.kills / (double) fight.deaths);
     }
 }

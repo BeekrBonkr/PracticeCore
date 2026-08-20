@@ -10,11 +10,11 @@ import org.bukkit.entity.Player;
 
 /**
  * A rush arena keeps one leaderboard per objective — this small menu picks
- * which of the three to look at.
+ * which of them to look at.
  */
 public final class RushBoardPickerMenu extends Menu {
 
-    private static final int[] SLOTS = {11, 13, 15};
+    private static final int[] SLOTS = {10, 12, 14, 16};
 
     private final ArenaTemplate template;
 

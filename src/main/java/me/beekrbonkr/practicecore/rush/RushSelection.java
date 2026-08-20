@@ -6,15 +6,23 @@ import java.util.Locale;
 
 /**
  * Everything a player chose in the rush config menu: which base they start
- * from, the difficulty modifiers, and whether the run is <b>competitive</b> —
- * the fixed loadout (no starting items, defenses on, generators on) that is
- * the only way times are recorded and ranked. Immutable; the "with" methods
- * hand back an adjusted copy. Every objective is armed on every run — there
- * is nothing to pick about how it ends.
+ * from, the difficulty modifiers, the defender bots guarding enemy bases, and
+ * whether the run is <b>competitive</b> — the fixed loadout (no starting
+ * items, defenses on, generators on, bots pinned to the configured lineup)
+ * that is the only way times are recorded and ranked. Immutable; the "with"
+ * methods hand back an adjusted copy.
+ *
+ * With no bots, every objective the map supports is armed and whichever the
+ * player completes first ends the run. With bots ({@code bots() > 0}), the
+ * run becomes a combat run: only the team-wipe objective is armed, beds gate
+ * the defenders' respawns, and the emerald/diamond generators produce on a
+ * cycle like a real game instead of holding one objective item.
  */
 public record RushSelection(String team, BlockTier blocks,
                             CurrencyTier currency, PickaxeTier pickaxe,
                             DefensePreset defense, boolean baseGenerators,
+                            int bots, String botDifficulty,
+                            BotArmor botArmor, BotSword botSword,
                             boolean competitive) {
 
     /** Free building blocks in the starter kit. */
@@ -105,37 +113,109 @@ public record RushSelection(String team, BlockTier blocks,
         }
     }
 
+    /** What the defender bots wear. Leather is dyed the team's color. */
+    public enum BotArmor {
+        LEATHER("LEATHER"), CHAINMAIL("CHAINMAIL"), IRON("IRON"), DIAMOND("DIAMOND");
+
+        private final String prefix;
+
+        BotArmor(String prefix) {
+            this.prefix = prefix;
+        }
+
+        public Material piece(String slot) {
+            return Material.matchMaterial(prefix + "_" + slot);
+        }
+
+        public BotArmor next() {
+            return values()[(ordinal() + 1) % values().length];
+        }
+    }
+
+    /** What the defender bots swing. */
+    public enum BotSword {
+        WOODEN(Material.WOODEN_SWORD), STONE(Material.STONE_SWORD),
+        IRON(Material.IRON_SWORD), DIAMOND(Material.DIAMOND_SWORD);
+
+        private final Material item;
+
+        BotSword(Material item) {
+            this.item = item;
+        }
+
+        public Material item() {
+            return item;
+        }
+
+        public BotSword next() {
+            return values()[(ordinal() + 1) % values().length];
+        }
+    }
+
     public static RushSelection defaults() {
         return new RushSelection(null, BlockTier.NONE,
-                CurrencyTier.NONE, PickaxeTier.NONE, DefensePreset.NONE, true, false);
+                CurrencyTier.NONE, PickaxeTier.NONE, DefensePreset.NONE, true,
+                0, "", BotArmor.LEATHER, BotSword.WOODEN, false);
+    }
+
+    /** Whether this run fights defender bots instead of racing static objectives. */
+    public boolean combat() {
+        return bots > 0;
     }
 
     public RushSelection withTeam(String team) {
-        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators, competitive);
+        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+                bots, botDifficulty, botArmor, botSword, competitive);
     }
 
     public RushSelection withBlocks(BlockTier blocks) {
-        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators, competitive);
+        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+                bots, botDifficulty, botArmor, botSword, competitive);
     }
 
     public RushSelection withCurrency(CurrencyTier currency) {
-        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators, competitive);
+        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+                bots, botDifficulty, botArmor, botSword, competitive);
     }
 
     public RushSelection withPickaxe(PickaxeTier pickaxe) {
-        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators, competitive);
+        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+                bots, botDifficulty, botArmor, botSword, competitive);
     }
 
     public RushSelection withDefense(DefensePreset defense) {
-        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators, competitive);
+        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+                bots, botDifficulty, botArmor, botSword, competitive);
     }
 
     public RushSelection withBaseGenerators(boolean baseGenerators) {
-        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators, competitive);
+        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+                bots, botDifficulty, botArmor, botSword, competitive);
+    }
+
+    public RushSelection withBots(int bots) {
+        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+                Math.max(0, bots), botDifficulty, botArmor, botSword, competitive);
+    }
+
+    public RushSelection withBotDifficulty(String botDifficulty) {
+        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+                bots, botDifficulty == null ? "" : botDifficulty, botArmor, botSword, competitive);
+    }
+
+    public RushSelection withBotArmor(BotArmor botArmor) {
+        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+                bots, botDifficulty, botArmor, botSword, competitive);
+    }
+
+    public RushSelection withBotSword(BotSword botSword) {
+        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+                bots, botDifficulty, botArmor, botSword, competitive);
     }
 
     public RushSelection withCompetitive(boolean competitive) {
-        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators, competitive);
+        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+                bots, botDifficulty, botArmor, botSword, competitive);
     }
 
     static <E extends Enum<E>> E enumOr(Class<E> type, String name, E def) {

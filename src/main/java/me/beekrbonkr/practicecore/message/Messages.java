@@ -129,6 +129,37 @@ public final class Messages {
                 cfg.set("board.pvpbot-lines", updated);
             }
         }
+        if (from < 6) {
+            // v6 adds the session-stat lines (accuracy, K/D, dodged) to the
+            // PvP bot sidebar — spliced after the hits line, same reasoning
+            // as v5, unless the admin already shows them somewhere.
+            List<String> board = cfg.getStringList("board.pvpbot-lines");
+            if (!board.isEmpty() && board.stream().noneMatch(l -> l.contains("<accuracy>"))) {
+                List<String> updated = new ArrayList<>(board);
+                int hits = -1;
+                for (int i = 0; i < updated.size(); i++) {
+                    if (updated.get(i).contains("<taken>")) {
+                        hits = i;
+                    }
+                }
+                updated.add(hits < 0 ? updated.size() : hits + 1,
+                        "<gray>Accuracy: <white><accuracy> <dark_gray>• <gray>Dodged: <white><dodged>");
+                cfg.set("board.pvpbot-lines", updated);
+            }
+            // The K/D ratio joins the kills line when it is still the default.
+            List<String> refresh = cfg.getStringList("board.pvpbot-lines");
+            if (refresh.stream().noneMatch(l -> l.contains("<kd>"))) {
+                List<String> updated = new ArrayList<>(refresh);
+                for (int i = 0; i < updated.size(); i++) {
+                    if ("<gray>Kills: <green><kills> <dark_gray>/ <gray>Deaths: <red><deaths>"
+                            .equals(updated.get(i))) {
+                        updated.set(i, "<gray>Kills: <green><kills> <dark_gray>/ "
+                                + "<gray>Deaths: <red><deaths> <dark_gray>(K/D <white><kd><dark_gray>)");
+                    }
+                }
+                cfg.set("board.pvpbot-lines", updated);
+            }
+        }
     }
 
     private void index(FileConfiguration cfg) {
