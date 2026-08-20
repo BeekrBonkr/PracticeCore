@@ -39,6 +39,21 @@ public final class GuiConfig {
     /** Reshapes an older guis.yml. See {@link Versions#GUIS}. */
     private static void steps(org.bukkit.configuration.file.FileConfiguration cfg, int from) {
         // v0 → v1 is the first versioned layout; nothing moved.
+        if (from < 2) {
+            // v2 grows the rush menu to five rows so the defender-bot buttons
+            // fit. Only values still at their old shipped defaults move — an
+            // admin's own layout stands (and may need a manual look if the
+            // new buttons land outside their rows).
+            if (cfg.getInt("rush.rows", 4) == 4) {
+                cfg.set("rush.rows", 5);
+            }
+            if (cfg.getInt("rush.back.slot", 27) == 27) {
+                cfg.set("rush.back.slot", 36);
+            }
+            if (cfg.getInt("rush.close.slot", 35) == 35) {
+                cfg.set("rush.close.slot", 44);
+            }
+        }
     }
 
     // ------------------------------------------------------------- lookups

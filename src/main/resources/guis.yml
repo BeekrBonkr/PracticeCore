@@ -10,7 +10,7 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 1
+config-version: 2
 
 # The glass pane border drawn around every menu.
 filler:
@@ -56,12 +56,13 @@ settings:
     wool-color: {enabled: true, slot: 13}
     time: {enabled: true, slot: 15, material: CLOCK}
 
-# The rush pre-join menu: team base, difficulty modifiers, start. Every
-# objective is armed on every run, so there is nothing to pick about the goal.
+# The rush pre-join menu: team base, difficulty modifiers, defender bots,
+# start. With no bots every objective is armed on every run; with bots the run
+# becomes a combat run whose goal is the team wipe.
 rush:
-  rows: 4
-  back: {slot: 27}
-  close: {slot: 35}
+  rows: 5
+  back: {slot: 36}
+  close: {slot: 44}
   buttons:
     # The team button's icon always shows the selected team's wool.
     team: {slot: 11}
@@ -73,6 +74,13 @@ rush:
     pickaxe: {slot: 21, material: IRON_PICKAXE}
     defense: {slot: 22, material: END_STONE}
     generators: {slot: 23, material: FURNACE}
+    # Defender bots at enemy bases. The three lineup buttons only appear
+    # while the count is above zero; the armor and sword icons follow the
+    # selected tier.
+    bots: {slot: 28, material: ZOMBIE_HEAD}
+    bot-difficulty: {slot: 29, material: NETHER_STAR}
+    bot-armor: {slot: 30}
+    bot-sword: {slot: 31}
 
 # The PvP bot settings menu, opened by the in-arena settings item.
 # The kit and gear buttons' icons follow the current selection.
@@ -105,10 +113,18 @@ pvpbot-preview:
   back: {slot: 0}
   close: {slot: 8}
 
-# The mirrored MBedwars item shop opened at a rush dealer NPC. Page tabs sit
-# in the top row and the items fill the grid; only the close slot moves.
+# The mirrored MBedwars item shop opened at a rush dealer NPC, laid out like
+# the MBedwars HypixelV2 shop: Quick Buy first, page tabs beside it, a
+# separator row marking the open tab, and the items in the grid below.
 rushshop:
   close: {slot: 49}
+  # The Quick Buy tab's icon.
+  quickbuy: {material: NETHER_STAR}
+  # The separator row: the plain pane, and the pane under the open tab.
+  separator: GRAY_STAINED_GLASS_PANE
+  separator-selected: LIME_STAINED_GLASS_PANE
+  # An unfilled Quick Buy slot.
+  quickbuy-empty: RED_STAINED_GLASS_PANE
 
 # Arena categories. An arena's category is the folder its own folder sits in:
 # templates/<category>/<arena>/ is listed under <category>, and an arena

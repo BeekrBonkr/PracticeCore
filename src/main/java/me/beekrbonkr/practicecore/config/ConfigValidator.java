@@ -60,6 +60,10 @@ public final class ConfigValidator {
         constant(problems, cfg, "arenas.access-mode", PCConfig.AccessMode.class);
         constant(problems, cfg, "rush.competitive-defense",
                 me.beekrbonkr.practicecore.rush.RushSelection.DefensePreset.class);
+        constant(problems, cfg, "rush.bots.competitive.armor",
+                me.beekrbonkr.practicecore.rush.RushSelection.BotArmor.class);
+        constant(problems, cfg, "rush.bots.competitive.sword",
+                me.beekrbonkr.practicecore.rush.RushSelection.BotSword.class);
         constant(problems, cfg, "bedbreak.orientation", Orientation.class);
         profession(problems, cfg);
 
@@ -81,6 +85,12 @@ public final class ConfigValidator {
         atLeast(problems, cfg, "speedometer.update-ticks", 1);
         atLeast(problems, cfg, "spectate.update-ticks", 1);
         atLeast(problems, cfg, "mlg.min-drop", 2);
+        atLeast(problems, cfg, "rush.iron-interval-ticks", 1);
+        atLeast(problems, cfg, "rush.gold-interval-ticks", 1);
+        atLeast(problems, cfg, "rush.diamond-interval-ticks", 1);
+        atLeast(problems, cfg, "rush.emerald-interval-ticks", 1);
+        range(problems, cfg, "rush.bots.max-per-team", 0, 8);
+        range(problems, cfg, "rush.bots.competitive.per-team", 0, 8);
 
         // Cross-checks: each key can be fine on its own and still not fit
         // the other. These are the ones a per-key clamp cannot catch.

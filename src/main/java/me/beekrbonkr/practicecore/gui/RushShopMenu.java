@@ -15,18 +15,28 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The mirrored MBedwars item shop: page tabs across the top row, that page's
- * items below. Purchases are settled against the player's inventory — the
- * price items are removed, the products added — with no MBedwars game in
- * sight. Built from a {@link RushShopData} snapshot taken at open time.
+ * The mirrored MBedwars item shop, laid out the way its HypixelV2 layout is:
+ * a Quick Buy tab first and the shop pages after it across the top row, a
+ * separator row whose highlighted pane marks the open tab, and the page's
+ * items in the 7-wide grid below. Purchases are settled against the player's
+ * inventory — the price items removed, the products added — with no MBedwars
+ * game in sight.
+ *
+ * Quick Buy is the player's real MBedwars quick-buy list, read from and
+ * written back to their MBedwars profile: sneak-click any item to pin it into
+ * the first free slot, sneak-click a pinned item to clear it. Pins made here
+ * appear in real games and vice versa.
  */
 public final class RushShopMenu extends Menu {
 
-    /** First slot of the item grid (row 1); the grid runs to slot 44. */
-    private static final int GRID_START = 9;
-    private static final int GRID_SIZE = 36;
+    /** The 7-wide, 3-row item grid (columns 1-7 of rows 2-4). */
+    private static final int[] GRID = {
+            19, 20, 21, 22, 23, 24, 25,
+            28, 29, 30, 31, 32, 33, 34,
+            37, 38, 39, 40, 41, 42, 43};
 
     private final RushShopData shop;
+    /** 0 = Quick Buy; 1.. = shop.pages() index + 1. */
     private int page;
     /** One warning per open, not one per refresh — buying re-renders. */
     private boolean warnedTabCap;
@@ -50,58 +60,14 @@ public final class RushShopMenu extends Menu {
     @Override
     protected void render() {
         List<RushShopData.Page> pages = shop.pages();
-        page = Math.clamp(page, 0, pages.size() - 1);
+        page = Math.clamp(page, 0, pages.size());
 
-        if (pages.size() > 9 && !warnedTabCap) {
-            warnedTabCap = true;
-            plugin.getLogger().warning("The MBedwars shop has " + pages.size()
-                    + " pages; only the first 9 fit the tab row — the rest are hidden.");
-        }
-        for (int i = 0; i < Math.min(9, pages.size()); i++) {
-            RushShopData.Page tab = pages.get(i);
-            int index = i;
-            set(i, tabWithGlow(tab, i == page), event -> {
-                if (index == page) {
-                    return;
-                }
-                click();
-                page = index;
-                refresh();
-            });
-        }
-
-        RushShopData.Page current = shop.pages().get(page);
-        List<RushShopData.Entry> entries = current.entries();
-        if (entries.size() > GRID_SIZE && !warnedEntryCap) {
-            warnedEntryCap = true;
-            plugin.getLogger().warning("Shop page '" + current.name() + "' has "
-                    + entries.size() + " items; only the first " + GRID_SIZE
-                    + " fit the grid — the rest are hidden.");
-        }
-        // Entries pinned to a slot in the MBedwars GUI land on the same slot
-        // here; the rest flow into the remaining cells in order.
-        boolean[] taken = new boolean[GRID_SIZE];
-        List<RushShopData.Entry> flowing = new ArrayList<>();
-        for (RushShopData.Entry entry : entries) {
-            Integer slot = entry.forceSlot();
-            if (slot != null && slot >= GRID_START && slot < GRID_START + GRID_SIZE
-                    && !taken[slot - GRID_START]) {
-                taken[slot - GRID_START] = true;
-                set(slot, entryIcon(entry), event -> buy(entry));
-            } else {
-                flowing.add(entry);
-            }
-        }
-        int cell = 0;
-        for (RushShopData.Entry entry : flowing) {
-            while (cell < GRID_SIZE && taken[cell]) {
-                cell++;
-            }
-            if (cell >= GRID_SIZE) {
-                break;
-            }
-            taken[cell] = true;
-            set(GRID_START + cell, entryIcon(entry), event -> buy(entry));
+        renderTabs(pages);
+        renderSeparator();
+        if (page == 0) {
+            renderQuickBuy();
+        } else {
+            renderPage(pages.get(page - 1));
         }
 
         ItemStack filler = ItemBuilder.of(
@@ -114,11 +80,53 @@ public final class RushShopMenu extends Menu {
         closeButton(plugin.guis().slot("rushshop.close", 49));
     }
 
+    // ----------------------------------------------------------------- tabs
+
+    private void renderTabs(List<RushShopData.Page> pages) {
+        set(0, quickBuyTab(page == 0), event -> switchTo(0));
+        if (pages.size() > 8 && !warnedTabCap) {
+            warnedTabCap = true;
+            plugin.getLogger().warning("The MBedwars shop has " + pages.size()
+                    + " pages; only the first 8 fit beside Quick Buy — the rest are hidden.");
+        }
+        for (int i = 0; i < Math.min(8, pages.size()); i++) {
+            int index = i + 1;
+            set(index, tab(pages.get(i), page == index), event -> switchTo(index));
+        }
+    }
+
+    private void switchTo(int index) {
+        if (index == page) {
+            return;
+        }
+        click();
+        page = index;
+        refresh();
+    }
+
+    private ItemStack quickBuyTab(boolean selected) {
+        return ItemBuilder.of(plugin.guis()
+                        .buttonMaterial("rushshop.quickbuy", Material.NETHER_STAR))
+                .name(name("gui.rushshop.quickbuy.name"))
+                .lore(lore(selected ? "gui.rushshop.tab-selected" : "gui.rushshop.tab-lore"))
+                .glow(selected)
+                .build();
+    }
+
     /** The page's own icon with our tab hint appended, glowing when selected. */
-    private ItemStack tabWithGlow(RushShopData.Page tab, boolean selected) {
+    private ItemStack tab(RushShopData.Page tab, boolean selected) {
         ItemStack icon = tab.icon().clone();
         ItemMeta meta = icon.getItemMeta();
         if (meta != null) {
+            if (!meta.hasDisplayName() && tab.displayName() != null
+                    && !tab.displayName().isBlank()) {
+                // MBedwars display names carry legacy § color codes.
+                meta.displayName(net.kyori.adventure.text.serializer.legacy
+                        .LegacyComponentSerializer.legacySection()
+                        .deserialize(tab.displayName())
+                        .decoration(net.kyori.adventure.text.format
+                                .TextDecoration.ITALIC, false));
+            }
             List<Component> lines = new ArrayList<>(
                     meta.hasLore() && meta.lore() != null ? meta.lore() : List.of());
             lines.addAll(lore(selected ? "gui.rushshop.tab-selected" : "gui.rushshop.tab-lore"));
@@ -132,7 +140,89 @@ public final class RushShopMenu extends Menu {
         return icon;
     }
 
-    private ItemStack entryIcon(RushShopData.Entry entry) {
+    /** The MBedwars-style indicator row: green pane under the open tab. */
+    private void renderSeparator() {
+        ItemStack plain = ItemBuilder.of(plugin.guis()
+                        .material("rushshop.separator", Material.GRAY_STAINED_GLASS_PANE))
+                .name(Component.empty())
+                .build();
+        ItemStack marker = ItemBuilder.of(plugin.guis()
+                        .material("rushshop.separator-selected", Material.LIME_STAINED_GLASS_PANE))
+                .name(Component.empty())
+                .build();
+        for (int column = 0; column < 9; column++) {
+            set(9 + column, column == page ? marker : plain);
+        }
+    }
+
+    // ------------------------------------------------------------ quick buy
+
+    private void renderQuickBuy() {
+        List<String> pins = plugin.rush().quickBuyIds(viewer.getUniqueId());
+        ItemStack empty = ItemBuilder.of(plugin.guis()
+                        .material("rushshop.quickbuy-empty", Material.RED_STAINED_GLASS_PANE))
+                .name(name("gui.rushshop.quickbuy.empty-name"))
+                .lore(lore("gui.rushshop.quickbuy.empty-lore"))
+                .build();
+        for (int cell = 0; cell < GRID.length; cell++) {
+            RushShopData.Entry entry = cell < pins.size()
+                    ? shop.entryById(pins.get(cell)) : null;
+            if (entry == null) {
+                set(GRID[cell], empty);
+            } else {
+                set(GRID[cell], entryIcon(entry, true), event -> clickEntry(entry, event));
+            }
+        }
+    }
+
+    private void renderPage(RushShopData.Page current) {
+        List<RushShopData.Entry> entries = current.entries();
+        if (entries.size() > GRID.length && !warnedEntryCap) {
+            warnedEntryCap = true;
+            plugin.getLogger().warning("Shop page '" + current.name() + "' has "
+                    + entries.size() + " items; only the first " + GRID.length
+                    + " fit the grid — the rest are hidden.");
+        }
+        // Entries pinned to a slot in the MBedwars GUI land on the same slot
+        // here when it falls inside the grid; the rest flow in order.
+        boolean[] taken = new boolean[GRID.length];
+        List<RushShopData.Entry> flowing = new ArrayList<>();
+        for (RushShopData.Entry entry : entries) {
+            int cell = cellOf(entry.forceSlot());
+            if (cell >= 0 && !taken[cell]) {
+                taken[cell] = true;
+                set(GRID[cell], entryIcon(entry, false), event -> clickEntry(entry, event));
+            } else {
+                flowing.add(entry);
+            }
+        }
+        int cell = 0;
+        for (RushShopData.Entry entry : flowing) {
+            while (cell < GRID.length && taken[cell]) {
+                cell++;
+            }
+            if (cell >= GRID.length) {
+                break;
+            }
+            taken[cell] = true;
+            set(GRID[cell], entryIcon(entry, false), event -> clickEntry(entry, event));
+        }
+    }
+
+    /** The grid cell a forced MBedwars slot maps to, or -1 for none. */
+    private static int cellOf(Integer forceSlot) {
+        if (forceSlot == null) {
+            return -1;
+        }
+        for (int cell = 0; cell < GRID.length; cell++) {
+            if (GRID[cell] == forceSlot) {
+                return cell;
+            }
+        }
+        return -1;
+    }
+
+    private ItemStack entryIcon(RushShopData.Entry entry, boolean onQuickBuy) {
         ItemStack icon = entry.icon().clone();
         ItemMeta meta = icon.getItemMeta();
         if (meta != null) {
@@ -146,6 +236,13 @@ public final class RushShopMenu extends Menu {
             }
             lines.addAll(lore(affordable
                     ? "gui.rushshop.click-to-buy" : "gui.rushshop.cannot-afford"));
+            if (onQuickBuy) {
+                lines.addAll(lore("gui.rushshop.quickbuy.unpin-hint"));
+            } else if (plugin.rush().isQuickBuyPinned(viewer.getUniqueId(), entry.id())) {
+                lines.addAll(lore("gui.rushshop.quickbuy.pinned"));
+            } else {
+                lines.addAll(lore("gui.rushshop.quickbuy.pin-hint"));
+            }
             meta.lore(lines);
             icon.setItemMeta(meta);
         }
@@ -158,6 +255,35 @@ public final class RushShopMenu extends Menu {
     }
 
     // ------------------------------------------------------------- purchase
+
+    /** Sneak-click pins and unpins; a plain click buys — like MBedwars. */
+    private void clickEntry(RushShopData.Entry entry,
+                            org.bukkit.event.inventory.InventoryClickEvent event) {
+        if (event.isShiftClick()) {
+            togglePin(entry);
+            return;
+        }
+        buy(entry);
+    }
+
+    private void togglePin(RushShopData.Entry entry) {
+        if (plugin.rush().isQuickBuyPinned(viewer.getUniqueId(), entry.id())) {
+            if (plugin.rush().unpinQuickBuy(viewer, entry.id())) {
+                sound("rush.quickbuy-unpin");
+                plugin.messages().actionBar(viewer, "rush.quickbuy-unpinned");
+                refresh();
+            }
+            return;
+        }
+        if (plugin.rush().pinQuickBuy(viewer, entry.id())) {
+            sound("rush.quickbuy-pin");
+            plugin.messages().actionBar(viewer, "rush.quickbuy-pinned");
+            refresh();
+        } else {
+            deny();
+            plugin.messages().actionBar(viewer, "rush.quickbuy-full");
+        }
+    }
 
     private void buy(RushShopData.Entry entry) {
         if (plugin.sessions().get(viewer.getUniqueId()) == null) {

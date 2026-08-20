@@ -359,6 +359,11 @@ public final class PvpBotListener implements Listener {
         // Clicking counts as being at the keyboard, even standing still.
         BotSettings settings = fight.settings;
         fight.wake(plugin.botTuning().wakeGraceTicks(), plugin.botTuning().afkTicks());
+        // Every swing feeds the session's accuracy stat: hits landed over
+        // swings thrown, block breaks and all — swing discipline included.
+        if (!fight.playerDead() && !fight.botDead()) {
+            fight.playerSwings++;
+        }
         double dist = player.getEyeLocation().distance(fight.bot.getEyeLocation());
         if (dist > settings.knob("whiff-punish.detect-min", 3.4)
                 && dist < settings.knob("whiff-punish.detect-max", 8)) {

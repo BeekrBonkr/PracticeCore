@@ -46,13 +46,14 @@ public final class ProtectionListener implements Listener {
                 || !plugin.worldService().isPracticeWorld(player.getWorld())) {
             return;
         }
-        // PvP sparring is the one sanctioned damage source: the session's own
-        // bot and its projectiles go through — PvpBotListener intercepts any
-        // hit that would actually kill. Everything else keeps death
-        // structurally impossible; falls are handled by the movement fail
-        // check, not by void/fall damage.
+        // Bot sparring is the one sanctioned damage source: the session's own
+        // PvP bot (and its projectiles) or its rush defenders go through —
+        // the bot listeners intercept any hit that would actually kill.
+        // Everything else keeps death structurally impossible; falls are
+        // handled by the movement fail check, not by void/fall damage.
         PracticeSession session = plugin.sessions().get(player.getUniqueId());
-        if (session != null && plugin.pvpBot().allowsDamage(session, event)) {
+        if (session != null && (plugin.pvpBot().allowsDamage(session, event)
+                || plugin.rushBots().allowsDamage(session, event))) {
             return;
         }
         event.setCancelled(true);

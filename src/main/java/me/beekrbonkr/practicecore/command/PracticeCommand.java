@@ -129,33 +129,42 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
      * starts (or switches) watching, "leave" stops and restores.
      */
     private void spectate(CommandSender sender, String[] args) {
-        Player player = asPlayer(sender);
-        if (player == null) {
+        runSpectate(plugin, sender, args.length < 2 ? null : args[1]);
+    }
+
+    /**
+     * The spectate flow itself, shared with the standalone /spectate command:
+     * null opens the target picker, "leave"/"stop"/"off" stops watching, a
+     * name starts (or switches) watching that player.
+     */
+    public static void runSpectate(PracticeCorePlugin plugin, CommandSender sender, String arg) {
+        Messages msg = plugin.messages();
+        if (!(sender instanceof Player player)) {
+            msg.send(sender, "general.players-only");
             return;
         }
         if (!player.hasPermission("practicecore.spectate")) {
-            msg().send(player, "permission.spectate");
+            msg.send(player, "permission.spectate");
             return;
         }
         if (!plugin.pcConfig().spectateEnabled()) {
-            msg().send(player, "spectate.disabled");
+            msg.send(player, "spectate.disabled");
             return;
         }
-        if (args.length < 2) {
+        if (arg == null || arg.isBlank()) {
             new me.beekrbonkr.practicecore.gui.SpectateMenu(plugin, player, null).open();
             return;
         }
-        String arg = args[1];
         if (arg.equalsIgnoreCase("leave") || arg.equalsIgnoreCase("stop")
                 || arg.equalsIgnoreCase("off")) {
             if (!plugin.spectate().stopIntoDefaultArena(player, "spectate.stopped")) {
-                msg().send(player, "spectate.not-spectating");
+                msg.send(player, "spectate.not-spectating");
             }
             return;
         }
         Player target = Bukkit.getPlayerExact(arg);
         if (target == null) {
-            msg().send(player, "spectate.unknown-player", "player", arg);
+            msg.send(player, "spectate.unknown-player", "player", arg);
             return;
         }
         plugin.spectate().start(player, target);

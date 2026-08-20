@@ -165,6 +165,15 @@ public final class BotTuning {
         return file.number("bot.follow-range", 128.0, 16.0, 512.0);
     }
 
+    /**
+     * Blocks from which the server keeps bots (and their tags) rendered for
+     * clients — the practice world's entity tracking range. 0 leaves the
+     * server's own spigot.yml values alone.
+     */
+    public int trackingRange() {
+        return file.integer("bot.tracking-range", 96, 0, 512);
+    }
+
     /** Base melee damage before the held weapon's own attribute is added. */
     public double baseAttackDamage() {
         return file.number("bot.base-attack-damage", 1.0, 0.0, 20.0);

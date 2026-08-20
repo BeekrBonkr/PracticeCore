@@ -26,6 +26,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.BoundingBox;
 
@@ -191,7 +192,8 @@ public final class MBedwarsHook {
                 }
             }
             if (!entries.isEmpty()) {
-                pages.add(new RushShopData.Page(page.getName(), safeIcon(page.getIcon()), entries));
+                pages.add(new RushShopData.Page(page.getName(), page.getDisplayName(),
+                        safeIcon(page.getIcon()), entries));
             }
         }
         return new RushShopData(pages);
@@ -211,8 +213,78 @@ public final class MBedwarsHook {
         if (prices.isEmpty() || products.isEmpty()) {
             return null;
         }
-        return new RushShopData.Entry(safeIcon(item.getIcon()), item.getForceSlot(),
-                prices, products);
+        return new RushShopData.Entry(item.getId(), safeIcon(item.getIcon()),
+                item.getForceSlot(), prices, products);
+    }
+
+    // ------------------------------------------------------------- quick buy
+
+    /**
+     * The player's MBedwars HypixelV2 quick-buy pins, positional (null =
+     * empty slot), as shop-item ids the snapshot's entries carry too. Null
+     * while MBedwars has not loaded this player's properties yet — the
+     * async {@link #loadQuickBuy} path covers that.
+     */
+    public static List<String> quickBuyIds(Player player) {
+        var properties = BedwarsAPI.getPlayerDataAPI()
+                .getPropertiesCached(player.getUniqueId());
+        if (properties.isEmpty()) {
+            return null;
+        }
+        ShopItem[] items = properties.get().getShopHypixelV2QuickBuyItems();
+        List<String> ids = new ArrayList<>(items.length);
+        for (ShopItem item : items) {
+            ids.add(item == null ? null : item.getId());
+        }
+        return ids;
+    }
+
+    /**
+     * Requests the player's MBedwars properties (a possibly-async fetch) and
+     * hands the quick-buy ids to {@code callback} on the main thread.
+     */
+    public static void loadQuickBuy(org.bukkit.plugin.Plugin plugin, Player player,
+                                    java.util.function.Consumer<List<String>> callback) {
+        BedwarsAPI.getPlayerDataAPI().getProperties(player.getUniqueId(), properties -> {
+            ShopItem[] items = properties.getShopHypixelV2QuickBuyItems();
+            List<String> ids = new ArrayList<>(items.length);
+            for (ShopItem item : items) {
+                ids.add(item == null ? null : item.getId());
+            }
+            if (Bukkit.isPrimaryThread()) {
+                callback.accept(ids);
+            } else {
+                Bukkit.getScheduler().runTask(plugin, () -> callback.accept(ids));
+            }
+        });
+    }
+
+    /**
+     * Writes the quick-buy pins back into the player's MBedwars profile, so
+     * pinning here and pinning in a real game are the same list.
+     */
+    public static void saveQuickBuy(Player player, List<String> ids) {
+        var properties = BedwarsAPI.getPlayerDataAPI()
+                .getPropertiesCached(player.getUniqueId());
+        if (properties.isEmpty()) {
+            return; // never loaded — nothing sane to overwrite
+        }
+        ShopItem[] items = new ShopItem[ids.size()];
+        for (int i = 0; i < ids.size(); i++) {
+            items[i] = ids.get(i) == null ? null : shopItemById(ids.get(i));
+        }
+        properties.get().setShopHypixelV2QuickBuyItems(items);
+    }
+
+    private static ShopItem shopItemById(String id) {
+        for (ShopPage page : BedwarsAPI.getGameAPI().getShopPages()) {
+            for (ShopItem item : page.getItems()) {
+                if (item.getId().equals(id)) {
+                    return item;
+                }
+            }
+        }
+        return null;
     }
 
     private static Material priceMaterial(ShopPrice price) {
@@ -266,10 +338,15 @@ public final class MBedwarsHook {
             if (stack == null || stack.getType().isAir()) {
                 return List.of();
             }
+            // Ids normalized to lowercase: MBedwars spells them CamelCase
+            // ("Fireball", "RescuePlatform") and the use-time switch matches
+            // lowercase — the mismatch is what once made every special item
+            // land in the "unsupported" branch.
             return List.of(new RushShopData.Product(
                     stack.clone().asQuantity(Math.max(1, product.getAmount())),
                     product.isAutoWear(),
-                    special.getType() == null ? "plugin" : special.getType().getId()));
+                    special.getType() == null ? "plugin"
+                            : special.getType().getId().toLowerCase(Locale.ROOT)));
         }
         if (product instanceof ItemShopProduct itemProduct) {
             ItemStack[] stacks = itemProduct.getItemStacks();

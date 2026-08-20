@@ -16,7 +16,7 @@
 #   guis.yml     — menu layout: slots, icons, rows
 #   sounds.yml   — every sound cue
 #   pvpbot.yml   — the PvP bot's difficulty tuning and its kits
-config-version: 4
+config-version: 5
 
 world:
   # Name of the ephemeral practice world. Its folder is DELETED and recreated
@@ -165,8 +165,15 @@ spectate:
 # MBedwars installed; everything else here works without it.
 rush:
   # Ticks between drops at the player's base generators (20 ticks = 1s).
+  # Gold runs at 4× the iron interval: one gold for every four iron, the
+  # classic forge ratio.
   iron-interval-ticks: 25
-  gold-interval-ticks: 120
+  gold-interval-ticks: 100
+  # Combat runs only (defender bots enabled): the shared diamond and emerald
+  # generators produce on a cycle like a real game instead of holding one
+  # objective item. 600 = 30s diamonds, 1300 = 65s emeralds.
+  diamond-interval-ticks: 600
+  emerald-interval-ticks: 1300
   # Items lying on a generator before it pauses dropping more…
   generator-item-cap: 48
   # …and how close (in blocks) they must lie to count toward that cap.
@@ -202,6 +209,39 @@ rush:
     depth: 2
   # The villager profession shop dealers wear.
   dealer-profession: LIBRARIAN
+  # Ticks the shop's teleporter channels (stand still) before sending the
+  # player back to their base spawn. Moving a block cancels it, unconsumed.
+  teleporter-channel-ticks: 60
+  # The shop's TNT sheep: it walks toward the nearest enemy defender (or
+  # straight ahead with nobody to hunt) and detonates when the fuse runs out.
+  tnt-sheep:
+    fuse-ticks: 80
+    power: 2.5
+    speed: 1.2
+  # Defender bots at every enemy base. Count, difficulty and gear are chosen
+  # per player in the rush menu; these are the shared rules.
+  bots:
+    # The ceiling the bots-per-team button cycles up to (0-8).
+    max-per-team: 4
+    # Blocks from a defender at which it engages the player. Hitting a
+    # defender, or touching its team's bed or defenses, wakes it regardless.
+    aggro-range: 10
+    # Blocks from its post past which a defender breaks off the chase and
+    # walks home — defenders guard their base, they don't hunt across the map.
+    leash-range: 26
+    # Ticks a killed defender stays down before returning — while its bed
+    # still stands. A broken bed ends its respawns, exactly like a real game.
+    respawn-ticks: 100
+    # Ticks the player is held at their own base after a defender kills them.
+    player-respawn-ticks: 60
+    # The defender lineup competitive combat runs are pinned to, so the
+    # team-wipe leaderboard compares like with like. per-team 0 keeps
+    # competitive as the classic bot-free race.
+    competitive:
+      per-team: 0
+      difficulty: veteran
+      armor: IRON
+      sword: IRON
 
 # MLG water-bucket practice. These are the server-wide defaults; any arena's
 # own settings.mlg in its arena.yml overrides the keys it names.

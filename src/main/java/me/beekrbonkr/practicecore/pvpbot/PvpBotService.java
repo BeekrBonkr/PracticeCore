@@ -105,6 +105,15 @@ public final class PvpBotService {
         }
     }
 
+    /**
+     * The shared packet-level player-model disguise, or null without
+     * ProtocolLib. The rush defender bots ride the same instance, so one
+     * packet listener serves every disguised entity.
+     */
+    public PlayerDisguise disguise() {
+        return disguise;
+    }
+
     public static BotFight fightOf(PracticeSession session) {
         return session != null && session.mode() instanceof PvpBotMode
                 && session.modeState() instanceof BotFight fight ? fight : null;
@@ -333,6 +342,7 @@ public final class PvpBotService {
         // player's inventory out from under them.
         boolean kitChanged = !sameKit(fresh.kit(), fight.settings.kit());
         boolean gearChanged = kitChanged || fresh.gear() != fight.settings.gear();
+        boolean anyChanged = kitChanged || gearChanged || !sameKnobs(fresh, fight.settings);
         if (kitChanged) {
             captureLayout(player, fight); // the outgoing kit's arrangement
         }
@@ -345,10 +355,29 @@ public final class PvpBotService {
         if (gearChanged) {
             equipBot(fight);
         }
+        if (anyChanged) {
+            // Session stats describe one opponent. The opponent just changed,
+            // so the numbers start over — and the player is told why.
+            fight.resetSessionStats();
+            plugin.messages().send(player, "pvpbot.chat.stats-reset");
+        }
     }
 
     private static boolean sameKit(PvpKit a, PvpKit b) {
         return a == null ? b == null : b != null && a.id().equals(b.id());
+    }
+
+    /** Whether every AI knob and arsenal toggle is unchanged. */
+    private static boolean sameKnobs(BotSettings a, BotSettings b) {
+        return a.evasiveness() == b.evasiveness()
+                && a.cps() == b.cps()
+                && a.accuracy() == b.accuracy()
+                && a.combos() == b.combos()
+                && a.reach() == b.reach()
+                && a.aggression() == b.aggression()
+                && a.rod() == b.rod()
+                && a.bow() == b.bow()
+                && a.block() == b.block();
     }
 
     // ----------------------------------------------------------- kit layout
@@ -416,24 +445,35 @@ public final class PvpBotService {
 
     /**
      * The player would have died — no death screen, just a lost stock and a
-     * 3-second "dead" hold: the body stays pinned where it fell, blind and
-     * untouchable, under the death title counting the respawn down. The
-     * spawn teleport <em>is</em> the respawn, so it lands when the timer runs
-     * out, together with the heal, the fresh kit and the bot's own reset.
+     * 3-second "dead" hold. Both fighters are sent home the moment the death
+     * lands: the player waits out the hold at their own spawn, blind and
+     * untouchable under the countdown title, and the bot walks off the kill
+     * by being put straight back on its mark. The heal, fresh kit and stock
+     * reset land when the timer runs out.
      */
     public void playerDied(Player player, PracticeSession session, BotFight fight) {
         if (fight.playerDead()) {
-            // Already dead — a stumble off the edge mid-hold. Put the body
-            // back on its anchor; the running countdown carries on.
+            // Already dead — a stumble mid-hold. Back onto the spawn anchor;
+            // the running countdown carries on.
             holdAtAnchor(player, fight);
             return;
         }
         fight.deaths++;
-        plugin.messages().send(player, "pvpbot.chat.bot-killed-player", "hearts",
-                healthPoints(fight.bot != null && fight.bot.isValid() ? fight.bot.getHealth() : 0));
+        String botHearts = healthPoints(
+                fight.bot != null && fight.bot.isValid() ? fight.bot.getHealth() : 0);
+        plugin.messages().send(player, "pvpbot.chat.bot-killed-player", "hearts", botHearts);
+        // Spectators get the round's result too — who fell, and how much
+        // health the victor had left.
+        for (Player watcher : plugin.spectate().watchersOf(session.playerId())) {
+            plugin.messages().send(watcher, "pvpbot.chat.spectator-bot-killed",
+                    "player", player.getName(), "hearts", botHearts);
+        }
         plugin.sounds().play(player, "pvpbot.player-death");
-        fight.deathAnchor = anchorFor(player, session, fight);
+        // Both fighters teleport home immediately — the death is where the
+        // round ends, not three seconds later.
+        fight.deathAnchor = fight.playerSpawn;
         holdAtAnchor(player, fight);
+        sendBotHome(fight);
         int hold = tuning().respawnTicks();
         fight.playerRespawnTicks = hold;
         // A shade longer than the hold so they never flicker out early; the
@@ -448,19 +488,18 @@ public final class PvpBotService {
         sendDeathCountdown(player, secondsLeft(hold));
     }
 
-    /**
-     * Where the body waits out the hold: exactly where it fell, unless the
-     * fall itself was the death — a ring-out leaves no ground to stand on, so
-     * the spawn is the only place to hold.
-     */
-    private Location anchorFor(Player player, PracticeSession session, BotFight fight) {
-        Location loc = player.getLocation();
-        if (loc.getWorld() != fight.playerSpawn.getWorld()
-                || !session.containsBlock(loc)
-                || loc.getY() < session.bounds().getMinY() + plugin.pcConfig().failYOffset() + 1) {
-            return fight.playerSpawn;
+    /** Puts the (victorious) bot straight back on its spawn mark. */
+    private void sendBotHome(BotFight fight) {
+        if (fight.bot == null || !fight.bot.isValid()) {
+            return;
         }
-        return loc;
+        fight.bot.getPathfinder().stopPathfinding();
+        fight.bot.teleport(fight.botSpawn);
+        fight.bot.setVelocity(new Vector(0, 0, 0));
+        fight.bot.setFallDistance(0);
+        if (fight.nameTag != null && fight.nameTag.isValid()) {
+            fight.nameTag.teleport(tagLocation(fight.bot));
+        }
     }
 
     /** Pins the corpse: no drifting, no falling, no walking it off the arena. */
@@ -486,23 +525,29 @@ public final class PvpBotService {
 
     /**
      * The bot dropped — a kill on the board, and its body is gone for the
-     * 3-second respawn timer, counted down above the player's hotbar.
+     * 3-second respawn timer, counted down above the player's hotbar. The
+     * winner is sent back to their own spawn immediately, so a kill can never
+     * become a spawn camp.
      */
     public void botDied(Player player, PracticeSession session, BotFight fight) {
         if (fight.botDead()) {
             return;
         }
         fight.kills++;
+        String playerHearts = healthPoints(player.getHealth());
         plugin.messages().title(player, "pvpbot.title.kill", "pvpbot.title.kill-sub",
                 "kills", String.valueOf(fight.kills),
                 "deaths", String.valueOf(fight.deaths));
         plugin.messages().send(player, "pvpbot.chat.player-killed-bot",
-                "hearts", healthPoints(player.getHealth()));
+                "hearts", playerHearts);
+        for (Player watcher : plugin.spectate().watchersOf(session.playerId())) {
+            plugin.messages().send(watcher, "pvpbot.chat.spectator-player-killed",
+                    "player", player.getName(), "hearts", playerHearts);
+        }
         plugin.sounds().play(player, "pvpbot.bot-death");
-        // Health and kit refresh in place; the bot's body disappears until the
-        // timer brings it back at its spawn — and the winner goes back to
-        // their own spawn with it, so a kill can never become a spawn camp.
-        resetStock(player, session, fight, false);
+        // Health, kit and spawn teleport land now; the bot's body disappears
+        // until the timer brings it back at its own mark.
+        resetStock(player, session, fight, true);
         despawn(fight);
         fight.botRespawnTicks = tuning().respawnTicks();
         plugin.messages().actionBar(player, "pvpbot.respawn-bar",
@@ -643,12 +688,9 @@ public final class PvpBotService {
         if (fight.botDead()) {
             fight.botRespawnTicks--;
             if (fight.botRespawnTicks == 0) {
+                // The winner already went home the moment the kill landed —
+                // only the body needs to come back.
                 spawnBot(session, fight);
-                // Both fighters open the new round on their own spawn: the
-                // winner is put back at the same moment the body returns.
-                if (!fight.playerDead()) {
-                    plugin.sessions().teleportInternal(player, fight.playerSpawn);
-                }
                 fight.graceTicks = Math.max(fight.graceTicks, tuning().shortGraceTicks());
                 plugin.sounds().play(player, "pvpbot.bot-respawn", fight.botSpawn);
             } else if (fight.botRespawnTicks % 20 == 0) {
@@ -746,6 +788,7 @@ public final class PvpBotService {
                     } else {
                         fight.attackCooldown = settings.attackIntervalTicks()
                                 + (settings.chance("attack-jitter-chance", 0.4) ? 1 : 0);
+                        fight.botAttacks++;
                         if (chance(settings.hitChance())) {
                             strike(bot, player);
                         } else {
@@ -941,6 +984,7 @@ public final class PvpBotService {
             if (fight.critTicks < 0
                     && eyeDist <= s.reachBlocks() + s.knob("jump-crit.window", 0.5)) {
                 fight.critBonusNextHit = true;
+                fight.botAttacks++;
                 strike(bot, player);
             }
         }
@@ -1197,6 +1241,7 @@ public final class PvpBotService {
         } else if (mayHit) {
             fight.attackCooldown = s.attackIntervalTicks()
                     + (s.chance("attack-jitter-chance", 0.4) ? 1 : 0);
+            fight.botAttacks++;
             boolean airPunish = s.cerebral() && !playerOnGround
                     && player.getVelocity().getY() < 0;
             if (!airPunish && !chance(s.hitChance())) {

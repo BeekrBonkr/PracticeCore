@@ -56,6 +56,13 @@ public final class RushService {
     public RushSelection rawSelection(UUID player, ArenaTemplate template, RushMapData data) {
         var stats = plugin.stats();
         RushSelection defaults = RushSelection.defaults();
+        int maxBots = plugin.pcConfig().rushBotsMaxPerTeam();
+        int bots = 0;
+        try {
+            bots = Math.clamp(Integer.parseInt(
+                    stats.pref(player, "rush.bots", "0")), 0, maxBots);
+        } catch (NumberFormatException ignored) {
+        }
         RushSelection selection = new RushSelection(
                 stats.pref(player, "rush.team." + template.name(), null),
                 RushSelection.enumOr(RushSelection.BlockTier.class,
@@ -68,6 +75,12 @@ public final class RushService {
                         stats.pref(player, "rush.defense", null), defaults.defense()),
                 stats.prefBool(player, "rush.base-generators",
                         plugin.pcConfig().rushBaseGeneratorsDefault()),
+                bots,
+                stats.pref(player, "rush.bot-difficulty", defaults.botDifficulty()),
+                RushSelection.enumOr(RushSelection.BotArmor.class,
+                        stats.pref(player, "rush.bot-armor", null), defaults.botArmor()),
+                RushSelection.enumOr(RushSelection.BotSword.class,
+                        stats.pref(player, "rush.bot-sword", null), defaults.botSword()),
                 stats.prefBool(player, "rush.competitive", false));
 
         if (data.team(selection.team()) == null || !data.team(selection.team()).playable()) {
@@ -80,20 +93,26 @@ public final class RushService {
     /**
      * The gameplay-effective selection: competitive mode pins the loadout
      * everyone races under — no starting items, defenses at the configured
-     * preset, base generators running — so its leaderboards compare like with
-     * like. The player's stored casual modifiers survive untouched underneath.
+     * preset, base generators running, defender bots at the configured lineup
+     * — so its leaderboards compare like with like. The player's stored
+     * casual modifiers survive untouched underneath.
      */
     public RushSelection selection(UUID player, ArenaTemplate template, RushMapData data) {
         RushSelection selection = rawSelection(player, template, data);
         if (!selection.competitive()) {
             return selection;
         }
+        var config = plugin.pcConfig();
         return selection
                 .withBlocks(RushSelection.BlockTier.NONE)
                 .withCurrency(RushSelection.CurrencyTier.NONE)
                 .withPickaxe(RushSelection.PickaxeTier.NONE)
-                .withDefense(plugin.pcConfig().rushCompetitiveDefense())
-                .withBaseGenerators(true);
+                .withDefense(config.rushCompetitiveDefense())
+                .withBaseGenerators(true)
+                .withBots(config.rushBotsCompetitivePerTeam())
+                .withBotDifficulty(config.rushBotsCompetitiveDifficulty())
+                .withBotArmor(config.rushBotsCompetitiveArmor())
+                .withBotSword(config.rushBotsCompetitiveSword());
     }
 
     /** Whether the player's next rush run is competitive. Set by the menu buttons. */
@@ -101,21 +120,25 @@ public final class RushService {
         plugin.stats().setPref(player, "rush.competitive", competitive);
     }
 
-    /** Persists everything but the team, which is remembered per arena. One write, not five. */
+    /** Persists everything but the team, which is remembered per arena. One write, not nine. */
     public void saveSelection(UUID player, RushSelection selection) {
         plugin.stats().setPrefs(player, java.util.Map.of(
                 "rush.blocks", selection.blocks().name(),
                 "rush.currency", selection.currency().name(),
                 "rush.pickaxe", selection.pickaxe().name(),
                 "rush.defense", selection.defense().name(),
-                "rush.base-generators", selection.baseGenerators()));
+                "rush.base-generators", selection.baseGenerators(),
+                "rush.bots", selection.bots(),
+                "rush.bot-difficulty", selection.botDifficulty(),
+                "rush.bot-armor", selection.botArmor().name(),
+                "rush.bot-sword", selection.botSword().name()));
     }
 
     public void saveTeam(UUID player, ArenaTemplate template, String team) {
         plugin.stats().setPref(player, "rush.team." + template.name(), team);
     }
 
-    /** The objectives this map can actually arm, in board order. */
+    /** The objectives this map can arm for a bot-free race, in board order. */
     public List<RushObjective> supportedObjectives(RushMapData data) {
         List<RushObjective> supported = new ArrayList<>();
         if (data.playableTeams().size() >= 2) {
@@ -128,6 +151,18 @@ public final class RushService {
             supported.add(RushObjective.DIAMOND);
         }
         return supported;
+    }
+
+    /**
+     * The objectives a run under this selection actually arms. Combat runs
+     * (defender bots enabled) arm only the team wipe — beds gate respawns
+     * and generator pickups are just resources, exactly like a real game.
+     */
+    public List<RushObjective> supportedObjectives(RushMapData data, RushSelection selection) {
+        if (selection != null && selection.combat() && data.playableTeams().size() >= 2) {
+            return List.of(RushObjective.TEAM_WIPE);
+        }
+        return supportedObjectives(data);
     }
 
     // ---------------------------------------------------------- stats keys
@@ -330,6 +365,186 @@ public final class RushService {
         return built;
     }
 
+    // ------------------------------------------------- more special items
+
+    /** Live teleporter channels; value = the countdown task. */
+    private final java.util.Map<UUID, BukkitTask> teleporterChannels = new java.util.HashMap<>();
+
+    /**
+     * The MBedwars teleporter: stand still while it channels, then snap back
+     * to your base spawn. Moving a block cancels it and keeps the item; the
+     * one that fires is consumed by the caller-supplied hook.
+     */
+    public void startTeleporter(Player player, PracticeSession session, Runnable consume) {
+        UUID id = player.getUniqueId();
+        cancelTeleporter(id);
+        int total = plugin.pcConfig().rushTeleporterChannelTicks();
+        Location start = player.getLocation();
+        plugin.sounds().play(player, "rush.teleporter-start");
+        BukkitTask[] task = new BukkitTask[1];
+        int[] left = {total};
+        task[0] = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (!player.isOnline() || plugin.sessions().get(id) != session
+                    || (session.state() != SessionState.ACTIVE
+                        && session.state() != SessionState.READY)) {
+                cancelTeleporter(id);
+                return;
+            }
+            if (player.getLocation().getBlockX() != start.getBlockX()
+                    || player.getLocation().getBlockY() != start.getBlockY()
+                    || player.getLocation().getBlockZ() != start.getBlockZ()) {
+                cancelTeleporter(id);
+                plugin.messages().actionBar(player, "rush.teleporter-cancelled");
+                return;
+            }
+            left[0] -= 5;
+            if (left[0] > 0) {
+                plugin.messages().actionBar(player, "rush.teleporter-channel",
+                        "seconds", String.format(java.util.Locale.ROOT, "%.1f", left[0] / 20.0));
+                return;
+            }
+            cancelTeleporter(id);
+            consume.run();
+            plugin.sessions().teleportInternal(player, session.spawn());
+            plugin.sounds().play(player, "rush.teleporter");
+            plugin.messages().actionBar(player, "rush.teleporter-done");
+        }, 5L, 5L);
+        teleporterChannels.put(id, task[0]);
+    }
+
+    private void cancelTeleporter(UUID player) {
+        BukkitTask task = teleporterChannels.remove(player);
+        if (task != null) {
+            task.cancel();
+        }
+    }
+
+    /**
+     * The tracker: points the player at the nearest living defender bot, or
+     * at the nearest standing enemy bed when nothing is alive to hunt. The
+     * compass in hand starts pointing there too.
+     *
+     * @return false when there is nothing to track on this run
+     */
+    public boolean useTracker(Player player, PracticeSession session) {
+        RushState state = session.modeState() instanceof RushState s ? s : null;
+        if (state == null) {
+            return false;
+        }
+        Location target = null;
+        String label = null;
+        var bot = plugin.rushBots().nearestBot(session, player.getLocation());
+        if (bot != null) {
+            target = bot.entity().getLocation();
+            label = me.beekrbonkr.practicecore.mode.RushMode.prettyTeam(bot.team());
+        } else {
+            double best = Double.MAX_VALUE;
+            for (RushState.TargetBed bed : state.enemyBeds()) {
+                if (state.isBedBroken(bed.team())) {
+                    continue;
+                }
+                double distance = bed.head().distanceSquared(player.getLocation());
+                if (distance < best) {
+                    best = distance;
+                    target = bed.head();
+                    label = me.beekrbonkr.practicecore.mode.RushMode.prettyTeam(bed.team());
+                }
+            }
+        }
+        if (target == null) {
+            return false;
+        }
+        player.setCompassTarget(target);
+        plugin.messages().actionBar(player, "rush.tracker",
+                "team", label,
+                "distance", String.valueOf(
+                        (int) Math.round(target.distance(player.getLocation()))));
+        plugin.sounds().play(player, "rush.tracker");
+        return true;
+    }
+
+    /**
+     * The TNT sheep: waddles toward the nearest enemy defender (or straight
+     * ahead with nobody to hunt) and detonates when the fuse runs out. The
+     * explosion goes through the same listener as TNT and fireballs, so it
+     * breaks placed blocks and defenses, never the map.
+     */
+    public void spawnTntSheep(Player player, PracticeSession session) {
+        Location loc = player.getLocation().add(player.getLocation()
+                .getDirection().setY(0).normalize().multiply(1.2));
+        if (!session.containsBlock(loc)) {
+            loc = player.getLocation();
+        }
+        int fuse = plugin.pcConfig().rushTntSheepFuseTicks();
+        double power = plugin.pcConfig().rushTntSheepPower();
+        double speed = plugin.pcConfig().rushTntSheepSpeed();
+        org.bukkit.entity.Sheep sheep = loc.getWorld().spawn(loc,
+                org.bukkit.entity.Sheep.class, s -> {
+                    s.setColor(org.bukkit.DyeColor.RED);
+                    s.setGlowing(true);
+                    s.setPersistent(false);
+                    s.setRemoveWhenFarAway(false);
+                });
+        Bukkit.getMobGoals().removeAllGoals(sheep);
+        plugin.sounds().playAt(loc, "rush.tnt-sheep");
+        BukkitTask[] walker = new BukkitTask[1];
+        long spawnedAt = sheep.getTicksLived();
+        walker[0] = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (!sheep.isValid() || plugin.sessions().get(player.getUniqueId()) != session) {
+                sheep.remove();
+                walker[0].cancel();
+                return;
+            }
+            if (sheep.getTicksLived() - spawnedAt >= fuse) {
+                walker[0].cancel();
+                Location at = sheep.getLocation();
+                sheep.remove();
+                at.getWorld().createExplosion(player, at, (float) power, false, true);
+                return;
+            }
+            var bot = plugin.rushBots().nearestBot(session, sheep.getLocation());
+            if (bot != null) {
+                sheep.getPathfinder().moveTo(bot.entity(), speed);
+            } else if (!sheep.getPathfinder().hasPath()) {
+                Location ahead = sheep.getLocation().add(
+                        player.getLocation().getDirection().setY(0).normalize().multiply(6));
+                sheep.getPathfinder().moveTo(ahead, speed);
+            }
+        }, 4L, 4L);
+    }
+
+    /**
+     * The guard dog: a wolf loyal to the player. Vanilla tame behavior does
+     * the rest — it follows, retaliates for its owner, and joins any fight
+     * the owner starts; the sweep below also points it at nearby defenders
+     * on its own. Wiped by the arena reset like every other entity.
+     */
+    public void spawnGuardDog(Player player, PracticeSession session) {
+        org.bukkit.entity.Wolf wolf = player.getWorld().spawn(player.getLocation(),
+                org.bukkit.entity.Wolf.class, w -> {
+                    w.setOwner(player);
+                    w.setTamed(true);
+                    w.setPersistent(false);
+                    w.setRemoveWhenFarAway(false);
+                    w.setCanPickupItems(false);
+                });
+        plugin.sounds().playAt(player.getLocation(), "rush.guard-dog");
+        BukkitTask[] sweep = new BukkitTask[1];
+        sweep[0] = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (!wolf.isValid() || plugin.sessions().get(player.getUniqueId()) != session) {
+                sweep[0].cancel();
+                return;
+            }
+            if (wolf.getTarget() == null || !wolf.getTarget().isValid()) {
+                var bot = plugin.rushBots().nearestBot(session, wolf.getLocation());
+                if (bot != null && bot.entity().getLocation()
+                        .distanceSquared(wolf.getLocation()) < 12 * 12) {
+                    wolf.setTarget(bot.entity());
+                }
+            }
+        }, 20L, 20L);
+    }
+
     /** Places one tracked block if the spot is in-bounds air. */
     private boolean placeTracked(PracticeSession session, org.bukkit.block.Block block,
                                  Material material) {
@@ -390,6 +605,8 @@ public final class RushService {
 
     /** Snapshot of the MBedwars shop; its config is static at runtime, so one walk serves every open. */
     private RushShopData shopCache;
+    /** Per-player quick-buy pins, mirrored from the MBedwars profile. */
+    private final java.util.Map<UUID, List<String>> quickBuy = new java.util.HashMap<>();
 
     /** Opens the mirrored MBedwars shop, or explains why it can't. */
     public void openShop(Player player) {
@@ -403,6 +620,7 @@ public final class RushService {
                 shopCache = MBedwarsHook.shopSnapshot();
             }
             shop = shopCache;
+            primeQuickBuy(player);
         } catch (LinkageError e) {
             // available() only proves MBedwars is enabled, not that this build
             // still has every class and method the hook links against.
@@ -416,6 +634,93 @@ public final class RushService {
         }
         plugin.sounds().play(player, "rush.shop-open");
         new me.beekrbonkr.practicecore.gui.RushShopMenu(plugin, player, shop).open();
+    }
+
+    /**
+     * Makes sure the player's MBedwars quick-buy pins are in the local
+     * mirror. Usually they are cached and land synchronously; a cold profile
+     * loads async and refreshes any shop menu still open when it arrives.
+     */
+    private void primeQuickBuy(Player player) {
+        if (quickBuy.containsKey(player.getUniqueId())) {
+            return;
+        }
+        List<String> cached = MBedwarsHook.quickBuyIds(player);
+        if (cached != null) {
+            quickBuy.put(player.getUniqueId(), new ArrayList<>(cached));
+            return;
+        }
+        MBedwarsHook.loadQuickBuy(plugin, player, ids -> {
+            quickBuy.put(player.getUniqueId(), new ArrayList<>(ids));
+            if (player.isOnline() && player.getOpenInventory().getTopInventory()
+                    .getHolder() instanceof me.beekrbonkr.practicecore.gui.RushShopMenu menu) {
+                menu.refresh();
+            }
+        });
+    }
+
+    /**
+     * The player's quick-buy pins, positional (null = empty slot). Empty
+     * while the MBedwars profile is still loading.
+     */
+    public List<String> quickBuyIds(UUID player) {
+        List<String> ids = quickBuy.get(player);
+        return ids == null ? List.of() : List.copyOf(ids);
+    }
+
+    /**
+     * Pins an item into the first free quick-buy slot, both here and in the
+     * player's MBedwars profile.
+     *
+     * @return false when every slot is taken or the profile is not loaded yet
+     */
+    /** The Hypixel-style quick-buy grid: 3 rows of 7. */
+    private static final int QUICK_BUY_SLOTS = 21;
+
+    public boolean pinQuickBuy(Player player, String itemId) {
+        List<String> ids = quickBuy.get(player.getUniqueId());
+        if (ids == null || ids.contains(itemId)) {
+            return false;
+        }
+        int free = ids.indexOf(null);
+        if (free >= 0) {
+            ids.set(free, itemId);
+        } else if (ids.size() < QUICK_BUY_SLOTS) {
+            // A fresh profile hands back a short (even empty) array — grow it.
+            ids.add(itemId);
+        } else {
+            return false;
+        }
+        writeQuickBuy(player, ids);
+        return true;
+    }
+
+    /** Unpins an item from the quick-buy page, mirrored back to MBedwars. */
+    public boolean unpinQuickBuy(Player player, String itemId) {
+        List<String> ids = quickBuy.get(player.getUniqueId());
+        if (ids == null || !ids.contains(itemId)) {
+            return false;
+        }
+        ids.set(ids.indexOf(itemId), null);
+        writeQuickBuy(player, ids);
+        return true;
+    }
+
+    public boolean isQuickBuyPinned(UUID player, String itemId) {
+        List<String> ids = quickBuy.get(player);
+        return ids != null && ids.contains(itemId);
+    }
+
+    private void writeQuickBuy(Player player, List<String> ids) {
+        try {
+            MBedwarsHook.saveQuickBuy(player, ids);
+        } catch (LinkageError e) {
+            plugin.getLogger().severe("Could not write quick-buy pins to MBedwars: " + e);
+        }
+    }
+
+    public void forgetQuickBuy(UUID player) {
+        quickBuy.remove(player);
     }
 
     // ----------------------------------------------------- generator ticking
@@ -435,6 +740,10 @@ public final class RushService {
             task.cancel();
             task = null;
         }
+        for (BukkitTask channel : List.copyOf(teleporterChannels.values())) {
+            channel.cancel();
+        }
+        teleporterChannels.clear();
         shopCache = null; // /practice reload may follow an MBedwars shop edit
     }
 
@@ -459,7 +768,7 @@ public final class RushService {
                 if (nearbyDrops(generator.dropSpot(), generator.drops())
                         < plugin.pcConfig().rushGeneratorItemCap()) {
                     dropTracked(generator.dropSpot(), new ItemStack(generator.drops()),
-                            generator.drops() == Material.IRON_INGOT ? "iron" : "gold", false);
+                            generator.type(), false);
                 }
             }
         }

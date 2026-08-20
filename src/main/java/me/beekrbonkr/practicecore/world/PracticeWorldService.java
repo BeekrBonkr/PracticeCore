@@ -89,6 +89,9 @@ public final class PracticeWorldService {
         // to exist. Natural spawning stays off via doMobSpawning; only
         // plugin-spawned entities (bots, dealers) ever appear.
         world.setDifficulty(difficulty());
+        // Bots must render from across the arena, not pop in at the stock
+        // 48-block monster tracking range (bot.tracking-range in pvpbot.yml).
+        EntityTrackingRange.apply(plugin, world, plugin.botTuning().trackingRange());
     }
 
     /**

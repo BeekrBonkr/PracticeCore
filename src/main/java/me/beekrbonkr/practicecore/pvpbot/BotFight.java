@@ -25,6 +25,10 @@ public final class BotFight {
     public int longestCombo;
     public int kills;
     public int deaths;
+    /** Player arm swings while the fight is live — the accuracy denominator. */
+    public int playerSwings;
+    /** Bot attack attempts in reach — what "hits dodged" is measured against. */
+    public int botAttacks;
 
     // ----------------------------------------------------------- AI memory
     /** Settings GUI open — the bot stands still and holds fire. */
@@ -187,6 +191,22 @@ public final class BotFight {
         hitsLanded++;
         combo++;
         longestCombo = Math.max(longestCombo, combo);
+    }
+
+    /**
+     * Wipes the session stats. Called when the bot's difficulty or settings
+     * change — numbers earned against one opponent must not blend into the
+     * record of another.
+     */
+    public void resetSessionStats() {
+        hitsLanded = 0;
+        hitsTaken = 0;
+        combo = 0;
+        longestCombo = 0;
+        kills = 0;
+        deaths = 0;
+        playerSwings = 0;
+        botAttacks = 0;
     }
 
     public void countHitTaken(int window) {
