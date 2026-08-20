@@ -661,11 +661,13 @@ public final class RushService {
 
     /**
      * The player's quick-buy pins, positional (null = empty slot). Empty
-     * while the MBedwars profile is still loading.
+     * while the MBedwars profile is still loading. Copied null-tolerantly —
+     * List.copyOf refuses the nulls that ARE the empty slots.
      */
     public List<String> quickBuyIds(UUID player) {
         List<String> ids = quickBuy.get(player);
-        return ids == null ? List.of() : List.copyOf(ids);
+        return ids == null ? List.of()
+                : java.util.Collections.unmodifiableList(new ArrayList<>(ids));
     }
 
     /**
