@@ -71,6 +71,7 @@ public final class ConfigValidator {
         material(problems, cfg, "mlg.platform-material", true);
         material(problems, cfg, "mlg.pad-material", true);
         material(problems, cfg, "rush.rescue-platform.material", true);
+        material(problems, cfg, "rush.starter-sword", false);
         material(problems, cfg, "bedbreak.bed-material", true);
         for (String tool : new String[]{"teleport", "menu", "leave"}) {
             material(problems, cfg, "spectate.items." + tool + ".material", false);

@@ -414,6 +414,20 @@ public final class RushBotService {
     }
 
     /**
+     * A defender caught in an explosion's manual knockback: hitstun so the
+     * shove is ridden instead of being steered away next tick, and aggro —
+     * a fireball at your feet is nothing if not a provocation.
+     */
+    public void onBlasted(Entity entity) {
+        UUID owner = ownerOf(entity);
+        PracticeSession session = owner == null ? null : plugin.sessions().get(owner);
+        RushBot bot = botOf(session, entity);
+        if (bot != null) {
+            onBotDamaged(bot);
+        }
+    }
+
+    /**
      * A defender dropped. Its bed decides what happens next: standing, the
      * defender respawns at its post after the delay; broken, it is out — and
      * if the whole team is out with it, the run ends on the team wipe.

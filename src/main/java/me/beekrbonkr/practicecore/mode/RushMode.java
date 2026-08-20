@@ -338,6 +338,21 @@ public final class RushMode implements Mode {
         Map<Integer, ItemStack> kit = new LinkedHashMap<>(new TreeMap<>(template.kit()));
         RushSelection selection = plugin.rush().selection(player.getUniqueId(), template,
                 RushMapData.parse(template));
+        // Every spawn — and every combat respawn — carries at least the
+        // starter sword in the first hotbar slot, like a real game. A kit
+        // that already puts a sword there keeps its own; anything else in
+        // that slot moves to the first free one.
+        Material starterSword = plugin.pcConfig().rushStarterSword();
+        if (starterSword != null) {
+            ItemStack first = kit.get(0);
+            if (first == null || !first.getType().name().endsWith("_SWORD")) {
+                kit.remove(0);
+                if (first != null) {
+                    place(kit, first);
+                }
+                kit.put(0, new ItemStack(starterSword));
+            }
+        }
         if (selection.pickaxe().item() != null) {
             place(kit, new ItemStack(selection.pickaxe().item()));
         }

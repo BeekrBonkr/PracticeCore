@@ -3,6 +3,21 @@
 Notable changes to PracticeCore. Versions follow the plugin's own numbering;
 config file format versions (`config-version`) migrate automatically on start.
 
+## 0.7.3
+
+- **Every rush spawn now carries a starter sword** in the first hotbar slot,
+  on the initial spawn and on every combat respawn — like a real game.
+  Configured by `rush.starter-sword` (default `WOODEN_SWORD`, `''` disables);
+  a kit that already puts a sword in that slot keeps its own, and anything
+  else there moves to the first free slot.
+- **Explosions now knock defender bots around.** The manual TNT/fireball
+  knockback only pushed players (whose cancelled damage event needs it);
+  bots were left to vanilla explosion physics, which is weak on mobs and was
+  immediately overridden by the brain's per-tick steering — a fireball at a
+  defender's feet read as a dud. Bots now take the same falloff-scaled shove
+  as players, with hitstun so they visibly ride the blast, and being blasted
+  aggros them.
+
 ## 0.7.2
 
 - **Fixed the shop still failing to open** for players whose MBedwars
