@@ -283,6 +283,11 @@ public final class RushService {
      * Explosion side-effects the cancelled damage event swallows: bedwars
      * players expect TNT jumps and fireball jumps, so the knockback is applied
      * directly. Strength falls off linearly to nothing at {@code radius}.
+     *
+     * Defender bots get the same push: vanilla explosion knockback on a mob
+     * is weak and the brain's per-tick steering eats what little lands, so a
+     * fireball at a bot's feet read as a dud. The manual shove comes with
+     * hitstun, so the bot rides the blast like the player would.
      */
     public void applyExplosionKnockback(Location center) {
         double radius = plugin.pcConfig().rushExplosionRadius();
@@ -292,11 +297,13 @@ public final class RushService {
         double power = plugin.pcConfig().rushExplosionStrength();
         for (Entity entity : center.getWorld()
                 .getNearbyEntities(center, radius, radius, radius)) {
-            if (!(entity instanceof Player player)
-                    || plugin.sessions().get(player.getUniqueId()) == null) {
+            boolean sessionPlayer = entity instanceof Player player
+                    && plugin.sessions().get(player.getUniqueId()) != null;
+            boolean bot = !sessionPlayer && plugin.rushBots().isBot(entity);
+            if (!sessionPlayer && !bot) {
                 continue;
             }
-            Location eye = player.getLocation().add(0, 0.5, 0);
+            Location eye = entity.getLocation().add(0, 0.5, 0);
             double distance = eye.distance(center);
             if (distance > radius) {
                 continue;
@@ -309,7 +316,10 @@ public final class RushService {
             push = push.normalize().multiply(strength);
             // The vertical lift is what makes TNT jumps work.
             push.setY(Math.max(push.getY(), 0.55 * strength + 0.25));
-            player.setVelocity(player.getVelocity().add(push));
+            entity.setVelocity(entity.getVelocity().add(push));
+            if (bot) {
+                plugin.rushBots().onBlasted(entity);
+            }
         }
     }
 

@@ -94,6 +94,7 @@ public final class PCConfig {
     private final int rushRescuePlatformRadius;
     private final int rushRescuePlatformDepth;
     private final String rushDealerProfession;
+    private final Material rushStarterSword;
     private final int rushTeleporterChannelTicks;
     private final int rushTntSheepFuseTicks;
     private final double rushTntSheepPower;
@@ -267,6 +268,10 @@ public final class PCConfig {
         this.rushRescuePlatformRadius = Math.clamp(cfg.getInt("rush.rescue-platform.radius", 2), 0, 8);
         this.rushRescuePlatformDepth = Math.clamp(cfg.getInt("rush.rescue-platform.depth", 2), 1, 8);
         this.rushDealerProfession = cfg.getString("rush.dealer-profession", "LIBRARIAN");
+        // Blank is a deliberate off-switch here, so it must not fall back.
+        String starterSword = cfg.getString("rush.starter-sword", "WOODEN_SWORD");
+        this.rushStarterSword = starterSword == null || starterSword.isBlank()
+                ? null : material(starterSword, Material.WOODEN_SWORD);
         this.rushTeleporterChannelTicks =
                 Math.max(1, cfg.getInt("rush.teleporter-channel-ticks", 60));
         this.rushTntSheepFuseTicks = Math.max(1, cfg.getInt("rush.tnt-sheep.fuse-ticks", 80));
@@ -669,6 +674,14 @@ public final class PCConfig {
 
     public String rushDealerProfession() {
         return rushDealerProfession;
+    }
+
+    /**
+     * The sword every rush spawn carries in the first hotbar slot, like a
+     * real game. Null when disabled ('' in config.yml).
+     */
+    public Material rushStarterSword() {
+        return rushStarterSword;
     }
 
     /** Ticks the MBedwars-style teleporter channels before firing. */

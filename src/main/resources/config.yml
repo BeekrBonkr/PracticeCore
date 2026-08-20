@@ -209,6 +209,11 @@ rush:
     depth: 2
   # The villager profession shop dealers wear.
   dealer-profession: LIBRARIAN
+  # The sword every rush spawn (and respawn) carries in the first hotbar
+  # slot, like a real game. Whatever the arena kit had there moves to the
+  # first free slot; a kit that already puts a sword there keeps its own.
+  # '' disables the guarantee.
+  starter-sword: WOODEN_SWORD
   # Ticks the shop's teleporter channels (stand still) before sending the
   # player back to their base spawn. Moving a block cancels it, unconsumed.
   teleporter-channel-ticks: 60
