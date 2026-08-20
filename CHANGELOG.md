@@ -3,6 +3,13 @@
 Notable changes to PracticeCore. Versions follow the plugin's own numbering;
 config file format versions (`config-version`) migrate automatically on start.
 
+## 0.7.2
+
+- **Fixed the shop still failing to open** for players whose MBedwars
+  quick-buy bar has any empty slot — which is nearly everyone. The pin list
+  is positional, with nulls marking the empty slots, and the accessor copied
+  it with `List.copyOf`, which refuses nulls; it now copies null-tolerantly.
+
 ## 0.7.1
 
 - **Fixed the rush shop failing to open** on servers whose MBedwars shop
