@@ -3,6 +3,16 @@
 Notable changes to PracticeCore. Versions follow the plugin's own numbering;
 config file format versions (`config-version`) migrate automatically on start.
 
+## 0.7.1
+
+- **Fixed the rush shop failing to open** on servers whose MBedwars shop
+  contains addon-provided special items: the `PLUGIN` special-item type
+  carries a null id, and the 0.7.0 id normalization crashed on it
+  (`NullPointerException` in `MBedwarsHook.resolve` on every dealer click).
+  Those products now fall back to the "plugin" id, and any shop entry that
+  cannot be read is skipped with a console warning instead of taking the
+  whole shop down.
+
 ## 0.7.0
 
 ### Rush practice

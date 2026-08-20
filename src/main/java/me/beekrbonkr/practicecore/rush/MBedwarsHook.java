@@ -186,7 +186,17 @@ public final class MBedwarsHook {
         for (ShopPage page : BedwarsAPI.getGameAPI().getShopPages()) {
             List<RushShopData.Entry> entries = new ArrayList<>();
             for (ShopItem item : page.getItems()) {
-                RushShopData.Entry entry = entryOf(item);
+                RushShopData.Entry entry;
+                try {
+                    entry = entryOf(item);
+                } catch (RuntimeException e) {
+                    // One unreadable entry (an addon product with surprises in
+                    // it) must cost that item, never the whole shop.
+                    Bukkit.getLogger().warning("Skipping MBedwars shop item '"
+                            + item.getId() + "' on page '" + page.getName()
+                            + "' — it could not be read: " + e);
+                    continue;
+                }
                 if (entry != null) {
                     entries.add(entry);
                 }
@@ -341,12 +351,15 @@ public final class MBedwarsHook {
             // Ids normalized to lowercase: MBedwars spells them CamelCase
             // ("Fireball", "RescuePlatform") and the use-time switch matches
             // lowercase — the mismatch is what once made every special item
-            // land in the "unsupported" branch.
+            // land in the "unsupported" branch. The PLUGIN type (addon-made
+            // specials) carries a null id, so both the type and its id need
+            // the fallback or one addon item takes the whole shop down.
+            String typeId = special.getType() == null ? null : special.getType().getId();
             return List.of(new RushShopData.Product(
                     stack.clone().asQuantity(Math.max(1, product.getAmount())),
                     product.isAutoWear(),
-                    special.getType() == null ? "plugin"
-                            : special.getType().getId().toLowerCase(Locale.ROOT)));
+                    typeId == null || typeId.isBlank()
+                            ? "plugin" : typeId.toLowerCase(Locale.ROOT)));
         }
         if (product instanceof ItemShopProduct itemProduct) {
             ItemStack[] stacks = itemProduct.getItemStacks();
