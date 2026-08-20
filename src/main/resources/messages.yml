@@ -146,6 +146,12 @@ rush:
   # Action bar when using a special item that genuinely needs a real
   # multiplayer game around it (trap, magic milk, magnet shoes, …).
   special-unsupported: '<yellow>This item has no effect in solo practice'
+  # The run's own ender chest, opened from any ender chest block on the map.
+  ender-chest-title: '<dark_purple>Ender Chest'
+  # Punch-to-deposit action bars. <count> is the resources moved.
+  deposited: '<green>Deposited <white><count></white> resource(s)'
+  deposit-full: '<yellow>Deposited <white><count></white> — the chest is full, the rest stayed with you'
+  deposit-nothing: '<gray>Nothing to deposit'
   # Quick-buy pinning in the shop (mirrored into your MBedwars profile).
   quickbuy-pinned: '<green>Pinned to Quick Buy'
   quickbuy-unpinned: '<yellow>Removed from Quick Buy'

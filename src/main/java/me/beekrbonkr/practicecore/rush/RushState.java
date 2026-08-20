@@ -76,6 +76,13 @@ public final class RushState {
     private int playerDeaths;
     /** Ticks left of the blind post-death hold at the player's own base. */
     private int playerHoldTicks;
+    /**
+     * The run's own ender chest, like a real game's: opened from any ender
+     * chest block on the map, survives combat respawns, and dies with this
+     * state on the next reset. Never the player's real ender chest — that is
+     * player data no arena may touch.
+     */
+    private org.bukkit.inventory.Inventory enderChest;
 
     public RushSelection selection() {
         return selection;
@@ -143,6 +150,15 @@ public final class RushState {
 
     public void setPlayerHoldTicks(int ticks) {
         this.playerHoldTicks = Math.max(0, ticks);
+    }
+
+    /** The run's ender chest, created on first open. */
+    public org.bukkit.inventory.Inventory enderChest(PracticeCorePlugin plugin) {
+        if (enderChest == null) {
+            enderChest = Bukkit.createInventory(null, 27,
+                    plugin.messages().component("rush.ender-chest-title"));
+        }
+        return enderChest;
     }
 
     public RushMapData data() {

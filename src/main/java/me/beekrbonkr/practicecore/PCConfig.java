@@ -95,6 +95,8 @@ public final class PCConfig {
     private final int rushRescuePlatformDepth;
     private final String rushDealerProfession;
     private final Material rushStarterSword;
+    private final boolean rushPunchToDeposit;
+    private final List<Material> rushDepositItems;
     private final int rushTeleporterChannelTicks;
     private final int rushTntSheepFuseTicks;
     private final double rushTntSheepPower;
@@ -272,6 +274,21 @@ public final class PCConfig {
         String starterSword = cfg.getString("rush.starter-sword", "WOODEN_SWORD");
         this.rushStarterSword = starterSword == null || starterSword.isBlank()
                 ? null : material(starterSword, Material.WOODEN_SWORD);
+        this.rushPunchToDeposit = cfg.getBoolean("rush.punch-to-deposit", true);
+        List<Material> deposit = new ArrayList<>();
+        for (String name : cfg.getStringList("rush.deposit-items")) {
+            Material parsed = Material.matchMaterial(name);
+            if (parsed != null && parsed.isItem()) {
+                deposit.add(parsed);
+            } else if (plugin != null) {
+                plugin.getLogger().warning("config.yml: '" + name
+                        + "' under rush.deposit-items is not an item this server knows — skipped.");
+            }
+        }
+        this.rushDepositItems = deposit.isEmpty()
+                ? List.of(Material.IRON_INGOT, Material.GOLD_INGOT,
+                        Material.DIAMOND, Material.EMERALD)
+                : List.copyOf(deposit);
         this.rushTeleporterChannelTicks =
                 Math.max(1, cfg.getInt("rush.teleporter-channel-ticks", 60));
         this.rushTntSheepFuseTicks = Math.max(1, cfg.getInt("rush.tnt-sheep.fuse-ticks", 80));
@@ -682,6 +699,16 @@ public final class PCConfig {
      */
     public Material rushStarterSword() {
         return rushStarterSword;
+    }
+
+    /** Whether punching a chest deposits resources into it in one hit. */
+    public boolean rushPunchToDeposit() {
+        return rushPunchToDeposit;
+    }
+
+    /** The resources punch-to-deposit sweeps into the chest. */
+    public List<Material> rushDepositItems() {
+        return rushDepositItems;
     }
 
     /** Ticks the MBedwars-style teleporter channels before firing. */

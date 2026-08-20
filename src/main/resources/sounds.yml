@@ -66,6 +66,9 @@ rush:
   # Pinning and unpinning a Quick Buy slot.
   quickbuy-pin: 'UI_BUTTON_CLICK 0.6 1.6'
   quickbuy-unpin: 'UI_BUTTON_CLICK 0.6 1.0'
+  # The run's ender chest opening, and a punch-deposit landing.
+  ender-chest-open: 'BLOCK_ENDER_CHEST_OPEN 0.7 1.0'
+  deposit: 'ENTITY_ITEM_PICKUP 0.8 0.9'
   # The emulated special items.
   fireball: 'ENTITY_GHAST_SHOOT 0.8 1.0'
   tnt-primed: 'ENTITY_TNT_PRIMED 1.0 1.0'

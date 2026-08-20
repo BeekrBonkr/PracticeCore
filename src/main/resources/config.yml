@@ -214,6 +214,16 @@ rush:
   # first free slot; a kit that already puts a sword there keeps its own.
   # '' disables the guarantee.
   starter-sword: WOODEN_SWORD
+  # Ender chests on rush maps act like a real game's: right-clicking any
+  # ender chest block opens the run's own 27-slot chest — it survives combat
+  # respawns and is wiped by the next reset. The player's REAL ender chest is
+  # never touched (session.block-ender-chests still guards it everywhere).
+  #
+  # Punching a chest or ender chest deposits the resources below into it in
+  # one hit, the classic bedwars quick-deposit. Sneak-punch bypasses it, so a
+  # player-placed chest can still be broken. Set false to punch chests in peace.
+  punch-to-deposit: true
+  deposit-items: [IRON_INGOT, GOLD_INGOT, DIAMOND, EMERALD]
   # Ticks the shop's teleporter channels (stand still) before sending the
   # player back to their base spawn. Moving a block cancels it, unconsumed.
   teleporter-channel-ticks: 60
