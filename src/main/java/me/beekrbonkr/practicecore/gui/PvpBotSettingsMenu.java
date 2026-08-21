@@ -69,6 +69,7 @@ public final class PvpBotSettingsMenu extends Menu {
         toggle(slot("rod", 29), "rod", Material.FISHING_ROD, settings.rod());
         toggle(slot("bow", 30), "bow", Material.BOW, settings.bow());
         toggle(slot("block", 31), "block", Material.SHIELD, settings.block());
+        toggle(slot("build", 32), "build", Material.WHITE_WOOL, settings.build());
         backButton(plugin.guis().slot("pvpbot.back", 36));
         closeButton(plugin.guis().slot("pvpbot.close", 40));
     }

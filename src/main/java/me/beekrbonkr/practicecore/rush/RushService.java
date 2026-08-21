@@ -71,8 +71,7 @@ public final class RushService {
                         stats.pref(player, "rush.currency", null), defaults.currency()),
                 RushSelection.enumOr(RushSelection.PickaxeTier.class,
                         stats.pref(player, "rush.pickaxe", null), defaults.pickaxe()),
-                RushSelection.enumOr(RushSelection.DefensePreset.class,
-                        stats.pref(player, "rush.defense", null), defaults.defense()),
+                defenseId(stats.pref(player, "rush.defense", null)),
                 stats.prefBool(player, "rush.base-generators",
                         plugin.pcConfig().rushBaseGeneratorsDefault()),
                 bots,
@@ -115,6 +114,17 @@ public final class RushService {
                 .withBotSword(config.rushBotsCompetitiveSword());
     }
 
+    /**
+     * A stored defense pref read as a preset id. Older builds wrote the enum
+     * constant ({@code ENDSTONE}); the shipped presets carry those same names
+     * in lower case, so a straight fold is all the migration anyone needs. An
+     * id config.yml no longer defines resolves to "none" at build time.
+     */
+    private String defenseId(String stored) {
+        return stored == null || stored.isBlank()
+                ? RushDefense.NONE : stored.trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
     /** Whether the player's next rush run is competitive. Set by the menu buttons. */
     public void setCompetitive(UUID player, boolean competitive) {
         plugin.stats().setPref(player, "rush.competitive", competitive);
@@ -126,7 +136,7 @@ public final class RushService {
                 "rush.blocks", selection.blocks().name(),
                 "rush.currency", selection.currency().name(),
                 "rush.pickaxe", selection.pickaxe().name(),
-                "rush.defense", selection.defense().name(),
+                "rush.defense", selection.defense(),
                 "rush.base-generators", selection.baseGenerators(),
                 "rush.bots", selection.bots(),
                 "rush.bot-difficulty", selection.botDifficulty(),

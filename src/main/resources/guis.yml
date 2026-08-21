@@ -56,31 +56,45 @@ settings:
     wool-color: {enabled: true, slot: 13}
     time: {enabled: true, slot: 15, material: CLOCK}
 
-# The rush pre-join menu: team base, difficulty modifiers, defender bots,
-# start. With no bots every objective is armed on every run; with bots the run
+# The rush pre-join menu: team base, match modifiers, defender bots, start.
+# With no bots every objective is armed on every run; with bots the run
 # becomes a combat run whose goal is the team wipe.
+#
+# Four rows that read top to bottom as the order the choices are made: where
+# you start, what you start with, who is waiting for you, then go.
 rush:
+  rows: 6
+  back: {slot: 45}
+  close: {slot: 53}
+  buttons:
+    # Row 1 — where the run starts. The icon is always the team's own wool.
+    team: {slot: 13}
+    # Row 2 — the five match modifiers.
+    blocks: {slot: 20, material: WHITE_WOOL}
+    currency: {slot: 21, material: IRON_INGOT}
+    pickaxe: {slot: 22, material: IRON_PICKAXE}
+    # Opens the bed-defense gallery below; its icon follows the chosen preset.
+    defense: {slot: 23}
+    generators: {slot: 24, material: FURNACE}
+    # Row 3 — defender bots at enemy bases. The three lineup buttons only
+    # appear while the count is above zero; the armor and sword icons follow
+    # the selected tier.
+    bots: {slot: 29, material: ZOMBIE_HEAD}
+    bot-difficulty: {slot: 30, material: NETHER_STAR}
+    bot-armor: {slot: 31}
+    bot-sword: {slot: 32}
+    # Row 4 — go. Start carries a summary of everything set above it.
+    start: {slot: 39, material: LIME_DYE}
+    # Instant ranked start: generators on, no starting items, defenses on.
+    competitive: {slot: 41, material: NETHER_STAR}
+
+# The bed-defense gallery, opened by the rush menu's defense button. One tile
+# per preset in config.yml's rush.defense-presets; each tile's icon is that
+# preset's own (or its outermost material).
+rush-defenses:
   rows: 5
   back: {slot: 36}
   close: {slot: 44}
-  buttons:
-    # The team button's icon always shows the selected team's wool.
-    team: {slot: 11}
-    start: {slot: 13, material: LIME_DYE}
-    # Instant ranked start: generators on, no starting items, defenses on.
-    competitive: {slot: 15, material: NETHER_STAR}
-    blocks: {slot: 19, material: WHITE_WOOL}
-    currency: {slot: 20, material: IRON_INGOT}
-    pickaxe: {slot: 21, material: IRON_PICKAXE}
-    defense: {slot: 22, material: END_STONE}
-    generators: {slot: 23, material: FURNACE}
-    # Defender bots at enemy bases. The three lineup buttons only appear
-    # while the count is above zero; the armor and sword icons follow the
-    # selected tier.
-    bots: {slot: 28, material: ZOMBIE_HEAD}
-    bot-difficulty: {slot: 29, material: NETHER_STAR}
-    bot-armor: {slot: 30}
-    bot-sword: {slot: 31}
 
 # The PvP bot settings menu, opened by the in-arena settings item.
 # The kit and gear buttons' icons follow the current selection.
@@ -101,6 +115,7 @@ pvpbot:
     rod: {slot: 29, material: FISHING_ROD}
     bow: {slot: 30, material: BOW}
     block: {slot: 31, material: SHIELD}
+    build: {slot: 32, material: WHITE_WOOL}
 
 # The PvP kit gallery (left-click selects, right-click previews).
 pvpbot-kits:

@@ -247,9 +247,7 @@ public final class RushState {
         }
 
         replaceBeds(world);
-        if (selection.defense() != RushSelection.DefensePreset.NONE) {
-            generateDefenses(session, world);
-        }
+        generateDefenses(plugin, session, world);
         for (RushMapData.Dealer dealer : data.dealers()) {
             Location loc = new Location(world,
                     origin.getX() + dealer.offset().getX(),
@@ -291,20 +289,30 @@ public final class RushState {
     }
 
     /**
-     * Covers every enemy bed in concentric shells, innermost layer first —
-     * Chebyshev distance 1 is the first material, distance 2 the second.
-     * Only air (or a previous run's identical shell) is written, never the
+     * Builds the chosen preset's stepped pyramid over every enemy bed — the
+     * shape bedwars players actually build, not a box.
+     *
+     * <p>Two numbers place each block. {@code d} is its horizontal Chebyshev
+     * distance from the nearer bed cell and {@code h} its height above the
+     * bed; a block exists wherever {@code d + h <= layers}, which is what
+     * makes the footprint lose a ring per level and taper to a cap directly
+     * over the bed. That same sum is the shell it belongs to, so
+     * {@code layers[0]} — the innermost material — hugs the bed and the last
+     * one forms the skin a rusher meets first. Because both beds are seeded,
+     * the result is a ridge along the bed rather than a point.
+     *
+     * <p>Only air (or a previous run's identical shell) is written, never the
      * map's own blocks, and nothing below the bed's own Y so floors survive.
      */
-    private void generateDefenses(PracticeSession session, World world) {
-        Material[] layers = selection.defense().layers();
-        if (layers.length == 0) {
+    private void generateDefenses(PracticeCorePlugin plugin, PracticeSession session, World world) {
+        List<Material> layers = plugin.pcConfig().rushDefense(selection.defense()).layers();
+        int reach = layers.size();
+        if (reach == 0) {
             return;
         }
         for (TargetBed bed : enemyBeds) {
             List<Location> cells = List.of(bed.head(), bed.foot());
             int bedY = bed.head().getBlockY();
-            int reach = layers.length;
             int minX = cells.stream().mapToInt(Location::getBlockX).min().orElse(0) - reach;
             int maxX = cells.stream().mapToInt(Location::getBlockX).max().orElse(0) + reach;
             int minZ = cells.stream().mapToInt(Location::getBlockZ).min().orElse(0) - reach;
@@ -312,16 +320,16 @@ public final class RushState {
             for (int x = minX; x <= maxX; x++) {
                 for (int z = minZ; z <= maxZ; z++) {
                     for (int y = bedY; y <= bedY + reach; y++) {
-                        int distance = Integer.MAX_VALUE;
+                        int shell = Integer.MAX_VALUE;
                         for (Location cell : cells) {
-                            int d = Math.max(Math.abs(x - cell.getBlockX()),
-                                    Math.max(y - cell.getBlockY(), Math.abs(z - cell.getBlockZ())));
-                            distance = Math.min(distance, d);
+                            int horizontal = Math.max(Math.abs(x - cell.getBlockX()),
+                                    Math.abs(z - cell.getBlockZ()));
+                            shell = Math.min(shell, horizontal + (y - cell.getBlockY()));
                         }
-                        if (distance < 1 || distance > layers.length) {
-                            continue;
+                        if (shell < 1 || shell > reach) {
+                            continue; // the bed itself, or outside the pyramid
                         }
-                        Material material = layers[distance - 1];
+                        Material material = layers.get(shell - 1);
                         Location loc = new Location(world, x, y, z);
                         if (!session.containsBlock(loc)) {
                             // A bed against the map's edge must not shell

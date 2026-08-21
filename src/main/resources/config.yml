@@ -183,10 +183,76 @@ rush:
   generator-tick-period: 5
   # Whether base generators run for players who have not toggled them yet.
   base-generators-default: true
-  # Bed defense preset every competitive run races under: NONE, WOOL,
-  # ENDSTONE (wool + end stone) or OBSIDIAN (end stone + obsidian). Fixed so
-  # competitive times stay comparable between players.
-  competitive-defense: ENDSTONE
+  # The id (from defense-presets below) every competitive run races under.
+  # Fixed so competitive times stay comparable between players.
+  competitive-defense: endstone
+  # ---------------------------------------------------------------------
+  # Bed defenses — the pyramid built over every enemy bed before a run.
+  #
+  # This list is yours: one you delete stays deleted, and one you add shows up
+  # in the picker. Each preset is a stepped pyramid, exactly the shape players
+  # build in a real match — widest at bed level, losing a ring for every block
+  # of height, tapering to a cap over the bed.
+  #
+  #   layers  the materials, INNERMOST FIRST. layers[0] touches the bed; the
+  #           last one is the skin a rusher meets. The number of layers is
+  #           also how far the pyramid reaches out and up, so three materials
+  #           is a three-high pyramid three blocks wide either side of the bed.
+  #           An empty list builds nothing.
+  #   name    the label, when messages.yml has no gui.rush.defense.option.<id>
+  #   icon    the picker's tile; the outermost material when left out
+  #
+  # Only air is ever written, and never outside the map's own bounds — a bed
+  # tucked under a roof simply gets a smaller pyramid.
+  defense-presets:
+    none:
+      name: 'None'
+      icon: BARRIER
+      layers: []
+    wool:
+      name: 'Wool'
+      icon: WHITE_WOOL
+      layers: [WHITE_WOOL]
+    wood:
+      name: 'Wood'
+      icon: OAK_PLANKS
+      layers: [OAK_PLANKS]
+    clay:
+      name: 'Terracotta'
+      icon: TERRACOTTA
+      layers: [TERRACOTTA]
+    endstone:
+      name: 'Wool + End Stone'
+      icon: END_STONE
+      layers: [WHITE_WOOL, END_STONE]
+    glass:
+      name: 'Wool + Glass'
+      icon: GLASS
+      layers: [WHITE_WOOL, GLASS]
+    ceramic:
+      name: 'Wool + Terracotta'
+      icon: BRICKS
+      layers: [WHITE_WOOL, TERRACOTTA]
+    obsidian:
+      name: 'Obsidian + End Stone'
+      icon: OBSIDIAN
+      layers: [OBSIDIAN, END_STONE]
+    ironclad:
+      name: 'Obsidian + Wool'
+      icon: END_STONE_BRICKS
+      layers: [OBSIDIAN, WHITE_WOOL]
+    fortress:
+      name: 'Fortress'
+      icon: CRYING_OBSIDIAN
+      layers: [OBSIDIAN, END_STONE, WHITE_WOOL]
+    bunker:
+      name: 'Bunker'
+      icon: NETHERITE_BLOCK
+      layers: [OBSIDIAN, OBSIDIAN, END_STONE]
+    keep:
+      name: 'The Keep'
+      icon: BEACON
+      layers: [OBSIDIAN, OBSIDIAN, END_STONE, WHITE_WOOL]
   # The emulated MBedwars combat items.
   tnt-fuse-ticks: 60
   fireball-power: 3.0
@@ -394,3 +460,12 @@ effects:
   title-fade-in-ms: 50
   title-stay-ms: 1200
   title-fade-out-ms: 400
+  # How long a "loading" title (a queued join, an arena being pasted) stays up
+  # on its own. It is normally taken down the instant the work finishes, so
+  # this is only the backstop for a wait that never reports back — keep it
+  # comfortably longer than your slowest paste.
+  title-hold-ms: 15000
+  # …and how long the work has to still be running before that title appears
+  # at all. Most joins land in a tick or two; flashing a card at the player
+  # for those would be worse than saying nothing. 0 shows it immediately.
+  title-delay-ticks: 10

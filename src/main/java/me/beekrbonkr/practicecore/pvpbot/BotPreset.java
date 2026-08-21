@@ -16,7 +16,7 @@ public record BotPreset(String id, String configuredName,
                         BotSettings.Evasiveness evasiveness, BotSettings.Cps cps,
                         BotSettings.Accuracy accuracy, BotSettings.Combos combos,
                         BotSettings.Reach reach, BotSettings.Aggression aggression,
-                        Boolean rod, Boolean bow, Boolean block) {
+                        Boolean rod, Boolean bow, Boolean block, Boolean build) {
 
     /**
      * Builds a preset from its config block. A block naming a tier this build
@@ -35,7 +35,8 @@ public record BotPreset(String id, String configuredName,
                     tier(id, knobs, "combos", BotSettings.Combos.class),
                     tier(id, knobs, "reach", BotSettings.Reach.class),
                     tier(id, knobs, "aggression", BotSettings.Aggression.class),
-                    flag(knobs, "rod"), flag(knobs, "bow"), flag(knobs, "block"));
+                    flag(knobs, "rod"), flag(knobs, "bow"), flag(knobs, "block"),
+                    flag(knobs, "build"));
         } catch (IllegalArgumentException e) {
             plugin.getLogger().warning("pvpbot.yml: preset '" + id + "' — " + e.getMessage()
                     + ". That preset was skipped.");
@@ -82,6 +83,9 @@ public record BotPreset(String id, String configuredName,
         if (block != null) {
             prefs.put("pvpbot.block", block);
         }
+        if (build != null) {
+            prefs.put("pvpbot.build", build);
+        }
         return prefs;
     }
 
@@ -101,7 +105,8 @@ public record BotPreset(String id, String configuredName,
                 && same(aggression, settings.aggression())
                 && same(rod, settings.rod())
                 && same(bow, settings.bow())
-                && same(block, settings.block());
+                && same(block, settings.block())
+                && same(build, settings.build());
     }
 
     /** A knob the preset does not set cannot disagree with anything. */

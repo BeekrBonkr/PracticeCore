@@ -67,6 +67,22 @@ public final class BotFight {
     public int botGapples;
     public int botPots;
     public int botStews;
+    // ------------------------------------------------------------- building
+    /** Blocks the bot has left to place this stock. */
+    public int buildBudget;
+    /** Ticks before it may place another. */
+    public int buildCooldown;
+    /**
+     * The block the bot jumped off and is about to seal under itself. Held
+     * across ticks because the placement only works at the top of the hop:
+     * placing at the feet of a bot still standing there does nothing.
+     */
+    public Location pillarSpot;
+    /** Ticks left to catch that hop before the attempt is abandoned. */
+    public int pillarTicks;
+    /** How high the current tower has gone, so it stops at the configured cap. */
+    public int pillarHeight;
+
     /** Last bot position, to spot being stuck against a wall and hop. */
     public double lastX;
     public double lastZ;
@@ -218,6 +234,14 @@ public final class BotFight {
 
     /** Fresh stock: full AI reset, stats keep counting. */
     public void resetStock(int graceTicks, int feintCooldown) {
+        // Blocks come from the bot's own pocket, not from any kit, and the
+        // supply lasts a stock — deliberately not part of the periodic
+        // top-up, or the budget would never actually bind.
+        buildBudget = settings == null ? 0 : settings.tuning().buildBudget();
+        buildCooldown = 0;
+        pillarSpot = null;
+        pillarTicks = 0;
+        pillarHeight = 0;
         combo = 0;
         hitstunTicks = 0;
         crouchTicks = 0;

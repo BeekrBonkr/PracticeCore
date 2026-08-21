@@ -11,7 +11,6 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -358,8 +357,7 @@ public final class SpectateService {
         spectator.setFlying(true);
         spectator.setInvulnerable(true);
         spectator.setCollidable(false);
-        AttributeInstance maxHealth = spectator.getAttribute(PlayerSnapshot.maxHealthAttribute());
-        spectator.setHealth(maxHealth != null ? maxHealth.getValue() : 20.0);
+        PlayerSnapshot.healToFull(spectator);
         spectator.setFoodLevel(20);
         spectator.setSaturation(20);
         spectator.setFireTicks(0);

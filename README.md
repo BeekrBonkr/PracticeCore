@@ -122,8 +122,8 @@ The timer always starts the moment you first move off the spawn —
 - **Competitive** — one button in the rush menu, instant start, and the only
   way times are recorded and ranked. The loadout is pinned so every entry on
   a board raced the same conditions: no starting items, bed defenses on (the
-  preset in `rush.competitive-defense`, default wool + end stone), base
-  generators running.
+  preset id in `rush.competitive-defense`, default `endstone` — wool inside,
+  end stone out), base generators running.
 - **Casual** — your own mix of the difficulty modifiers below. Nothing is
   written to stats: no time, no finish count, no personal best; the finish
   message still shows your time and the action bar reminds you it was
@@ -156,17 +156,32 @@ Maps come from two places:
   At least one team needs both a spawn and a bed to save.
 
 Clicking a rush arena in the GUI opens the **rush setup menu** instead of
-joining straight away: cycle the team base, hit **Start Competitive** for the
-ranked loadout, or dial the casual difficulty modifiers — **starter blocks**
+joining straight away. It reads top to bottom as the order the choices are
+made: the **team base** on the first row, the five **match modifiers** on the
+second, the **defender lineup** on the third, and **Start Casual** / **Start
+Competitive** on the fourth. The modifiers are **starter blocks**
 (none/16/32/64 wool), **starting resources** (iron/gold to spend
-immediately), **pickaxe tier** (none → diamond), **bed defenses**
-(auto-generated shells over every enemy bed: wool, wool + end stone, or end
-stone + obsidian, reusing nothing from the map itself), and whether the
-**iron/gold generators** run — every team base produces, exactly like a real
-game, with a per-generator item cap so idle bases don't flood — and **Start
-Casual**. Every choice
-(including which mode you last played) is remembered per player — a plain
-`/practice join <map>` replays your last setup.
+immediately), **pickaxe tier** (none → diamond), **bed defenses** and whether
+the **iron/gold generators** run — every team base produces, exactly like a
+real game, with a per-generator item cap so idle bases don't flood. The
+lineup buttons (count, difficulty, armor, sword) appear as soon as the
+defender count leaves zero. Hovering **Start Casual** lists the whole match,
+so nobody has to check a row of buttons to see what they are about to play.
+Every choice (including which mode you last played) is remembered per player
+— a plain `/practice join <map>` replays your last setup.
+
+**Bed defenses** are the pyramid a real bedwars player builds, not a box: the
+footprint is widest at bed level and loses a ring for every block of height,
+tapering to a cap over the bed. The defense button opens a gallery of presets
+— wool, wood, terracotta, wool + end stone, wool + glass, obsidian + end
+stone, and heavier ones up to a four-layer Keep — each tile spelling out what
+it is made of, layer by layer, outermost first. The gallery is
+`rush.defense-presets` in `config.yml` and it is yours to curate: a preset you
+delete stays deleted, and one you add shows up in the picker. Each is just a
+list of materials, **innermost first** — the first touches the bed, the last
+is the skin a rusher meets — and the length of that list is how far the
+pyramid reaches out and up. Only air is ever written, and never outside the
+map's own bounds, so a bed tucked under a roof simply gets a smaller pyramid.
 
 During a run the **mirrored MBedwars shop** is open for business: villager
 NPCs stand at the map's dealer spots and sell the real MBedwars item shop —
@@ -236,9 +251,24 @@ your crosshair** (the better you track, the harder it works to slip off your
 cursor), holds duel spacing, **spam-clicks at a configured CPS** with a
 configurable miss chance, goes for **jump-crits and W-tap knockback resets**,
 and — each individually toggleable — **rods you at range**, takes **bow
-potshots**, and raises a **1.8 sword block** when it gets comboed (halving
-what lands). Hits it takes put it into a short **hitstun** where it rides
-the knockback like a real player — comboing it works the way it should.
+potshots**, raises a **1.8 sword block** when it gets comboed (halving what
+lands), and **places blocks to reach you**. Hits it takes put it into a short
+**hitstun** where it rides the knockback like a real player — comboing it
+works the way it should.
+
+**Building** is how it gets somewhere its legs cannot. Tower up and it
+**towers after you**, hopping and sealing the spot underneath itself, riding
+its own pillar; put a hole between you and it and it **bridges**, laying one
+block ahead of its feet and stepping out onto it. It only builds once walking
+has actually failed — a bot with a path is going somewhere and does not stop
+to build — and it builds faster the higher its thinking layer, the way a
+better player does. Everything it places you can break, and every stock reset
+takes the lot back down with the rest of the arena. A per-stock block budget
+keeps a long spar from becoming a build-off. Tune it under
+`behavior.building` in `pvpbot.yml` (material, budget, placement interval,
+how high above you it starts climbing, how deep a hole counts as one worth
+bridging), switch it off server-wide with `behavior.building.enabled`, or let
+each player switch it off for their own bot with the **Building** toggle.
 
 At the high accuracy tiers the bot also fights with its head (the
 **cerebral layer**, on by default for Veteran and above): it **times its
@@ -301,7 +331,7 @@ gear (mirror your kit, or a fixed tier), a named **difficulty preset**
 (**Rookie → Brawler → Veteran → Demon → Unfair → Suffer**, one click setting every
 AI knob; hand-tuned mixes read as Custom), plus the individual knobs —
 evasiveness, CPS, accuracy, crits/W-taps, reach, aggression — and the
-rod/bow/block toggles. The near-top tier of two knobs is Demon's own:
+rod/bow/block/build toggles. The near-top tier of two knobs is Demon's own:
 **extreme** evasiveness (fastest strafe, hops mid-fight, shrugs off hitstun
 sooner and escapes long combos more often) and **frenzied** aggression
 (fastest approach, tightest spacing, closes distance with sprint-jumps like
@@ -543,11 +573,22 @@ board — every mode — signs off with your server's address on its bottom
 line, styled by the `board.footer` lines in `messages.yml` (a gold gradient
 by default). While it stays `''`, no footer renders at all.
 
-Anything that takes more than an instant tells the player so as it starts:
-joining shows *Building &lt;arena&gt;…* and *teleporting you in…* on the
-action bar while the schematic pastes, the setup wizard says *Pasting…*
-while it builds, and imports and world regeneration announce themselves in
-chat — a command that goes quiet mid-work reads as a broken server.
+Anything that takes more than an instant tells the player so as it starts,
+and it says so **on a title** — a queued action that goes quiet, mid-teleport,
+reads as a frozen client, and the action bar is too easy to miss at exactly
+that moment. Joining puts up *Loading — Building &lt;arena&gt;…* and holds it
+until the player is actually standing in the arena; the setup wizard does the
+same while it pastes. Both keep their action bar line as well, and imports and
+world regeneration announce themselves in chat — a command that goes quiet
+mid-work reads as a broken server.
+
+A title only appears if the work is **still running** after
+`effects.title-delay-ticks` (default half a second), so the common instant
+join flashes nothing at all, and it comes down when the work reports back
+rather than timing out — `effects.title-hold-ms` is only the backstop for a
+wait that never does, so keep it comfortably longer than your slowest paste.
+Blank both lines of a pair in `messages.yml` (`session.building-title` /
+`-subtitle`, `setup.pasting-title` / `-subtitle`) to switch one off entirely.
 
 ## The bundled arenas
 

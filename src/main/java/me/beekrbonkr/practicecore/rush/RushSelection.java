@@ -20,7 +20,7 @@ import java.util.Locale;
  */
 public record RushSelection(String team, BlockTier blocks,
                             CurrencyTier currency, PickaxeTier pickaxe,
-                            DefensePreset defense, boolean baseGenerators,
+                            String defense, boolean baseGenerators,
                             int bots, String botDifficulty,
                             BotArmor botArmor, BotSword botSword,
                             boolean competitive) {
@@ -89,30 +89,6 @@ public record RushSelection(String team, BlockTier blocks,
         }
     }
 
-    /**
-     * Auto-generated defense layers over every enemy bed. Each layer is a
-     * shell of one material, innermost first.
-     */
-    public enum DefensePreset {
-        NONE(), WOOL(Material.WHITE_WOOL),
-        ENDSTONE(Material.WHITE_WOOL, Material.END_STONE),
-        OBSIDIAN(Material.OBSIDIAN, Material.END_STONE);
-
-        private final Material[] layers;
-
-        DefensePreset(Material... layers) {
-            this.layers = layers;
-        }
-
-        public Material[] layers() {
-            return layers.clone();
-        }
-
-        public DefensePreset next() {
-            return values()[(ordinal() + 1) % values().length];
-        }
-    }
-
     /** What the defender bots wear. Leather is dyed the team's color. */
     public enum BotArmor {
         LEATHER("LEATHER"), CHAINMAIL("CHAINMAIL"), IRON("IRON"), DIAMOND("DIAMOND");
@@ -154,7 +130,7 @@ public record RushSelection(String team, BlockTier blocks,
 
     public static RushSelection defaults() {
         return new RushSelection(null, BlockTier.NONE,
-                CurrencyTier.NONE, PickaxeTier.NONE, DefensePreset.NONE, true,
+                CurrencyTier.NONE, PickaxeTier.NONE, RushDefense.NONE, true,
                 0, "", BotArmor.LEATHER, BotSword.WOODEN, false);
     }
 
@@ -183,7 +159,8 @@ public record RushSelection(String team, BlockTier blocks,
                 bots, botDifficulty, botArmor, botSword, competitive);
     }
 
-    public RushSelection withDefense(DefensePreset defense) {
+    /** @param defense a {@link RushDefense} id from config.yml */
+    public RushSelection withDefense(String defense) {
         return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
                 bots, botDifficulty, botArmor, botSword, competitive);
     }

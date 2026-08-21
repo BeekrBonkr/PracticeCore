@@ -46,6 +46,13 @@ session:
   building: '<gray>Building <white><arena></white><gray>…'
   # Action bar when the arena is built and the teleport is on its way.
   teleporting: '<gray>Arena ready — teleporting you in…'
+  # Title covering the whole join — the paste and the teleport after it. It
+  # appears only if the join is still running after effects.title-delay-ticks
+  # (so an instant join flashes nothing) and comes down when the player is
+  # standing in the arena, so a slow paste never looks like a frozen client.
+  # Blank both lines to switch it off. <arena>
+  building-title: '<yellow><bold>Loading'
+  building-subtitle: '<gray>Building <white><arena><gray>…'
   setup-in-progress: '<prefix><red>Finish or cancel arena setup first.'
   teleport-failed: '<prefix><red>Could not send you to the arena.'
   state-restored: '<prefix><gray>Your pre-practice state was restored.'
@@ -466,6 +473,10 @@ setup:
   # Action bar while the wizard pastes an arena — big maps take a moment.
   # <arena>
   pasting: '<gray>Pasting <white><arena></white><gray>…'
+  # Title over the same wait, on the same delay, taken down when the paste
+  # lands. <arena>
+  pasting-title: '<yellow><bold>Loading'
+  pasting-subtitle: '<gray>Pasting <white><arena><gray>…'
   # <arena> <holder>
   busy: '<prefix><red>Setup is already in progress by <white><holder><red> on ''<arena>''.'
   clipboard-empty: '<prefix><red>Your WorldEdit clipboard is empty. Select your arena build and run //copy first.'
@@ -918,18 +929,58 @@ gui:
         diamond: 'diamond'
     defense:
       name: '<red><bold>Bed Defenses'
-      # <preset>
+      # <preset> <layers>
       lore:
-        - '<gray>Auto-generated layers over'
-        - '<gray>every enemy bed.'
+        - '<gray>The pyramid built over every'
+        - '<gray>enemy bed before the run.'
         - ''
         - '<gray>Preset: <white><preset>'
-        - '<yellow>Click to cycle'
+        - '<gray>Layers: <white><layers>'
+        - '<yellow>Click to browse presets'
+      # Labels for the presets in config.yml's rush.defense-presets. A preset
+      # you invent has no key here and falls back to its own `name`.
       option:
-        none: 'none'
-        wool: 'wool'
-        endstone: 'wool + end stone'
-        obsidian: 'end stone + obsidian'
+        none: 'None'
+        wool: 'Wool'
+        wood: 'Wood'
+        clay: 'Terracotta'
+        endstone: 'Wool + End Stone'
+        glass: 'Wool + Glass'
+        ceramic: 'Wool + Terracotta'
+        obsidian: 'Obsidian + End Stone'
+        ironclad: 'Obsidian + Wool'
+        fortress: 'Fortress'
+        bunker: 'Bunker'
+        keep: 'The Keep'
+    # The bed-defense gallery the button above opens.
+    defenses:
+      title: '<dark_gray><bold>Bed Defenses'
+      # <preset>
+      tile-name: '<white><bold><preset>'
+      # <layers> — how many materials thick the pyramid is
+      tile-lore:
+        - '<gray>A <white><layers><gray>-layer pyramid over'
+        - '<gray>every enemy bed.'
+        - ''
+      # One line per layer, outermost first — the order a rusher digs through
+      # them. <depth> counts from the outside in, <material> is the block.
+      layer-line: '<dark_gray> <depth>. <gray><material>'
+      select:
+        - ''
+        - '<yellow>Click to choose'
+      selected:
+        - ''
+        - '<green>Currently chosen'
+    # Values the Start button's summary is built from.
+    summary:
+      # <amount>
+      blocks: '<white><amount> wool'
+      # <iron> <gold>
+      currency: '<white><iron> iron<gray>, <white><gold> gold'
+      # <preset> <layers>
+      defense: '<white><preset> <dark_gray>(<layers>)'
+      # <count> <difficulty> <armor> <sword>
+      defenders: '<white><count>/team <dark_gray>(<difficulty><dark_gray>, <armor><dark_gray>, <sword><dark_gray>)'
     generators:
       name: '<yellow><bold>Base Generators'
       # <state>
@@ -992,11 +1043,21 @@ gui:
         diamond: 'diamond'
     start:
       name: '<green><bold>Start Casual'
-      # <arena>
+      # The whole match summarized, so nobody has to hover five buttons to
+      # find out what they are about to play.
+      # <arena> <team> <blocks> <currency> <pickaxe> <defense> <generators>
       lore:
         - '<gray>Map: <white><arena>'
         - ''
-        - '<gray>Play with your modifiers below.'
+        - '<yellow>Match modifiers'
+        - '<dark_gray> • <gray>Base: <white><team>'
+        - '<dark_gray> • <gray>Starter blocks: <blocks>'
+        - '<dark_gray> • <gray>Starting resources: <currency>'
+        - '<dark_gray> • <gray>Pickaxe: <white><pickaxe>'
+        - '<dark_gray> • <gray>Bed defenses: <defense>'
+        - '<dark_gray> • <gray>Base generators: <generators>'
+        - '<dark_gray> • <gray>Defenders: <defenders>'
+        - ''
         - '<gray>Break a bed or grab an emerald'
         - '<gray>or diamond — whichever you'
         - '<gray>reach first ends the run.'
@@ -1231,6 +1292,21 @@ gui:
         - '<gray>The bot blocks with its sword'
         - '<gray>when it gets comboed,'
         - '<gray>halving what lands.'
+        - ''
+        - '<gray>Currently: <state>'
+        - '<yellow>Click to toggle'
+    build:
+      name: '<white><bold>Building'
+      # <state>
+      lore:
+        - '<gray>The bot places blocks to get'
+        - '<gray>to you — towering after you'
+        - '<gray>when you go up, bridging a'
+        - '<gray>gap it cannot walk around.'
+        - ''
+        - '<gray>You can break whatever it'
+        - '<gray>builds, and every stock reset'
+        - '<gray>clears it away.'
         - ''
         - '<gray>Currently: <state>'
         - '<yellow>Click to toggle'

@@ -139,6 +139,22 @@ public final class PlayerSnapshot {
         return new Location(world, x, y, z, yaw, pitch);
     }
 
+    /**
+     * Puts a fighter back on a completely full bar — leftover absorption
+     * included, since a gapple's yellow hearts are not part of the health
+     * anyone is supposed to start a fresh life on.
+     *
+     * <p>Call this <em>after</em> potion effects are cleared and the kit is
+     * dealt, never before: both can move the max-health attribute, and a heal
+     * taken while the maximum is still in flux leaves the player short of the
+     * bar they were just given.
+     */
+    public static void healToFull(org.bukkit.entity.LivingEntity entity) {
+        AttributeInstance max = entity.getAttribute(maxHealthAttribute());
+        entity.setHealth(max != null ? max.getValue() : 20.0);
+        entity.setAbsorptionAmount(0);
+    }
+
     private static double maxHealth(Player player) {
         AttributeInstance attr = player.getAttribute(maxHealthAttribute());
         return attr != null ? attr.getValue() : 20.0;

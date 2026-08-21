@@ -233,6 +233,7 @@ defaults:
   rod: false
   bow: false
   block: false
+  build: true
 
 # ===========================================================================
 # Named difficulties — one click sets every knob
@@ -457,6 +458,55 @@ behavior:
   unstick:
     chance: 0.5
     threshold: 0.01
+
+  # --- building -------------------------------------------------------------
+  #
+  # Blocks are how the bot reaches you when walking cannot. Two moves cover
+  # everything a player uses them for mid-fight:
+  #
+  #   towering  you went up, so it hops and seals the spot underneath itself,
+  #             riding its own pillar after you
+  #   bridging  a hole between you and it, so it lays one block ahead of its
+  #             feet and steps out onto it
+  #
+  # Whatever it builds you can break, and every stock reset takes the lot back
+  # down with the rest of the arena. Each player can also switch this off for
+  # their own bot from the Building button in the settings menu.
+  building:
+    # The master switch. Off here and no bot builds, whatever anyone toggled.
+    enabled: true
+    # What it builds with. Must be a full block it can stand on.
+    material: WHITE_WOOL
+    # Blocks it may place per stock — the cap that keeps a long spar from
+    # turning into a build-off.
+    budget: 64
+    # Ticks between placements. The thinking layers build faster, the way a
+    # better player does.
+    interval-ticks:
+      base: 7
+      cerebral: 6
+      duellist: 5
+      unfair: 4
+      suffer: 3
+    # Ticks it flourishes the block in hand after placing one.
+    flourish-ticks: 8
+    tower:
+      # How far above the bot you have to be before it starts climbing. Below
+      # about 3 it can still jump to you, so this should not go much lower.
+      min-height: 3.0
+      # …and how close, horizontally. Further away than this and it walks.
+      max-distance: 6.0
+      # Blocks a single tower may climb before the bot gives up on it.
+      max-height: 24
+      # Ticks it allows for the hop to clear the block it is sealing. Raise it
+      # only if you have lowered bot.jump-velocity.
+      window-ticks: 8
+    bridge:
+      # How deep the hole ahead must be to count as one worth bridging —
+      # anything shallower is a step the bot simply walks down.
+      min-drop: 3
+      # The nudge out onto the block it just laid.
+      step: 0.16
 
   # --- strafing -------------------------------------------------------------
   strafe:

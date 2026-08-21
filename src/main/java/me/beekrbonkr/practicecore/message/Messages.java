@@ -292,6 +292,76 @@ public final class Messages {
     }
 
     public void title(Player to, String titleKey, String subtitleKey, String... placeholders) {
+        show(to, titleKey, subtitleKey, plugin.pcConfig().titleStayMs(), placeholders);
+    }
+
+    /**
+     * The "hold on, this is loading" cue for a queued action of unknown
+     * length — an arena being pasted, a teleport in flight. Anything slower
+     * than a moment says so through this rather than leaving the player
+     * looking at what reads as a frozen client.
+     *
+     * <p>The title deliberately does <em>not</em> go up straight away: on a
+     * warm server most joins land in a tick or two, and flashing a card at
+     * everyone for those would be worse than saying nothing. It appears only
+     * if the work is still going after {@code effects.title-delay-ticks}, and
+     * {@link LoadingCue#finish()} both cancels a pending one and takes down a
+     * showing one, so the caller never has to know which happened.
+     *
+     * <p>Silencing both keys in messages.yml switches the cue off entirely.
+     */
+    public LoadingCue loading(Player to, String titleKey, String subtitleKey,
+                              String... placeholders) {
+        LoadingCue cue = new LoadingCue(to);
+        long delay = plugin.pcConfig().titleDelayTicks();
+        if (delay <= 0) {
+            cue.show(titleKey, subtitleKey, placeholders);
+        } else {
+            Bukkit.getScheduler().runTaskLater(plugin,
+                    () -> cue.show(titleKey, subtitleKey, placeholders), delay);
+        }
+        return cue;
+    }
+
+    /** One loading cue's lifetime. See {@link #loading}. */
+    public final class LoadingCue {
+
+        private final Player to;
+        private boolean finished;
+        private boolean shown;
+
+        private LoadingCue(Player to) {
+            this.to = to;
+        }
+
+        private void show(String titleKey, String subtitleKey, String... placeholders) {
+            if (finished || to == null || !to.isOnline()) {
+                return;
+            }
+            shown = true;
+            // The hold is only a backstop: finish() is what normally takes
+            // this down, so it has to outlast the slowest paste.
+            Messages.this.show(to, titleKey, subtitleKey,
+                    plugin.pcConfig().titleHoldMs(), placeholders);
+        }
+
+        /** The work landed, one way or the other. Safe to call more than once. */
+        public void finish() {
+            if (finished) {
+                return;
+            }
+            finished = true;
+            if (shown && to != null && to.isOnline()) {
+                to.clearTitle();
+            }
+        }
+    }
+
+    private void show(Player to, String titleKey, String subtitleKey, long stayMs,
+                      String... placeholders) {
+        if (silenced(titleKey) && silenced(subtitleKey)) {
+            return;
+        }
         TagResolver resolver = resolver(placeholders);
         var config = plugin.pcConfig();
         to.showTitle(Title.title(
@@ -299,7 +369,7 @@ public final class Messages {
                 Text.parse(raw(subtitleKey), resolver),
                 Title.Times.times(
                         Duration.ofMillis(config.titleFadeInMs()),
-                        Duration.ofMillis(config.titleStayMs()),
+                        Duration.ofMillis(stayMs),
                         Duration.ofMillis(config.titleFadeOutMs()))));
     }
 
@@ -307,7 +377,12 @@ public final class Messages {
 
     /** Rendered as a chat/menu component rather than sent. */
     public Component component(String key, String... placeholders) {
-        return Text.parse(raw(key), resolver(placeholders));
+        return component(key, TagResolver.empty(), placeholders);
+    }
+
+    /** The same, with room for a nested message reference. */
+    public Component component(String key, TagResolver extra, String... placeholders) {
+        return Text.parse(raw(key), resolver(extra, placeholders));
     }
 
     /** An item name: parsed with the vanilla italic default removed. */

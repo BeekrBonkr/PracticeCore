@@ -252,6 +252,27 @@ public final class BotTuning {
         return file.number("bot.soup-heal-hearts", 3.5, 0.0, 10.0);
     }
 
+    // ------------------------------------------------------------- building
+
+    /**
+     * The master switch for block placement. A server that wants its arenas
+     * left exactly as built turns this off and no bot towers or bridges,
+     * whatever any player has toggled.
+     */
+    public boolean buildingEnabled() {
+        return file.bool("behavior.building.enabled", true);
+    }
+
+    /** What the bot builds with. Must be a full block it can stand on. */
+    public Material buildMaterial() {
+        return file.material("behavior.building.material", Material.WHITE_WOOL, true);
+    }
+
+    /** Blocks the bot may place per stock, so a long spar cannot fill the arena. */
+    public int buildBudget() {
+        return file.integer("behavior.building.budget", 64, 0, 4096);
+    }
+
     /** Whether the bot heals with its kit's own pots, stew and gapples. */
     public boolean consumablesEnabled() {
         return file.bool("behavior.consumables.enabled", true);
@@ -856,6 +877,14 @@ public final class BotTuning {
                 }
             }
         }
+        String build = file.string("behavior.building.material", "");
+        if (!build.isBlank()) {
+            Material parsed = Material.matchMaterial(build);
+            if (parsed == null || !parsed.isBlock()) {
+                problems.add("pvpbot.yml: behavior.building.material '" + build
+                        + "' is not a block the bot can place — white wool is used.");
+            }
+        }
         evasivenessTable(problems, "behavior.strafe.burst");
         evasivenessTable(problems, "behavior.strafe.hop.chance");
         constantOrNever(problems, "behavior.strafe.hop.from", BotSettings.Evasiveness.class);
@@ -922,7 +951,7 @@ public final class BotTuning {
             }
             Map<String, String> knobs = new LinkedHashMap<>();
             for (String knob : List.of("evasiveness", "cps", "accuracy",
-                    "combos", "reach", "aggression", "rod", "bow", "block")) {
+                    "combos", "reach", "aggression", "rod", "bow", "block", "build")) {
                 if (entry.isSet(knob)) {
                     knobs.put(knob, String.valueOf(entry.get(knob)));
                 }
