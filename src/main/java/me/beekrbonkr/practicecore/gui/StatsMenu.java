@@ -115,7 +115,8 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
         if (template == null) {
             lines.addAll(lore("gui.stats.entry-lore-missing", "arena", arena));
         }
-        return ItemBuilder.of(template != null ? template.effectiveIcon() : Material.PAPER)
+        return ItemBuilder.of(template != null
+                        ? plugin.modes().of(template).menuIcon(plugin, template) : Material.PAPER)
                 .name(name("gui.stats.entry-name", "arena", display))
                 .lore(lines)
                 .glow(rank == 1)

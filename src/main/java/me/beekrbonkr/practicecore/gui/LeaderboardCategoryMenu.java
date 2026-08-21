@@ -15,30 +15,33 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Category picker: one tile per arena category, each opening that category's
- * own arena menu. Which categories exist is derived from the arenas the
- * viewer can see, so an empty category can never be offered.
+ * Category picker for leaderboards, mirroring the Play button's
+ * {@link CategoryMenu}: one tile per category, each opening that category's
+ * own {@link LeaderboardMenu}. Only categories with at least one
+ * board-bearing arena appear — leaderboards are public regardless of who may
+ * play, so this groups the same arenas the flat leaderboard list would show.
  */
-public final class CategoryMenu extends PagedMenu<String> {
+public final class LeaderboardCategoryMenu extends PagedMenu<String> {
 
-    /** category → its visible arenas, from one scan per render (see entries()). */
+    /** category → its board-bearing arenas, from one scan per render. */
     private Map<String, List<ArenaTemplate>> byCategory = Map.of();
 
-    public CategoryMenu(PracticeCorePlugin plugin, Player viewer, Menu parent) {
+    public LeaderboardCategoryMenu(PracticeCorePlugin plugin, Player viewer, Menu parent) {
         super(plugin, viewer, parent);
     }
 
     @Override
     protected Component title() {
-        return text("gui.categories.title");
+        return text("gui.leaderboards.categories.title");
     }
 
     @Override
     protected List<String> entries() {
-        // One permission-filtered pass; icon() reuses the grouping rather than
-        // re-scanning every template per tile.
         Map<String, List<ArenaTemplate>> grouped = new LinkedHashMap<>();
-        for (ArenaTemplate template : plugin.templates().visibleTo(viewer)) {
+        for (ArenaTemplate template : plugin.templates().completeTemplates()) {
+            if (!plugin.modes().of(template).hasLeaderboards()) {
+                continue;
+            }
             grouped.computeIfAbsent(template.effectiveCategory(), k -> new ArrayList<>())
                     .add(template);
         }
@@ -49,8 +52,8 @@ public final class CategoryMenu extends PagedMenu<String> {
     @Override
     protected ItemStack emptyIcon() {
         return ItemBuilder.of(emptyMaterial())
-                .name(name("gui.categories.empty.name"))
-                .lore(lore("gui.categories.empty.lore"))
+                .name(name("gui.leaderboards.empty.name"))
+                .lore(lore("gui.leaderboards.empty.lore"))
                 .build();
     }
 
@@ -58,9 +61,9 @@ public final class CategoryMenu extends PagedMenu<String> {
     protected ItemStack icon(String category) {
         List<ArenaTemplate> arenas = byCategory.getOrDefault(category, List.of());
         return ItemBuilder.of(categoryIcon(category, arenas))
-                .name(name("gui.categories.entry-name",
+                .name(name("gui.leaderboards.categories.entry-name",
                         "category", plugin.guis().categoryName(category)))
-                .lore(lore("gui.categories.entry-lore",
+                .lore(lore("gui.leaderboards.categories.entry-lore",
                         "category", plugin.guis().categoryName(category),
                         "count", String.valueOf(arenas.size())))
                 .build();
@@ -79,6 +82,6 @@ public final class CategoryMenu extends PagedMenu<String> {
     @Override
     protected void onEntryClick(String category, InventoryClickEvent event) {
         click();
-        later(() -> new ArenaMenu(plugin, viewer, this, category).open());
+        later(() -> new LeaderboardMenu(plugin, viewer, this, category).open());
     }
 }

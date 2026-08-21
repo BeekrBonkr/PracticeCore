@@ -56,10 +56,11 @@ public final class ArenaMenu extends PagedMenu<ArenaTemplate> {
     @Override
     protected ItemStack icon(ArenaTemplate template) {
         boolean allowed = plugin.templates().canUse(viewer, template);
+        Material face = plugin.modes().of(template).menuIcon(plugin, template);
         // Modes without time boards get a tile without the dead time fields —
         // "Best: none, Rank: none" forever reads as broken, not as unranked.
         if (!plugin.modes().of(template).hasLeaderboards()) {
-            return ItemBuilder.of(allowed ? template.effectiveIcon() : Material.IRON_BARS)
+            return ItemBuilder.of(allowed ? face : Material.IRON_BARS)
                     .name(name(allowed ? "gui.arenas.entry-name" : "gui.arenas.entry-name-locked",
                             "arena", template.displayName()))
                     .lore(lore("gui.arenas.entry-lore-unranked",
@@ -71,7 +72,7 @@ public final class ArenaMenu extends PagedMenu<ArenaTemplate> {
         long best = plugin.stats().bestMs(viewer.getUniqueId(), template.name());
         int rank = plugin.leaderboards().rank(template.name(), viewer.getUniqueId());
         LeaderboardService.Entry record = plugin.leaderboards().record(template.name());
-        return ItemBuilder.of(allowed ? template.effectiveIcon() : Material.IRON_BARS)
+        return ItemBuilder.of(allowed ? face : Material.IRON_BARS)
                 .name(name(allowed ? "gui.arenas.entry-name" : "gui.arenas.entry-name-locked",
                         "arena", template.displayName()))
                 .lore(lore("gui.arenas.entry-lore",

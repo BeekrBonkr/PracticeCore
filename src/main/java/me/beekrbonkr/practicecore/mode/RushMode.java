@@ -365,6 +365,9 @@ public final class RushMode implements Mode {
         if (selection.currency().gold() > 0) {
             place(kit, new ItemStack(Material.GOLD_INGOT, selection.currency().gold()));
         }
+        if (selection.tnt().amount() > 0) {
+            place(kit, new ItemStack(Material.TNT, selection.tnt().amount()));
+        }
         return kit;
     }
 
@@ -422,6 +425,24 @@ public final class RushMode implements Mode {
             lines.add(msg.component("board.rush.casual-line"));
         }
         return lines;
+    }
+
+    /**
+     * Imported maps wear their MBedwars selector icon in the menus, cached in
+     * {@link me.beekrbonkr.practicecore.rush.RushService} so the API is asked
+     * once per map, not once per redraw. A red bed — the icon every import
+     * used to stamp — counts as "no choice made" so existing imports pick up
+     * their MBedwars face without a re-import; any other configured icon is
+     * the admin's own and stands.
+     */
+    @Override
+    public Material menuIcon(PracticeCorePlugin plugin, ArenaTemplate template) {
+        Material configured = template.icon();
+        if (configured != null && configured != Material.RED_BED) {
+            return configured;
+        }
+        Material imported = plugin.rush().importedIcon(template);
+        return imported != null ? imported : template.effectiveIcon();
     }
 
     public static String prettyTeam(String name) {

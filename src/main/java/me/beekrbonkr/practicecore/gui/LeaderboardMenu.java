@@ -16,13 +16,26 @@ import java.util.List;
 /** Arena picker for leaderboards. */
 public final class LeaderboardMenu extends PagedMenu<ArenaTemplate> {
 
+    /** Null lists every board-bearing arena; otherwise only that category's. */
+    private final String category;
+
     public LeaderboardMenu(PracticeCorePlugin plugin, Player viewer, Menu parent) {
+        this(plugin, viewer, parent, null);
+    }
+
+    public LeaderboardMenu(PracticeCorePlugin plugin, Player viewer, Menu parent,
+                           String category) {
         super(plugin, viewer, parent);
+        this.category = category;
     }
 
     @Override
     protected Component title() {
-        return text("gui.leaderboards.title");
+        if (category == null) {
+            return text("gui.leaderboards.title");
+        }
+        return text("gui.leaderboards.title-category",
+                "category", plugin.guis().categoryName(category));
     }
 
     @Override
@@ -33,6 +46,8 @@ public final class LeaderboardMenu extends PagedMenu<ArenaTemplate> {
         // out entirely rather than listed forever-empty.
         return plugin.templates().completeTemplates().stream()
                 .filter(template -> plugin.modes().of(template).hasLeaderboards())
+                .filter(template -> category == null
+                        || template.effectiveCategory().equals(category))
                 .toList();
     }
 
@@ -63,7 +78,7 @@ public final class LeaderboardMenu extends PagedMenu<ArenaTemplate> {
                 bestRank = rank;
             }
         }
-        return ItemBuilder.of(template.effectiveIcon())
+        return ItemBuilder.of(plugin.modes().of(template).menuIcon(plugin, template))
                 .name(name("gui.leaderboards.entry-name", "arena", template.displayName()))
                 .lore(lore("gui.leaderboards.entry-lore",
                         "arena", template.displayName(),

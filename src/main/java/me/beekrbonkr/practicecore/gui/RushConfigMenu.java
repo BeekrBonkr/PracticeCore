@@ -4,6 +4,7 @@ import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.mode.RushMode;
 import me.beekrbonkr.practicecore.rush.RushDefense;
 import me.beekrbonkr.practicecore.rush.RushMapData;
+import me.beekrbonkr.practicecore.rush.RushPreset;
 import me.beekrbonkr.practicecore.rush.RushSelection;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
 import me.beekrbonkr.practicecore.util.ItemBuilder;
@@ -28,11 +29,13 @@ import java.util.Locale;
  *
  * <p>The layout reads top to bottom as the order the choices are actually
  * made: <em>where you start</em> (the base) on the first row, <em>what you
- * start with and what stands in your way</em> (the five match modifiers) on
+ * start with and what stands in your way</em> (the six match modifiers) on
  * the second, <em>who is waiting for you</em> (the defender lineup) on the
  * third, and <em>go</em> (casual / competitive) on the fourth. The casual
  * start carries a summary of everything set above it, so nobody has to hover
- * a row of buttons to find out what they are about to play.
+ * a row of buttons to find out what they are about to play. The bottom row
+ * holds the one-click presets ({@link RushPreset}): each writes a known-good
+ * set of dials and starts the run immediately.
  */
 public final class RushConfigMenu extends Menu {
 
@@ -72,6 +75,7 @@ public final class RushConfigMenu extends Menu {
         pickaxeButton(slot("pickaxe", 22));
         defenseButton(slot("defense", 23));
         generatorsButton(slot("generators", 24));
+        tntButton(slot("tnt", 25));
         botsButton(slot("bots", 29));
         // The lineup knobs only appear once there is a lineup to shape.
         if (selection.bots() > 0) {
@@ -81,6 +85,7 @@ public final class RushConfigMenu extends Menu {
         }
         startButton(slot("start", 39));
         competitiveButton(slot("competitive", 41));
+        presetButtons();
         backButton(plugin.guis().slot("rush.back", 45));
         closeButton(plugin.guis().slot("rush.close", 53));
     }
@@ -236,6 +241,24 @@ public final class RushConfigMenu extends Menu {
         });
     }
 
+    /** Starter TNT — it auto-ignites on place, so it is demolition fuel. */
+    private void tntButton(int slot) {
+        RushSelection.TntTier tier = selection.tnt();
+        set(slot, ItemBuilder.of(
+                        plugin.guis().buttonMaterial("rush.buttons.tnt", Material.TNT),
+                        Math.max(1, tier.amount()))
+                .name(name("gui.rush.tnt.name"))
+                .lore(lore("gui.rush.tnt.lore", "amount",
+                        tier.amount() == 0 ? raw("gui.none") : String.valueOf(tier.amount())))
+                .glow(tier.amount() > 0)
+                .build(), event -> {
+            click();
+            selection = selection.withTnt(tier.next());
+            plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+            refresh();
+        });
+    }
+
     // ------------------------------------------------------------- defenders
 
     /** Bots per enemy team, 0 (classic race) up to the configured ceiling. */
@@ -371,6 +394,9 @@ public final class RushConfigMenu extends Menu {
                                 "gold", String.valueOf(currency.gold()))),
                 msg.ref("pickaxe", "gui.rush.pickaxe.option."
                         + selection.pickaxe().name().toLowerCase(Locale.ROOT)),
+                msg.ref("tnt", selection.tnt().amount() == 0 ? msg.component("gui.none")
+                        : msg.component("gui.rush.summary.tnt",
+                                "amount", String.valueOf(selection.tnt().amount()))),
                 msg.ref("defense", defense.builds()
                         ? msg.component("gui.rush.summary.defense",
                                 "preset", defenseName(defense),
@@ -427,5 +453,40 @@ public final class RushConfigMenu extends Menu {
                 plugin.sessions().join(viewer, template);
             });
         });
+    }
+
+    /**
+     * The one-click presets along the bottom border row: each writes its
+     * known-good dial positions over the stored selection and starts the run
+     * — the fastest route into a specific kind of practice. Presets the
+     * config has switched off (a zero-defender competitive lineup, bots
+     * capped at none) are simply not offered.
+     */
+    private void presetButtons() {
+        for (RushPreset preset : RushPreset.values()) {
+            if (!preset.available(plugin.pcConfig())
+                    || !plugin.guis().buttonEnabled(preset.buttonKey())) {
+                continue;
+            }
+            set(plugin.guis().slot(preset.buttonKey(), preset.defaultSlot()),
+                    ItemBuilder.of(plugin.guis().buttonMaterial(preset.buttonKey(), preset.icon()))
+                            .name(name(preset.messageKey("name")))
+                            .lore(lore(preset.messageKey("lore"), "arena", template.displayName()))
+                            .glow(preset.competitive())
+                            .hideAttributes()
+                            .build(), event -> {
+                click();
+                selection = preset.apply(selection, plugin.pcConfig());
+                plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+                plugin.rush().setCompetitive(viewer.getUniqueId(), preset.competitive());
+                if (selection.team() != null) {
+                    plugin.rush().saveTeam(viewer.getUniqueId(), template, selection.team());
+                }
+                later(() -> {
+                    viewer.closeInventory();
+                    plugin.sessions().join(viewer, template);
+                });
+            });
+        }
     }
 }

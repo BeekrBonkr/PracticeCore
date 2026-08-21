@@ -425,7 +425,9 @@ final class RushCommands {
         template.setMode(RushMode.ID);
         if (existing == null) {
             template.setDisplayName(stripLegacy(imported.displayName()));
-            template.setIcon(Material.RED_BED);
+            // The map keeps the face players know from the MBedwars selector;
+            // only an arena without one falls back to the generic bed.
+            template.setIcon(imported.icon() != null ? imported.icon() : Material.RED_BED);
         }
         template.settings().put("rush", settings.get("rush"));
         // The plain spawn is only the fallback the join validation requires;

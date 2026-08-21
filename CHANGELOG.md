@@ -3,6 +3,38 @@
 Notable changes to PracticeCore. Versions follow the plugin's own numbering;
 config file format versions (`config-version`) migrate automatically on start.
 
+## 0.9.0
+
+- **Imported maps wear their MBedwars icons.** Menus now show an imported
+  rush arena with the same icon its MBedwars selector uses, resolved through
+  the API once per map and cached in memory (cleared by `/practice reload`),
+  so the menus never ping MBedwars per redraw. New imports also persist the
+  icon into `arena.yml`; existing imports still carrying the old automatic
+  red bed pick their MBedwars face up live, no re-import needed — any other
+  icon an admin configured stands.
+- **Leaderboards are organized by category.** The leaderboards button and
+  `/practice top` now open a category picker first — the same grouping the
+  Play button uses — with each category opening its own board list. Turning
+  `categories.enabled` off in `guis.yml` flattens leaderboards back into one
+  menu, exactly like Play.
+- **One-click presets on the rush menu.** A strip along the bottom border
+  starts a run under a known-good loadout: **Competitive Race** and
+  **Competitive Team Wipe** (both ranked), **Bridge Optimization** (64 wool,
+  nothing in the way), **Bed Break** (pickaxe, TNT, wool against the standard
+  defense), **Warmup** (competitive conditions off the books), **Bot
+  Skirmish** (two defenders per base) and **Sandbox** (everything on). The
+  casual presets write the dials so the menu shows what they chose; the
+  competitive ones touch only the bots toggle and leave your casual dials
+  alone.
+- **Competitive follows the bots toggle.** Bots off is the classic ranked
+  race; bots on is the ranked **team wipe**, pinned to the
+  `rush.bots.competitive` lineup so the team-wipe board compares like with
+  like. `config.yml` v6 raises an untouched `per-team: 0` to 4; setting it
+  back to 0 disables competitive team wipes (and hides their preset).
+- **Starter TNT is a match modifier.** A sixth dial on the rush menu (none /
+  1 / 2 / 4) puts auto-igniting TNT in the starter kit for demolition
+  practice. Casual runs only — competitive still pins no starting items.
+
 ## 0.8.0
 
 - **Bed defenses are pyramids now, not boxes.** The shell over each enemy bed

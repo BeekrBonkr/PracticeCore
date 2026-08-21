@@ -208,4 +208,13 @@ public interface Mode {
     default List<Component> boardLines(PracticeCorePlugin plugin, PracticeSession session) {
         return null;
     }
+
+    /**
+     * The material player-facing menus show for an arena of this mode. The
+     * default is the template's own configured/derived icon; modes with a
+     * better source (rush mirrors the MBedwars arena icon) override this.
+     */
+    default org.bukkit.Material menuIcon(PracticeCorePlugin plugin, ArenaTemplate template) {
+        return template.effectiveIcon();
+    }
 }

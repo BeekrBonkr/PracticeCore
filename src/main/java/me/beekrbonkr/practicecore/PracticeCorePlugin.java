@@ -282,6 +282,17 @@ public final class PracticeCorePlugin extends JavaPlugin {
                 cfg.set("rush.gold-interval-ticks", 100);
             }
         }
+        if (from < 6) {
+            // v6: competitive follows the bots toggle — off is the classic
+            // race, on is the pinned team wipe — so per-team stops meaning
+            // "competitive never has bots" and becomes the wipe's lineup
+            // size. The old shipped default (0) would leave the team-wipe
+            // preset with nothing to pin; only that untouched 0 moves.
+            if (cfg.isSet("rush.bots.competitive.per-team")
+                    && cfg.getInt("rush.bots.competitive.per-team", 0) == 0) {
+                cfg.set("rush.bots.competitive.per-team", 4);
+            }
+        }
     }
 
     /**

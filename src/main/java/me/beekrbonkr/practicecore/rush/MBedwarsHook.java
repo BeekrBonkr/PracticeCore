@@ -42,11 +42,14 @@ import java.util.Locale;
  */
 public final class MBedwarsHook {
 
-    /** What one MBedwars arena looks like to the importer: Bukkit types only. */
+    /**
+     * What one MBedwars arena looks like to the importer: Bukkit types only.
+     * {@code icon} is the arena's own selector icon, or null when it has none.
+     */
     public record ImportedArena(String name, String displayName, World world,
                                 BoundingBox region, String status,
                                 List<ImportedTeam> teams, List<ImportedSpawner> spawners,
-                                List<Location> dealers) {
+                                List<Location> dealers, Material icon) {
     }
 
     /** {@code bedBlock} is wherever MBedwars says the bed is; may not be a bed block. */
@@ -148,7 +151,28 @@ public final class MBedwarsHook {
         }
 
         return new ImportedArena(arena.getName(), arena.getDisplayName(), world, region,
-                arena.getStatus().name(), teams, spawners, dealers);
+                arena.getStatus().name(), teams, spawners, dealers,
+                iconMaterial(arena.getIcon()));
+    }
+
+    /**
+     * The selector icon MBedwars shows for an arena, as a plain material, or
+     * null when the arena is unknown or has no usable icon. This is what the
+     * practice menus mirror so an imported map keeps its familiar face.
+     */
+    public static Material arenaIconMaterial(String arenaName) {
+        GameAPI api = BedwarsAPI.getGameAPI();
+        Arena arena = api.getArenaByExactName(arenaName);
+        if (arena == null) {
+            arena = api.getArenaByName(arenaName);
+        }
+        return arena == null ? null : iconMaterial(arena.getIcon());
+    }
+
+    /** An icon stack reduced to a menu-safe material, or null. */
+    private static Material iconMaterial(ItemStack icon) {
+        return icon == null || icon.getType().isAir() || !icon.getType().isItem()
+                ? null : icon.getType();
     }
 
     /**

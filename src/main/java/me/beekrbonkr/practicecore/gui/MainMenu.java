@@ -66,7 +66,15 @@ public final class MainMenu extends Menu {
         if (shown("leaderboards") && viewer.hasPermission("practicecore.leaderboard")) {
             set(slot("leaderboards", 12), leaderboardIcon(), event -> {
                 click();
-                later(() -> new LeaderboardMenu(plugin, viewer, this).open());
+                later(() -> {
+                    // Same shape as Play: a category picker first, unless the
+                    // admin has flattened the menus.
+                    if (plugin.guis().categoriesEnabled()) {
+                        new LeaderboardCategoryMenu(plugin, viewer, this).open();
+                    } else {
+                        new LeaderboardMenu(plugin, viewer, this).open();
+                    }
+                });
             });
         }
         if (shown("stats")) {

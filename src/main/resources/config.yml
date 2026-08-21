@@ -16,7 +16,7 @@
 #   guis.yml     — menu layout: slots, icons, rows
 #   sounds.yml   — every sound cue
 #   pvpbot.yml   — the PvP bot's difficulty tuning and its kits
-config-version: 5
+config-version: 6
 
 world:
   # Name of the ephemeral practice world. Its folder is DELETED and recreated
@@ -315,11 +315,13 @@ rush:
     respawn-ticks: 100
     # Ticks the player is held at their own base after a defender kills them.
     player-respawn-ticks: 60
-    # The defender lineup competitive combat runs are pinned to, so the
-    # team-wipe leaderboard compares like with like. per-team 0 keeps
-    # competitive as the classic bot-free race.
+    # The defender lineup competitive team-wipe runs are pinned to, so the
+    # team-wipe leaderboard compares like with like. Competitive follows the
+    # menu's bots toggle: off is the classic bot-free race, on is the team
+    # wipe at exactly this lineup. per-team 0 disables competitive team-wipe
+    # runs entirely (and hides the menu's preset for them).
     competitive:
-      per-team: 0
+      per-team: 4
       difficulty: veteran
       armor: IRON
       sword: IRON

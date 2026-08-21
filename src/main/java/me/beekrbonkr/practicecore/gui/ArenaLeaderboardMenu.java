@@ -121,7 +121,7 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
         setFooter(47, standing.build());
 
         if (plugin.templates().canUse(viewer, template)) {
-            set(51, ItemBuilder.of(template.effectiveIcon())
+            set(51, ItemBuilder.of(plugin.modes().of(template).menuIcon(plugin, template))
                     .name(name("gui.board.play-name", "arena", boardName))
                     .lore(lore("gui.board.play-lore", "arena", boardName))
                     .build(), event -> {
