@@ -11,23 +11,23 @@ package me.beekrbonkr.practicecore.config;
 public final class Versions {
 
     /**
-     * config.yml — admin-editable. v5 retunes the untouched gold generator
-     * interval to the 4:1 forge ratio and adds the rush combat keys.
+     * config.yml — admin-editable. v6 raises the untouched competitive
+     * defender lineup from 0 to 4 per team, so the competitive team-wipe
+     * preset has a lineup to pin.
      */
-    public static final int CONFIG = 5;
+    public static final int CONFIG = 6;
 
     /**
-     * messages.yml — admin-editable. v6 extends the PvP bot sidebar with the
-     * session-stat lines (accuracy, K/D, dodged).
+     * messages.yml — admin-editable. v7 adds the rush TNT modifier, the rush
+     * preset tiles and the leaderboard category picker (all additive).
      */
-    public static final int MESSAGES = 6;
+    public static final int MESSAGES = 7;
 
     /**
-     * guis.yml — admin-editable menu layout. v2 grew the rush menu to five
-     * rows for the defender-bot buttons; v3 re-laid it into a row per
-     * decision and added the bed-defense gallery.
+     * guis.yml — admin-editable menu layout. v4 adds the rush TNT modifier
+     * and the preset row along the rush menu's bottom border (additive).
      */
-    public static final int GUIS = 3;
+    public static final int GUIS = 4;
 
     /** sounds.yml — admin-editable sound cues. */
     public static final int SOUNDS = 1;

@@ -46,6 +46,45 @@ public final class RushService {
         this.specialKey = new NamespacedKey(plugin, "rush-special");
     }
 
+    // ------------------------------------------------------------- map icons
+
+    /**
+     * Menu icons for imported maps, resolved from MBedwars once per arena and
+     * then served from here — the menus redraw far too often to ping the
+     * MBedwars API every time. Values may be null (no source, no MBedwars
+     * arena of that name, no icon); the miss is cached like a hit. Cleared on
+     * reload with the rest of the mirrored MBedwars state.
+     */
+    private final java.util.Map<String, Material> importedIcons = new java.util.HashMap<>();
+
+    /**
+     * The MBedwars selector icon of the arena this template was imported
+     * from, or null when there is nothing to mirror (hand-built map,
+     * MBedwars missing, or the source arena is gone).
+     */
+    public Material importedIcon(ArenaTemplate template) {
+        String name = template.name();
+        if (importedIcons.containsKey(name)) {
+            return importedIcons.get(name);
+        }
+        if (!MBedwarsHook.available()) {
+            // Not cached: MBedwars may still be coming up, or arrive later.
+            return null;
+        }
+        String source = RushMapData.parse(template).source();
+        Material icon = null;
+        if (source != null && !source.isBlank()) {
+            try {
+                icon = MBedwarsHook.arenaIconMaterial(source);
+            } catch (LinkageError e) {
+                plugin.getLogger().severe(
+                        "Could not read the MBedwars icon of '" + source + "': " + e);
+            }
+        }
+        importedIcons.put(name, icon);
+        return icon;
+    }
+
     // ---------------------------------------------------------- selections
 
     /**
@@ -71,6 +110,8 @@ public final class RushService {
                         stats.pref(player, "rush.currency", null), defaults.currency()),
                 RushSelection.enumOr(RushSelection.PickaxeTier.class,
                         stats.pref(player, "rush.pickaxe", null), defaults.pickaxe()),
+                RushSelection.enumOr(RushSelection.TntTier.class,
+                        stats.pref(player, "rush.tnt", null), defaults.tnt()),
                 defenseId(stats.pref(player, "rush.defense", null)),
                 stats.prefBool(player, "rush.base-generators",
                         plugin.pcConfig().rushBaseGeneratorsDefault()),
@@ -92,9 +133,12 @@ public final class RushService {
     /**
      * The gameplay-effective selection: competitive mode pins the loadout
      * everyone races under — no starting items, defenses at the configured
-     * preset, base generators running, defender bots at the configured lineup
-     * — so its leaderboards compare like with like. The player's stored
-     * casual modifiers survive untouched underneath.
+     * preset, base generators running — so its leaderboards compare like
+     * with like. The bots toggle survives as the one real choice: off is the
+     * classic race, on is the competitive team wipe, whose defender count
+     * and lineup are pinned to the configured competitive lineup so the
+     * team-wipe board stays comparable too. The player's stored casual
+     * modifiers survive untouched underneath.
      */
     public RushSelection selection(UUID player, ArenaTemplate template, RushMapData data) {
         RushSelection selection = rawSelection(player, template, data);
@@ -106,9 +150,10 @@ public final class RushService {
                 .withBlocks(RushSelection.BlockTier.NONE)
                 .withCurrency(RushSelection.CurrencyTier.NONE)
                 .withPickaxe(RushSelection.PickaxeTier.NONE)
+                .withTnt(RushSelection.TntTier.NONE)
                 .withDefense(config.rushCompetitiveDefense())
                 .withBaseGenerators(true)
-                .withBots(config.rushBotsCompetitivePerTeam())
+                .withBots(selection.combat() ? config.rushBotsCompetitivePerTeam() : 0)
                 .withBotDifficulty(config.rushBotsCompetitiveDifficulty())
                 .withBotArmor(config.rushBotsCompetitiveArmor())
                 .withBotSword(config.rushBotsCompetitiveSword());
@@ -136,6 +181,7 @@ public final class RushService {
                 "rush.blocks", selection.blocks().name(),
                 "rush.currency", selection.currency().name(),
                 "rush.pickaxe", selection.pickaxe().name(),
+                "rush.tnt", selection.tnt().name(),
                 "rush.defense", selection.defense(),
                 "rush.base-generators", selection.baseGenerators(),
                 "rush.bots", selection.bots(),
@@ -806,6 +852,7 @@ public final class RushService {
         }
         teleporterChannels.clear();
         shopCache = null; // /practice reload may follow an MBedwars shop edit
+        importedIcons.clear(); // …or an MBedwars arena-icon edit
     }
 
     private void tickAll() {

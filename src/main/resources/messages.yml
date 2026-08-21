@@ -12,7 +12,7 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 6
+config-version: 7
 
 prefix: '<gold>Practice <dark_gray>» '
 
@@ -794,6 +794,19 @@ gui:
 
   leaderboards:
     title: '<dark_gray><bold>Leaderboards'
+    # <category>
+    title-category: '<dark_gray><bold>Leaderboards — <category>'
+    # The category picker shown first (while guis.yml categories.enabled is
+    # on): one tile per category, each opening that category's own boards.
+    categories:
+      title: '<dark_gray><bold>Leaderboards'
+      # <category>
+      entry-name: '<gold><bold><category>'
+      # <category> <count>
+      entry-lore:
+        - '<gray><count> arena(s) with boards'
+        - ''
+        - '<yellow>Click to browse'
     empty:
       name: '<red>No arenas yet'
       lore:
@@ -974,6 +987,8 @@ gui:
     # Values the Start button's summary is built from.
     summary:
       # <amount>
+      tnt: '<white><amount> TNT'
+      # <amount>
       blocks: '<white><amount> wool'
       # <iron> <gold>
       currency: '<white><iron> iron<gray>, <white><gold> gold'
@@ -981,6 +996,17 @@ gui:
       defense: '<white><preset> <dark_gray>(<layers>)'
       # <count> <difficulty> <armor> <sword>
       defenders: '<white><count>/team <dark_gray>(<difficulty><dark_gray>, <armor><dark_gray>, <sword><dark_gray>)'
+    tnt:
+      name: '<red><bold>Starter TNT'
+      # <amount>
+      lore:
+        - '<gray>TNT in your starter kit. It'
+        - '<gray>auto-ignites on place — demolition'
+        - '<gray>fuel for bed defenses.'
+        - ''
+        - '<gray>Amount: <white><amount>'
+        - '<dark_gray>Casual runs only.'
+        - '<yellow>Click to cycle'
     generators:
       name: '<yellow><bold>Base Generators'
       # <state>
@@ -1045,7 +1071,7 @@ gui:
       name: '<green><bold>Start Casual'
       # The whole match summarized, so nobody has to hover five buttons to
       # find out what they are about to play.
-      # <arena> <team> <blocks> <currency> <pickaxe> <defense> <generators>
+      # <arena> <team> <blocks> <currency> <pickaxe> <tnt> <defense> <generators>
       lore:
         - '<gray>Map: <white><arena>'
         - ''
@@ -1054,6 +1080,7 @@ gui:
         - '<dark_gray> • <gray>Starter blocks: <blocks>'
         - '<dark_gray> • <gray>Starting resources: <currency>'
         - '<dark_gray> • <gray>Pickaxe: <white><pickaxe>'
+        - '<dark_gray> • <gray>TNT: <tnt>'
         - '<dark_gray> • <gray>Bed defenses: <defense>'
         - '<dark_gray> • <gray>Base generators: <generators>'
         - '<dark_gray> • <gray>Defenders: <defenders>'
@@ -1073,10 +1100,88 @@ gui:
         - '<gray>The ranked loadout, same for'
         - '<gray>everyone: <white>no starting items<gray>,'
         - '<white>bed defenses on<gray>, <white>generators on<gray>.'
+        - '<gray>Bots off is the ranked race; bots'
+        - '<gray>on is the ranked <white>team wipe<gray>, at'
+        - '<gray>the server''s fixed defender lineup.'
         - ''
         - '<gold>Only competitive times count'
         - '<gold>for records and leaderboards.'
         - '<yellow>Click to play'
+    # The one-click preset strip along the menu's bottom row. Each tile
+    # applies its loadout over your dials and starts the run immediately.
+    presets:
+      competitive:
+        name: '<gold><bold>Competitive Race'
+        # <arena>
+        lore:
+          - '<gray>The ranked race, one click:'
+          - '<gray>starter sword only, defenses on,'
+          - '<gray>generators on, shop open, no bots.'
+          - ''
+          - '<gold>Times are recorded and ranked.'
+          - '<yellow>Click to play'
+      competitive-wipe:
+        name: '<gold><bold>Competitive Team Wipe'
+        # <arena>
+        lore:
+          - '<gray>The ranked team wipe: starter'
+          - '<gray>sword, generators on, shop open,'
+          - '<gray>the fixed defender lineup at'
+          - '<gray>every enemy base.'
+          - ''
+          - '<gold>Times are recorded and ranked.'
+          - '<yellow>Click to play'
+      bridge:
+        name: '<aqua><bold>Bridge Optimization'
+        # <arena>
+        lore:
+          - '<gray>Route practice: <white>64 wool<gray> in'
+          - '<gray>hand, generators on, shop open,'
+          - '<gray>nothing in your way.'
+          - ''
+          - '<red>Casual — times are not recorded.'
+          - '<yellow>Click to play'
+      bed-break:
+        name: '<red><bold>Bed Break'
+        # <arena>
+        lore:
+          - '<gray>Cracking a defended bed: iron'
+          - '<gray>pickaxe, <white>TNT<gray>, wool, generators'
+          - '<gray>on, the standard defense up.'
+          - ''
+          - '<red>Casual — times are not recorded.'
+          - '<yellow>Click to play'
+      warmup:
+        name: '<green><bold>Warmup'
+        # <arena>
+        lore:
+          - '<gray>The exact competitive conditions'
+          - '<gray>— no starting items, defenses on'
+          - '<gray>— without the run going on the'
+          - '<gray>books.'
+          - ''
+          - '<red>Casual — times are not recorded.'
+          - '<yellow>Click to play'
+      skirmish:
+        name: '<red><bold>Bot Skirmish'
+        # <arena>
+        lore:
+          - '<gray>Combat practice: two defenders'
+          - '<gray>at every enemy base, wool, iron'
+          - '<gray>pickaxe and iron to spend.'
+          - ''
+          - '<red>Casual — times are not recorded.'
+          - '<yellow>Click to play'
+      sandbox:
+        name: '<white><bold>Sandbox'
+        # <arena>
+        lore:
+          - '<gray>Everything on: full wool, full'
+          - '<gray>purse, diamond pickaxe, TNT,'
+          - '<gray>generators running. Mess around.'
+          - ''
+          - '<red>Casual — times are not recorded.'
+          - '<yellow>Click to play'
 
   # The PvP bot settings, opened by the in-arena settings item. The bot
   # freezes while this menu is open and re-reads everything on close.

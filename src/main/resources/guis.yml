@@ -10,7 +10,7 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 2
+config-version: 4
 
 # The glass pane border drawn around every menu.
 filler:
@@ -61,7 +61,8 @@ settings:
 # becomes a combat run whose goal is the team wipe.
 #
 # Four rows that read top to bottom as the order the choices are made: where
-# you start, what you start with, who is waiting for you, then go.
+# you start, what you start with, who is waiting for you, then go — and a
+# preset strip along the bottom border for one-click starts.
 rush:
   rows: 6
   back: {slot: 45}
@@ -69,13 +70,15 @@ rush:
   buttons:
     # Row 1 — where the run starts. The icon is always the team's own wool.
     team: {slot: 13}
-    # Row 2 — the five match modifiers.
+    # Row 2 — the six match modifiers.
     blocks: {slot: 20, material: WHITE_WOOL}
     currency: {slot: 21, material: IRON_INGOT}
     pickaxe: {slot: 22, material: IRON_PICKAXE}
     # Opens the bed-defense gallery below; its icon follows the chosen preset.
     defense: {slot: 23}
     generators: {slot: 24, material: FURNACE}
+    # Starter TNT — auto-ignites on place, like every rush TNT.
+    tnt: {slot: 25, material: TNT}
     # Row 3 — defender bots at enemy bases. The three lineup buttons only
     # appear while the count is above zero; the armor and sword icons follow
     # the selected tier.
@@ -87,6 +90,17 @@ rush:
     start: {slot: 39, material: LIME_DYE}
     # Instant ranked start: generators on, no starting items, defenses on.
     competitive: {slot: 41, material: NETHER_STAR}
+    # The preset strip: each tile writes a known-good set of modifiers over
+    # the player's dials and starts the run immediately. The two competitive
+    # presets pin the ranked loadout; the rest are casual. A preset the
+    # config has switched off (per-team 0, bots capped at none) never shows.
+    preset-competitive: {slot: 46, material: DIAMOND}
+    preset-competitive-wipe: {slot: 47, material: DIAMOND_SWORD}
+    preset-bridge: {slot: 48, material: SCAFFOLDING}
+    preset-bed-break: {slot: 49, material: TNT}
+    preset-warmup: {slot: 50, material: FEATHER}
+    preset-skirmish: {slot: 51, material: IRON_SWORD}
+    preset-sandbox: {slot: 52, material: CHEST}
 
 # The bed-defense gallery, opened by the rush menu's defense button. One tile
 # per preset in config.yml's rush.defense-presets; each tile's icon is that

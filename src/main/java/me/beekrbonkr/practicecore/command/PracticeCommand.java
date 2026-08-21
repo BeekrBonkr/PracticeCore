@@ -219,7 +219,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
                     msg().send(player, "permission.leaderboard");
                     return;
                 }
-                new LeaderboardMenu(plugin, player, null).open();
+                openLeaderboards(player);
             }
             case "stats" -> new StatsMenu(plugin, player, null).open();
             case "settings" -> new SettingsMenu(plugin, player, null).open();
@@ -242,6 +242,15 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
 
     // ---------------------------------------------------------- leaderboard
 
+    /** Category picker first — unless the admin has flattened the menus. */
+    private void openLeaderboards(Player player) {
+        if (plugin.guis().categoriesEnabled()) {
+            new me.beekrbonkr.practicecore.gui.LeaderboardCategoryMenu(plugin, player, null).open();
+        } else {
+            new LeaderboardMenu(plugin, player, null).open();
+        }
+    }
+
     private void top(CommandSender sender, String[] args) {
         if (!sender.hasPermission("practicecore.leaderboard")) {
             msg().send(sender, "permission.leaderboard");
@@ -249,7 +258,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
         }
         if (args.length < 2) {
             if (sender instanceof Player player) {
-                new LeaderboardMenu(plugin, player, null).open();
+                openLeaderboards(player);
             } else {
                 msg().send(sender, "general.usage", "usage", "/practice top <arena>");
             }

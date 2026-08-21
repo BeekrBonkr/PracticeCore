@@ -72,7 +72,8 @@ public final class CategoryMenu extends PagedMenu<String> {
         if (configured != null) {
             return configured;
         }
-        return arenas.isEmpty() ? Material.GRASS_BLOCK : arenas.get(0).effectiveIcon();
+        return arenas.isEmpty() ? Material.GRASS_BLOCK
+                : plugin.modes().of(arenas.get(0)).menuIcon(plugin, arenas.get(0));
     }
 
     @Override

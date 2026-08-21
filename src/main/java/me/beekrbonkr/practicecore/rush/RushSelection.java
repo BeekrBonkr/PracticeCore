@@ -20,7 +20,7 @@ import java.util.Locale;
  */
 public record RushSelection(String team, BlockTier blocks,
                             CurrencyTier currency, PickaxeTier pickaxe,
-                            String defense, boolean baseGenerators,
+                            TntTier tnt, String defense, boolean baseGenerators,
                             int bots, String botDifficulty,
                             BotArmor botArmor, BotSword botSword,
                             boolean competitive) {
@@ -65,6 +65,28 @@ public record RushSelection(String team, BlockTier blocks,
         }
 
         public CurrencyTier next() {
+            return values()[(ordinal() + 1) % values().length];
+        }
+    }
+
+    /**
+     * TNT in the starter kit — it auto-ignites on place like every rush TNT,
+     * so this is demolition practice fuel, not a block.
+     */
+    public enum TntTier {
+        NONE(0), ONE(1), TWO(2), FOUR(4);
+
+        private final int amount;
+
+        TntTier(int amount) {
+            this.amount = amount;
+        }
+
+        public int amount() {
+            return amount;
+        }
+
+        public TntTier next() {
             return values()[(ordinal() + 1) % values().length];
         }
     }
@@ -130,7 +152,7 @@ public record RushSelection(String team, BlockTier blocks,
 
     public static RushSelection defaults() {
         return new RushSelection(null, BlockTier.NONE,
-                CurrencyTier.NONE, PickaxeTier.NONE, RushDefense.NONE, true,
+                CurrencyTier.NONE, PickaxeTier.NONE, TntTier.NONE, RushDefense.NONE, true,
                 0, "", BotArmor.LEATHER, BotSword.WOODEN, false);
     }
 
@@ -140,58 +162,63 @@ public record RushSelection(String team, BlockTier blocks,
     }
 
     public RushSelection withTeam(String team) {
-        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+        return new RushSelection(team, blocks, currency, pickaxe, tnt, defense, baseGenerators,
                 bots, botDifficulty, botArmor, botSword, competitive);
     }
 
     public RushSelection withBlocks(BlockTier blocks) {
-        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+        return new RushSelection(team, blocks, currency, pickaxe, tnt, defense, baseGenerators,
                 bots, botDifficulty, botArmor, botSword, competitive);
     }
 
     public RushSelection withCurrency(CurrencyTier currency) {
-        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+        return new RushSelection(team, blocks, currency, pickaxe, tnt, defense, baseGenerators,
                 bots, botDifficulty, botArmor, botSword, competitive);
     }
 
     public RushSelection withPickaxe(PickaxeTier pickaxe) {
-        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+        return new RushSelection(team, blocks, currency, pickaxe, tnt, defense, baseGenerators,
+                bots, botDifficulty, botArmor, botSword, competitive);
+    }
+
+    public RushSelection withTnt(TntTier tnt) {
+        return new RushSelection(team, blocks, currency, pickaxe, tnt, defense, baseGenerators,
                 bots, botDifficulty, botArmor, botSword, competitive);
     }
 
     /** @param defense a {@link RushDefense} id from config.yml */
     public RushSelection withDefense(String defense) {
-        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+        return new RushSelection(team, blocks, currency, pickaxe, tnt, defense, baseGenerators,
                 bots, botDifficulty, botArmor, botSword, competitive);
     }
 
     public RushSelection withBaseGenerators(boolean baseGenerators) {
-        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+        return new RushSelection(team, blocks, currency, pickaxe, tnt, defense, baseGenerators,
                 bots, botDifficulty, botArmor, botSword, competitive);
     }
 
     public RushSelection withBots(int bots) {
-        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+        return new RushSelection(team, blocks, currency, pickaxe, tnt, defense, baseGenerators,
                 Math.max(0, bots), botDifficulty, botArmor, botSword, competitive);
     }
 
     public RushSelection withBotDifficulty(String botDifficulty) {
-        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+        return new RushSelection(team, blocks, currency, pickaxe, tnt, defense, baseGenerators,
                 bots, botDifficulty == null ? "" : botDifficulty, botArmor, botSword, competitive);
     }
 
     public RushSelection withBotArmor(BotArmor botArmor) {
-        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+        return new RushSelection(team, blocks, currency, pickaxe, tnt, defense, baseGenerators,
                 bots, botDifficulty, botArmor, botSword, competitive);
     }
 
     public RushSelection withBotSword(BotSword botSword) {
-        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+        return new RushSelection(team, blocks, currency, pickaxe, tnt, defense, baseGenerators,
                 bots, botDifficulty, botArmor, botSword, competitive);
     }
 
     public RushSelection withCompetitive(boolean competitive) {
-        return new RushSelection(team, blocks, currency, pickaxe, defense, baseGenerators,
+        return new RushSelection(team, blocks, currency, pickaxe, tnt, defense, baseGenerators,
                 bots, botDifficulty, botArmor, botSword, competitive);
     }
 
