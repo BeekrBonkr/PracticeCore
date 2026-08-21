@@ -54,6 +54,42 @@ public final class GuiConfig {
                 cfg.set("rush.close.slot", 44);
             }
         }
+        if (from < 3) {
+            // v3 gives the rush menu a row per decision — base, match
+            // modifiers, defenders, go — and hands the defense choice to its
+            // own gallery. Chains off v2 above, so a file coming all the way
+            // from v1 lands here with v2's slots already in place. Only slots
+            // still sitting where the last version put them are moved; a
+            // layout the admin arranged themselves is theirs and stands.
+            relocate(cfg, "rush.rows", 5, 6);
+            relocate(cfg, "rush.back.slot", 36, 45);
+            relocate(cfg, "rush.close.slot", 44, 53);
+            relocate(cfg, "rush.buttons.team.slot", 11, 13);
+            relocate(cfg, "rush.buttons.blocks.slot", 19, 20);
+            relocate(cfg, "rush.buttons.currency.slot", 20, 21);
+            relocate(cfg, "rush.buttons.pickaxe.slot", 21, 22);
+            relocate(cfg, "rush.buttons.defense.slot", 22, 23);
+            relocate(cfg, "rush.buttons.generators.slot", 23, 24);
+            relocate(cfg, "rush.buttons.bots.slot", 28, 29);
+            relocate(cfg, "rush.buttons.bot-difficulty.slot", 29, 30);
+            relocate(cfg, "rush.buttons.bot-armor.slot", 30, 31);
+            relocate(cfg, "rush.buttons.bot-sword.slot", 31, 32);
+            relocate(cfg, "rush.buttons.start.slot", 13, 39);
+            relocate(cfg, "rush.buttons.competitive.slot", 15, 41);
+            // The gallery picks the icon per preset now, so a leftover fixed
+            // material would override every one of them.
+            if ("END_STONE".equalsIgnoreCase(cfg.getString("rush.buttons.defense.material", ""))) {
+                cfg.set("rush.buttons.defense.material", null);
+            }
+        }
+    }
+
+    /** Moves a slot only while it still sits where the previous version put it. */
+    private static void relocate(org.bukkit.configuration.file.FileConfiguration cfg,
+                                 String path, int old, int now) {
+        if (cfg.isSet(path) && cfg.getInt(path, old) == old) {
+            cfg.set(path, now);
+        }
     }
 
     // ------------------------------------------------------------- lookups

@@ -59,9 +59,19 @@ public final class SetupManager {
 
     private final PracticeCorePlugin plugin;
     private SetupSession active;
+    /** The "pasting" title of the paste in flight — one wizard, one paste. */
+    private Messages.LoadingCue pasteCue;
 
     public SetupManager(PracticeCorePlugin plugin) {
         this.plugin = plugin;
+    }
+
+    /** The paste landed, one way or the other. Safe when none was queued. */
+    private void endPasteCue() {
+        if (pasteCue != null) {
+            pasteCue.finish();
+            pasteCue = null;
+        }
     }
 
     private Messages msg() {
@@ -242,6 +252,8 @@ public final class SetupManager {
         // Big maps take seconds to paste — with FAWE that runs off-thread, and
         // either way the admin is told something is happening right now.
         msg().actionBar(admin, "setup.pasting", "arena", name);
+        pasteCue = msg().loading(admin, "setup.pasting-title", "setup.pasting-subtitle",
+                "arena", name);
         if (plugin.schematics().supportsAsyncEdits()) {
             java.util.concurrent.CompletableFuture
                     .supplyAsync(() -> {
@@ -270,6 +282,7 @@ public final class SetupManager {
     private void finishOpen(Player admin, String name, File dir, Clipboard clipboard,
                             boolean editing, ArenaTemplate existing, Slot slot, Location origin,
                             BoundingBox bounds, Throwable error) {
+        endPasteCue();
         World world = plugin.worldService().world();
         if (error != null || bounds == null || world == null) {
             plugin.allocator().release(slot);
@@ -732,6 +745,8 @@ public final class SetupManager {
         }
         World world = plugin.worldService().world();
         msg().actionBar(admin, "setup.pasting", "arena", session.name);
+        pasteCue = msg().loading(admin, "setup.pasting-title", "setup.pasting-subtitle",
+                "arena", session.name);
         if (plugin.schematics().supportsAsyncEdits()) {
             java.util.concurrent.CompletableFuture
                     .supplyAsync(() -> {
@@ -763,6 +778,7 @@ public final class SetupManager {
     /** Main-thread tail of {@link #replaceSchematic}. */
     private void finishReplace(Player admin, SetupSession session, Clipboard clipboard,
                                BoundingBox bounds, Throwable error) {
+        endPasteCue();
         if (error != null || bounds == null) {
             if (admin.isOnline()) {
                 msg().send(admin, "setup.schematic-replace-failed",

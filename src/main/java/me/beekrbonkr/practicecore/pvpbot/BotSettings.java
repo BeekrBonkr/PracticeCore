@@ -22,7 +22,7 @@ import java.util.UUID;
 public record BotSettings(BotTuning tuning, PvpKit kit, GearTier gear, Evasiveness evasiveness,
                           Cps cps, Accuracy accuracy, Combos combos,
                           Reach reach, Aggression aggression,
-                          boolean rod, boolean bow, boolean block) {
+                          boolean rod, boolean bow, boolean block, boolean build) {
 
     /** How hard the bot works to stay out of the player's crosshair. */
     public enum Evasiveness {
@@ -187,6 +187,16 @@ public record BotSettings(BotTuning tuning, PvpKit kit, GearTier gear, Evasivene
         return bow || (kit != null && kit.carries(Material.BOW));
     }
 
+    /**
+     * Whether the bot may place blocks to get to the player — towering after
+     * someone who went up, bridging a gap it cannot walk around. Unlike the
+     * rod and bow this needs no kit item: the bot builds from its own supply,
+     * so the toggle is the whole answer.
+     */
+    public boolean usesBlocks() {
+        return build && tuning.buildingEnabled();
+    }
+
     /** A layer-scaled knob from pvpbot.yml's {@code behavior} section. */
     public double knob(String path, double fallback) {
         return tuning.scaled("behavior." + path, this, fallback);
@@ -263,7 +273,8 @@ public record BotSettings(BotTuning tuning, PvpKit kit, GearTier gear, Evasivene
                         tuning.defaultTier("aggression", Aggression.class, Aggression.BALANCED)),
                 stats.prefBool(player, "pvpbot.rod", tuning.defaultToggle("rod", false)),
                 stats.prefBool(player, "pvpbot.bow", tuning.defaultToggle("bow", false)),
-                stats.prefBool(player, "pvpbot.block", tuning.defaultToggle("block", false)));
+                stats.prefBool(player, "pvpbot.block", tuning.defaultToggle("block", false)),
+                stats.prefBool(player, "pvpbot.build", tuning.defaultToggle("build", true)));
     }
 
     private static <E extends Enum<E>> E enumOr(Class<E> type, String name, E def) {

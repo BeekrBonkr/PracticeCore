@@ -14,7 +14,6 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -48,6 +47,8 @@ public final class SessionManager {
     private final Set<UUID> internalGamemode = new HashSet<>();
     /** Players whose arena is being pasted off-thread right now. */
     private final Set<UUID> pendingJoins = new HashSet<>();
+    /** The "loading" title of a join in flight, one per player at most. */
+    private final Map<UUID, Messages.LoadingCue> joinCues = new HashMap<>();
 
     public SessionManager(PracticeCorePlugin plugin) {
         this.plugin = plugin;
@@ -191,6 +192,11 @@ public final class SessionManager {
         // Say so up front — a silent pause after the command reads as lag.
         pendingJoins.add(id);
         msg.actionBar(player, "session.building", "arena", template.displayName());
+        // The action bar is easy to miss mid-teleport; a title is not. One
+        // cue covers the whole join — paste and teleport — and comes down
+        // when the player is actually standing in the arena.
+        beginLoading(player, "session.building-title", "session.building-subtitle",
+                template.displayName());
         if (plugin.schematics().supportsAsyncEdits()) {
             java.util.concurrent.CompletableFuture
                     .supplyAsync(() -> {
@@ -216,6 +222,25 @@ public final class SessionManager {
     }
 
     /**
+     * Raises the join's loading title — or rather queues it: it only appears
+     * if the join is still running a beat later, so the common instant join
+     * shows nothing at all.
+     */
+    private void beginLoading(Player player, String titleKey, String subtitleKey, String arena) {
+        endLoading(player); // never leave a previous attempt's cue behind
+        joinCues.put(player.getUniqueId(),
+                plugin.messages().loading(player, titleKey, subtitleKey, "arena", arena));
+    }
+
+    /** The join landed, one way or the other. Safe on a player with no cue. */
+    private void endLoading(Player player) {
+        Messages.LoadingCue cue = joinCues.remove(player.getUniqueId());
+        if (cue != null) {
+            cue.finish();
+        }
+    }
+
+    /**
      * Second half of {@link #join} — runs on the main thread once the paste
      * finished. The world may have moved on while the paste ran (the player
      * quit, left, or was handed to setup), in which case the orphaned paste
@@ -232,6 +257,7 @@ public final class SessionManager {
         World world = plugin.worldService().world();
         if (error != null || bounds == null || world == null) {
             plugin.allocator().release(slot);
+            endLoading(player);
             msg.send(player, "arena.paste-failed");
             plugin.getLogger().severe("Paste failed for '" + template.name() + "': "
                     + (error != null ? error.getMessage() : "no result"));
@@ -241,6 +267,7 @@ public final class SessionManager {
             slot.markDirty();
             eraseRegion(world, bounds);
             releaseLater(slot);
+            endLoading(player);
             return;
         }
         slot.occupy();
@@ -300,6 +327,7 @@ public final class SessionManager {
         Messages msg = plugin.messages();
         ArenaTemplate template = session.template();
         internalTeleports.remove(id);
+        endLoading(player);
         if (err != null || !Boolean.TRUE.equals(ok)
                 || !player.isOnline() || sessions.get(id) != session
                 // Another plugin's teleport during the async window is
@@ -332,6 +360,7 @@ public final class SessionManager {
      */
     private void abortJoin(Player player, PracticeSession failed, PracticeSession previous) {
         UUID id = player.getUniqueId();
+        endLoading(player);
         boolean wasCurrent = sessions.remove(id, failed);
         cleanupArena(failed, true);
         if (previous != null && wasCurrent && player.isOnline()
@@ -404,8 +433,6 @@ public final class SessionManager {
         for (PotionEffect effect : player.getActivePotionEffects()) {
             player.removePotionEffect(effect.getType());
         }
-        AttributeInstance maxHealth = player.getAttribute(PlayerSnapshot.maxHealthAttribute());
-        player.setHealth(maxHealth != null ? maxHealth.getValue() : 20.0);
         player.setFoodLevel(20);
         player.setSaturation(20);
         player.setFireTicks(0);
@@ -413,6 +440,10 @@ public final class SessionManager {
         player.setVelocity(new Vector(0, 0, 0));
         plugin.settings().applyToSession(player);
         giveKit(player, session);
+        // Last, once the effects are gone and the kit is on: both can move
+        // the max-health attribute, so a heal taken any earlier can land
+        // under the bar the player ends up with.
+        PlayerSnapshot.healToFull(player);
     }
 
     /**
@@ -682,6 +713,9 @@ public final class SessionManager {
         clearNonPlayerEntities(session);
         session.resetTimer();
         giveKit(player, session);
+        // Every reset is a respawn — a failed run, a void fall, /practice
+        // restart — and every one of them starts on a full bar.
+        PlayerSnapshot.healToFull(player);
         internalTeleports.add(player.getUniqueId());
         player.teleport(session.spawn());
         internalTeleports.remove(player.getUniqueId());
@@ -744,6 +778,7 @@ public final class SessionManager {
     }
 
     public void handleQuit(Player player) {
+        endLoading(player); // a join still in flight has nobody left to tell
         PracticeSession session = sessions.remove(player.getUniqueId());
         if (session != null) {
             notifyEnd(session);

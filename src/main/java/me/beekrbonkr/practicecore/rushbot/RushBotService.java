@@ -148,7 +148,7 @@ public final class RushBotService {
                 tuning.defaultTier("reach", BotSettings.Reach.class, BotSettings.Reach.NORMAL),
                 tuning.defaultTier("aggression", BotSettings.Aggression.class,
                         BotSettings.Aggression.BALANCED),
-                false, false, false);
+                false, false, false, false);
         if (preset == null) {
             return defaults;
         }
@@ -159,7 +159,7 @@ public final class RushBotService {
                 preset.combos() != null ? preset.combos() : defaults.combos(),
                 preset.reach() != null ? preset.reach() : defaults.reach(),
                 preset.aggression() != null ? preset.aggression() : defaults.aggression(),
-                false, false, false);
+                false, false, false, false);
     }
 
     /** The preset a rush difficulty id resolves to, or null — for menu labels. */

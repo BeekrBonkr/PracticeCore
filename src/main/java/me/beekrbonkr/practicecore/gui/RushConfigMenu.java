@@ -2,11 +2,13 @@ package me.beekrbonkr.practicecore.gui;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.mode.RushMode;
+import me.beekrbonkr.practicecore.rush.RushDefense;
 import me.beekrbonkr.practicecore.rush.RushMapData;
 import me.beekrbonkr.practicecore.rush.RushSelection;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
 import me.beekrbonkr.practicecore.util.ItemBuilder;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -23,6 +25,14 @@ import java.util.Locale;
  * choose — every one the map supports is armed, and whichever is completed
  * first ends the run. Every change is persisted immediately, so a plain
  * /practice join later replays the same choices.
+ *
+ * <p>The layout reads top to bottom as the order the choices are actually
+ * made: <em>where you start</em> (the base) on the first row, <em>what you
+ * start with and what stands in your way</em> (the five match modifiers) on
+ * the second, <em>who is waiting for you</em> (the defender lineup) on the
+ * third, and <em>go</em> (casual / competitive) on the fourth. The casual
+ * start carries a summary of everything set above it, so nobody has to hover
+ * a row of buttons to find out what they are about to play.
  */
 public final class RushConfigMenu extends Menu {
 
@@ -46,7 +56,7 @@ public final class RushConfigMenu extends Menu {
 
     @Override
     protected int rows() {
-        return plugin.guis().rows("rush", 5);
+        return plugin.guis().rows("rush", 6);
     }
 
     private int slot(String button, int def) {
@@ -56,23 +66,23 @@ public final class RushConfigMenu extends Menu {
     @Override
     protected void render() {
         border();
-        teamButton(slot("team", 11));
-        startButton(slot("start", 13));
-        competitiveButton(slot("competitive", 15));
-        blocksButton(slot("blocks", 19));
-        currencyButton(slot("currency", 20));
-        pickaxeButton(slot("pickaxe", 21));
-        defenseButton(slot("defense", 22));
-        generatorsButton(slot("generators", 23));
-        botsButton(slot("bots", 28));
+        teamButton(slot("team", 13));
+        blocksButton(slot("blocks", 20));
+        currencyButton(slot("currency", 21));
+        pickaxeButton(slot("pickaxe", 22));
+        defenseButton(slot("defense", 23));
+        generatorsButton(slot("generators", 24));
+        botsButton(slot("bots", 29));
         // The lineup knobs only appear once there is a lineup to shape.
         if (selection.bots() > 0) {
-            botDifficultyButton(slot("bot-difficulty", 29));
-            botArmorButton(slot("bot-armor", 30));
-            botSwordButton(slot("bot-sword", 31));
+            botDifficultyButton(slot("bot-difficulty", 30));
+            botArmorButton(slot("bot-armor", 31));
+            botSwordButton(slot("bot-sword", 32));
         }
-        backButton(plugin.guis().slot("rush.back", 36));
-        closeButton(plugin.guis().slot("rush.close", 44));
+        startButton(slot("start", 39));
+        competitiveButton(slot("competitive", 41));
+        backButton(plugin.guis().slot("rush.back", 45));
+        closeButton(plugin.guis().slot("rush.close", 53));
     }
 
     // ----------------------------------------------------------------- team
@@ -180,20 +190,34 @@ public final class RushConfigMenu extends Menu {
         });
     }
 
+    /**
+     * Opens the preset gallery rather than cycling: there are far more
+     * pyramids to choose from than anyone wants to click through, and the
+     * gallery can show what each one is actually made of.
+     */
     private void defenseButton(int slot) {
-        RushSelection.DefensePreset preset = selection.defense();
+        RushDefense preset = plugin.pcConfig().rushDefense(selection.defense());
         set(slot, ItemBuilder.of(
-                        plugin.guis().buttonMaterial("rush.buttons.defense", Material.END_STONE))
+                        plugin.guis().buttonMaterial("rush.buttons.defense", preset.menuIcon()))
                 .name(name("gui.rush.defense.name"))
-                .lore(lore("gui.rush.defense.lore", plugin.messages().ref("preset",
-                        "gui.rush.defense.option." + preset.name().toLowerCase(Locale.ROOT))))
-                .glow(preset != RushSelection.DefensePreset.NONE)
+                .lore(lore("gui.rush.defense.lore",
+                        "preset", defenseName(preset),
+                        "layers", String.valueOf(preset.reach())))
+                .glow(preset.builds())
+                .hideAttributes()
                 .build(), event -> {
             click();
-            selection = selection.withDefense(preset.next());
-            plugin.rush().saveSelection(viewer.getUniqueId(), selection);
-            refresh();
+            later(() -> new RushDefenseMenu(plugin, viewer, this, selection.defense(), picked -> {
+                selection = selection.withDefense(picked.id());
+                plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+            }).open());
         });
+    }
+
+    /** A preset's label: messages.yml first, then its own configured name. */
+    private String defenseName(RushDefense preset) {
+        String configured = raw("gui.rush.defense.option." + preset.id());
+        return configured.isEmpty() ? preset.displayName() : configured;
     }
 
     private void generatorsButton(int slot) {
@@ -308,7 +332,9 @@ public final class RushConfigMenu extends Menu {
         set(slot, ItemBuilder.of(
                         plugin.guis().buttonMaterial("rush.buttons.start", Material.LIME_DYE))
                 .name(name("gui.rush.start.name"))
-                .lore(lore("gui.rush.start.lore", "arena", template.displayName()))
+                .lore(lore("gui.rush.start.lore", summary(),
+                        "arena", template.displayName(),
+                        "team", teamLabel()))
                 .build(), event -> {
             click();
             plugin.rush().setCompetitive(viewer.getUniqueId(), false);
@@ -321,6 +347,62 @@ public final class RushConfigMenu extends Menu {
                 plugin.sessions().join(viewer, template);
             });
         });
+    }
+
+    /**
+     * Every modifier this run would use, as one set of placeholders for the
+     * start button's lore — so the summary lives where the decision is made
+     * instead of five hovers away. These are the <em>stored</em> choices:
+     * competitive pins its own loadout and says so in its own lore.
+     */
+    private TagResolver summary() {
+        var msg = plugin.messages();
+        RushSelection.BlockTier blocks = selection.blocks();
+        RushSelection.CurrencyTier currency = selection.currency();
+        RushDefense defense = plugin.pcConfig().rushDefense(selection.defense());
+        return TagResolver.resolver(
+                msg.ref("blocks", blocks.amount() == 0 ? msg.component("gui.none")
+                        : msg.component("gui.rush.summary.blocks",
+                                "amount", String.valueOf(blocks.amount()))),
+                msg.ref("currency", currency.iron() == 0 && currency.gold() == 0
+                        ? msg.component("gui.none")
+                        : msg.component("gui.rush.summary.currency",
+                                "iron", String.valueOf(currency.iron()),
+                                "gold", String.valueOf(currency.gold()))),
+                msg.ref("pickaxe", "gui.rush.pickaxe.option."
+                        + selection.pickaxe().name().toLowerCase(Locale.ROOT)),
+                msg.ref("defense", defense.builds()
+                        ? msg.component("gui.rush.summary.defense",
+                                "preset", defenseName(defense),
+                                "layers", String.valueOf(defense.reach()))
+                        : msg.component("gui.none")),
+                msg.ref("generators", selection.baseGenerators()
+                        ? "gui.rush.generators.state-on" : "gui.rush.generators.state-off"),
+                msg.ref("defenders", selection.combat()
+                        ? msg.component("gui.rush.summary.defenders",
+                                msg.ref("difficulty", defenderDifficulty()),
+                                "count", String.valueOf(selection.bots()),
+                                "armor", raw("gui.rush.bot-armor.option."
+                                        + selection.botArmor().name().toLowerCase(Locale.ROOT)),
+                                "sword", raw("gui.rush.bot-sword.option."
+                                        + selection.botSword().name().toLowerCase(Locale.ROOT)))
+                        : msg.component("gui.none")));
+    }
+
+    /** The defender lineup's difficulty label, or the configured default. */
+    private Component defenderDifficulty() {
+        var preset = plugin.rushBots().presetOf(selection.botDifficulty());
+        return preset == null ? name("gui.rush.bot-difficulty.default") : presetLabel(preset);
+    }
+
+    /** The chosen base's name, or "none" on a map with no playable team. */
+    private String teamLabel() {
+        RushMapData.TeamBase team = data.team(selection.team());
+        if (team == null) {
+            List<RushMapData.TeamBase> teams = data.playableTeams();
+            team = teams.isEmpty() ? null : teams.get(0);
+        }
+        return team == null ? raw("gui.none") : RushMode.prettyTeam(team.name());
     }
 
     /**

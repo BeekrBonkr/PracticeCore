@@ -58,14 +58,13 @@ public final class ConfigValidator {
         constant(problems, cfg, "world.difficulty", Difficulty.class);
         constant(problems, cfg, "timer.start-mode", PCConfig.TimerStartMode.class);
         constant(problems, cfg, "arenas.access-mode", PCConfig.AccessMode.class);
-        constant(problems, cfg, "rush.competitive-defense",
-                me.beekrbonkr.practicecore.rush.RushSelection.DefensePreset.class);
         constant(problems, cfg, "rush.bots.competitive.armor",
                 me.beekrbonkr.practicecore.rush.RushSelection.BotArmor.class);
         constant(problems, cfg, "rush.bots.competitive.sword",
                 me.beekrbonkr.practicecore.rush.RushSelection.BotSword.class);
         constant(problems, cfg, "bedbreak.orientation", Orientation.class);
         profession(problems, cfg);
+        defensePresets(problems, cfg);
 
         material(problems, cfg, "menu-item.material", false);
         material(problems, cfg, "mlg.platform-material", true);
@@ -119,6 +118,47 @@ public final class ConfigValidator {
 
     /** The bed-break wall directions; config.yml's only free-text mode name. */
     private enum Orientation { VERTICAL, HORIZONTAL }
+
+    /**
+     * The bed-defense gallery: every layer must be a placeable block, and the
+     * competitive preset must name one of the presets that survived. A preset
+     * with no layers is legal — that is what "none" is.
+     */
+    private void defensePresets(List<String> problems, FileConfiguration cfg) {
+        var section = cfg.getConfigurationSection("rush.defense-presets");
+        List<String> ids = new ArrayList<>();
+        if (section != null) {
+            for (String id : section.getKeys(false)) {
+                ids.add(id.toLowerCase(Locale.ROOT));
+                String path = "rush.defense-presets." + id;
+                if (!section.isConfigurationSection(id)) {
+                    problems.add("config.yml: " + path
+                            + " is not a block of settings — that preset is skipped.");
+                    continue;
+                }
+                material(problems, cfg, path + ".icon", false);
+                for (String name : cfg.getStringList(path + ".layers")) {
+                    Material layer = Material.matchMaterial(name);
+                    if (layer == null || !layer.isBlock()) {
+                        problems.add("config.yml: '" + name + "' in " + path
+                                + ".layers is not a block this server can place —"
+                                + " that layer is dropped.");
+                    }
+                }
+            }
+        }
+        if (!set(cfg, "rush.competitive-defense")) {
+            return;
+        }
+        String competitive = cfg.getString("rush.competitive-defense", "")
+                .trim().toLowerCase(Locale.ROOT);
+        if (!competitive.equals(me.beekrbonkr.practicecore.rush.RushDefense.NONE)
+                && !ids.contains(competitive)) {
+            problems.add("config.yml: rush.competitive-defense '" + competitive
+                    + "' is not one of rush.defense-presets — competitive runs"
+                    + " get no bed defenses at all.");
+        }
+    }
 
     /** Mirrors RushService's registry lookup, so the two can never disagree. */
     private void profession(List<String> problems, FileConfiguration cfg) {

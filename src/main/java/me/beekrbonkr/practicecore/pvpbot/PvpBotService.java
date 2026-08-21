@@ -14,6 +14,8 @@ import org.bukkit.Registry;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Arrow;
@@ -564,8 +566,6 @@ public final class PvpBotService {
             plugin.sessions().teleportInternal(player, fight.playerSpawn);
             plugin.sounds().play(player, "pvpbot.player-respawn", fight.playerSpawn);
         }
-        AttributeInstance maxHealth = player.getAttribute(PlayerSnapshot.maxHealthAttribute());
-        player.setHealth(maxHealth != null ? maxHealth.getValue() : 20.0);
         player.setFoodLevel(20);
         player.setSaturation(20);
         player.setFireTicks(0);
@@ -577,10 +577,14 @@ public final class PvpBotService {
         plugin.settings().applyToSession(player); // night vision survives the wipe
         plugin.sessions().regiveKit(player, session);
         syncSwordComponents(player);
+        // The heal comes last, after the effects are gone and the kit is back
+        // on: both move the max-health attribute, and healing before they
+        // settle leaves the player a few points under the bar they were just
+        // handed. A stock always starts on a full one.
+        PlayerSnapshot.healToFull(player);
         if (fight.bot != null && fight.bot.isValid()) {
             fight.bot.teleport(fight.botSpawn);
-            AttributeInstance botMax = fight.bot.getAttribute(PlayerSnapshot.maxHealthAttribute());
-            fight.bot.setHealth(botMax != null ? botMax.getValue() : 20.0);
+            PlayerSnapshot.healToFull(fight.bot);
             fight.bot.setFireTicks(0);
             fight.bot.setVelocity(new Vector(0, 0, 0));
             fight.bot.setPose(org.bukkit.entity.Pose.STANDING, false); // uncrouch
@@ -691,6 +695,15 @@ public final class PvpBotService {
                 // The winner already went home the moment the kill landed —
                 // only the body needs to come back.
                 spawnBot(session, fight);
+                // They went home on a full bar too, three seconds ago, when
+                // the stock reset ran; anything that has touched them since
+                // would otherwise be carried into a round that has not
+                // started yet. A player still waiting out their own death
+                // hold is left alone — that hold's reset heals them when it
+                // ends.
+                if (!fight.playerDead()) {
+                    PlayerSnapshot.healToFull(player);
+                }
                 fight.graceTicks = Math.max(fight.graceTicks, tuning().shortGraceTicks());
                 plugin.sounds().play(player, "pvpbot.bot-respawn", fight.botSpawn);
             } else if (fight.botRespawnTicks % 20 == 0) {
@@ -856,6 +869,9 @@ public final class PvpBotService {
         }
         if (fight.heldRevertTicks > 0 && --fight.heldRevertTicks == 0) {
             equipSword(fight);
+        }
+        if (fight.buildCooldown > 0) {
+            fight.buildCooldown--;
         }
 
         // A husk's melee applies the vanilla hunger effect — an artifact the
@@ -1096,6 +1112,16 @@ public final class PvpBotService {
         boolean fleeing = fight.stance == BotFight.RESET
                 || fight.gappleRetreatTicks > 0
                 || (fight.consuming() && fight.consumeItem == Material.GOLDEN_APPLE);
+        // …and before any of that, blocks. A bot that can build reaches you
+        // the way a player would — towering after someone who went up,
+        // bridging a gap its legs cannot cross — instead of milling about at
+        // the bottom of a pillar. A tick spent building is the bot's own: it
+        // steers itself and throws nothing, exactly like a mid-feint tick.
+        if (tickBuilding(bot, player, session, fight, s, botLoc, toBot, dist, fleeing)) {
+            fight.lastX = botLoc.getX();
+            fight.lastZ = botLoc.getZ();
+            return;
+        }
         if (fleeing) {
             if (--fight.repathTicks <= 0) {
                 fight.repathTicks = s.knobTicks("reset.repath-ticks", 4);
@@ -1560,6 +1586,157 @@ public final class PvpBotService {
         arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
         arrow.setCritical(false);
         plugin.sounds().playAt(bot.getLocation(), "pvpbot.bow-shot");
+    }
+
+    // -------------------------------------------------------------- building
+
+    /**
+     * Block placement: the bot getting itself where its legs cannot.
+     *
+     * <p>Two moves, and they cover between them everything a player uses
+     * blocks for mid-fight. <b>Towering</b> answers someone who went up —
+     * the bot hops and seals the spot it just left, riding its own pillar
+     * after them. <b>Bridging</b> answers a hole — one block laid ahead of
+     * its feet, then a nudge forward onto it.
+     *
+     * <p>Everything it places goes through the session's block tracker, so
+     * the player may break it (the default {@code canBreak} is "blocks placed
+     * this run") and the stock reset takes the whole lot back down. A
+     * per-stock budget is what stops an endless spar becoming a build-off.
+     *
+     * @return true when the bot is mid-build and owns its own steering
+     */
+    private boolean tickBuilding(Husk bot, Player player, PracticeSession session,
+                                 BotFight fight, BotSettings s, Location botLoc,
+                                 Vector toBot, double dist, boolean fleeing) {
+        // A pillar block is sealed at the top of the hop that made room for
+        // it — dropping one under a bot still standing there does nothing.
+        if (fight.pillarSpot != null) {
+            fight.pillarTicks--;
+            Location spot = fight.pillarSpot;
+            if (botLoc.getY() - spot.getY() >= 1.0) {
+                fight.pillarSpot = null;
+                if (placeBotBlock(session, fight, spot, s)) {
+                    fight.pillarHeight++;
+                    // Come down on it rather than beside it: a mob's own
+                    // drift is enough to miss a one-block pillar.
+                    bot.setVelocity(new Vector(
+                            (spot.getX() + 0.5 - botLoc.getX()) * 0.5,
+                            bot.getVelocity().getY(),
+                            (spot.getZ() + 0.5 - botLoc.getZ()) * 0.5));
+                    return true;
+                }
+                // Nothing could go there — a ceiling, the arena's own roof.
+                // The cooldown is what keeps that from becoming a bot that
+                // hops on the spot forever.
+                fight.buildCooldown = s.knobTicks("building.interval-ticks", 5);
+            } else if (fight.pillarTicks <= 0) {
+                fight.pillarSpot = null; // the hop never cleared the block
+                fight.buildCooldown = s.knobTicks("building.interval-ticks", 5);
+            } else {
+                return true; // still on the way up
+            }
+        }
+        // Everything below starts something new; the pending-pillar bookkeeping
+        // above runs whatever the bot is doing, so a stance flip mid-hop
+        // cannot strand a spot to be sealed at some unrelated height later.
+        if (fleeing || !s.usesBlocks() || fight.buildBudget <= 0 || fight.buildCooldown > 0
+                || fight.graceTicks > 0 || fight.hitstunTicks > 0 || fight.critTicks >= 0
+                || fight.blocking() || fight.consuming() || fight.crouching()) {
+            return false;
+        }
+        double climb = player.getLocation().getY() - botLoc.getY();
+        if (climb < 1.0) {
+            fight.pillarHeight = 0; // level again: that tower is finished
+        }
+        if (bot.isOnGround() && climb >= s.knob("building.tower.min-height", 3.0)
+                && dist <= s.knob("building.tower.max-distance", 6.0)
+                && fight.pillarHeight < s.knobTicks("building.tower.max-height", 24)) {
+            bot.getPathfinder().stopPathfinding();
+            // Straight up, no drift — the block goes where the feet were.
+            bot.setVelocity(new Vector(0, tuning().jumpVelocity(), 0));
+            fight.pillarSpot = botLoc.getBlock().getLocation();
+            fight.pillarTicks = s.knobTicks("building.tower.window-ticks", 8);
+            return true;
+        }
+        return bot.isOnGround() && bridge(bot, session, fight, s, botLoc, toBot, dist);
+    }
+
+    /**
+     * One block laid across the hole the bot is standing at the edge of, and
+     * a nudge out onto it. Only fires once its legs have actually run out of
+     * road — a bot with a path is going somewhere and must not stop to build
+     * — and only over a real drop, so a single step down is still walked.
+     */
+    private boolean bridge(Husk bot, PracticeSession session, BotFight fight,
+                           BotSettings s, Location botLoc, Vector toBot, double dist) {
+        if (dist <= s.spacingGap()) {
+            return false; // close enough to fight; nothing to cross
+        }
+        Vector toPlayer = toBot.clone().multiply(-1);
+        if (toPlayer.lengthSquared() < 1.0E-4) {
+            return false;
+        }
+        // Straight along the dominant axis, never diagonally: a trail of
+        // corner-to-corner blocks is not something a mob can walk.
+        Vector forward = Math.abs(toPlayer.getX()) >= Math.abs(toPlayer.getZ())
+                ? new Vector(Math.signum(toPlayer.getX()), 0, 0)
+                : new Vector(0, 0, Math.signum(toPlayer.getZ()));
+        Block ahead = botLoc.getBlock().getRelative(
+                (int) forward.getX(), 0, (int) forward.getZ());
+        Block support = ahead.getRelative(BlockFace.DOWN);
+        if (!ahead.getType().isAir() || !ahead.getRelative(BlockFace.UP).getType().isAir()
+                || !support.getType().isAir()) {
+            return false; // a wall, no head room, or ground to walk on
+        }
+        int drop = s.knobTicks("building.bridge.min-drop", 3);
+        for (int below = 1; below <= drop; below++) {
+            if (!support.getRelative(0, -below, 0).getType().isAir()) {
+                return false; // a step down, not a hole
+            }
+        }
+        double stall = s.knob("unstick.threshold", 0.01);
+        boolean stuck = Math.abs(botLoc.getX() - fight.lastX) < stall
+                && Math.abs(botLoc.getZ() - fight.lastZ) < stall;
+        if (bot.getPathfinder().hasPath() && !stuck) {
+            return false;
+        }
+        if (!placeBotBlock(session, fight, support.getLocation(), s)) {
+            return false;
+        }
+        bot.getPathfinder().stopPathfinding();
+        bot.setVelocity(forward.multiply(s.knob("building.bridge.step", 0.16))
+                .setY(bot.getVelocity().getY()));
+        return true;
+    }
+
+    /**
+     * Puts one block down for the bot: inside the arena, into air only, never
+     * over a finish trigger, and tracked exactly like a block the player
+     * placed. The bot flourishes it in hand for a moment so the placement
+     * reads, the same way the rod and bow do.
+     *
+     * @return false when the spot was not the bot's to build on
+     */
+    private boolean placeBotBlock(PracticeSession session, BotFight fight, Location loc,
+                                  BotSettings s) {
+        Block block = loc.getBlock();
+        if (!session.containsBlock(loc) || session.isTrigger(loc) || !block.getType().isAir()) {
+            return false;
+        }
+        Material material = tuning().buildMaterial();
+        session.tracker().recordPlace(block, block.getBlockData());
+        block.setType(material, false);
+        fight.buildBudget--;
+        fight.buildCooldown = s.knobTicks("building.interval-ticks", 5);
+        loc.getWorld().playSound(loc.toCenterLocation(),
+                material.createBlockData().getSoundGroup().getPlaceSound(), 1.0f, 1.0f);
+        if (fight.bot != null && fight.bot.isValid()) {
+            fight.bot.getEquipment().setItemInMainHand(new ItemStack(material));
+            fight.heldRevertTicks = s.knobTicks("building.flourish-ticks", 8);
+            fight.bot.swingMainHand();
+        }
+        return true;
     }
 
     // ---------------------------------------------------------- consumables

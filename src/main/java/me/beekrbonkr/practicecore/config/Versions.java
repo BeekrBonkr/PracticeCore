@@ -23,10 +23,11 @@ public final class Versions {
     public static final int MESSAGES = 6;
 
     /**
-     * guis.yml — admin-editable menu layout. v2 grows the rush menu to five
-     * rows for the defender-bot buttons.
+     * guis.yml — admin-editable menu layout. v2 grew the rush menu to five
+     * rows for the defender-bot buttons; v3 re-laid it into a row per
+     * decision and added the bed-defense gallery.
      */
-    public static final int GUIS = 2;
+    public static final int GUIS = 3;
 
     /** sounds.yml — admin-editable sound cues. */
     public static final int SOUNDS = 1;

@@ -81,7 +81,8 @@ public final class PCConfig {
     private final int rushGeneratorTickPeriod;
     private final double rushGeneratorCapRadius;
     private final boolean rushBaseGeneratorsDefault;
-    private final me.beekrbonkr.practicecore.rush.RushSelection.DefensePreset rushCompetitiveDefense;
+    private final Map<String, me.beekrbonkr.practicecore.rush.RushDefense> rushDefenses;
+    private final String rushCompetitiveDefense;
     private final int rushTntFuseTicks;
     private final double rushFireballPower;
     private final double rushFireballSpeed;
@@ -158,6 +159,8 @@ public final class PCConfig {
     private final int titleFadeInMs;
     private final int titleStayMs;
     private final int titleFadeOutMs;
+    private final int titleHoldMs;
+    private final int titleDelayTicks;
 
     public PCConfig(PracticeCorePlugin plugin, FileConfiguration cfg) {
         this.plugin = plugin;
@@ -249,14 +252,12 @@ public final class PCConfig {
         this.rushGeneratorTickPeriod = Math.max(1, cfg.getInt("rush.generator-tick-period", 5));
         this.rushGeneratorCapRadius = Math.max(0.5, cfg.getDouble("rush.generator-cap-radius", 2.0));
         this.rushBaseGeneratorsDefault = cfg.getBoolean("rush.base-generators-default", true);
-        me.beekrbonkr.practicecore.rush.RushSelection.DefensePreset competitiveDefense;
-        try {
-            competitiveDefense = me.beekrbonkr.practicecore.rush.RushSelection.DefensePreset.valueOf(
-                    cfg.getString("rush.competitive-defense", "ENDSTONE").toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            competitiveDefense = me.beekrbonkr.practicecore.rush.RushSelection.DefensePreset.ENDSTONE;
-        }
-        this.rushCompetitiveDefense = competitiveDefense;
+        this.rushDefenses = readDefensePresets(cfg);
+        String competitiveDefense = cfg.getString("rush.competitive-defense", "endstone")
+                .trim().toLowerCase(Locale.ROOT);
+        this.rushCompetitiveDefense = this.rushDefenses.containsKey(competitiveDefense)
+                ? competitiveDefense
+                : me.beekrbonkr.practicecore.rush.RushDefense.NONE;
         this.rushTntFuseTicks = Math.max(1, cfg.getInt("rush.tnt-fuse-ticks", 60));
         this.rushFireballPower = Math.max(0, cfg.getDouble("rush.fireball-power", 3.0));
         this.rushFireballSpeed = Math.max(0.1, cfg.getDouble("rush.fireball-speed", 1.5));
@@ -385,6 +386,8 @@ public final class PCConfig {
         this.titleFadeInMs = Math.max(0, cfg.getInt("effects.title-fade-in-ms", 50));
         this.titleStayMs = Math.max(0, cfg.getInt("effects.title-stay-ms", 1200));
         this.titleFadeOutMs = Math.max(0, cfg.getInt("effects.title-fade-out-ms", 400));
+        this.titleHoldMs = Math.max(0, cfg.getInt("effects.title-hold-ms", 15000));
+        this.titleDelayTicks = Math.max(0, cfg.getInt("effects.title-delay-ticks", 10));
     }
 
     private void readSpectateTool(FileConfiguration cfg, Map<String, Material> materials,
@@ -392,6 +395,41 @@ public final class PCConfig {
                                   Material defMaterial, int defSlot) {
         materials.put(tool, material(cfg.getString("spectate.items." + tool + ".material"), defMaterial));
         slots.put(tool, Math.clamp(cfg.getInt("spectate.items." + tool + ".slot", defSlot), 0, 8));
+    }
+
+    /**
+     * The bed-defense gallery from {@code rush.defense-presets}, in file order
+     * — which is the order the picker menu lists them in. A "none" entry is
+     * always present, whether or not the admin kept theirs, because it is what
+     * every unknown id falls back to.
+     */
+    private Map<String, me.beekrbonkr.practicecore.rush.RushDefense> readDefensePresets(
+            FileConfiguration cfg) {
+        Map<String, me.beekrbonkr.practicecore.rush.RushDefense> presets = new LinkedHashMap<>();
+        presets.put(me.beekrbonkr.practicecore.rush.RushDefense.NONE,
+                me.beekrbonkr.practicecore.rush.RushDefense.none());
+        ConfigurationSection section = cfg.getConfigurationSection("rush.defense-presets");
+        if (section == null) {
+            return java.util.Collections.unmodifiableMap(presets);
+        }
+        for (String key : section.getKeys(false)) {
+            ConfigurationSection entry = section.getConfigurationSection(key);
+            if (entry == null) {
+                continue;
+            }
+            String id = key.trim().toLowerCase(Locale.ROOT);
+            List<Material> layers = new ArrayList<>();
+            for (String name : entry.getStringList("layers")) {
+                Material layer = material(name, null);
+                if (layer != null && layer.isBlock()) {
+                    layers.add(layer);
+                }
+            }
+            presets.put(id, new me.beekrbonkr.practicecore.rush.RushDefense(id,
+                    entry.getString("name", id), material(entry.getString("icon"), null), layers));
+        }
+        // LinkedHashMap, not Map.copyOf: the file's order is the menu's order.
+        return java.util.Collections.unmodifiableMap(presets);
     }
 
     private Material material(String name, Material fallback) {
@@ -402,7 +440,8 @@ public final class PCConfig {
         if (parsed == null || !parsed.isItem()) {
             if (plugin != null) {
                 plugin.getLogger().warning("config.yml: '" + name
-                        + "' is not an item this server knows — using " + fallback + ".");
+                        + "' is not an item this server knows — using "
+                        + (fallback == null ? "nothing" : fallback.name()) + ".");
             }
             return fallback;
         }
@@ -633,8 +672,29 @@ public final class PCConfig {
     }
 
     /** The bed defense preset every competitive run is pinned to. */
-    public me.beekrbonkr.practicecore.rush.RushSelection.DefensePreset rushCompetitiveDefense() {
+    /** The bed-defense preset id every competitive run races under. */
+    public String rushCompetitiveDefense() {
         return rushCompetitiveDefense;
+    }
+
+    /** Every bed-defense preset, in the order config.yml lists them. */
+    public Map<String, me.beekrbonkr.practicecore.rush.RushDefense> rushDefenses() {
+        return rushDefenses;
+    }
+
+    /**
+     * One preset by id, case-insensitively. Never null: an id an admin
+     * removed (or a pref written by an older build) resolves to the "none"
+     * preset rather than leaving a run without an answer.
+     */
+    public me.beekrbonkr.practicecore.rush.RushDefense rushDefense(String id) {
+        me.beekrbonkr.practicecore.rush.RushDefense preset = id == null ? null
+                : rushDefenses.get(id.trim().toLowerCase(Locale.ROOT));
+        if (preset != null) {
+            return preset;
+        }
+        preset = rushDefenses.get(me.beekrbonkr.practicecore.rush.RushDefense.NONE);
+        return preset != null ? preset : me.beekrbonkr.practicecore.rush.RushDefense.none();
     }
 
     /** Whether base generators run for players with no saved preference. */
@@ -948,5 +1008,23 @@ public final class PCConfig {
 
     public int titleFadeOutMs() {
         return titleFadeOutMs;
+    }
+
+    /**
+     * How long a "loading" title stays up on its own. It is normally taken
+     * down the moment the work finishes; this is only the backstop for a
+     * queued action that never reports back, so it must outlast a slow paste.
+     */
+    public int titleHoldMs() {
+        return titleHoldMs;
+    }
+
+    /**
+     * How long a queued action has to still be running before its "loading"
+     * title appears at all. Most joins land in a tick or two, and flashing a
+     * card at the player for those would be worse than saying nothing.
+     */
+    public int titleDelayTicks() {
+        return titleDelayTicks;
     }
 }

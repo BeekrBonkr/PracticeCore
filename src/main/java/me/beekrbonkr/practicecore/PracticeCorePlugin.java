@@ -253,8 +253,9 @@ public final class PracticeCorePlugin extends JavaPlugin {
         return new YamlMigrator(this, "config", "config.yml",
                 new File(getDataFolder(), "config.yml"), Versions.CONFIG,
                 PracticeCorePlugin::configSteps,
-                // A gamerule the admin removed must stay removed.
-                java.util.Set.of("world.gamerules")).run(getConfig());
+                // A gamerule — or a bed-defense preset — the admin removed
+                // must stay removed.
+                java.util.Set.of("world.gamerules", "rush.defense-presets")).run(getConfig());
     }
 
     /** Reshapes an older config.yml. See {@link Versions#CONFIG}. */

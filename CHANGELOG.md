@@ -3,6 +3,54 @@
 Notable changes to PracticeCore. Versions follow the plugin's own numbering;
 config file format versions (`config-version`) migrate automatically on start.
 
+## 0.8.0
+
+- **Bed defenses are pyramids now, not boxes.** The shell over each enemy bed
+  is placed wherever horizontal distance + height stays within the layer
+  count, so the footprint is widest at bed level and loses a ring per level,
+  tapering to a cap over the bed — the shape players actually build. The
+  innermost material still hugs the bed and the outermost is the skin a
+  rusher meets; seeding both bed blocks makes it a ridge rather than a point.
+- **A gallery of defense presets, and they are data.** `rush.defense-presets`
+  in `config.yml` is a curated section — one you delete stays deleted, one
+  you add shows up. Twelve ship, from single-layer wool to a four-layer Keep.
+  The defense button now opens a picker instead of cycling, and each tile
+  spells its pyramid out layer by layer, outermost first. Each preset is just
+  a list of materials, innermost first, and that list's length is how far the
+  pyramid reaches out and up. Old `DefensePreset` names fold onto the new
+  lower-case ids, so saved preferences carry over untouched.
+- **The rush setup menu is reorganized.** Four rows reading top to bottom as
+  the order the choices are made — team base, match modifiers, defender
+  lineup, then go — instead of start and competitive stranded among the
+  modifiers. Hovering **Start Casual** now summarizes the whole match: base,
+  starter blocks, resources, pickaxe, defenses, generators and defenders.
+  `guis.yml` v3 migrates existing layouts, moving each slot only while it
+  still sits where the last version put it.
+- **PvP bots can use blocks to reach you.** Tower up and the bot hops and
+  seals the spot underneath itself, riding its own pillar after you; put a
+  hole between you and it and it bridges, laying a block ahead along the
+  dominant axis (never diagonally — a mob cannot walk corner to corner) and
+  stepping out onto it. It builds only once walking has actually failed, and
+  faster the higher its thinking layer. Everything it places is tracked, so
+  you can break it and the stock reset clears it away; a per-stock budget
+  stops a long spar becoming a build-off. Tuned under `behavior.building` in
+  `pvpbot.yml`, with a server-wide switch and a per-player **Building**
+  toggle.
+- **Queued work that takes a moment now says so on a title.** Joins and setup
+  pastes raise one — the action bar is easy to miss at exactly the moment the
+  screen looks frozen. It appears only if the work is still running after
+  `effects.title-delay-ticks`, so the common instant join flashes nothing,
+  and comes down when the work reports back.
+- **Fixed: a respawn could leave a player short of a full bar.** The heal was
+  never the last thing to happen — it ran before potion effects were cleared
+  and before the kit was re-dealt, both of which can move the max-health
+  attribute, so it landed against a maximum that had not settled. The
+  bot-death path also healed the instant the bot dropped and never
+  re-asserted it when the round actually restarted. Health is now restored
+  last on every reset path, absorption included, through one shared helper;
+  arena resets (failed runs, void falls, `/practice restart`) restored no
+  health at all and now do.
+
 ## 0.7.4
 
 - **Ender chests work in rush practice.** Right-clicking any ender chest
