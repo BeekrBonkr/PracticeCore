@@ -4,7 +4,6 @@ import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.command.PracticeCommand;
 import me.beekrbonkr.practicecore.session.PracticeSession;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -63,6 +62,8 @@ public final class MainMenu extends Menu {
         if (shown("random")) {
             set(slot("random", 11), randomIcon(), event -> joinRandom());
         }
+        // STYLE-GUIDE: needs logic change (R53) — shown as disabled would
+        // reveal the button to players without practicecore.leaderboard.
         if (shown("leaderboards") && viewer.hasPermission("practicecore.leaderboard")) {
             set(slot("leaderboards", 12), leaderboardIcon(), event -> {
                 click();
@@ -83,11 +84,10 @@ public final class MainMenu extends Menu {
                 later(() -> new StatsMenu(plugin, viewer, this).open());
             });
         }
-        // Contextual entries: shown only when they can actually do something
-        // — a menu that offers dead buttons teaches players to ignore it.
+        // Contextual entries: only meaningful inside a session (R53).
         PracticeSession session = plugin.sessions().get(viewer.getUniqueId());
         if (shown("restart") && session != null) {
-            set(slot("restart", 14), restartIcon(), event -> restart());
+            set(slot("restart", 14), restartIcon(session), event -> restart());
         }
         if (shown("bot") && me.beekrbonkr.practicecore.pvpbot.PvpBotService.fightOf(session) != null) {
             set(slot("bot", 20), botIcon(), event -> {
@@ -95,6 +95,7 @@ public final class MainMenu extends Menu {
                 later(() -> new PvpBotSettingsMenu(plugin, viewer, this, session).open());
             });
         }
+        // STYLE-GUIDE: needs logic change (R53) — same permission reveal as above.
         if (shown("spectate") && plugin.pcConfig().spectateEnabled()
                 && viewer.hasPermission("practicecore.spectate")) {
             set(slot("spectate", 19), spectateIcon(), event -> {
@@ -122,101 +123,111 @@ public final class MainMenu extends Menu {
         }
         if (shown("leave") && session != null) {
             set(slot("leave", 23), leaveIcon(), event -> {
-                sound("menu.select");
+                click();
                 later(() -> {
                     viewer.closeInventory();
                     plugin.leaveService().leave(viewer);
                 });
             });
         }
+        nav("main");
     }
 
     // ---------------------------------------------------------------- icons
 
     private ItemStack joinIcon() {
         int count = plugin.templates().visibleTo(viewer).size();
-        return ItemBuilder.of(icon("play", Material.COMPASS))
-                .name(name("gui.main.play.name"))
-                .lore(lore("gui.main.play.lore", "count", String.valueOf(count)))
+        return Button.of(plugin, icon("play", Material.COMPASS))
+                .name("gui.main.play.name")
+                .lore("gui.main.play.lore", "count", String.valueOf(count))
+                .hint("open")
                 .build();
     }
 
     private ItemStack randomIcon() {
-        return ItemBuilder.of(icon("random", Material.ENDER_EYE))
-                .name(name("gui.main.random.name"))
-                .lore(lore("gui.main.random.lore"))
-                .build();
+        Button button = Button.of(plugin, icon("random", Material.ENDER_EYE))
+                .name("gui.main.random.name")
+                .lore("gui.main.random.lore");
+        if (plugin.templates().availableTo(viewer).isEmpty()) {
+            button.disabled("gui.reason.no-arenas");
+        } else {
+            button.hint("play");
+        }
+        return button.build();
     }
 
     private ItemStack leaderboardIcon() {
-        return ItemBuilder.of(icon("leaderboards", Material.GOLD_INGOT))
-                .name(name("gui.main.leaderboards.name"))
-                .lore(lore("gui.main.leaderboards.lore"))
+        return Button.of(plugin, icon("leaderboards", Material.GOLD_INGOT))
+                .name("gui.main.leaderboards.name")
+                .lore("gui.main.leaderboards.lore")
+                .hint("view")
                 .build();
     }
 
     private ItemStack statsIcon() {
-        return ItemBuilder.of(icon("stats", Material.WRITABLE_BOOK))
-                .name(name("gui.main.stats.name"))
-                .lore(lore("gui.main.stats.lore"))
+        return Button.of(plugin, icon("stats", Material.BOOK))
+                .name("gui.main.stats.name")
+                .lore("gui.main.stats.lore")
+                .hint("view")
                 .build();
     }
 
-    private ItemStack restartIcon() {
-        PracticeSession session = plugin.sessions().get(viewer.getUniqueId());
-        return ItemBuilder.of(icon("restart", Material.CLOCK))
-                .name(name("gui.main.restart.name"))
-                .lore(session == null
-                        ? lore("gui.main.restart.lore-idle")
-                        : lore("gui.main.restart.lore", "arena", session.template().displayName()))
+    private ItemStack restartIcon(PracticeSession session) {
+        return Button.of(plugin, icon("restart", Material.CLOCK))
+                .name("gui.main.restart.name")
+                .lore("gui.main.restart.lore", "arena", session.template().displayName())
+                .hint("restart")
                 .build();
     }
 
     private ItemStack scoreboardIcon() {
         boolean on = plugin.stats().scoreboardEnabled(viewer.getUniqueId());
-        return ItemBuilder.of(on
-                        ? icon("sidebar", Material.ITEM_FRAME)
-                        : plugin.guis().material("main.buttons.sidebar.material-off",
-                                Material.GLOW_ITEM_FRAME))
-                .name(name("gui.main.sidebar.name"))
-                .lore(lore("gui.main.sidebar.lore", plugin.messages().ref("state",
-                        on ? "gui.main.sidebar.state-shown" : "gui.main.sidebar.state-hidden")))
+        return Button.of(plugin, icon("sidebar", Material.OAK_SIGN))
+                .name("gui.main.sidebar.name")
+                .lore("gui.main.sidebar.lore", plugin.messages().ref("state",
+                        on ? "label.state.shown" : "label.state.hidden"))
                 .glow(on)
+                .hint("toggle")
                 .build();
     }
 
     private ItemStack botIcon() {
-        return ItemBuilder.of(icon("bot", Material.ZOMBIE_HEAD))
-                .name(name("gui.main.bot.name"))
-                .lore(lore("gui.main.bot.lore"))
+        return Button.of(plugin, icon("bot", Material.ZOMBIE_HEAD))
+                .name("gui.main.bot.name")
+                .lore("gui.main.bot.lore")
+                .hint("open")
                 .build();
     }
 
     private ItemStack spectateIcon() {
-        return ItemBuilder.of(icon("spectate", Material.SPYGLASS))
-                .name(name("gui.main.spectate.name"))
-                .lore(lore("gui.main.spectate.lore"))
+        return Button.of(plugin, icon("spectate", Material.SPYGLASS))
+                .name("gui.main.spectate.name")
+                .lore("gui.main.spectate.lore")
+                .hint("open")
                 .build();
     }
 
     private ItemStack helpIcon() {
-        return ItemBuilder.of(icon("help", Material.PAPER))
-                .name(name("gui.main.help.name"))
-                .lore(lore("gui.main.help.lore"))
+        return Button.of(plugin, icon("help", Material.PAPER))
+                .name("gui.main.help.name")
+                .lore("gui.main.help.lore")
+                .hint("view")
                 .build();
     }
 
     private ItemStack settingsIcon() {
-        return ItemBuilder.of(icon("settings", Material.COMPARATOR))
-                .name(name("gui.main.settings.name"))
-                .lore(lore("gui.main.settings.lore"))
+        return Button.of(plugin, icon("settings", Material.COMPARATOR))
+                .name("gui.main.settings.name")
+                .lore("gui.main.settings.lore")
+                .hint("open")
                 .build();
     }
 
     private ItemStack leaveIcon() {
-        return ItemBuilder.of(icon("leave", Material.OAK_DOOR))
-                .name(name("gui.main.leave.name"))
-                .lore(lore("gui.main.leave.lore", "destination", destination()))
+        return Button.of(plugin, icon("leave", Material.OAK_DOOR))
+                .name("gui.main.leave.name")
+                .lore("gui.main.leave.lore", "destination", destination())
+                .hint("leave")
                 .build();
     }
 
@@ -239,10 +250,6 @@ public final class MainMenu extends Menu {
         List<ArenaTemplate> available = plugin.templates().availableTo(viewer);
         if (available.isEmpty()) {
             deny();
-            later(() -> {
-                viewer.closeInventory();
-                plugin.messages().send(viewer, "arena.none-available");
-            });
             return;
         }
         ArenaTemplate template = available.get(ThreadLocalRandom.current().nextInt(available.size()));
