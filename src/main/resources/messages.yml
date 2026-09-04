@@ -827,43 +827,33 @@ gui:
   main:
     title: '<dark_gray><bold>Practice'
     play:
-      name: '<green><bold>Play'
+      name: '<white><bold>Play'
       # <count>
       lore:
         - '<gray>Pick an arena to practice in.'
         - ''
-        - '<dark_gray><count> arena(s) available'
-        - '<yellow>Click to browse'
+        - '<gray>Arenas: <white><count>'
     random:
-      name: '<light_purple><bold>Random Arena'
+      name: '<white><bold>Random Arena'
       lore:
-        - '<gray>Drops you straight into one'
-        - '<gray>of the arenas you can play.'
-        - '<yellow>Click to join'
+        - '<gray>Drops you into one of the'
+        - '<gray>arenas you can play.'
     leaderboards:
       name: '<gold><bold>Leaderboards'
       lore:
         - '<gray>The fastest times on every arena.'
-        - '<yellow>Click to view'
     stats:
-      name: '<aqua><bold>My Stats'
+      name: '<white><bold>My Stats'
       lore:
         - '<gray>Your bests, ranks and run counts.'
-        - '<yellow>Click to view'
     restart:
       name: '<yellow><bold>Restart Run'
       # <arena>
       lore:
-        - '<gray>Wipe your blocks and start over'
+        - '<gray>Wipes your blocks and starts over'
         - '<gray>from the arena spawn.'
         - ''
         - '<gray>Arena: <white><arena>'
-        - '<yellow>Click to restart'
-      lore-idle:
-        - '<gray>Wipe your blocks and start over'
-        - '<gray>from the arena spawn.'
-        - ''
-        - '<red>You are not practicing.'
     sidebar:
       name: '<white><bold>Sidebar'
       # <state>
@@ -871,78 +861,63 @@ gui:
         - '<gray>The live timer scoreboard.'
         - ''
         - '<gray>Currently: <state>'
-        - '<yellow>Click to toggle'
-      state-shown: '<green>shown'
-      state-hidden: '<red>hidden'
     help:
       name: '<white><bold>Help'
       lore:
-        - '<gray>How practice arenas work,'
+        - '<gray>How practice arenas work'
         - '<gray>and every command you can run.'
-        - '<yellow>Click for details'
     # Only shown while sparring the PvP bot.
     bot:
-      name: '<red><bold>Bot Settings'
+      name: '<white><bold>Bot Settings'
       lore:
         - '<gray>Kit, difficulty and the bot''s'
-        - '<gray>arsenal. It pauses while'
+        - '<gray>arsenal. The bot pauses while'
         - '<gray>this menu is open.'
-        - '<yellow>Click to open'
     settings:
-      name: '<light_purple><bold>Settings'
+      name: '<white><bold>Settings'
       lore:
-        - '<gray>Night vision, wool color'
-        - '<gray>and your arena''s time of day.'
-        - '<yellow>Click to open'
+        - '<gray>Night vision, wool color and'
+        - '<gray>your arena''s time of day.'
     spectate:
-      name: '<aqua><bold>Spectate'
+      name: '<white><bold>Spectate'
       lore:
         - '<gray>Watch another player practice'
         - '<gray>without disturbing their run.'
-        - '<yellow>Click to pick a player'
     leave:
       name: '<red><bold>Leave'
       # <destination>
       lore:
-        - '<gray>Restores your inventory, location'
-        - '<gray>and everything else exactly as it was.'
+        - '<gray>Restores your inventory and'
+        - '<gray>location exactly as they were.'
         - ''
         - '<gray>Sends you to: <white><destination>'
-        - '<yellow>Click to leave'
 
   settings:
     title: '<dark_gray><bold>Settings'
     night-vision:
-      name: '<gold><bold>Night Vision'
+      name: '<white><bold>Night Vision'
       # <state>
       lore:
         - '<gray>Permanent night vision while'
         - '<gray>you are practicing.'
         - ''
         - '<gray>Currently: <state>'
-        - '<yellow>Click to toggle'
-      state-on: '<green>enabled'
-      state-off: '<red>disabled'
     wool-color:
       name: '<white><bold>Wool Color'
       # <color>
       lore:
-        - '<gray>The color of the wool in your'
-        - '<gray>kit — and so of your bridges.'
+        - '<gray>Cycles the wool color in your kit.'
         - ''
         - '<gray>Currently: <white><color>'
-        - '<yellow>Click to cycle'
-        - '<yellow>Right-click to cycle back'
       default: 'kit default'
     time:
-      name: '<yellow><bold>Time of Day'
+      name: '<white><bold>Time of Day'
       # <time>
       lore:
         - '<gray>The time of day in your arena.'
         - '<gray>Only you see it.'
         - ''
         - '<gray>Currently: <white><time>'
-        - '<yellow>Click to cycle'
       option:
         default: 'server time'
         day: 'day'
@@ -952,72 +927,64 @@ gui:
         midnight: 'midnight'
 
   categories:
-    title: '<dark_gray><bold>Categories'
+    title: '<dark_gray><bold>Play'
     empty:
-      name: '<red>No arenas available'
+      name: '<gray><bold>No arenas yet'
       lore:
-        - '<gray>Nothing has been set up yet, or'
-        - '<gray>you lack permission for them all.'
+        - '<gray>Nothing has been set up, or you'
+        - '<gray>lack permission for them all.'
     # <category>
-    entry-name: '<green><bold><category>'
+    entry-name: '<white><bold><category>'
     # <category> <count>
     entry-lore:
-      - '<gray><count> arena(s)'
-      - ''
-      - '<yellow>Click to browse'
+      - '<gray>Arenas: <white><count>'
 
   arenas:
-    title: '<dark_gray><bold>Arenas'
+    title: '<dark_gray><bold>Play'
     # <category>
-    title-category: '<dark_gray><bold><category>'
+    title-category: '<dark_gray><bold>Play — <category>'
     empty:
-      name: '<red>No arenas available'
+      name: '<gray><bold>No arenas yet'
       lore:
-        - '<gray>Nothing has been set up yet, or'
-        - '<gray>you lack permission for them all.'
+        - '<gray>Nothing has been set up, or you'
+        - '<gray>lack permission for them all.'
     # <arena>
     entry-name: '<green><bold><arena>'
-    entry-name-locked: '<red><bold><arena>'
-    # <mode> <best> <rank> <players> <finishes> <record> <record-holder> <status>
+    # <mode> <best> <rank> <players> <finishes> <record> <record-holder>
     entry-lore:
       - '<gray>Mode: <white><mode>'
       - ''
       - '<gray>Your best: <white><best>'
       - '<gray>Your rank: <white><rank> <dark_gray>of <players>'
-      - '<gray>Runs finished: <white><finishes>'
-      - '<gray>Record: <white><record> <dark_gray><record-holder>'
-      - ''
-      - '<status>'
+      - '<gray>Runs: <white><finishes>'
+      - '<gray>Record: <white><record>'
+      - '<gray>Held by: <white><record-holder>'
     # Tiles for modes without shared time boards (MLG streaks, PvP bot spar):
-    # no dead best/rank/record fields. <mode> <status>
+    # no dead best/rank/record fields. <mode>
     entry-lore-unranked:
       - '<gray>Mode: <white><mode>'
       - ''
       - '<gray>Scored in-session — no time board.'
-      - ''
-      - '<status>'
-    status-open: '<yellow>Click to play'
-    status-locked: '<red>You do not have access to this arena.'
-    # <node>
-    status-locked-node: '<dark_gray>needs <node>'
+    # Appended when the viewer holds the arena record (R35).
+    record-line:
+      - '<gold>You hold the record'
 
   spectate:
-    title: '<dark_gray><bold>Spectate a player'
+    title: '<dark_gray><bold>Spectate'
     empty:
-      name: '<red>Nobody is practicing'
+      name: '<gray><bold>No players yet'
       lore:
+        - '<gray>Nobody is practicing right now.'
         - '<gray>Players appear here the moment'
         - '<gray>they enter an arena.'
     entry:
       # <player>
-      name: '<aqua><bold><player>'
+      name: '<white><bold><player>'
       # <arena> <mode> <watchers>
       lore:
         - '<gray>Arena: <white><arena>'
         - '<gray>Mode: <white><mode>'
         - '<gray>Spectators: <white><watchers>'
-        - ''
-        - '<yellow>Click to spectate'
 
   leaderboards:
     title: '<dark_gray><bold>Leaderboards'
@@ -1031,35 +998,36 @@ gui:
       entry-name: '<gold><bold><category>'
       # <category> <count>
       entry-lore:
-        - '<gray><count> arena(s) with boards'
-        - ''
-        - '<yellow>Click to browse'
+        - '<gray>Arenas with boards: <white><count>'
     empty:
-      name: '<red>No arenas yet'
+      name: '<gray><bold>No leaderboards yet'
       lore:
-        - '<gray>Leaderboards appear once arenas exist.'
+        - '<gray>Boards appear once an arena'
+        - '<gray>has been finished.'
     # <arena>
     entry-name: '<gold><bold><arena>'
     # <players> <record> <record-holder> <rank>
     entry-lore:
-      - '<gray>Players ranked: <white><players>'
+      - '<gray>Players: <white><players>'
       - '<gray>Record: <white><record>'
       - '<gray>Held by: <white><record-holder>'
       - ''
-      - '<gray>You are <white><rank>'
-      - '<yellow>Click for the full board'
+      - '<gray>Your rank: <white><rank>'
+    record-line:
+      - '<gold>You hold the record'
 
   board:
     # <arena>
-    title: '<dark_gray><bold><arena> · top times'
+    title: '<dark_gray><bold>Top Times — <arena>'
     empty:
-      name: '<red>No times yet'
+      name: '<gray><bold>No times yet'
       lore:
         - '<gray>Be the first to finish this arena.'
+    # Rows are information, not buttons: no bold (R32).
     # <rank> <player>
-    entry-name: '<white><bold>#<rank> <player>'
-    entry-name-first: '<gold><bold>#<rank> <player>'
-    entry-name-self: '<aqua><bold>#<rank> <player>'
+    entry-name: '<white>#<rank> <player>'
+    entry-name-first: '<gold>#<rank> <player>'
+    entry-name-self: '<aqua>#<rank> <player>'
     # <time> <behind>
     entry-lore:
       - '<gray>Time: <white><time>'
@@ -1068,7 +1036,7 @@ gui:
       - ''
       - '<aqua>That''s you.'
     standing:
-      name: '<aqua><bold>Your standing'
+      name: '<aqua>Your Standing'
       # <rank> <players> <best> <next> <gap>
       lore:
         - '<gray>Rank: <white><rank> <dark_gray>of <players>'
@@ -1081,39 +1049,37 @@ gui:
     # <arena>
     play-name: '<green><bold>Play <arena>'
     play-lore:
-      - '<yellow>Click to join'
+      - '<gray>Join this arena now.'
 
   stats:
-    title-self: '<dark_gray><bold>Your stats'
     # <player>
-    title-other: '<dark_gray><bold><player>''s stats'
+    title: '<dark_gray><bold>Stats — <player>'
     empty-self:
-      name: '<red>No times recorded'
+      name: '<gray><bold>No times yet'
       lore:
         - '<gray>Finish a run and it shows up here.'
     empty-other:
-      name: '<red>No times recorded'
+      name: '<gray><bold>No times yet'
       lore:
-        - '<gray>This player has not finished a run yet.'
+        - '<gray>This player has not finished a run.'
     # <arena>
     entry-name: '<white><bold><arena>'
     # <best> <last> <finishes> <rank> <players> <behind>
     entry-lore:
       - '<gray>Best: <white><best>'
       - '<gray>Last: <white><last>'
-      - '<gray>Runs finished: <white><finishes>'
+      - '<gray>Runs: <white><finishes>'
       - '<gray>Rank: <white><rank> <dark_gray>of <players>'
-      - '<gray>Off the record by: <white><behind>'
-    entry-lore-missing:
-      - ''
-      - '<dark_gray>This arena no longer exists.'
+      - '<gray>Behind record: <white><behind>'
+    record-line:
+      - '<gold>You hold the record'
     summary:
       # <player> <arenas> <finishes> <records>
-      name: '<aqua><bold><player>'
+      name: '<aqua><player>'
       lore:
         - '<gray>Arenas completed: <white><arenas>'
-        - '<gray>Total runs finished: <white><finishes>'
-        - '<gray>Arena records held: <white><records>'
+        - '<gray>Runs: <white><finishes>'
+        - '<gray>Records held: <white><records>'
 
   rush:
     # <arena>
@@ -1382,8 +1348,6 @@ gui:
   pvpbot:
     # <arena>
     title: '<dark_gray><bold>Bot Settings — <arena>'
-    state-on: '<green>on'
-    state-off: '<red>off'
     kit:
       name: '<white><bold>Kit'
       # <kit>
@@ -1392,7 +1356,6 @@ gui:
         - '<gray>it unless gear says otherwise.'
         - ''
         - '<gray>Kit: <white><kit>'
-        - '<yellow>Click to browse kits'
       option:
         sword: 'Sword'
         nodebuff: 'NoDebuff'
@@ -1409,15 +1372,15 @@ gui:
         bedwars: 'Bedwars'
         skywars: 'Skywars'
     # Named difficulty presets — one click sets every AI knob below.
+    # The labels themselves live under label.difficulty.
     preset:
-      name: '<gold><bold>Difficulty'
+      name: '<white><bold>Difficulty'
       # <level>
       lore:
         - '<gray>One click sets every knob:'
         - '<gray>speed, aim, combos, reach.'
         - ''
         - '<gray>Difficulty: <level>'
-        - '<yellow>Click to cycle'
     # The kit gallery.
     kits:
       title: '<dark_gray><bold>Kits'
@@ -1430,17 +1393,16 @@ gui:
       # <count> — how many more item types the tile had no room for
       more-line: '<dark_gray> • <gray>… and <count> more'
       blocks-note:
-        - '<aqua>Comes with blocks to place.'
+        - '<gray>Comes with blocks to place.'
+      # State line on the tile that is currently chosen (R61).
       selected:
-        - '<green>Selected'
-        - '<yellow>Right-click to preview'
-      click-hint:
-        - '<yellow>Click to select'
-        - '<yellow>Right-click to preview'
+        - '<gray>Currently: <green>selected'
     # The full-inventory kit preview.
     preview:
       # <kit>
       title: '<dark_gray><bold>Preview — <kit>'
+      # <kit>
+      banner-name: '<white><kit>'
       icon-lore:
         - '<gray>Laid out exactly as it lands:'
         - '<gray>armor up top, hotbar at the bottom.'
@@ -1452,7 +1414,6 @@ gui:
         - '<gray>What the bot wears and swings.'
         - ''
         - '<gray>Gear: <white><tier>'
-        - '<yellow>Click to cycle'
       option:
         mirror: 'mirror your kit'
         none: 'none (wooden sword)'
@@ -1467,7 +1428,6 @@ gui:
         - '<gray>out of your crosshair.'
         - ''
         - '<gray>Level: <white><level>'
-        - '<yellow>Click to cycle'
       option:
         low: 'low'
         medium: 'medium'
@@ -1483,7 +1443,6 @@ gui:
         - '<gray>in clicks per second.'
         - ''
         - '<gray>CPS: <white><cps>'
-        - '<yellow>Click to cycle'
     accuracy:
       name: '<white><bold>Accuracy'
       # <level>
@@ -1492,7 +1451,6 @@ gui:
         - '<gray>in range actually lands.'
         - ''
         - '<gray>Level: <white><level>'
-        - '<yellow>Click to cycle'
       option:
         low: 'low'
         medium: 'medium'
@@ -1508,7 +1466,6 @@ gui:
         - '<gray>and sprint-resets its hits.'
         - ''
         - '<gray>Level: <white><level>'
-        - '<yellow>Click to cycle'
       option:
         off: 'off'
         some: 'some'
@@ -1522,7 +1479,6 @@ gui:
         - '<gray>The bot''s attack range.'
         - ''
         - '<gray>Reach: <white><level>'
-        - '<yellow>Click to cycle'
       option:
         short: 'short (2.6)'
         normal: 'normal (3.0)'
@@ -1535,7 +1491,6 @@ gui:
         - '<gray>and how tight it spaces.'
         - ''
         - '<gray>Level: <white><level>'
-        - '<yellow>Click to cycle'
       option:
         passive: 'passive'
         balanced: 'balanced'
@@ -1548,50 +1503,37 @@ gui:
       # <state>
       lore:
         - '<gray>The bot hooks you at range'
-        - '<gray>to reset your combos.'
-        - '<gray>Kits carrying a rod always'
-        - '<gray>use it; this adds one to'
-        - '<gray>every other kit.'
+        - '<gray>to reset your combos. Kits'
+        - '<gray>with a rod always use it.'
         - ''
         - '<gray>Currently: <state>'
-        - '<yellow>Click to toggle'
     bow:
       name: '<white><bold>Bow'
       # <state>
       lore:
-        - '<gray>The bot takes potshots'
-        - '<gray>before closing in.'
-        - '<gray>Kits carrying a bow always'
-        - '<gray>use it; this adds one to'
-        - '<gray>every other kit.'
+        - '<gray>The bot takes potshots before'
+        - '<gray>closing in. Kits with a bow'
+        - '<gray>always use it.'
         - ''
         - '<gray>Currently: <state>'
-        - '<yellow>Click to toggle'
     block:
       name: '<white><bold>Sword Blocking'
       # <state>
       lore:
         - '<gray>The bot blocks with its sword'
-        - '<gray>when it gets comboed,'
-        - '<gray>halving what lands.'
+        - '<gray>when comboed, halving what lands.'
         - ''
         - '<gray>Currently: <state>'
-        - '<yellow>Click to toggle'
     build:
       name: '<white><bold>Building'
       # <state>
       lore:
-        - '<gray>The bot places blocks to get'
-        - '<gray>to you — towering after you'
-        - '<gray>when you go up, bridging a'
-        - '<gray>gap it cannot walk around.'
-        - ''
-        - '<gray>You can break whatever it'
-        - '<gray>builds, and every stock reset'
-        - '<gray>clears it away.'
+        - '<gray>The bot towers after you and'
+        - '<gray>bridges gaps it cannot walk.'
+        - '<gray>You can break what it builds;'
+        - '<gray>every stock reset clears it.'
         - ''
         - '<gray>Currently: <state>'
-        - '<yellow>Click to toggle'
 
   rushshop:
     title: '<dark_gray><bold>Item Shop'
