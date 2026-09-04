@@ -3,18 +3,20 @@ package me.beekrbonkr.practicecore.gui;
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.rush.RushObjective;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import me.beekrbonkr.practicecore.util.TimeFormat;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 
+import java.util.Locale;
+
 /**
  * A rush arena keeps one leaderboard per objective — this small menu picks
- * which of them to look at.
+ * which of them to look at. Laid out from guis.yml's {@code rushboards}
+ * section like every other menu.
  */
 public final class RushBoardPickerMenu extends Menu {
 
-    private static final int[] SLOTS = {10, 12, 14, 16};
+    private static final int[] DEFAULT_SLOTS = {10, 12, 14, 16};
 
     private final ArenaTemplate template;
 
@@ -31,7 +33,7 @@ public final class RushBoardPickerMenu extends Menu {
 
     @Override
     protected int rows() {
-        return 3;
+        return plugin.guis().rows("rushboards", 3);
     }
 
     @Override
@@ -40,26 +42,33 @@ public final class RushBoardPickerMenu extends Menu {
         RushObjective[] objectives = RushObjective.values();
         for (int i = 0; i < objectives.length; i++) {
             RushObjective objective = objectives[i];
+            String button = "rushboards.buttons." + objective.id().toLowerCase(Locale.ROOT);
+            if (!plugin.guis().buttonEnabled(button)) {
+                continue;
+            }
             String key = objective.statsKey(template.name());
             var record = plugin.leaderboards().record(key);
             int rank = plugin.leaderboards().rank(key, viewer.getUniqueId());
-            set(SLOTS[i], ItemBuilder.of(objective.icon())
-                    .name(name("gui.rushboards.entry-name",
-                            "objective", plugin.rush().objectiveName(objective)))
-                    .lore(lore("gui.rushboards.entry-lore",
+            Button tile = Button.of(plugin, plugin.guis().buttonMaterial(button, objective.icon()))
+                    .name("gui.rushboards.entry-name",
+                            "objective", plugin.rush().objectiveName(objective))
+                    .lore("gui.rushboards.entry-lore",
                             "players", String.valueOf(plugin.leaderboards().size(key)),
                             "record", record != null
                                     ? TimeFormat.precise(record.millis()) : raw("gui.none"),
                             "record-holder", record != null ? record.displayName() : raw("gui.none"),
-                            "rank", rank > 0 ? "#" + rank : raw("gui.none")))
-                    .glow(rank == 1)
-                    .build(), event -> {
+                            "rank", rank > 0 ? "#" + rank : raw("gui.none"));
+            if (rank == 1) {
+                tile.line(name("gui.rushboards.record-line"));
+            }
+            int slot = plugin.guis().slot(button,
+                    i < DEFAULT_SLOTS.length ? DEFAULT_SLOTS[i] : CONTENT_SLOTS[i]);
+            set(slot, tile.hint("view").build(), event -> {
                 click();
                 later(() -> new ArenaLeaderboardMenu(plugin, viewer, this, template, key,
                         plugin.rush().displayFor(template, objective)).open());
             });
         }
-        backButton(18);
-        closeButton(26);
+        nav("rushboards");
     }
 }
