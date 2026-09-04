@@ -56,6 +56,7 @@ These are the only places a player will notice something other than text, color,
 3. **Locked tiles show a reason line.** Admins (`practicecore.arena`) see the node; everyone else sees "no permission".
 4. **Nav positions moved** in menus that had non-standard slots: rush shop close (49 → 53), PvP bot menus close (40 → 44), bed defense actions/session/editor per the row rule. Admins who customized `guis.yml` keep their own slots.
 5. **Bed defense list entries** lost the `[play]` chip; the name itself is now clickable.
+6. **Missing values show `???`.** `gui.none` had become `<dark_gray>—`, but menus substitute it as plain text, so the tag was printed literally ("Record: <dark_gray>—"). It is now `???`, tag-free (R12a). A server that already ran v9 keeps the old value in its `messages.yml`; set `gui.none` to `'???'` there by hand.
 
 ## 3. Intentionally left alone (needs a logic change)
 
@@ -86,6 +87,7 @@ Start a server with a copy of an existing `plugins/PracticeCore/` folder so the 
 - [ ] A key you edited by hand before upgrading keeps your text; an untouched key shows the new text
 - [ ] `/practice reload` reports no validation problems
 - [ ] `label.state.on` / `off` render as the words `on` / `off` (green / red), not blank
+- [ ] An arena with no record shows `Record: ???` and `Held by: ???` in white, never a literal `<dark_gray>` tag
 
 ### Every menu
 - [ ] Back is bottom-left, Close is bottom-right, paging bottom-middle, in every menu including the hub

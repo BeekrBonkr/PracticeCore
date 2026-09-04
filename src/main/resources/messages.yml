@@ -802,7 +802,10 @@ label:
       custom: '<white>Custom'
 
 gui:
-  none: '<dark_gray>—'
+  # Shown wherever a value is missing: no record yet, no holder, unranked.
+  # It is substituted into lore as plain text, so keep it tag-free — a
+  # MiniMessage tag here would be printed literally, not colored.
+  none: '???'
   # Navigation chrome, identical in every menu (R45).
   back: '<yellow><bold>Back'
   back-lore: '<gray>Return to the previous menu.'
