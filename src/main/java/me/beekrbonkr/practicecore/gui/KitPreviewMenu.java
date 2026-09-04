@@ -42,9 +42,10 @@ public final class KitPreviewMenu extends Menu {
         border();
         Map<Integer, ItemStack> contents = kit.kit();
 
-        set(4, ItemBuilder.of(kit.icon())
-                .name(name("gui.pvpbot.kits.entry-name", "kit", KitsMenu.kitName(plugin, kit)))
-                .lore(lore("gui.pvpbot.preview.icon-lore"))
+        // The banner is information, not a button: no bold, no hint (R32).
+        set(4, Button.of(plugin, kit.icon())
+                .name("gui.pvpbot.preview.banner-name", "kit", KitsMenu.kitName(plugin, kit))
+                .lore("gui.pvpbot.preview.icon-lore")
                 .hideAttributes()
                 .build());
 
@@ -78,6 +79,8 @@ public final class KitPreviewMenu extends Menu {
             }
         }
 
+        // The one permitted exception to bottom-row nav (R49): the whole grid
+        // mirrors a real inventory, so Back and Close take the top corners.
         backButton(plugin.guis().slot("pvpbot-preview.back", 0));
         closeButton(plugin.guis().slot("pvpbot-preview.close", 8));
     }

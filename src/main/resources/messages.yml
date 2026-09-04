@@ -1374,8 +1374,6 @@ gui:
   pvpbot:
     # <arena>
     title: '<dark_gray><bold>Bot Settings — <arena>'
-    state-on: '<green>on'
-    state-off: '<red>off'
     kit:
       name: '<white><bold>Kit'
       # <kit>
@@ -1384,7 +1382,6 @@ gui:
         - '<gray>it unless gear says otherwise.'
         - ''
         - '<gray>Kit: <white><kit>'
-        - '<yellow>Click to browse kits'
       option:
         sword: 'Sword'
         nodebuff: 'NoDebuff'
@@ -1401,15 +1398,15 @@ gui:
         bedwars: 'Bedwars'
         skywars: 'Skywars'
     # Named difficulty presets — one click sets every AI knob below.
+    # The labels themselves live under label.difficulty.
     preset:
-      name: '<gold><bold>Difficulty'
+      name: '<white><bold>Difficulty'
       # <level>
       lore:
         - '<gray>One click sets every knob:'
         - '<gray>speed, aim, combos, reach.'
         - ''
         - '<gray>Difficulty: <level>'
-        - '<yellow>Click to cycle'
     # The kit gallery.
     kits:
       title: '<dark_gray><bold>Kits'
@@ -1422,17 +1419,16 @@ gui:
       # <count> — how many more item types the tile had no room for
       more-line: '<dark_gray> • <gray>… and <count> more'
       blocks-note:
-        - '<aqua>Comes with blocks to place.'
+        - '<gray>Comes with blocks to place.'
+      # State line on the tile that is currently chosen (R61).
       selected:
-        - '<green>Selected'
-        - '<yellow>Right-click to preview'
-      click-hint:
-        - '<yellow>Click to select'
-        - '<yellow>Right-click to preview'
+        - '<gray>Currently: <green>selected'
     # The full-inventory kit preview.
     preview:
       # <kit>
       title: '<dark_gray><bold>Preview — <kit>'
+      # <kit>
+      banner-name: '<white><kit>'
       icon-lore:
         - '<gray>Laid out exactly as it lands:'
         - '<gray>armor up top, hotbar at the bottom.'
@@ -1444,7 +1440,6 @@ gui:
         - '<gray>What the bot wears and swings.'
         - ''
         - '<gray>Gear: <white><tier>'
-        - '<yellow>Click to cycle'
       option:
         mirror: 'mirror your kit'
         none: 'none (wooden sword)'
@@ -1459,7 +1454,6 @@ gui:
         - '<gray>out of your crosshair.'
         - ''
         - '<gray>Level: <white><level>'
-        - '<yellow>Click to cycle'
       option:
         low: 'low'
         medium: 'medium'
@@ -1475,7 +1469,6 @@ gui:
         - '<gray>in clicks per second.'
         - ''
         - '<gray>CPS: <white><cps>'
-        - '<yellow>Click to cycle'
     accuracy:
       name: '<white><bold>Accuracy'
       # <level>
@@ -1484,7 +1477,6 @@ gui:
         - '<gray>in range actually lands.'
         - ''
         - '<gray>Level: <white><level>'
-        - '<yellow>Click to cycle'
       option:
         low: 'low'
         medium: 'medium'
@@ -1500,7 +1492,6 @@ gui:
         - '<gray>and sprint-resets its hits.'
         - ''
         - '<gray>Level: <white><level>'
-        - '<yellow>Click to cycle'
       option:
         off: 'off'
         some: 'some'
@@ -1514,7 +1505,6 @@ gui:
         - '<gray>The bot''s attack range.'
         - ''
         - '<gray>Reach: <white><level>'
-        - '<yellow>Click to cycle'
       option:
         short: 'short (2.6)'
         normal: 'normal (3.0)'
@@ -1527,7 +1517,6 @@ gui:
         - '<gray>and how tight it spaces.'
         - ''
         - '<gray>Level: <white><level>'
-        - '<yellow>Click to cycle'
       option:
         passive: 'passive'
         balanced: 'balanced'
@@ -1540,50 +1529,37 @@ gui:
       # <state>
       lore:
         - '<gray>The bot hooks you at range'
-        - '<gray>to reset your combos.'
-        - '<gray>Kits carrying a rod always'
-        - '<gray>use it; this adds one to'
-        - '<gray>every other kit.'
+        - '<gray>to reset your combos. Kits'
+        - '<gray>with a rod always use it.'
         - ''
         - '<gray>Currently: <state>'
-        - '<yellow>Click to toggle'
     bow:
       name: '<white><bold>Bow'
       # <state>
       lore:
-        - '<gray>The bot takes potshots'
-        - '<gray>before closing in.'
-        - '<gray>Kits carrying a bow always'
-        - '<gray>use it; this adds one to'
-        - '<gray>every other kit.'
+        - '<gray>The bot takes potshots before'
+        - '<gray>closing in. Kits with a bow'
+        - '<gray>always use it.'
         - ''
         - '<gray>Currently: <state>'
-        - '<yellow>Click to toggle'
     block:
       name: '<white><bold>Sword Blocking'
       # <state>
       lore:
         - '<gray>The bot blocks with its sword'
-        - '<gray>when it gets comboed,'
-        - '<gray>halving what lands.'
+        - '<gray>when comboed, halving what lands.'
         - ''
         - '<gray>Currently: <state>'
-        - '<yellow>Click to toggle'
     build:
       name: '<white><bold>Building'
       # <state>
       lore:
-        - '<gray>The bot places blocks to get'
-        - '<gray>to you — towering after you'
-        - '<gray>when you go up, bridging a'
-        - '<gray>gap it cannot walk around.'
-        - ''
-        - '<gray>You can break whatever it'
-        - '<gray>builds, and every stock reset'
-        - '<gray>clears it away.'
+        - '<gray>The bot towers after you and'
+        - '<gray>bridges gaps it cannot walk.'
+        - '<gray>You can break what it builds;'
+        - '<gray>every stock reset clears it.'
         - ''
         - '<gray>Currently: <state>'
-        - '<yellow>Click to toggle'
 
   rushshop:
     title: '<dark_gray><bold>Item Shop'
