@@ -5,7 +5,6 @@ import me.beekrbonkr.practicecore.mode.RushMode;
 import me.beekrbonkr.practicecore.rush.RushObjective;
 import me.beekrbonkr.practicecore.stats.LeaderboardService;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import me.beekrbonkr.practicecore.util.TimeFormat;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -43,9 +42,7 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
 
     @Override
     protected Component title() {
-        return self()
-                ? text("gui.stats.title-self")
-                : text("gui.stats.title-other", "player", subjectName);
+        return text("gui.stats.title", "player", subjectName);
     }
 
     @Override
@@ -88,11 +85,7 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
 
     @Override
     protected ItemStack emptyIcon() {
-        String key = self() ? "gui.stats.empty-self" : "gui.stats.empty-other";
-        return ItemBuilder.of(emptyMaterial())
-                .name(name(key + ".name"))
-                .lore(lore(key + ".lore"))
-                .build();
+        return emptyIcon(self() ? "gui.stats.empty-self" : "gui.stats.empty-other");
     }
 
     @Override
@@ -104,28 +97,33 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
         int rank = plugin.leaderboards().rank(arena, subject);
         LeaderboardService.Entry record = plugin.leaderboards().record(arena);
         long last = plugin.stats().lastMs(subject, arena);
-
-        List<Component> lines = new ArrayList<>(lore("gui.stats.entry-lore",
-                "arena", display,
-                "best", best >= 0 ? TimeFormat.precise(best) : raw("gui.none"),
-                "last", last >= 0 ? TimeFormat.precise(last) : raw("gui.none"),
-                "finishes", String.valueOf(plugin.stats().finishes(subject, arena)),
-                "rank", rank > 0 ? "#" + rank : raw("gui.none"),
-                "players", String.valueOf(plugin.leaderboards().size(arena)),
-                "behind", record != null && rank > 1
-                        ? "+" + TimeFormat.precise(best - record.millis())
-                        : raw("gui.none")));
         var defense = plugin.bedDefenses().resolveStatsKey(arena);
-        if (template == null && defense == null) {
-            lines.addAll(lore("gui.stats.entry-lore-missing", "arena", arena));
-        }
-        return ItemBuilder.of(template != null
+
+        Button tile = Button.of(plugin, template != null
                         ? plugin.modes().of(template).menuIcon(plugin, template)
                         : defense != null ? defense.getKey().icon() : Material.PAPER)
-                .name(name("gui.stats.entry-name", "arena", display))
-                .lore(lines)
-                .glow(rank == 1)
-                .build();
+                .name("gui.stats.entry-name", "arena", display)
+                .lore("gui.stats.entry-lore",
+                        "arena", display,
+                        "best", best >= 0 ? TimeFormat.precise(best) : raw("gui.none"),
+                        "last", last >= 0 ? TimeFormat.precise(last) : raw("gui.none"),
+                        "finishes", String.valueOf(plugin.stats().finishes(subject, arena)),
+                        "rank", rank > 0 ? "#" + rank : raw("gui.none"),
+                        "players", String.valueOf(plugin.leaderboards().size(arena)),
+                        "behind", record != null && rank > 1
+                                ? "+" + TimeFormat.precise(best - record.millis())
+                                : raw("gui.none"));
+        if (rank == 1) {
+            tile.lore("gui.stats.record-line");
+        }
+        if (template == null && defense == null) {
+            tile.disabled("gui.reason.gone");
+        } else if (!viewer.hasPermission("practicecore.leaderboard")) {
+            tile.locked("gui.reason.no-permission");
+        } else {
+            tile.hint("view");
+        }
+        return tile.build();
     }
 
     /** The arena behind a stats key — plain name or a rush composite key. */
@@ -162,7 +160,7 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
                 plugin.messages().send(viewer, "permission.leaderboard");
                 return;
             }
-            click();
+            sound("menu.select");
             later(() -> new ArenaLeaderboardMenu(plugin, viewer, this, entry.getKey(),
                     plugin.bedDefenses().displayFor(defense.getKey(), defense.getValue()),
                     defense.getKey().icon(), () -> {
@@ -181,7 +179,7 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
             plugin.messages().send(viewer, "permission.leaderboard");
             return;
         }
-        click();
+        sound("menu.select");
         var rush = plugin.rush().resolveStatsKey(entry.getKey());
         if (rush != null) {
             later(() -> new ArenaLeaderboardMenu(plugin, viewer, this, template, entry.getKey(),
@@ -200,18 +198,18 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
         int finishes = arenas.keySet().stream()
                 .mapToInt(arena -> plugin.stats().finishes(subject, arena))
                 .sum();
-        setFooter(47, ItemBuilder.of(Material.PLAYER_HEAD)
-                .edit(meta -> {
-                    if (meta instanceof SkullMeta skull) {
-                        skull.setOwningPlayer(Bukkit.getOfflinePlayer(subject));
-                    }
-                })
-                .name(name("gui.stats.summary.name", "player", subjectName))
-                .lore(lore("gui.stats.summary.lore",
+        ItemStack summary = Button.of(plugin, Material.PLAYER_HEAD)
+                .name("gui.stats.summary.name", "player", subjectName)
+                .lore("gui.stats.summary.lore",
                         "player", subjectName,
                         "arenas", String.valueOf(arenas.size()),
                         "finishes", String.valueOf(finishes),
-                        "records", String.valueOf(records)))
-                .build());
+                        "records", String.valueOf(records))
+                .build();
+        if (summary.getItemMeta() instanceof SkullMeta skull) {
+            skull.setOwningPlayer(Bukkit.getOfflinePlayer(subject));
+            summary.setItemMeta(skull);
+        }
+        setFooter(footerSlot(0), summary);
     }
 }

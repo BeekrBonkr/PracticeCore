@@ -3,7 +3,6 @@ package me.beekrbonkr.practicecore.gui;
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.session.PracticeSession;
 import me.beekrbonkr.practicecore.session.SessionState;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -62,29 +61,31 @@ public final class SpectateMenu extends PagedMenu<PracticeSession> {
         Player target = Bukkit.getPlayer(session.playerId());
         String name = target != null ? target.getName() : "?";
         int watchers = plugin.spectate().watcherCount(session.playerId());
-        return ItemBuilder.of(Material.PLAYER_HEAD)
-                .name(name("gui.spectate.entry.name", "player", name))
-                .lore(lore("gui.spectate.entry.lore",
+        ItemStack head = Button.of(plugin, Material.PLAYER_HEAD)
+                .name("gui.spectate.entry.name", "player", name)
+                .lore("gui.spectate.entry.lore",
                         "arena", session.template().displayName(),
                         "mode", session.mode().displayName(),
-                        "watchers", String.valueOf(watchers)))
-                .edit(meta -> {
-                    if (meta instanceof SkullMeta skull && target != null) {
-                        skull.setOwningPlayer(target);
-                    }
-                })
+                        "watchers", String.valueOf(watchers))
+                .hint("view")
                 .build();
+        if (target != null && head.getItemMeta() instanceof SkullMeta skull) {
+            skull.setOwningPlayer(target);
+            head.setItemMeta(skull);
+        }
+        return head;
     }
 
     @Override
     protected void onEntryClick(PracticeSession session, InventoryClickEvent event) {
         Player target = Bukkit.getPlayer(session.playerId());
         if (target == null || !target.isOnline()) {
+            // The tile went stale between render and click (R55).
             deny();
             refresh();
             return;
         }
-        click();
+        sound("menu.select");
         later(() -> {
             viewer.closeInventory();
             plugin.spectate().start(viewer, target);
@@ -93,9 +94,6 @@ public final class SpectateMenu extends PagedMenu<PracticeSession> {
 
     @Override
     protected ItemStack emptyIcon() {
-        return ItemBuilder.of(emptyMaterial())
-                .name(name("gui.spectate.empty.name"))
-                .lore(lore("gui.spectate.empty.lore"))
-                .build();
+        return emptyIcon("gui.spectate.empty");
     }
 }

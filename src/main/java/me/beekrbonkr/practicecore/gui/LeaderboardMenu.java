@@ -3,7 +3,6 @@ package me.beekrbonkr.practicecore.gui;
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.stats.LeaderboardService;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import me.beekrbonkr.practicecore.util.TimeFormat;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
@@ -53,10 +52,7 @@ public final class LeaderboardMenu extends PagedMenu<ArenaTemplate> {
 
     @Override
     protected ItemStack emptyIcon() {
-        return ItemBuilder.of(emptyMaterial())
-                .name(name("gui.leaderboards.empty.name"))
-                .lore(lore("gui.leaderboards.empty.lore"))
-                .build();
+        return emptyIcon("gui.leaderboards.empty");
     }
 
     @Override
@@ -78,16 +74,18 @@ public final class LeaderboardMenu extends PagedMenu<ArenaTemplate> {
                 bestRank = rank;
             }
         }
-        return ItemBuilder.of(plugin.modes().of(template).menuIcon(plugin, template))
-                .name(name("gui.leaderboards.entry-name", "arena", template.displayName()))
-                .lore(lore("gui.leaderboards.entry-lore",
+        Button tile = Button.of(plugin, plugin.modes().of(template).menuIcon(plugin, template))
+                .name("gui.leaderboards.entry-name", "arena", template.displayName())
+                .lore("gui.leaderboards.entry-lore",
                         "arena", template.displayName(),
                         "players", String.valueOf(players),
                         "record", record != null ? TimeFormat.precise(record.millis()) : raw("gui.none"),
                         "record-holder", record != null ? record.displayName() : raw("gui.none"),
-                        "rank", bestRank > 0 ? "#" + bestRank : raw("gui.none")))
-                .glow(bestRank == 1)
-                .build();
+                        "rank", bestRank > 0 ? "#" + bestRank : raw("gui.none"));
+        if (bestRank == 1) {
+            tile.lore("gui.leaderboards.record-line");
+        }
+        return tile.hint("view").build();
     }
 
     /** With categories off, the bed defense boards hang off the flat list. */
@@ -97,10 +95,11 @@ public final class LeaderboardMenu extends PagedMenu<ArenaTemplate> {
                 || !plugin.guis().buttonEnabled("beddefense.flat-button")) {
             return;
         }
-        set(plugin.guis().slot("beddefense.flat-button", 51),
-                ItemBuilder.of(plugin.guis().buttonMaterial("beddefense.flat-button", Material.RED_BED))
-                        .name(name("gui.beddefense.boards.flat-button.name"))
-                        .lore(lore("gui.beddefense.boards.flat-button.lore"))
+        set(plugin.guis().slot("beddefense.flat-button", footerSlot(2)),
+                Button.of(plugin, plugin.guis().buttonMaterial("beddefense.flat-button", Material.RED_BED))
+                        .name("gui.beddefense.boards.flat-button.name")
+                        .lore("gui.beddefense.boards.flat-button.lore")
+                        .hint("open")
                         .build(), event -> {
             click();
             later(() -> new BedDefenseBoardsMenu(plugin, viewer, this).open());
@@ -109,7 +108,7 @@ public final class LeaderboardMenu extends PagedMenu<ArenaTemplate> {
 
     @Override
     protected void onEntryClick(ArenaTemplate template, InventoryClickEvent event) {
-        click();
+        sound("menu.select");
         if (template.mode().equals(me.beekrbonkr.practicecore.mode.RushMode.ID)) {
             later(() -> new RushBoardPickerMenu(plugin, viewer, this, template).open());
             return;
