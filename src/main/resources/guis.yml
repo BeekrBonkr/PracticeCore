@@ -111,11 +111,11 @@ rush-defenses:
 pvpbot:
   rows: 5
   buttons:
-    kit: {slot: 11}
-    preset: {slot: 13, material: NETHER_STAR}
+    kit: {slot: 11, material: CHEST}
+    preset: {slot: 13, material: EXPERIENCE_BOTTLE}
     gear: {slot: 15}
     evasiveness: {slot: 19, material: FEATHER}
-    cps: {slot: 20, material: CLOCK}
+    cps: {slot: 20, material: SUGAR}
     accuracy: {slot: 21, material: TARGET}
     combos: {slot: 22, material: RABBIT_FOOT}
     reach: {slot: 23, material: STICK}
@@ -129,7 +129,8 @@ pvpbot:
 pvpbot-kits:
   rows: 5
 
-# The full-inventory kit preview window.
+# The full-inventory kit preview window. The one menu whose Back and Close
+# sit on the top row: the grid below mirrors a real inventory.
 pvpbot-preview:
   back: {slot: 0}
   close: {slot: 8}
