@@ -119,6 +119,6 @@ public record BotPreset(String id, String configuredName,
      * invented have no such key; {@link #configuredName()} covers those.
      */
     public String messageKey(String style) {
-        return "gui.pvpbot.preset." + style + "." + id;
+        return "label.difficulty." + style + "." + id;
     }
 }

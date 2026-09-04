@@ -107,7 +107,7 @@ public final class PvpBotSettingsMenu extends Menu {
                         plugin.guis().buttonMaterial("pvpbot.buttons.preset", Material.NETHER_STAR))
                 .name(name("gui.pvpbot.preset.name"))
                 .lore(lore("gui.pvpbot.preset.lore",
-                        plugin.messages().ref("level", presetLabel(current, "option"))))
+                        plugin.messages().ref("level", presetLabel(current, "long"))))
                 .glow(current != null)
                 .build(), event -> {
             click();
@@ -128,7 +128,7 @@ public final class PvpBotSettingsMenu extends Menu {
      */
     private Component presetLabel(BotPreset preset, String style) {
         String key = preset == null
-                ? "gui.pvpbot.preset." + style + ".custom" : preset.messageKey(style);
+                ? "label.difficulty." + style + ".custom" : preset.messageKey(style);
         if (!plugin.messages().raw(key).isEmpty()) {
             return plugin.messages().component(key);
         }
