@@ -12,13 +12,13 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 9
+config-version: 8
 
 prefix: '<gold>Practice <dark_gray>» '
 
 general:
   players-only: '<prefix><red>That has to be run in-game.'
-  # <usage> — always "/practice sub <required> [optional]"; never prose (style guide R14).
+  # <usage>
   usage: '<prefix><red>Usage: <white><usage>'
 
 permission:
@@ -63,10 +63,10 @@ run:
   # <time>
   finished-pb: '<prefix><green>Finished in <white><time><green> — new personal best!'
   # <time> <best>
-  finished: '<prefix><gray>Finished in <white><time><gray> (best <white><best><gray>).'
+  finished: '<prefix><gray>Finished in <white><time><gray> (best <white><best><gray>)'
   # <time>
-  finished-first: '<prefix><gray>Finished in <white><time><gray>.'
-  failed: '<prefix><gray>You fell — resetting.'
+  finished-first: '<prefix><gray>Finished in <white><time>'
+  failed: '<prefix><gray>You fell! Resetting…'
   restarted: '<prefix><gray>Run restarted.'
   timer-not-started: '<yellow>The timer has not started yet'
   title:
@@ -79,11 +79,11 @@ run:
     behind: '<gray>+<delta> off your best'
     first: '<gray>Run complete'
   # <player> <arena> <time> <previous-holder> <delta>
-  record-broadcast: '<prefix><gold><player> <gray>set a new record on <white><arena> <gray>— <white><time><gray>!'
-  record-broadcast-beaten: '<prefix><gold><player> <gray>set a new record on <white><arena> <gray>— <white><time><gray>, beating <white><previous-holder><gray> by <white><delta><gray>!'
+  record-broadcast: '<prefix><gold><player> <gray>set a new record on <white><arena> <dark_gray>— <yellow><time>'
+  record-broadcast-beaten: '<prefix><gold><player> <gray>set a new record on <white><arena> <dark_gray>— <yellow><time> <dark_gray>(beat <previous-holder> by <delta>)'
   # Quieter than the record shout — an improved personal best, not a takeover.
   # <player> <arena> <time> <improvement>
-  pb-broadcast: '<prefix><gray><player> beat their personal best on <white><arena> <gray>— <white><time> <gray>(<white>-<improvement><gray>).'
+  pb-broadcast: '<prefix><gray><player> beat their personal best on <white><arena> <dark_gray>— <gray><time> (-<improvement>)'
 
 build:
   out-of-bounds: '<red>Out of bounds'
@@ -93,9 +93,9 @@ mlg:
   # Shown when the bucket is used while still standing on the platform.
   jump-first: '<red>Clutch on the way down, not before'
   # <streak>
-  success: '<prefix><green>MLG landed. <gray>Streak: <white><streak><gray>.'
+  success: '<prefix><green>MLG! <gray>Streak: <white><streak>'
   # <streak> — the clutch that beat your highest streak ever
-  success-best: '<prefix><green>MLG landed. <gray>Streak: <white><streak> <gray>— new best!'
+  success-best: '<prefix><green>MLG! <gray>Streak: <white><streak> <gold>— new best!'
 
 # Spectator mode: /practice spectate, the main menu's Spectate button, and
 # the three hotbar tools every spectator carries.
@@ -123,34 +123,28 @@ spectate:
   watcher-left: '<prefix><gray><player> stopped spectating you.'
   # Action bar when a spectator drifts too far and is pulled back.
   leash: '<gray>Pulled back to the arena you are spectating'
-  # Hotbar tools (style guide R66): description, blank, right-click hint.
   item:
     teleport:
       # <target>
-      name: '<white><bold>Teleport to <target>'
+      name: '<aqua><bold>Teleport to <target>'
       lore:
-        - '<gray>Snap back to the player'
-        - '<gray>you are watching.'
-        - ''
-        - '<yellow>Right-click to teleport'
+        - '<gray>Right-click to snap back'
+        - '<gray>to the player you watch.'
     menu:
       name: '<white><bold>Switch Player'
       lore:
-        - '<gray>Pick another player to watch.'
-        - ''
-        - '<yellow>Right-click to open'
+        - '<gray>Right-click to pick another'
+        - '<gray>player to spectate.'
     leave:
       name: '<red><bold>Stop Spectating'
       lore:
-        - '<gray>Head back into an arena'
-        - '<gray>of your own.'
-        - ''
-        - '<yellow>Right-click to leave'
+        - '<gray>Right-click to head back'
+        - '<gray>into an arena of your own.'
 
 rush:
   not-configured: '<prefix><red>This rush arena has no playable team base — tell an admin.'
   # Action bar on finishing a casual run.
-  records-disabled: '<yellow>Not ranked — play competitive to set records'
+  records-disabled: '<yellow>Casual run — play competitive to set records'
   mbedwars-missing: '<prefix><red>MBedwars is not installed — there is nothing to import from.'
   shop-unavailable: '<prefix><red>The shop needs MBedwars installed on this server.'
   shop-empty: '<prefix><red>The MBedwars shop has nothing usable in practice.'
@@ -171,32 +165,25 @@ rush:
   quickbuy-full: '<red>Quick Buy is full — remove something first'
   # The teleporter special item: channel, cancel, land. <seconds>
   teleporter-channel: '<gray>Teleporting in <yellow><seconds>s<gray>… stand still'
-  teleporter-cancelled: '<red>Teleport canceled — you moved'
+  teleporter-cancelled: '<red>Teleport cancelled — you moved'
   teleporter-done: '<gray>Back at your base'
   # The tracker special item. <team> <distance>
   tracker: '<gray>Nearest target: <white><team> <dark_gray>— <yellow><distance>m <gray>(compass set)'
   tracker-nothing: '<yellow>Nothing left to track'
-  # Titles on a combat-run death and respawn (style guide R20 — rush no
-  # longer borrows the PvP bot's keys). <seconds>
-  title:
-    death: '<red><bold>YOU DIED'
-    death-sub: '<gray>Respawning in <yellow><seconds><gray>…'
-    respawned: '<green><bold>FIGHT'
-    respawned-sub: ''
   # Defender bots (combat runs).
   bots:
     # Floats over each defender's head. <team> <health>
-    tag: '<gray><team> Defender <red>♥ <white><health>'
+    tag: '<red><team> Defender <dark_red>♥ <white><health>'
     # A defender fell but its bed still stands — it will be back. <team>
     defender-down: '<yellow><team> defender down — it respawns while their bed stands'
     # A defender fell after its bed was gone: out for good. <team>
     defender-eliminated: '<prefix><green>A <white><team></white> defender is eliminated — no bed, no respawn.'
     # The player broke a team's bed on a combat run. <team>
-    bed-destroyed: '<prefix><gold>Bed destroyed. <gray><white><team></white> defenders can no longer respawn.'
+    bed-destroyed: '<prefix><gold>Bed destroyed! <gray><white><team></white> defenders can no longer respawn.'
     # One enemy team fully out — the wipe that ends the run. <team>
     team-wiped: '<prefix><gold><bold>TEAM WIPE!</bold> <gray>Team <white><team></white> is out — bed gone, every defender down.'
     # A defender killed the player: a bedwars respawn, not a failed run.
-    player-died: '<prefix><red>You were slain. Your bed still stands, so you respawn at your base; bought items are lost.'
+    player-died: '<prefix><red>You were slain — your bed still stands, so you respawn at your base. Bought items are lost.'
 
 # The PvP bot spar: an endless fight against an AI opponent. No timer, no
 # leaderboard — kills, deaths and combos live on the sidebar.
@@ -211,22 +198,22 @@ pvpbot:
   # 3-second respawn countdown (<seconds>); K/D lives in the chat summary.
   title:
     death: '<red><bold>YOU DIED'
-    respawn-sub: '<gray>Respawning in <yellow><seconds><gray>…'
+    respawn-sub: '<gray>Respawning in <yellow><seconds><gray>...'
     respawned: '<green><bold>FIGHT'
     respawned-sub: ''
     kill: '<green><bold>Bot slain'
     kill-sub: '<gray>Kills <green><kills> <dark_gray>/ <gray>Deaths <red><deaths>'
   # Action bar counting down the bot's own 3-second respawn. <seconds>
-  respawn-bar: '<gray>Bot respawns in <yellow><seconds><gray>…'
+  respawn-bar: '<gray>Bot respawns in <yellow><seconds><gray>...'
   # Chat summary after each stock; <hearts> is the health points (half-hearts)
   # the survivor had left.
   chat:
-    bot-killed-player: '<prefix><red>The bot killed you <dark_gray>(<gray>it had <white><hearts>❤<gray> left<dark_gray>).'
-    player-killed-bot: '<prefix><green>You killed the bot <dark_gray>(<gray>you had <white><hearts>❤<gray> left<dark_gray>).'
+    bot-killed-player: '<prefix><red>Bot killed player <dark_gray>(<gray>bot had <red><hearts>❤<gray> left<dark_gray>)'
+    player-killed-bot: '<prefix><green>Player killed bot <dark_gray>(<gray>you had <red><hearts>❤<gray> left<dark_gray>)'
     # Round results sent to everyone spectating the fight. <player> is the
     # practicing player; <hearts> the health the victor had left.
-    spectator-bot-killed: '<prefix><red>The bot killed <white><player> <dark_gray>(<gray>it had <white><hearts>❤<gray> left<dark_gray>).'
-    spectator-player-killed: '<prefix><green><white><player><green> killed the bot <dark_gray>(<gray>they had <white><hearts>❤<gray> left<dark_gray>).'
+    spectator-bot-killed: '<prefix><red>The bot killed <white><player> <dark_gray>(<gray>bot had <red><hearts>❤<gray> left<dark_gray>)'
+    spectator-player-killed: '<prefix><green><player> killed the bot <dark_gray>(<gray><player> had <red><hearts>❤<gray> left<dark_gray>)'
     # The session stats were wiped because the bot's difficulty or settings
     # changed — numbers against one opponent must not blend into another's.
     stats-reset: '<prefix><gray>Bot settings changed — your session stats were reset.'
@@ -289,7 +276,7 @@ board:
     - '<gray>Streak: <white><streak>'
     - '<gray>Best: <white><best>'
   # The PvP bot spar board: session stats, no timer. <difficulty> is the
-  # named preset the bot's knobs currently add up to (label.difficulty.short),
+  # named preset the bot's knobs currently add up to (gui.pvpbot.preset.short),
   # or Custom for a hand-tuned mix. Stats reset when the bot's settings
   # change. <accuracy> is hits landed over swings thrown; <kd> kills over
   # deaths; <dodged> bot attacks that failed to land on you.
@@ -374,29 +361,26 @@ beddefense:
   # guis.yml categories.entries has no 'beddefense' entry of its own).
   category-name: 'Bed Defense'
   not-a-rush-map: '<prefix><red>Bed defense practice needs a rush map with a team base and bed.'
-  # Action bar. Blocks may never go lower than the bed, in the editor or a round.
-  below-bed: '<red>Nothing goes under the bed'
   no-defense: '<prefix><yellow>There is no bed defense to build yet — design one in the editor, or pick one from the gallery.'
   forced-edit: '<prefix><yellow>No bed defenses exist yet, so you are in the <white>editor<yellow>: build one around your bed and save it.'
   # <id>
-  unknown: '<prefix><red>No bed defense with id <white><id><red>.'
+  unknown: '<prefix><red>No bed defense with id ''<id>''.'
   not-owner: '<prefix><red>That is not one of your bed defenses.'
   competitive-needs-shop: '<prefix><yellow>Competitive needs the MBedwars shop to buy blocks from — this round plays as practice.'
   # <name>
   deleted: '<prefix><gray>Deleted the bed defense <white><name><gray>.'
   # Action bar at the end of a practice round.
-  records-disabled: '<yellow>Not ranked — play competitive to set records'
+  records-disabled: '<gray>Practice rounds are not ranked — play competitive'
   # The hint floating over the bed at the start of a round. Blank to disable.
   hologram: '<yellow>Drop a block or use the menu<newline><gray>to preview this defense'
   # Board names: <name> is the defense's name.
   board-name: '<name> (Bed Defense)'
   board-name-strict: '<name> (Bed Defense, strict order)'
-  list-empty: '<prefix><gray>No bed defenses to play yet. Design one with <white>/practice beddefense edit<gray>.'
+  list-empty: '<prefix><gray>No bed defenses to play yet. Design one: <white>/practice beddefense edit'
   # <count>
   list-header: '<prefix><gray>Bed defenses you can play (<white><count><gray>):'
   # <id> <name> <author> <likes> <players> <blocks>
-  # The name is clickable: it runs the play command (style guide R15).
-  list-entry: '<dark_gray> • <click:run_command:''/practice beddefense play <id>''><hover:show_text:''<yellow>Click to play<newline><gray>/practice beddefense play <id>''><white><name></hover></click> <dark_gray>by <gray><author> <gray>— <white><likes><gray> likes, <white><players><gray> players, <white><blocks><gray> blocks'
+  list-entry: '<dark_gray> • <white><name> <dark_gray>by <gray><author> <dark_gray>— <yellow><likes> likes<dark_gray>, <gray><players> players<dark_gray>, <gray><blocks> blocks <dark_gray>[<click:run_command:''/practice beddefense play <id>''><green>play</click><dark_gray>]'
   like:
     # <name>
     added: '<prefix><green>You liked <white><name><green>.'
@@ -427,12 +411,12 @@ beddefense:
     not-in-editor: '<red>Previews are for playing — save the build first'
   guided:
     entered: '<prefix><gray>Guided building: the glowing block is the next one to place. Untimed.'
-    from-attempt: '<prefix><yellow>Timer canceled. <gray>Guided building: the glowing block is the next one to place.'
+    from-attempt: '<prefix><yellow>Timer cancelled. <gray>Guided building: the glowing block is the next one to place.'
     exited: '<prefix><gray>Guidance off — the next attempt is timed again.'
     # <material> <step> <total>
     next: '<gray>Next: <white><material> <dark_gray>(<step>/<total>)'
     # <name>
-    done: '<prefix><green>Defense complete. <gray>Resetting for a timed attempt.'
+    done: '<prefix><green>Defense complete! <gray>Resetting for a timed attempt.'
   edit:
     # <radius>
     entered: '<prefix><gray>Editor: build within <white><radius><gray> blocks of the bed, then save from the bed defense item.'
@@ -449,7 +433,7 @@ beddefense:
     loaded: '<prefix><gray>Loaded <white><name><gray> into the editor.'
     reset: '<prefix><gray>Build cleared.'
     # <max>
-    name-prompt: '<prefix><yellow>Name your bed defense in chat (up to <max> characters).'
+    name-prompt: '<gold>Name your bed defense (up to <max> characters).'
     # <name>
     name-set: '<prefix><green>Named <white><name><green>.'
     # <max>
@@ -460,24 +444,24 @@ beddefense:
     # <name> <author> <id>
     duplicate-title: '<red><bold>Already exists'
     duplicate-subtitle: '<gray><name> <dark_gray>by <gray><author>'
-    duplicate: '<prefix><red>That bed defense already exists: <white><name> <gray>by <white><author><gray>.'
+    duplicate: '<prefix><red>That bed defense already exists: <white><name> <gray>by <author>.'
     duplicate-actions: '<dark_gray>[<click:run_command:''/practice beddefense play <id>''><hover:show_text:''Play <name>''><green>Play it</hover></click><dark_gray>] [<click:run_command:''/practice beddefense like <id>''><hover:show_text:''Like <name>''><gold>Like it</hover></click><dark_gray>] [<click:run_command:''/practice beddefense favorite <id>''><hover:show_text:''Favorite <name>''><aqua>Favorite it</hover></click><dark_gray>]'
 
 protect:
   pearls-disabled: '<prefix><red>Ender pearls are disabled in practice.'
-  gamemode-locked: '<prefix><red>Leave practice before changing gamemode: <white>/practice leave<red>.'
+  gamemode-locked: '<prefix><red>Leave practice before changing gamemode (/practice leave).'
 
 world:
   unavailable: '<prefix><red>The practice world is unavailable — tell an admin.'
-  entry-denied: '<prefix><red>Use <white>/practice join<red> to enter the practice world.'
+  entry-denied: '<prefix><red>Use /practice join to enter the practice world.'
 
 leave:
   # <server>
-  sending: '<prefix><gray>Sending you to <white><server><gray>.'
+  sending: '<prefix><gray>Sending you to <white><server><gray>…'
 
 menu:
   # <menu> <menus>
-  unknown: '<prefix><red>No menu named <white><menu><red>. Menus: <white><menus><red>.'
+  unknown: '<prefix><red>No menu named ''<menu>''. Menus: <white><menus>'
   item-locked: '<yellow>You need that to get back out'
   # <slot>
   item-given: '<prefix><green>Practice menu item added to hotbar slot <white><slot><green>.'
@@ -494,9 +478,9 @@ sidebar:
 
 arena:
   # <arena>
-  unknown: '<prefix><red>No arena named <white><arena><red>. See <white>/practice list<red>.'
+  unknown: '<prefix><red>No arena named ''<arena>''. See /practice list.'
   # <arena>
-  incomplete: '<prefix><red>Arena <white><arena><red> is not fully configured.'
+  incomplete: '<prefix><red>Arena ''<arena>'' is not fully configured.'
   # <arena>
   locked: '<prefix><red>You do not have access to the <white><arena><red> arena.'
   none-available: '<prefix><red>There are no arenas you can join.'
@@ -504,11 +488,10 @@ arena:
   broken-trigger: '<prefix><red>This arena''s finish trigger is misconfigured — tell an admin.'
   schematic-failed: '<prefix><red>Could not load the arena schematic — tell an admin.'
   paste-failed: '<prefix><red>Failed to build your arena — tell an admin.'
-  list-empty: '<prefix><gray>No arenas are available yet. Admins: <white>/practice setup start <name><gray>.'
+  list-empty: '<prefix><gray>No arenas are available. Admins: <white>/practice setup start <name>'
   list-header: '<prefix><gray>Arenas:'
   # <arena> <display> <mode> <locked>
-  # The name is clickable: it runs the join command (style guide R15).
-  list-entry: '<dark_gray> • <click:run_command:''/practice join <arena>''><hover:show_text:''<yellow>Click to play<newline><gray>/practice join <arena>''><white><arena></hover></click> <gray>— <display> <dark_gray>[<mode>]<locked>'
+  list-entry: '<dark_gray> • <white><arena> <dark_gray>— <gray><display> <dark_gray>[<mode>]<locked>'
   list-locked-suffix: ' <red>(locked)'
 
 leaderboard:
@@ -517,28 +500,27 @@ leaderboard:
   # <arena>
   header: '<prefix><gray>Top times — <white><arena><gray>:'
   # <rank> <player> <time>
-  entry: '<dark_gray> #<rank> <white><player> <gray>— <white><time>'
+  entry: '<dark_gray> #<rank> <white><player> <dark_gray>— <yellow><time>'
   # <rank> <total>
-  your-rank: '<dark_gray>   <gray>You are <white>#<rank><gray> of <white><total><gray>.'
+  your-rank: '<dark_gray> … you are #<rank> of <total>'
   # <arena>
-  rush-pick-board: '<prefix><gray><white><arena><gray> is a rush arena — pick a board: <white><arena>#bed<gray>, <white><arena>#emerald<gray>, <white><arena>#diamond<gray> or <white><arena>#team_wipe<gray>.'
+  rush-pick-board: '<prefix><gray>''<arena>'' is a rush arena; pick a board: <white><arena>#bed<gray>, <white><arena>#emerald<gray>, <white><arena>#diamond<gray> or <white><arena>#team_wipe<gray>.'
   # /practice top beddefense — the bed defense boards live in the menu.
   beddefense-pick-board: '<prefix><gray>Bed defense boards are kept per defense: open <white>/practice menu leaderboards<gray>, or name one as <white>beddefense#<id><gray>.'
   # Arenas of modes that score in-session (MLG streaks, PvP bot spars).
-  not-ranked: '<prefix><gray><white><arena><gray> has no time leaderboard — its mode is scored in-session, on the sidebar.'
+  not-ranked: '<prefix><gray>''<arena>'' has no time leaderboard — its mode is scored in-session, on the sidebar.'
 
 stats:
   # <player>
-  unknown-player: '<prefix><red>No player named <white><player><red> in the plugin''s records.'
+  unknown-player: '<prefix><red>No player named ''<player>'' in the plugin''s records.'
   # <player>
   empty: '<prefix><gray><player> has no recorded times.'
   # <player>
   header: '<prefix><gray>Personal bests — <white><player><gray>:'
   # <arena> <time> <rank> <finishes>
-  # The arena name is clickable: it opens that board (style guide R15).
-  entry: '<dark_gray> • <click:run_command:''/practice top <arena>''><hover:show_text:''<yellow>Click to view<newline><gray>/practice top <arena>''><white><arena></hover></click> <gray>— <white><time> <dark_gray>(#<rank>, <finishes> run(s))'
+  entry: '<dark_gray> • <white><arena> <dark_gray>— <yellow><time> <dark_gray>(#<rank>, <finishes> run(s))'
   # <arena> <time> <finishes>
-  entry-unranked: '<dark_gray> • <white><arena> <gray>— <white><time> <dark_gray>(<finishes> run(s))'
+  entry-unranked: '<dark_gray> • <white><arena> <dark_gray>— <yellow><time> <dark_gray>(<finishes> run(s))'
   # <player>
   reset-notice: '<prefix><gray>An admin reset your practice personal bests.'
   # Clicking a stats entry whose arena has since been deleted.
@@ -569,17 +551,13 @@ help:
     - '<dark_gray> • <gray>place buttons or plates <dark_gray>— each adds a finish trigger (<white>/practice setup trigger clear<gray> restarts)'
     - '<dark_gray> • <white>/practice setup gui <dark_gray>— do all of this from a menu instead'
     - '<dark_gray> • <white>/practice setup kit [load] <dark_gray>— save your inventory as the kit'
-    - '<dark_gray> • <white>/practice setup <save|cancel|info>'
+    - '<dark_gray> • <white>/practice setup save | cancel | info'
     - '<prefix><gray>Editing an existing arena:'
     - '<dark_gray> • <white>/practice edit <arena> <dark_gray>— reopen it with every setting pre-loaded'
     - '<dark_gray> • <white>/practice setup capture <dark_gray>— save in-world changes into the schematic'
     - '<dark_gray> • <white>/practice setup schematic <dark_gray>— replace it from your WorldEdit clipboard'
-    - '<dark_gray> • <white>/practice setup display <text> <dark_gray>— the name players see'
-    - '<dark_gray> • <white>/practice setup icon [material] <dark_gray>— the menu icon (held item if omitted)'
-    - '<dark_gray> • <white>/practice setup permission [node] <dark_gray>— gate it, or reset to the default node'
-    - '<dark_gray> • <white>/practice setup mode <id> <dark_gray>— bridging, bedbreak, mlg, rush, pvpbot, …'
-    - '<dark_gray> • <white>/practice setup category [name] <dark_gray>— the Play category, or reset'
-    - '<dark_gray> • <white>/practice setup blocks <true|false> <dark_gray>— whether a PB needs placed blocks'
+    - '<dark_gray> • <white>/practice setup display <text> | icon [material] | permission <node|default>'
+    - '<dark_gray> • <white>/practice setup mode <id> | category <name|default> | blocks <true|false>'
     - '<dark_gray> • <white>/practice setup rush … <dark_gray>— team spawns, beds, generators, dealers (rush mode)'
     - '<dark_gray> • <white>/practice setup pvpbot bot <dark_gray>— the bot''s spawn point (pvpbot mode)'
   setup-rush:
@@ -602,51 +580,19 @@ help:
   pb:
     - '<dark_gray> • <white>/practice pb reset <player> [arena|all] <dark_gray>— wipe personal bests'
   world:
-    - '<dark_gray> • <white>/practice world <info|regen> <dark_gray>— practice world management'
+    - '<dark_gray> • <white>/practice world info|regen <dark_gray>— practice world management'
   reload:
     - '<dark_gray> • <white>/practice reload <dark_gray>— reload config, messages and arenas'
-  # The full /practice arena reference.
-  arena-detail:
-    - '<prefix><gray>Arena administration:'
-    - '<dark_gray> • <white>/practice arena list <dark_gray>— every saved arena and its access'
-    - '<dark_gray> • <white>/practice arena info <arena> <dark_gray>— one arena''s settings'
-    - '<dark_gray> • <white>/practice arena default [arena|none] <dark_gray>— the arena /practice join uses'
-    - '<dark_gray> • <white>/practice arena delete <arena> confirm <dark_gray>— remove it and every time on it'
-    - '<dark_gray> • <white>/practice arena permission <arena> <node|default|none> <dark_gray>— who may play it'
-    - '<dark_gray> • <white>/practice arena display <arena> <text> <dark_gray>— the name players see'
-    - '<dark_gray> • <white>/practice arena icon <arena> <material|auto> <dark_gray>— the menu icon'
-    - '<dark_gray> • <white>/practice arena blocks <arena> <true|false> <dark_gray>— whether a PB needs placed blocks'
-  # The full /practice world reference.
-  world-detail:
-    - '<prefix><gray>Practice world:'
-    - '<dark_gray> • <white>/practice world info <dark_gray>— world and grid status'
-    - '<dark_gray> • <white>/practice world regen confirm <dark_gray>— delete and rebuild it from nothing'
-  # The full /practice rush reference.
-  rush-detail:
-    - '<prefix><gray>Rush maps from MBedwars:'
-    - '<dark_gray> • <white>/practice rush list <dark_gray>— every MBedwars arena on this server'
-    - '<dark_gray> • <white>/practice rush import <arena> [overwrite] <dark_gray>— pull one map'
-    - '<dark_gray> • <white>/practice rush importall [teams:<n>] [size:<n>] [category:<name>] [overwrite] <dark_gray>— pull every matching map'
-  # The /practice pb reference.
-  pb-detail:
-    - '<prefix><gray>Personal bests:'
-    - '<dark_gray> • <white>/practice pb reset <player> [arena|all] <dark_gray>— wipe personal bests'
 
 # ---------------------------------------------------------------- admin text
 
 admin:
-  # Free-form admin output. Color is severity (style guide R4): gray info,
-  # red failure, green done, yellow caution.
   # <note>
   note: '<prefix><gray><note>'
   # <note>
   problem: '<prefix><red><note>'
   # <note>
   done: '<prefix><green><note>'
-  # <note> — a caution that is not a failure, e.g. "this needs confirm".
-  warn: '<prefix><yellow><note>'
-  # <command> — the second line of every chat-side confirmation (R58).
-  confirm-hint: '<prefix><gray>Run <white><command><gray> to go ahead.'
 
 setup:
   # Action bar while the wizard pastes an arena — big maps take a moment.
@@ -657,10 +603,10 @@ setup:
   pasting-title: '<yellow><bold>Loading'
   pasting-subtitle: '<gray>Pasting <white><arena><gray>…'
   # <arena> <holder>
-  busy: '<prefix><red>Setup is already in progress by <white><holder><red> on <white><arena><red>.'
+  busy: '<prefix><red>Setup is already in progress by <white><holder><red> on ''<arena>''.'
   clipboard-empty: '<prefix><red>Your WorldEdit clipboard is empty. Select your arena build and run //copy first.'
   # <arena>
-  exists: '<prefix><red>Arena <white><arena><red> already exists. Use <white>/practice edit <arena><red> instead.'
+  exists: '<prefix><red>Arena ''<arena>'' already exists. Use <white>/practice edit <arena><red> instead.'
   bad-name: '<prefix><red>Arena names must match [a-z0-9_-], max 32 characters.'
   # <width> <length> <max>
   too-big: '<prefix><red>Schematic is <width>×<length> blocks; the limit is <max> so neighboring arenas can never overlap.'
@@ -673,16 +619,16 @@ setup:
   none-active: '<prefix><red>No setup in progress. Start with <white>/practice setup start <name><red> or <white>/practice edit <arena><red>.'
   # <arena>
   left-session: '<prefix><gray>Ended your practice session on <white><arena><gray> to open the editor.'
-  world-unavailable: '<prefix><red>The practice world is unavailable — run <white>/practice world regen confirm<red>.'
+  world-unavailable: '<prefix><red>The practice world is unavailable — run /practice world regen confirm.'
   # <arena>
-  started: '<prefix><green>Configuring <white><arena><green>. Steps:'
+  started: '<prefix><green>Configuring ''<arena>''. Steps:'
   start-steps:
     - '<dark_gray> 1. <gray>Stand at the player spawn and run <white>/practice setup spawn'
     - '<dark_gray> 2. <gray>Place the given button or pressure plate at the finish (place several for multiple finishes)'
     - '<dark_gray> 3. <gray>Optional: arrange your inventory, then <white>/practice setup kit'
     - '<dark_gray> 4. <white>/practice setup save <gray>(or <white>/practice setup cancel<gray>)'
   # <arena>
-  editing: '<prefix><green>Editing <white><arena><green>. Everything is pre-loaded — change what you like.'
+  editing: '<prefix><green>Editing ''<arena>''. Everything is pre-loaded — change what you like.'
   edit-steps:
     - '<dark_gray> • <gray>Reshape the arena in-world, then <white>/practice setup capture <gray>to bake it in'
     - '<dark_gray> • <white>/practice setup info <gray>shows the current state'
@@ -696,36 +642,36 @@ setup:
   trigger-button: 'button'
   trigger-plate: 'pressure plate'
   # <data>
-  trigger-invalid: '<prefix><red>This arena''s saved trigger block is invalid (<white><data><red>) — place a new button or plate.'
-  not-captured-hint: '<yellow>Run /practice setup capture to keep these blocks'
+  trigger-invalid: '<prefix><red>This arena''s saved trigger block is invalid (''<data>'') — place a new button or plate.'
+  not-captured-hint: '<yellow>Blocks placed during setup are only saved by /practice setup capture'
   # <count>
   kit-saved: '<prefix><green>Kit saved (<count> stack(s)).'
   kit-saved-with-item: '<prefix><gray>The practice menu item is included.'
   kit-empty: '<prefix><red>This arena has no kit saved yet.'
   kit-loaded: '<prefix><green>Kit loaded into your inventory. Rearrange it, then <white>/practice setup kit<green>.'
   # <item>
-  kit-warning: '<prefix><yellow><white><item><yellow> in the kit can skip or break runs (kept anyway).'
+  kit-warning: '<prefix><yellow>Warning: <item> in the kit can skip or break runs (kept anyway).'
   # <name>
-  display-set: '<prefix><green>Display name set to <white><name><green>.'
+  display-set: '<prefix><green>Display name set to ''<name>''.'
   # <material>
-  icon-set: '<prefix><green>Menu icon set to <white><material><green>.'
-  icon-need-item: '<prefix><red>Hold the item you want as the menu icon, or name one: <white>/practice setup icon <material><red>.'
+  icon-set: '<prefix><green>Menu icon set to <material>.'
+  icon-need-item: '<prefix><red>Hold the item you want as the menu icon, or name one: <white>/practice setup icon <material>'
   # <material>
-  icon-invalid: '<prefix><red><white><material><red> is not an item material.'
+  icon-invalid: '<prefix><red>''<material>'' is not an item material.'
   # <node>
-  permission-set: '<prefix><green>Arena gated behind <white><node><green>.'
+  permission-set: '<prefix><green>Arena gated behind ''<node>''.'
   permission-cleared: '<prefix><green>Permission reset to this arena''s default node.'
   blocks-required: '<prefix><green>Personal bests now require at least one placed block.'
   blocks-not-required: '<prefix><green>Personal bests no longer require placed blocks.'
   # <mode> <modes>
-  mode-set: '<prefix><green>Mode set to <white><mode><green>.'
-  mode-unknown: '<prefix><red>Unknown mode <white><mode><red>. Known: <white><modes><red>.'
+  mode-set: '<prefix><green>Mode set to ''<mode>''.'
+  mode-unknown: '<prefix><red>Unknown mode ''<mode>''. Known: <modes>'
   # <category>
-  category-set: '<prefix><green>Category set to <white><category><green> — saving moves the arena into <white>templates/<category>/<green>.'
+  category-set: '<prefix><green>Category set to ''<category>'' — saving moves the arena into templates/<category>/.'
   category-cleared: '<prefix><green>Category reset to this arena''s mode — saving moves its folder back into templates/.'
   category-bad-name: '<prefix><red>Categories are folder names: [a-z0-9_-], max 32 characters.'
   # <category> <error>
-  category-move-failed: '<prefix><red>Saved, but the arena could not be moved into category <white><category><red>: <error>'
+  category-move-failed: '<prefix><red>Saved, but the arena could not be moved into category ''<category>'': <error>'
   captured: '<prefix><green>Arena captured — the schematic now matches what you see.'
   # <error>
   capture-failed: '<prefix><red>Could not capture the arena: <error>'
@@ -733,18 +679,18 @@ setup:
   schematic-replaced-hint: '<prefix><gray>Check the spawn and finish trigger — their offsets may no longer line up.'
   # <error>
   schematic-replace-failed: '<prefix><red>Could not replace the schematic: <error>'
-  need-spawn: '<prefix><red>Set the spawn first: <white>/practice setup spawn<red>.'
+  need-spawn: '<prefix><red>Set the spawn first: <white>/practice setup spawn'
   need-trigger: '<prefix><red>Place the finish button or pressure plate first.'
   # <error>
   save-failed: '<prefix><red>Could not write arena.yml: <error>'
   # <arena>
-  saved: '<prefix><green>Arena <white><arena><green> saved. Play it with <white>/practice join <arena><green>.'
+  saved: '<prefix><green>Arena ''<arena>'' saved — <white>/practice join <arena>'
   # <arena>
-  updated: '<prefix><green>Arena <white><arena><green> updated. Play it with <white>/practice join <arena><green>.'
+  updated: '<prefix><green>Arena ''<arena>'' updated — <white>/practice join <arena>'
   cancelled: '<prefix><gray>Setup canceled; nothing was saved.'
   edit-cancelled: '<prefix><gray>Edit canceled; the saved arena is unchanged.'
   # <arena> <editing>
-  info-header: '<prefix><gray><editing> arena <white><arena><gray>:'
+  info-header: '<prefix><gray><editing> arena ''<white><arena><gray>'''
   # <key> <value>
   info-line: '<dark_gray>   <key>: <white><value>'
   info-ready: '<prefix><green>Ready to save.'
@@ -757,155 +703,65 @@ setup:
   # <type>
   rush-generator-set: '<prefix><green>Rush <white><type><green> generator set on the block below you.'
   # <type>
-  rush-bad-generator: '<prefix><red><white><type><red> is not a generator type. Use iron, gold, diamond or emerald.'
+  rush-bad-generator: '<prefix><red>''<type>'' is not a generator type. Use iron, gold, diamond or emerald.'
   rush-dealer-set: '<prefix><green>Rush shop dealer spot set where you stand.'
   rush-cleared: '<prefix><green>Rush layout cleared — teams, generators and dealers removed.'
-  rush-need-base: '<prefix><red>A rush arena needs at least one team with both a spawn and a bed: <white>/practice setup rush team <color><red> and <white>/practice setup rush bed <color><red>.'
+  rush-need-base: '<prefix><red>A rush arena needs at least one team with both a spawn and a bed: <white>/practice setup rush team <color><red> and <white>/practice setup rush bed <color>'
   pvpbot-spawn-set: '<prefix><green>Bot spawn set where you stand. Without one, the bot spawns a few blocks ahead of the player spawn.'
   pvpbot-cleared: '<prefix><green>PvP bot layout cleared — the bot spawn marker was removed.'
 
 # ------------------------------------------------------------ GUI menu text
 
-# Shared labels used by menus AND by chat, boards and broadcasts.
-label:
-  # Boolean state words. The word carries the meaning; the color decorates (R31).
-  state:
-    'on': '<green>on'
-    'off': '<red>off'
-    shown: '<green>shown'
-    hidden: '<red>hidden'
-    public: '<green>public'
-    private: '<gray>private'
-    selected: '<green>selected'
-  # Rush objective names — boards, stats, broadcasts and the rush menus.
-  objective:
-    bed: 'Bed Rush'
-    emerald: 'Emerald Rush'
-    diamond: 'Diamond Rush'
-    team_wipe: 'Team Wipe'
-  # PvP bot difficulty presets, keyed by preset id. `long` carries a
-  # tagline for menus; `short` is the bare name for the sidebar.
-  difficulty:
-    long:
-      rookie: '<green>Rookie <dark_gray>— slow hands, soft aim'
-      brawler: '<yellow>Brawler <dark_gray>— a fair fight'
-      veteran: '<red>Veteran <dark_gray>— sharp and relentless'
-      demon: '<dark_red>Demon <dark_gray>— frame-perfect menace'
-      unfair: '<dark_purple><bold>Unfair</bold> <dark_gray>— it read your habits before you had them'
-      suffer: '<red><bold>Suffer</bold> <dark_gray>— nothing it does is impossible; all of it is'
-      custom: '<white>Custom <dark_gray>— your own mix'
-    short:
-      rookie: '<green>Rookie'
-      brawler: '<yellow>Brawler'
-      veteran: '<red>Veteran'
-      demon: '<dark_red>Demon'
-      unfair: '<dark_purple><bold>Unfair'
-      suffer: '<red><bold>Suffer'
-      custom: '<white>Custom'
-
 gui:
-  # Shown wherever a value is missing: no record yet, no holder, unranked.
-  # It is substituted into lore as plain text, so keep it tag-free — a
-  # MiniMessage tag here would be printed literally, not colored.
-  none: '???'
-  # Navigation chrome, identical in every menu (R45).
-  back: '<yellow><bold>Back'
+  none: '—'
+  back: '<yellow>Back'
   back-lore: '<gray>Return to the previous menu.'
-  close: '<red><bold>Close'
-  close-lore: '<gray>Close this menu.'
-  previous-page: '<yellow><bold>Previous Page'
-  next-page: '<yellow><bold>Next Page'
+  close: '<red>Close'
+  previous-page: '<yellow>Previous page'
+  next-page: '<yellow>Next page'
   # <page> <pages>
-  page: '<white><bold>Page <page> <gray>of <pages>'
-  # The closed click-hint vocabulary (R32). Every clickable control ends
-  # with one of these; menus append them, so lore keys never contain them.
-  hint:
-    click:
-      open: '<yellow>Click to open'
-      select: '<yellow>Click to select'
-      play: '<yellow>Click to play'
-      view: '<yellow>Click to view'
-      toggle: '<yellow>Click to toggle'
-      cycle: '<yellow>Click to cycle'
-      confirm: '<yellow>Click to confirm'
-      cancel: '<yellow>Click to cancel'
-      close: '<yellow>Click to close'
-      run: '<yellow>Click to run'
-      delete: '<yellow>Click to delete'
-      edit: '<yellow>Click to edit'
-      save: '<yellow>Click to save'
-      buy: '<yellow>Click to buy'
-      rename: '<yellow>Click to rename'
-      leave: '<yellow>Click to leave'
-      restart: '<yellow>Click to restart'
-    right:
-      cycle-back: '<yellow>Right-click to cycle back'
-      view: '<yellow>Right-click to view'
-      options: '<yellow>Right-click for options'
-      delete: '<yellow>Right-click to delete'
-      load: '<yellow>Right-click to load'
-      prompt: '<yellow>Right-click to type a name'
-    shift:
-      pin: '<dark_gray>Shift-click to pin to Quick Buy'
-      unpin: '<dark_gray>Shift-click to unpin from Quick Buy'
-  # The last lore line of a control that cannot act right now / is locked (R51, R52).
-  # <reason>
-  unavailable: '<red>Unavailable: <gray><reason>'
-  # <reason>
-  locked: '<red>Locked: <gray><reason>'
-  # Short lowercase reasons, inserted into the two lines above.
-  reason:
-    only-one-team: 'only one team base'
-    pinned-competitive: 'pinned by competitive mode'
-    no-defense: 'no defense chosen'
-    nothing-to-load: 'nothing to load'
-    nothing-saved: 'nothing saved yet'
-    already-selected: 'already selected'
-    needs-spawn: 'needs a spawn first'
-    needs-trigger: 'needs a finish trigger first'
-    no-blocks: 'place some blocks first'
-    wrong-phase: 'not while previewing'
-    cannot-afford: 'cannot afford'
-    no-presets: 'no difficulty presets configured'
-    no-arenas: 'no arenas you can play'
-    no-permission: 'no permission'
-    # <node>
-    needs-node: 'needs <white><node>'
-    gone: 'no longer exists'
-    offline: 'went offline'
-    own-defense: 'you cannot like your own'
-    no-defenses: 'no defenses yet'
+  page: '<white>Page <page> <gray>of <pages>'
 
   main:
     title: '<dark_gray><bold>Practice'
     play:
-      name: '<white><bold>Play'
+      name: '<green><bold>Play'
       # <count>
       lore:
         - '<gray>Pick an arena to practice in.'
         - ''
-        - '<gray>Arenas: <white><count>'
+        - '<dark_gray><count> arena(s) available'
+        - '<yellow>Click to browse'
     random:
-      name: '<white><bold>Random Arena'
+      name: '<light_purple><bold>Random Arena'
       lore:
-        - '<gray>Drops you into one of the'
-        - '<gray>arenas you can play.'
+        - '<gray>Drops you straight into one'
+        - '<gray>of the arenas you can play.'
+        - '<yellow>Click to join'
     leaderboards:
       name: '<gold><bold>Leaderboards'
       lore:
         - '<gray>The fastest times on every arena.'
+        - '<yellow>Click to view'
     stats:
-      name: '<white><bold>My Stats'
+      name: '<aqua><bold>My Stats'
       lore:
         - '<gray>Your bests, ranks and run counts.'
+        - '<yellow>Click to view'
     restart:
       name: '<yellow><bold>Restart Run'
       # <arena>
       lore:
-        - '<gray>Wipes your blocks and starts over'
+        - '<gray>Wipe your blocks and start over'
         - '<gray>from the arena spawn.'
         - ''
         - '<gray>Arena: <white><arena>'
+        - '<yellow>Click to restart'
+      lore-idle:
+        - '<gray>Wipe your blocks and start over'
+        - '<gray>from the arena spawn.'
+        - ''
+        - '<red>You are not practicing.'
     sidebar:
       name: '<white><bold>Sidebar'
       # <state>
@@ -913,63 +769,78 @@ gui:
         - '<gray>The live timer scoreboard.'
         - ''
         - '<gray>Currently: <state>'
+        - '<yellow>Click to toggle'
+      state-shown: '<green>shown'
+      state-hidden: '<red>hidden'
     help:
       name: '<white><bold>Help'
       lore:
-        - '<gray>How practice arenas work'
+        - '<gray>How practice arenas work,'
         - '<gray>and every command you can run.'
+        - '<yellow>Click for details'
     # Only shown while sparring the PvP bot.
     bot:
-      name: '<white><bold>Bot Settings'
+      name: '<red><bold>Bot Settings'
       lore:
         - '<gray>Kit, difficulty and the bot''s'
-        - '<gray>arsenal. The bot pauses while'
+        - '<gray>arsenal. It pauses while'
         - '<gray>this menu is open.'
+        - '<yellow>Click to open'
     settings:
-      name: '<white><bold>Settings'
+      name: '<light_purple><bold>Settings'
       lore:
-        - '<gray>Night vision, wool color and'
-        - '<gray>your arena''s time of day.'
+        - '<gray>Night vision, wool color'
+        - '<gray>and your arena''s time of day.'
+        - '<yellow>Click to open'
     spectate:
-      name: '<white><bold>Spectate'
+      name: '<aqua><bold>Spectate'
       lore:
         - '<gray>Watch another player practice'
         - '<gray>without disturbing their run.'
+        - '<yellow>Click to pick a player'
     leave:
       name: '<red><bold>Leave'
       # <destination>
       lore:
-        - '<gray>Restores your inventory and'
-        - '<gray>location exactly as they were.'
+        - '<gray>Restores your inventory, location'
+        - '<gray>and everything else exactly as it was.'
         - ''
         - '<gray>Sends you to: <white><destination>'
+        - '<yellow>Click to leave'
 
   settings:
     title: '<dark_gray><bold>Settings'
     night-vision:
-      name: '<white><bold>Night Vision'
+      name: '<gold><bold>Night Vision'
       # <state>
       lore:
         - '<gray>Permanent night vision while'
         - '<gray>you are practicing.'
         - ''
         - '<gray>Currently: <state>'
+        - '<yellow>Click to toggle'
+      state-on: '<green>enabled'
+      state-off: '<red>disabled'
     wool-color:
       name: '<white><bold>Wool Color'
       # <color>
       lore:
-        - '<gray>Cycles the wool color in your kit.'
+        - '<gray>The color of the wool in your'
+        - '<gray>kit — and so of your bridges.'
         - ''
         - '<gray>Currently: <white><color>'
+        - '<yellow>Click to cycle'
+        - '<yellow>Right-click to cycle back'
       default: 'kit default'
     time:
-      name: '<white><bold>Time of Day'
+      name: '<yellow><bold>Time of Day'
       # <time>
       lore:
         - '<gray>The time of day in your arena.'
         - '<gray>Only you see it.'
         - ''
         - '<gray>Currently: <white><time>'
+        - '<yellow>Click to cycle'
       option:
         default: 'server time'
         day: 'day'
@@ -979,64 +850,72 @@ gui:
         midnight: 'midnight'
 
   categories:
-    title: '<dark_gray><bold>Play'
+    title: '<dark_gray><bold>Categories'
     empty:
-      name: '<gray><bold>No arenas yet'
+      name: '<red>No arenas available'
       lore:
-        - '<gray>Nothing has been set up, or you'
-        - '<gray>lack permission for them all.'
+        - '<gray>Nothing has been set up yet, or'
+        - '<gray>you lack permission for them all.'
     # <category>
-    entry-name: '<white><bold><category>'
+    entry-name: '<green><bold><category>'
     # <category> <count>
     entry-lore:
-      - '<gray>Arenas: <white><count>'
+      - '<gray><count> arena(s)'
+      - ''
+      - '<yellow>Click to browse'
 
   arenas:
-    title: '<dark_gray><bold>Play'
+    title: '<dark_gray><bold>Arenas'
     # <category>
-    title-category: '<dark_gray><bold>Play — <category>'
+    title-category: '<dark_gray><bold><category>'
     empty:
-      name: '<gray><bold>No arenas yet'
+      name: '<red>No arenas available'
       lore:
-        - '<gray>Nothing has been set up, or you'
-        - '<gray>lack permission for them all.'
+        - '<gray>Nothing has been set up yet, or'
+        - '<gray>you lack permission for them all.'
     # <arena>
     entry-name: '<green><bold><arena>'
-    # <mode> <best> <rank> <players> <finishes> <record> <record-holder>
+    entry-name-locked: '<red><bold><arena>'
+    # <mode> <best> <rank> <players> <finishes> <record> <record-holder> <status>
     entry-lore:
       - '<gray>Mode: <white><mode>'
       - ''
       - '<gray>Your best: <white><best>'
       - '<gray>Your rank: <white><rank> <dark_gray>of <players>'
-      - '<gray>Runs: <white><finishes>'
-      - '<gray>Record: <white><record>'
-      - '<gray>Held by: <white><record-holder>'
+      - '<gray>Runs finished: <white><finishes>'
+      - '<gray>Record: <white><record> <dark_gray><record-holder>'
+      - ''
+      - '<status>'
     # Tiles for modes without shared time boards (MLG streaks, PvP bot spar):
-    # no dead best/rank/record fields. <mode>
+    # no dead best/rank/record fields. <mode> <status>
     entry-lore-unranked:
       - '<gray>Mode: <white><mode>'
       - ''
       - '<gray>Scored in-session — no time board.'
-    # Appended when the viewer holds the arena record (R35).
-    record-line:
-      - '<gold>You hold the record'
+      - ''
+      - '<status>'
+    status-open: '<yellow>Click to play'
+    status-locked: '<red>You do not have access to this arena.'
+    # <node>
+    status-locked-node: '<dark_gray>needs <node>'
 
   spectate:
-    title: '<dark_gray><bold>Spectate'
+    title: '<dark_gray><bold>Spectate a player'
     empty:
-      name: '<gray><bold>No players yet'
+      name: '<red>Nobody is practicing'
       lore:
-        - '<gray>Nobody is practicing right now.'
         - '<gray>Players appear here the moment'
         - '<gray>they enter an arena.'
     entry:
       # <player>
-      name: '<white><bold><player>'
+      name: '<aqua><bold><player>'
       # <arena> <mode> <watchers>
       lore:
         - '<gray>Arena: <white><arena>'
         - '<gray>Mode: <white><mode>'
         - '<gray>Spectators: <white><watchers>'
+        - ''
+        - '<yellow>Click to spectate'
 
   leaderboards:
     title: '<dark_gray><bold>Leaderboards'
@@ -1050,36 +929,35 @@ gui:
       entry-name: '<gold><bold><category>'
       # <category> <count>
       entry-lore:
-        - '<gray>Arenas with boards: <white><count>'
+        - '<gray><count> arena(s) with boards'
+        - ''
+        - '<yellow>Click to browse'
     empty:
-      name: '<gray><bold>No leaderboards yet'
+      name: '<red>No arenas yet'
       lore:
-        - '<gray>Boards appear once an arena'
-        - '<gray>has been finished.'
+        - '<gray>Leaderboards appear once arenas exist.'
     # <arena>
     entry-name: '<gold><bold><arena>'
     # <players> <record> <record-holder> <rank>
     entry-lore:
-      - '<gray>Players: <white><players>'
+      - '<gray>Players ranked: <white><players>'
       - '<gray>Record: <white><record>'
       - '<gray>Held by: <white><record-holder>'
       - ''
-      - '<gray>Your rank: <white><rank>'
-    record-line:
-      - '<gold>You hold the record'
+      - '<gray>You are <white><rank>'
+      - '<yellow>Click for the full board'
 
   board:
     # <arena>
-    title: '<dark_gray><bold>Top Times — <arena>'
+    title: '<dark_gray><bold><arena> · top times'
     empty:
-      name: '<gray><bold>No times yet'
+      name: '<red>No times yet'
       lore:
         - '<gray>Be the first to finish this arena.'
-    # Rows are information, not buttons: no bold (R32).
     # <rank> <player>
-    entry-name: '<white>#<rank> <player>'
-    entry-name-first: '<gold>#<rank> <player>'
-    entry-name-self: '<aqua>#<rank> <player>'
+    entry-name: '<white><bold>#<rank> <player>'
+    entry-name-first: '<gold><bold>#<rank> <player>'
+    entry-name-self: '<aqua><bold>#<rank> <player>'
     # <time> <behind>
     entry-lore:
       - '<gray>Time: <white><time>'
@@ -1088,7 +966,7 @@ gui:
       - ''
       - '<aqua>That''s you.'
     standing:
-      name: '<aqua>Your Standing'
+      name: '<aqua><bold>Your standing'
       # <rank> <players> <best> <next> <gap>
       lore:
         - '<gray>Rank: <white><rank> <dark_gray>of <players>'
@@ -1101,43 +979,50 @@ gui:
     # <arena>
     play-name: '<green><bold>Play <arena>'
     play-lore:
-      - '<gray>Join this arena now.'
+      - '<yellow>Click to join'
 
   stats:
+    title-self: '<dark_gray><bold>Your stats'
     # <player>
-    title: '<dark_gray><bold>Stats — <player>'
+    title-other: '<dark_gray><bold><player>''s stats'
     empty-self:
-      name: '<gray><bold>No times yet'
+      name: '<red>No times recorded'
       lore:
         - '<gray>Finish a run and it shows up here.'
     empty-other:
-      name: '<gray><bold>No times yet'
+      name: '<red>No times recorded'
       lore:
-        - '<gray>This player has not finished a run.'
+        - '<gray>This player has not finished a run yet.'
     # <arena>
     entry-name: '<white><bold><arena>'
     # <best> <last> <finishes> <rank> <players> <behind>
     entry-lore:
       - '<gray>Best: <white><best>'
       - '<gray>Last: <white><last>'
-      - '<gray>Runs: <white><finishes>'
+      - '<gray>Runs finished: <white><finishes>'
       - '<gray>Rank: <white><rank> <dark_gray>of <players>'
-      - '<gray>Behind record: <white><behind>'
-    record-line:
-      - '<gold>You hold the record'
+      - '<gray>Off the record by: <white><behind>'
+    entry-lore-missing:
+      - ''
+      - '<dark_gray>This arena no longer exists.'
     summary:
       # <player> <arenas> <finishes> <records>
-      name: '<aqua><player>'
+      name: '<aqua><bold><player>'
       lore:
         - '<gray>Arenas completed: <white><arenas>'
-        - '<gray>Runs: <white><finishes>'
-        - '<gray>Records held: <white><records>'
+        - '<gray>Total runs finished: <white><finishes>'
+        - '<gray>Arena records held: <white><records>'
 
   rush:
     # <arena>
     title: '<dark_gray><bold>Rush — <arena>'
-    # Lore keys hold description and state only; the click hints are appended
-    # from gui.hint.* (style guide R30/R32).
+    objective:
+      # Plain labels — used in boards, stats and broadcasts.
+      option:
+        bed: 'Bed Rush'
+        emerald: 'Emerald Rush'
+        diamond: 'Diamond Rush'
+        team_wipe: 'Team Wipe'
     team:
       name: '<white><bold>Team Base'
       # <team> <count>
@@ -1145,38 +1030,43 @@ gui:
         - '<gray>Where your run starts.'
         - ''
         - '<gray>Base: <white><team> <dark_gray>(<count> available)'
+        - '<yellow>Click to cycle'
+        - '<yellow>Right-click to cycle back'
     blocks:
       name: '<white><bold>Starter Blocks'
       # <amount>
       lore:
         - '<gray>Free wool in your starter kit.'
-        - '<gray>Practice runs only.'
         - ''
         - '<gray>Amount: <white><amount>'
+        - '<dark_gray>Casual runs only.'
+        - '<yellow>Click to cycle'
     currency:
-      name: '<white><bold>Starting Resources'
+      name: '<gold><bold>Starting Resources'
       # <iron> <gold>
       lore:
         - '<gray>Iron and gold to spend at'
         - '<gray>the shop right away.'
-        - '<gray>Practice runs only.'
         - ''
         - '<gray>Iron: <white><iron> <dark_gray>• <gray>Gold: <white><gold>'
+        - '<dark_gray>Casual runs only.'
+        - '<yellow>Click to cycle'
     pickaxe:
-      name: '<white><bold>Pickaxe'
+      name: '<aqua><bold>Pickaxe'
       # <tier>
       lore:
         - '<gray>The pickaxe in your starter kit.'
-        - '<gray>Practice runs only.'
         - ''
         - '<gray>Tier: <white><tier>'
+        - '<dark_gray>Casual runs only.'
+        - '<yellow>Click to cycle'
       option:
         none: 'none'
         wooden: 'wooden'
         iron: 'iron'
         diamond: 'diamond'
     defense:
-      name: '<white><bold>Bed Defenses'
+      name: '<red><bold>Bed Defenses'
       # <preset> <layers>
       lore:
         - '<gray>The pyramid built over every'
@@ -1184,6 +1074,7 @@ gui:
         - ''
         - '<gray>Preset: <white><preset>'
         - '<gray>Layers: <white><layers>'
+        - '<yellow>Click to browse presets'
       # Labels for the presets in config.yml's rush.defense-presets. A preset
       # you invent has no key here and falls back to its own `name`.
       option:
@@ -1201,8 +1092,7 @@ gui:
         keep: 'The Keep'
     # The bed-defense gallery the button above opens.
     defenses:
-      # <arena>
-      title: '<dark_gray><bold>Bed Defenses — <arena>'
+      title: '<dark_gray><bold>Bed Defenses'
       # <preset>
       tile-name: '<white><bold><preset>'
       # <layers> — how many materials thick the pyramid is
@@ -1213,8 +1103,12 @@ gui:
       # One line per layer, outermost first — the order a rusher digs through
       # them. <depth> counts from the outside in, <material> is the block.
       layer-line: '<dark_gray> <depth>. <gray><material>'
-      # The state line under the chosen preset's layers.
-      selected: '<gray>Currently: <green>selected'
+      select:
+        - ''
+        - '<yellow>Click to choose'
+      selected:
+        - ''
+        - '<green>Currently chosen'
     # Values the Start button's summary is built from.
     summary:
       # <amount>
@@ -1228,25 +1122,29 @@ gui:
       # <count> <difficulty> <armor> <sword>
       defenders: '<white><count>/team <dark_gray>(<difficulty><dark_gray>, <armor><dark_gray>, <sword><dark_gray>)'
     tnt:
-      name: '<white><bold>Starter TNT'
+      name: '<red><bold>Starter TNT'
       # <amount>
       lore:
         - '<gray>TNT in your starter kit. It'
         - '<gray>auto-ignites on place — demolition'
         - '<gray>fuel for bed defenses.'
-        - '<gray>Practice runs only.'
         - ''
         - '<gray>Amount: <white><amount>'
+        - '<dark_gray>Casual runs only.'
+        - '<yellow>Click to cycle'
     generators:
-      name: '<white><bold>Base Generators'
-      # <state> — label.state.on / label.state.off
+      name: '<yellow><bold>Base Generators'
+      # <state>
       lore:
         - '<gray>The iron and gold generators'
         - '<gray>at every team base.'
         - ''
         - '<gray>Currently: <state>'
+        - '<yellow>Click to toggle'
+      state-on: '<green>running'
+      state-off: '<red>off'
     bots:
-      name: '<white><bold>Defender Bots'
+      name: '<red><bold>Defender Bots'
       # <count>
       lore:
         - '<gray>Bots guarding every enemy base.'
@@ -1255,8 +1153,10 @@ gui:
         - '<gray>then take out every defender.'
         - ''
         - '<gray>Per team: <white><count>'
+        - '<yellow>Click to cycle'
+        - '<yellow>Right-click to cycle back'
     bot-difficulty:
-      name: '<white><bold>Defender Difficulty'
+      name: '<gold><bold>Defender Difficulty'
       default: 'Default'
       # <level>
       lore:
@@ -1264,6 +1164,7 @@ gui:
         - '<gray>the PvP bot difficulty presets.'
         - ''
         - '<gray>Difficulty: <level>'
+        - '<yellow>Click to cycle'
     bot-armor:
       name: '<white><bold>Defender Armor'
       # <tier>
@@ -1272,45 +1173,49 @@ gui:
         - '<gray>Leather is dyed team colors.'
         - ''
         - '<gray>Tier: <white><tier>'
+        - '<yellow>Click to cycle'
       option:
         leather: 'leather'
         chainmail: 'chainmail'
         iron: 'iron'
         diamond: 'diamond'
     bot-sword:
-      name: '<white><bold>Defender Sword'
+      name: '<aqua><bold>Defender Sword'
       # <tier>
       lore:
         - '<gray>What the defenders swing.'
         - ''
         - '<gray>Tier: <white><tier>'
+        - '<yellow>Click to cycle'
       option:
         wooden: 'wooden'
         stone: 'stone'
         iron: 'iron'
         diamond: 'diamond'
     start:
-      name: '<green><bold>Start Practice'
+      name: '<green><bold>Start Casual'
       # The whole match summarized, so nobody has to hover five buttons to
       # find out what they are about to play.
       # <arena> <team> <blocks> <currency> <pickaxe> <tnt> <defense> <generators>
       lore:
         - '<gray>Map: <white><arena>'
         - ''
-        - '<gray>Base: <white><team>'
-        - '<gray>Starter blocks: <blocks>'
-        - '<gray>Starting resources: <currency>'
-        - '<gray>Pickaxe: <white><pickaxe>'
-        - '<gray>TNT: <tnt>'
-        - '<gray>Bed defenses: <defense>'
-        - '<gray>Base generators: <generators>'
-        - '<gray>Defenders: <defenders>'
+        - '<yellow>Match modifiers'
+        - '<dark_gray> • <gray>Base: <white><team>'
+        - '<dark_gray> • <gray>Starter blocks: <blocks>'
+        - '<dark_gray> • <gray>Starting resources: <currency>'
+        - '<dark_gray> • <gray>Pickaxe: <white><pickaxe>'
+        - '<dark_gray> • <gray>TNT: <tnt>'
+        - '<dark_gray> • <gray>Bed defenses: <defense>'
+        - '<dark_gray> • <gray>Base generators: <generators>'
+        - '<dark_gray> • <gray>Defenders: <defenders>'
         - ''
         - '<gray>Break a bed or grab an emerald'
         - '<gray>or diamond — whichever you'
         - '<gray>reach first ends the run.'
         - ''
-        - '<dark_gray>Not ranked — play competitive'
+        - '<red>Casual runs are not ranked.'
+        - '<yellow>Click to play'
     competitive:
       name: '<gold><bold>Start Competitive'
       # <arena>
@@ -1324,10 +1229,11 @@ gui:
         - '<gray>on is the ranked <white>team wipe<gray>, at'
         - '<gray>the server''s fixed defender lineup.'
         - ''
-        - '<gold>Ranked — times are recorded'
+        - '<gold>Only competitive times count'
+        - '<gold>for records and leaderboards.'
+        - '<yellow>Click to play'
     # The one-click preset strip along the menu's bottom row. Each tile
     # applies its loadout over your dials and starts the run immediately.
-    # Ranked presets are gold, practice presets white (style guide R27).
     presets:
       competitive:
         name: '<gold><bold>Competitive Race'
@@ -1337,7 +1243,8 @@ gui:
           - '<gray>starter sword only, defenses on,'
           - '<gray>generators on, shop open, no bots.'
           - ''
-          - '<gold>Ranked — times are recorded'
+          - '<gold>Times are recorded and ranked.'
+          - '<yellow>Click to play'
       competitive-wipe:
         name: '<gold><bold>Competitive Team Wipe'
         # <arena>
@@ -1347,27 +1254,30 @@ gui:
           - '<gray>the fixed defender lineup at'
           - '<gray>every enemy base.'
           - ''
-          - '<gold>Ranked — times are recorded'
+          - '<gold>Times are recorded and ranked.'
+          - '<yellow>Click to play'
       bridge:
-        name: '<white><bold>Bridge Optimization'
+        name: '<aqua><bold>Bridge Optimization'
         # <arena>
         lore:
           - '<gray>Route practice: <white>64 wool<gray> in'
           - '<gray>hand, generators on, shop open,'
           - '<gray>nothing in your way.'
           - ''
-          - '<dark_gray>Not ranked — play competitive'
+          - '<red>Casual — times are not recorded.'
+          - '<yellow>Click to play'
       bed-break:
-        name: '<white><bold>Bed Break'
+        name: '<red><bold>Bed Break'
         # <arena>
         lore:
           - '<gray>Cracking a defended bed: iron'
           - '<gray>pickaxe, <white>TNT<gray>, wool, generators'
           - '<gray>on, the standard defense up.'
           - ''
-          - '<dark_gray>Not ranked — play competitive'
+          - '<red>Casual — times are not recorded.'
+          - '<yellow>Click to play'
       warmup:
-        name: '<white><bold>Warmup'
+        name: '<green><bold>Warmup'
         # <arena>
         lore:
           - '<gray>The exact competitive conditions'
@@ -1375,16 +1285,18 @@ gui:
           - '<gray>— without the run going on the'
           - '<gray>books.'
           - ''
-          - '<dark_gray>Not ranked — play competitive'
+          - '<red>Casual — times are not recorded.'
+          - '<yellow>Click to play'
       skirmish:
-        name: '<white><bold>Bot Skirmish'
+        name: '<red><bold>Bot Skirmish'
         # <arena>
         lore:
           - '<gray>Combat practice: two defenders'
           - '<gray>at every enemy base, wool, iron'
           - '<gray>pickaxe and iron to spend.'
           - ''
-          - '<dark_gray>Not ranked — play competitive'
+          - '<red>Casual — times are not recorded.'
+          - '<yellow>Click to play'
       sandbox:
         name: '<white><bold>Sandbox'
         # <arena>
@@ -1393,13 +1305,16 @@ gui:
           - '<gray>purse, diamond pickaxe, TNT,'
           - '<gray>generators running. Mess around.'
           - ''
-          - '<dark_gray>Not ranked — play competitive'
+          - '<red>Casual — times are not recorded.'
+          - '<yellow>Click to play'
 
   # The PvP bot settings, opened by the in-arena settings item. The bot
   # freezes while this menu is open and re-reads everything on close.
   pvpbot:
     # <arena>
     title: '<dark_gray><bold>Bot Settings — <arena>'
+    state-on: '<green>on'
+    state-off: '<red>off'
     kit:
       name: '<white><bold>Kit'
       # <kit>
@@ -1408,6 +1323,7 @@ gui:
         - '<gray>it unless gear says otherwise.'
         - ''
         - '<gray>Kit: <white><kit>'
+        - '<yellow>Click to browse kits'
       option:
         sword: 'Sword'
         nodebuff: 'NoDebuff'
@@ -1424,15 +1340,32 @@ gui:
         bedwars: 'Bedwars'
         skywars: 'Skywars'
     # Named difficulty presets — one click sets every AI knob below.
-    # The labels themselves live under label.difficulty.
     preset:
-      name: '<white><bold>Difficulty'
+      name: '<gold><bold>Difficulty'
       # <level>
       lore:
         - '<gray>One click sets every knob:'
         - '<gray>speed, aim, combos, reach.'
         - ''
         - '<gray>Difficulty: <level>'
+        - '<yellow>Click to cycle'
+      option:
+        rookie: '<green>Rookie <dark_gray>— slow hands, soft aim'
+        brawler: '<yellow>Brawler <dark_gray>— a fair fight'
+        veteran: '<red>Veteran <dark_gray>— sharp and relentless'
+        demon: '<dark_red>Demon <dark_gray>— frame-perfect menace'
+        unfair: '<dark_purple><bold>Unfair</bold> <dark_gray>— it read your habits before you had them'
+        suffer: '<red><bold>Suffer</bold> <dark_gray>— nothing it does is impossible; all of it is'
+        custom: '<light_purple>Custom <dark_gray>— your own mix'
+      # The same names without their tagline, for the sidebar's Difficulty line.
+      short:
+        rookie: '<green>Rookie'
+        brawler: '<yellow>Brawler'
+        veteran: '<red>Veteran'
+        demon: '<dark_red>Demon'
+        unfair: '<dark_purple><bold>Unfair'
+        suffer: '<red><bold>Suffer'
+        custom: '<light_purple>Custom'
     # The kit gallery.
     kits:
       title: '<dark_gray><bold>Kits'
@@ -1445,16 +1378,17 @@ gui:
       # <count> — how many more item types the tile had no room for
       more-line: '<dark_gray> • <gray>… and <count> more'
       blocks-note:
-        - '<gray>Comes with blocks to place.'
-      # State line on the tile that is currently chosen (R61).
+        - '<aqua>Comes with blocks to place.'
       selected:
-        - '<gray>Currently: <green>selected'
+        - '<green>Selected'
+        - '<yellow>Right-click to preview'
+      click-hint:
+        - '<yellow>Click to select'
+        - '<yellow>Right-click to preview'
     # The full-inventory kit preview.
     preview:
       # <kit>
       title: '<dark_gray><bold>Preview — <kit>'
-      # <kit>
-      banner-name: '<white><kit>'
       icon-lore:
         - '<gray>Laid out exactly as it lands:'
         - '<gray>armor up top, hotbar at the bottom.'
@@ -1466,6 +1400,7 @@ gui:
         - '<gray>What the bot wears and swings.'
         - ''
         - '<gray>Gear: <white><tier>'
+        - '<yellow>Click to cycle'
       option:
         mirror: 'mirror your kit'
         none: 'none (wooden sword)'
@@ -1480,6 +1415,7 @@ gui:
         - '<gray>out of your crosshair.'
         - ''
         - '<gray>Level: <white><level>'
+        - '<yellow>Click to cycle'
       option:
         low: 'low'
         medium: 'medium'
@@ -1495,6 +1431,7 @@ gui:
         - '<gray>in clicks per second.'
         - ''
         - '<gray>CPS: <white><cps>'
+        - '<yellow>Click to cycle'
     accuracy:
       name: '<white><bold>Accuracy'
       # <level>
@@ -1503,6 +1440,7 @@ gui:
         - '<gray>in range actually lands.'
         - ''
         - '<gray>Level: <white><level>'
+        - '<yellow>Click to cycle'
       option:
         low: 'low'
         medium: 'medium'
@@ -1518,8 +1456,9 @@ gui:
         - '<gray>and sprint-resets its hits.'
         - ''
         - '<gray>Level: <white><level>'
+        - '<yellow>Click to cycle'
       option:
-        'off': 'off'
+        off: 'off'
         some: 'some'
         full: 'full'
         unfair: 'unfair'
@@ -1531,6 +1470,7 @@ gui:
         - '<gray>The bot''s attack range.'
         - ''
         - '<gray>Reach: <white><level>'
+        - '<yellow>Click to cycle'
       option:
         short: 'short (2.6)'
         normal: 'normal (3.0)'
@@ -1543,6 +1483,7 @@ gui:
         - '<gray>and how tight it spaces.'
         - ''
         - '<gray>Level: <white><level>'
+        - '<yellow>Click to cycle'
       option:
         passive: 'passive'
         balanced: 'balanced'
@@ -1555,195 +1496,228 @@ gui:
       # <state>
       lore:
         - '<gray>The bot hooks you at range'
-        - '<gray>to reset your combos. Kits'
-        - '<gray>with a rod always use it.'
+        - '<gray>to reset your combos.'
+        - '<gray>Kits carrying a rod always'
+        - '<gray>use it; this adds one to'
+        - '<gray>every other kit.'
         - ''
         - '<gray>Currently: <state>'
+        - '<yellow>Click to toggle'
     bow:
       name: '<white><bold>Bow'
       # <state>
       lore:
-        - '<gray>The bot takes potshots before'
-        - '<gray>closing in. Kits with a bow'
-        - '<gray>always use it.'
+        - '<gray>The bot takes potshots'
+        - '<gray>before closing in.'
+        - '<gray>Kits carrying a bow always'
+        - '<gray>use it; this adds one to'
+        - '<gray>every other kit.'
         - ''
         - '<gray>Currently: <state>'
+        - '<yellow>Click to toggle'
     block:
       name: '<white><bold>Sword Blocking'
       # <state>
       lore:
         - '<gray>The bot blocks with its sword'
-        - '<gray>when comboed, halving what lands.'
+        - '<gray>when it gets comboed,'
+        - '<gray>halving what lands.'
         - ''
         - '<gray>Currently: <state>'
+        - '<yellow>Click to toggle'
     build:
       name: '<white><bold>Building'
       # <state>
       lore:
-        - '<gray>The bot towers after you and'
-        - '<gray>bridges gaps it cannot walk.'
-        - '<gray>You can break what it builds;'
-        - '<gray>every stock reset clears it.'
+        - '<gray>The bot places blocks to get'
+        - '<gray>to you — towering after you'
+        - '<gray>when you go up, bridging a'
+        - '<gray>gap it cannot walk around.'
+        - ''
+        - '<gray>You can break whatever it'
+        - '<gray>builds, and every stock reset'
+        - '<gray>clears it away.'
         - ''
         - '<gray>Currently: <state>'
+        - '<yellow>Click to toggle'
 
   rushshop:
     title: '<dark_gray><bold>Item Shop'
-    # Appended under the open tab's own MBedwars lore.
-    tab-selected: '<gray>Currently: <green>selected'
+    tab-lore:
+      - '<yellow>Click to view'
+    tab-selected:
+      - '<green>Selected'
     # <amount> <currency>
     price-line: '<gray>Cost: <white><amount> <currency>'
+    click-to-buy:
+      - '<yellow>Click to buy'
+    cannot-afford:
+      - '<red>You cannot afford this'
     # The Quick Buy tab: your MBedwars quick-buy pins, shared with real games.
     quickbuy:
-      name: '<white><bold>Quick Buy'
-      empty-name: '<gray><bold>Empty Slot'
+      name: '<gold><bold>Quick Buy'
+      empty-name: '<red><bold>Empty slot'
       empty-lore:
-        - '<gray>Shift-click any shop item'
+        - '<gray>Sneak-click any shop item'
         - '<gray>to pin it here.'
-      # The state line on a pinned item outside the Quick Buy tab.
-      pinned: '<gray>Quick Buy: <green>pinned'
+      pin-hint:
+        - '<dark_gray>Sneak-click to add to Quick Buy'
+      unpin-hint:
+        - '<dark_gray>Sneak-click to remove from Quick Buy'
+      pinned:
+        - '<gold>★ Pinned to Quick Buy'
 
   rushboards:
     # <arena>
-    title: '<dark_gray><bold>Boards — <arena>'
+    title: '<dark_gray><bold><arena> · boards'
     # <objective>
     entry-name: '<gold><bold><objective>'
     # <players> <record> <record-holder> <rank>
     entry-lore:
-      - '<gray>Players: <white><players>'
+      - '<gray>Players ranked: <white><players>'
       - '<gray>Record: <white><record>'
       - '<gray>Held by: <white><record-holder>'
       - ''
-      - '<gray>Your rank: <white><rank>'
-    # Added under the lore when the viewer holds the record (R35).
-    record-line: '<gold>You hold the record'
+      - '<gray>You are <white><rank>'
+      - '<yellow>Click for the full board'
 
   # Bed defense practice — every menu of the mode.
   beddefense:
-    # The team base button, shared by the round setup and session menus.
-    team:
-      name: '<white><bold>Team Base'
-      # <team> <count>
-      lore:
-        - '<gray>Where your round starts.'
-        - ''
-        - '<gray>Base: <white><team> <dark_gray>(<count> available)'
     # The map picker (the mode's category tile opens it).
     arenas:
-      title: '<dark_gray><bold>Bed Defense Maps'
+      title: '<dark_gray><bold>Bed Defense'
       empty:
-        name: '<gray><bold>No maps yet'
+        name: '<red>No maps available'
         lore:
-          - '<gray>Bed defense runs on rush maps.'
-          - '<gray>Import or build one first.'
+          - '<gray>Bed defense practice runs on rush'
+          - '<gray>maps — import or build one first.'
       # <arena>
-      entry-name: '<white><bold><arena>'
-      # <arena> <team> <bases>
+      entry-name: '<green><bold><arena>'
+      # <arena> <team> <bases> <status>
       entry-lore:
         - '<gray>Mode: <white>Bed Defense'
+        - ''
         - '<gray>Your base: <white><team> <dark_gray>(<bases> available)'
+        - ''
+        - '<status>'
       # The flat arena list's button (categories off).
       flat-button:
-        name: '<white><bold>Bed Defense'
+        name: '<red><bold>Bed Defense'
         lore:
           - '<gray>Build saved bed defenses'
           - '<gray>against the clock.'
-    # The round setup menu. <arena>
+          - ''
+          - '<yellow>Click to choose a map'
+    # The setup menu. <arena>
     title: '<dark_gray><bold>Bed Defense — <arena>'
+    state-on: '<green>on'
+    state-off: '<red>off'
     defense:
-      name: '<white><bold>Choose Defense'
+      name: '<red><bold>Bed Defense'
       # <name> <author> <blocks> <available>
       lore:
         - '<gray>The defense you build this round.'
         - ''
         - '<gray>Chosen: <white><name> <dark_gray>by <author>'
         - '<gray>Blocks: <white><blocks>'
-        - '<gray>Available: <white><available>'
+        - '<dark_gray><available> to choose from'
+        - '<yellow>Click to browse the gallery'
       # Nothing chosen yet, but there are defenses to pick. <available>
       lore-none:
         - '<gray>The defense you build this round.'
         - ''
-        - '<gray>Chosen: <white>the first available'
-        - '<gray>Available: <white><available>'
+        - '<gray>Chosen: <white>none <dark_gray>(the first available)'
+        - '<dark_gray><available> to choose from'
+        - '<yellow>Click to browse the gallery'
       lore-none-exist:
         - '<gray>The defense you build this round.'
         - ''
-        - '<gray>Nobody has saved one yet.'
+        - '<red>No bed defenses exist yet.'
         - '<gray>Design the first one below.'
     mode:
-      name: '<white><bold>Mode'
+      name: '<gold><bold>Mode'
       # <mode>
       lore:
         - '<gray>Competitive is a real match start:'
-        - '<gray>sword, armor, generators and shop.'
-        - '<gray>Practice hands you the exact blocks.'
+        - '<gray>sword, armor, generators and shop —'
+        - '<gray>blocks are bought. Practice hands'
+        - '<gray>you the defense''s exact blocks.'
         - ''
         - '<gray>Mode: <mode>'
         - '<gold>Only competitive is ranked.'
+        - '<yellow>Click to switch'
       option:
         competitive: '<gold>Competitive'
         practice: '<white>Practice'
     strict:
-      name: '<white><bold>Strict Order'
+      name: '<aqua><bold>Strict Order'
       # <state>
       lore:
-        - '<gray>Blocks must go down in the order'
-        - '<gray>the designer placed them.'
+        - '<gray>Blocks must go down in the'
+        - '<gray>order the designer placed them.'
         - '<gray>Kept on its own leaderboard.'
         - ''
         - '<gray>Currently: <state>'
+        - '<yellow>Click to toggle'
     shuffle:
-      name: '<white><bold>Shuffle'
+      name: '<light_purple><bold>Shuffle'
       # <pool>
       lore:
-        - '<gray>Draws a different defense from'
-        - '<gray>a pool every round. Practice only.'
+        - '<gray>A different defense every round,'
+        - '<gray>drawn from a pool.'
         - ''
         - '<gray>Pool: <white><pool>'
+        - '<dark_gray>Practice only.'
+        - '<yellow>Click to cycle'
       lore-competitive:
-        - '<gray>Draws a different defense from'
-        - '<gray>a pool every round. Practice only.'
+        - '<gray>A different defense every round.'
         - ''
-        - '<gray>Pool: <white>off'
+        - '<dark_gray>Competitive builds the chosen'
+        - '<dark_gray>defense — shuffle is off.'
       option:
-        'off': 'off'
+        off: 'off'
         favorites: 'your favorites'
         public: 'every public defense'
     timer:
-      name: '<white><bold>Timer Start'
+      name: '<yellow><bold>Timer Start'
       # <start>
       lore:
         - '<gray>When the clock starts.'
         - ''
         - '<gray>Starts on: <white><start>'
+        - '<yellow>Click to switch'
       lore-competitive:
-        - '<gray>When the clock starts. Competitive'
-        - '<gray>always times from the first move.'
+        - '<gray>When the clock starts.'
         - ''
         - '<gray>Starts on: <white><start>'
+        - '<dark_gray>Competitive always times from'
+        - '<dark_gray>the first movement.'
       option:
         move: 'first movement'
         first_block: 'first block placed'
     new:
-      name: '<white><bold>New Defense'
+      name: '<green><bold>Design a Defense'
       # <radius>
       lore:
-        - '<gray>Opens the editor with an empty bed.'
-        - '<gray>Build within <white><radius><gray> blocks,'
-        - '<gray>name it, save it.'
+        - '<gray>Open the editor with an empty bed:'
+        - '<gray>build anything within <white><radius>'
+        - '<gray>blocks, name it, save it.'
+        - ''
+        - '<yellow>Click to start designing'
     edit:
-      name: '<white><bold>Edit Defense'
+      name: '<green><bold>Edit One of Mine'
       # <count>
       lore:
-        - '<gray>Loads one of your saved defenses'
+        - '<gray>Load one of your saved defenses'
         - '<gray>into the editor.'
         - ''
         - '<gray>Saved: <white><count>'
+        - '<yellow>Click to choose'
       lore-none:
-        - '<gray>Loads one of your saved defenses'
+        - '<gray>Load one of your saved defenses'
         - '<gray>into the editor.'
         - ''
-        - '<gray>Saved: <white>0'
+        - '<dark_gray>You have none saved yet.'
     start:
       name: '<green><bold>Start Practice'
       name-competitive: '<gold><bold>Start Competitive'
@@ -1753,20 +1727,24 @@ gui:
         - '<gray>Map: <white><arena>'
         - '<gray>Defense: <white><defense>'
         - ''
-        - '<gray>Mode: <mode>'
-        - '<gray>Strict order: <strict>'
-        - '<gray>Shuffle: <white><shuffle>'
-        - '<gray>Timer starts on: <white><timer>'
+        - '<yellow>Round rules'
+        - '<dark_gray> • <gray>Mode: <mode>'
+        - '<dark_gray> • <gray>Strict order: <strict>'
+        - '<dark_gray> • <gray>Shuffle: <white><shuffle>'
+        - '<dark_gray> • <gray>Timer starts on: <white><timer>'
         - ''
         - '<ranked>'
+        - '<yellow>Click to play'
       ranked: '<gold>Times are recorded and ranked.'
-      unranked: '<gray>Practice rounds are not ranked.'
+      unranked: '<red>Practice rounds are not ranked.'
       # With no defense anywhere to build, Start becomes this.
-      name-design: '<white><bold>New Defense'
+      name-design: '<green><bold>Design the First Defense'
       lore-design:
-        - '<gray>Nobody has saved a bed defense yet.'
-        - '<gray>Build one around your bed, save it,'
-        - '<gray>and practice it.'
+        - '<gray>Nobody has saved a bed defense'
+        - '<gray>yet. Build one around your bed,'
+        - '<gray>save it, and practice it.'
+        - ''
+        - '<yellow>Click to open the editor'
     # The gallery. <tab>
     gallery:
       title: '<dark_gray><bold>Defenses — <tab>'
@@ -1778,49 +1756,57 @@ gui:
       tab-name: '<white><bold><tab>'
       # <count>
       tab-lore:
-        - '<gray>Defenses: <white><count>'
-      tab-lore-current:
-        - '<gray>Defenses: <white><count>'
-        - ''
-        - '<gray>Currently: <green>selected'
+        - '<gray><count> defense(s)'
+        - '<yellow>Click to view'
       empty:
         public:
-          name: '<gray><bold>No defenses yet'
+          name: '<red>Nothing published yet'
           lore:
-            - '<gray>Nobody has published one.'
-            - '<gray>Design one and publish it.'
+            - '<gray>Design a defense and publish'
+            - '<gray>it to see it here.'
         mine:
-          name: '<gray><bold>No defenses yet'
+          name: '<red>You have no defenses'
           lore:
-            - '<gray>You have not saved one.'
             - '<gray>Design one in the editor.'
         favorites:
-          name: '<gray><bold>No favorites yet'
+          name: '<red>No favorites yet'
           lore:
-            - '<gray>Right-click a defense and'
-            - '<gray>choose Favorite.'
+            - '<gray>Right-click a defense in the'
+            - '<gray>gallery to favorite it.'
       # <name>
-      tile-name: '<white><bold><name>'
+      tile-name: '<green><bold><name>'
       tile-name-own: '<aqua><bold><name>'
       # <name> <author> <blocks> <reach> <likes> <players> <completions>
       # <best> <record> <record-holder> <visibility> <liked> <favorite>
       tile-lore:
-        - '<gray>Author: <white><author> <dark_gray>— <visibility>'
-        - '<gray>Blocks: <white><blocks> <dark_gray>— <gray>Reach: <white><reach>'
-        - '<gray>Likes: <white><likes> <dark_gray>— <gray>Players: <white><players>'
-        - '<gray>Runs: <white><completions>'
-        - '<gray>Your best: <white><best>'
-        - '<gray>Record: <white><record> <dark_gray>— <gray>Held by: <white><record-holder>'
+        - '<gray>By <white><author> <dark_gray>• <visibility>'
+        - '<gray>Blocks: <white><blocks> <dark_gray>• <gray>Reach: <white><reach>'
         - ''
-        - '<liked> <dark_gray>— <favorite>'
+        - '<gold>♥ <likes> <dark_gray>• <gray><players> players <dark_gray>• <gray><completions> builds'
+        - '<gray>Your best: <white><best>'
+        - '<gray>Record: <white><record> <dark_gray><record-holder>'
+        - '<liked> <dark_gray>• <favorite>'
+        - ''
+      visibility-public: '<green>public'
+      visibility-private: '<gray>private'
       liked-yes: '<gold>Liked'
       liked-no: '<dark_gray>Not liked'
-      favorite-yes: '<gold>Favorite'
+      favorite-yes: '<aqua>Favorite'
       favorite-no: '<dark_gray>Not a favorite'
-      # Shown on the chosen defense.
-      selected-line: '<gray>Currently: <green>selected'
       # <count> <material>
-      kind-line: '<dark_gray> • <gray><count>× <material>'
+      kind-line: '<dark_gray> · <gray><count>× <material>'
+      actions:
+        - ''
+        - '<yellow>Click to build this one'
+        - '<yellow>Right-click for options'
+      actions-selected:
+        - ''
+        - '<green>Currently chosen'
+        - '<yellow>Right-click for options'
+      actions-edit:
+        - ''
+        - '<yellow>Click to load into the editor'
+        - '<yellow>Right-click for options'
     # One defense's actions. <name>
     actions:
       title: '<dark_gray><bold><name>'
@@ -1828,8 +1814,10 @@ gui:
         name: '<green><bold>Build It'
         # <name>
         lore:
-          - '<gray>Makes <white><name><gray> the defense'
-          - '<gray>for your next rounds.'
+          - '<gray>Choose <white><name><gray> for'
+          - '<gray>your next rounds.'
+          - ''
+          - '<yellow>Click to choose'
       like:
         name: '<gold><bold>Like'
         # <state> <likes>
@@ -1838,26 +1826,32 @@ gui:
           - ''
           - '<gray>Likes: <white><likes>'
           - '<gray>You: <state>'
+          - '<yellow>Click to toggle'
       favorite:
-        name: '<white><bold>Favorite'
+        name: '<aqua><bold>Favorite'
         # <state>
         lore:
-          - '<gray>A private bookmark. Shuffle can'
-          - '<gray>draw from your favorites.'
+          - '<gray>Your private bookmark — and the'
+          - '<gray>pool shuffle can draw from.'
           - ''
           - '<gray>You: <state>'
+          - '<yellow>Click to toggle'
       board:
         name: '<gold><bold>Leaderboard'
         # <players> <record> <record-holder> <rank>
         lore:
-          - '<gray>Players: <white><players>'
+          - '<gray>Players ranked: <white><players>'
           - '<gray>Record: <white><record>'
           - '<gray>Held by: <white><record-holder>'
-          - '<gray>Your rank: <white><rank>'
+          - ''
+          - '<gray>You are <white><rank>'
+          - '<yellow>Click for the boards'
       edit:
-        name: '<white><bold>Edit Defense'
+        name: '<green><bold>Edit'
         lore:
-          - '<gray>Loads it into the editor.'
+          - '<gray>Load it into the editor.'
+          - ''
+          - '<yellow>Click to edit'
       visibility:
         name: '<white><bold>Visibility'
         # <state>
@@ -1866,85 +1860,111 @@ gui:
           - '<gray>gallery for everyone.'
           - ''
           - '<gray>Currently: <state>'
+          - '<yellow>Click to toggle'
       delete:
         name: '<red><bold>Delete'
         lore:
-          - '<gray>Removes this defense and every'
+          - '<gray>Remove this defense and every'
           - '<gray>time recorded on it.'
-        name-armed: '<red><bold>Confirm Delete'
+          - ''
+          - '<yellow>Click, then click again'
+        name-armed: '<red><bold>Delete — click again'
         lore-armed:
           - '<red>This cannot be undone.'
-        # The second hint line while armed.
-        cancel-line: '<yellow>Any other click cancels'
+          - ''
+          - '<yellow>Click again to delete'
     # The leaderboards. <name>
     boards:
-      title: '<dark_gray><bold>Boards — Bed Defense'
-      title-one: '<dark_gray><bold>Boards — <name>'
+      title: '<dark_gray><bold>Bed Defense · boards'
+      title-one: '<dark_gray><bold><name> · boards'
       # The flat leaderboard list's button (categories off).
       flat-button:
-        name: '<white><bold>Bed Defense'
+        name: '<red><bold>Bed Defense'
         lore:
           - '<gray>One board per defense.'
+          - ''
+          - '<yellow>Click to browse'
       empty:
-        name: '<gray><bold>No times yet'
+        name: '<red>No times yet'
         lore:
           - '<gray>Competitive rounds put times here.'
       # <board>
       entry-name: '<gold><bold><board>'
       # <name> <author> <players> <record> <record-holder> <rank>
       entry-lore:
-        - '<gray>Author: <white><author>'
-        - '<gray>Players: <white><players>'
+        - '<gray>By <white><author>'
+        - '<gray>Players ranked: <white><players>'
         - '<gray>Record: <white><record>'
         - '<gray>Held by: <white><record-holder>'
-        - '<gray>Your rank: <white><rank>'
-    # The in-arena menu behind the bed defense item. <arena>
+        - ''
+        - '<gray>You are <white><rank>'
+        - '<yellow>Click for the full board'
+    # The in-arena menu behind the bed defense item.
     session:
-      title: '<dark_gray><bold>Bed Defense — <arena>'
+      title: '<dark_gray><bold>Bed Defense'
       preview:
-        name: '<white><bold>Preview'
+        name: '<aqua><bold>Preview'
         lore:
-          - '<gray>Watches the defense build itself'
-          - '<gray>block by block. Mid-attempt this'
-          - '<gray>becomes guided building instead.'
+          - '<gray>Watch the defense build itself,'
+          - '<gray>block by block, and step through'
+          - '<gray>it. Mid-attempt this becomes'
+          - '<gray>guided building instead.'
           - ''
           - '<dark_gray>Dropping any item does the same.'
+          - '<yellow>Click to preview'
       guided:
-        name: '<white><bold>Guided Building'
-        # <state>
+        name: '<green><bold>Guided Building'
         lore:
           - '<gray>The next block glows where it'
-          - '<gray>belongs until you place it. Untimed.'
+          - '<gray>belongs until you place it.'
+          - '<gray>Untimed.'
           - ''
-          - '<gray>Currently: <state>'
+          - '<yellow>Click to start'
+        name-exit: '<green><bold>Stop Guiding'
+        lore-exit:
+          - '<gray>Back to timed attempts.'
+          - ''
+          - '<yellow>Click to stop'
       defense:
-        name: '<white><bold>Choose Defense'
+        name: '<red><bold>Change Defense'
         # <name>
         lore:
           - '<gray>Building: <white><name>'
+          - ''
+          - '<yellow>Click to browse the gallery'
       settings:
-        name: '<white><bold>Round Settings'
+        name: '<gold><bold>Round Settings'
         lore:
           - '<gray>Mode, strict order, shuffle,'
-          - '<gray>timer start and your base.'
+          - '<gray>timer start, your base.'
+          - ''
+          - '<yellow>Click to open'
       restart:
         name: '<yellow><bold>Restart'
         lore:
-          - '<gray>Resets the arena and the clock.'
+          - '<gray>Reset the arena and the clock.'
+          - ''
+          - '<yellow>Click to restart'
       edit:
-        name: '<white><bold>Edit Defense'
+        name: '<green><bold>Edit This Defense'
         # <name>
         lore:
-          - '<gray>Opens <white><name><gray> in the editor.'
+          - '<gray>Open <white><name><gray> in the editor.'
+          - ''
+          - '<yellow>Click to edit'
       new:
-        name: '<white><bold>New Defense'
+        name: '<green><bold>Design a Defense'
         # <radius>
         lore:
-          - '<gray>Opens the editor with an empty bed.'
+          - '<gray>Open the editor with an empty bed.'
+          - ''
+          - '<yellow>Click to start designing'
       maps:
         name: '<white><bold>Other Maps'
         lore:
           - '<gray>Practice on a different map.'
+          - ''
+          - '<yellow>Click to choose'
     # The editor's menu behind the same item.
     editor:
       title: '<dark_gray><bold>Defense Editor'
@@ -1953,47 +1973,45 @@ gui:
         name: '<white><bold>Name'
         # <name>
         lore:
-          - '<gray>Asks for a name in chat.'
-          - ''
           - '<gray>Currently: <white><name>'
+          - ''
+          - '<yellow>Click to rename in chat'
       save:
         name: '<green><bold>Save and Play'
         # <name> <blocks> <visibility>
         lore:
-          - '<gray>Saves the build, then plays it.'
+          - '<gray>Save <white><name><gray> (<blocks> blocks)'
+          - '<gray>as <visibility><gray>, then build it.'
           - ''
-          - '<gray>Name: <white><name>'
-          - '<gray>Blocks: <white><blocks>'
-          - '<gray>Saves as: <visibility>'
+          - '<yellow>Click to save'
         lore-update:
-          - '<gray>Saves the changes, then plays it.'
+          - '<gray>Save changes to <white><name>'
+          - '<gray>(<blocks> blocks) as <visibility><gray>,'
+          - '<gray>then build it.'
           - ''
-          - '<gray>Name: <white><name>'
-          - '<gray>Blocks: <white><blocks>'
-          - '<gray>Saves as: <visibility>'
+          - '<yellow>Click to save'
       load:
-        name: '<white><bold>Load'
+        name: '<aqua><bold>Load'
         # <count>
         lore:
-          - '<gray>Replaces the build with one of'
+          - '<gray>Replace the build with one of'
           - '<gray>your saved defenses.'
           - ''
           - '<gray>Saved: <white><count>'
+          - '<yellow>Click to choose'
         lore-none:
-          - '<gray>Replaces the build with one of'
+          - '<gray>Replace the build with one of'
           - '<gray>your saved defenses.'
           - ''
-          - '<gray>Saved: <white>0'
+          - '<dark_gray>You have none saved yet.'
       reset:
         name: '<red><bold>Clear Build'
         # <blocks>
         lore:
-          - '<gray>Removes every placed block.'
+          - '<gray>Remove every block placed'
+          - '<gray>(<white><blocks><gray> so far).'
           - ''
-          - '<gray>Placed: <white><blocks>'
-        name-armed: '<red><bold>Confirm Clear'
-        lore-armed:
-          - '<red>Unsaved blocks are lost.'
+          - '<yellow>Click to clear'
       visibility:
         name: '<white><bold>Visibility'
         # <state>
@@ -2002,63 +2020,43 @@ gui:
           - '<gray>gallery for everyone.'
           - ''
           - '<gray>Saves as: <state>'
-      delete:
-        name: '<red><bold>Delete'
-        lore:
-          - '<gray>Removes the saved defense and'
-          - '<gray>every time recorded on it.'
-        name-armed: '<red><bold>Confirm Delete'
-        lore-armed:
-          - '<red>This cannot be undone.'
+          - '<yellow>Click to toggle'
       exit:
-        name: '<red><bold>Leave Editor'
+        name: '<yellow><bold>Leave Editor'
         lore:
           - '<gray>Back to building the chosen'
           - '<gray>defense. Unsaved work is lost.'
-    # The mode's hotbar items (style guide R66).
+          - ''
+          - '<yellow>Click to leave'
+    # The mode's hotbar items.
     items:
       menu:
-        name: '<white><bold>Bed Defense'
+        name: '<red><bold>Bed Defense'
         lore:
-          - '<gray>Preview, guided building, round'
-          - '<gray>settings and the editor.'
-          - ''
-          - '<yellow>Right-click to open'
+          - '<gray>Right-click for preview, guided'
+          - '<gray>building, settings and the editor.'
       previous:
         name: '<white><bold>Previous Block'
         lore:
-          - '<gray>Steps the preview back one block.'
-          - ''
-          - '<yellow>Right-click to step back'
+          - '<gray>Right-click to step back'
       play:
-        name: '<white><bold>Play Preview'
+        name: '<green><bold>Play'
         lore:
-          - '<gray>Builds the rest of the defense'
-          - '<gray>block by block.'
-          - ''
-          - '<yellow>Right-click to play'
+          - '<gray>Right-click to play the preview'
       pause:
-        name: '<white><bold>Pause Preview'
+        name: '<gold><bold>Pause'
         lore:
-          - '<gray>Holds the preview where it is.'
-          - ''
-          - '<yellow>Right-click to pause'
+          - '<gray>Right-click to pause the preview'
       next:
         name: '<white><bold>Next Block'
         lore:
-          - '<gray>Steps the preview forward one block.'
-          - ''
-          - '<yellow>Right-click to step forward'
+          - '<gray>Right-click to step forward'
       guided:
-        name: '<white><bold>Guided Building'
+        name: '<green><bold>Guided Building'
         lore:
-          - '<gray>Build it yourself with the next'
-          - '<gray>block pointed out.'
-          - ''
-          - '<yellow>Right-click to start'
+          - '<gray>Right-click to build it yourself'
+          - '<gray>with the next block pointed out'
       exit:
         name: '<red><bold>Leave Preview'
         lore:
-          - '<gray>Back to building on your own.'
-          - ''
-          - '<yellow>Right-click to leave'
+          - '<gray>Right-click to go back to building'

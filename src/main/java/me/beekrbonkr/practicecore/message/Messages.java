@@ -86,14 +86,14 @@ public final class Messages {
             return notes;
         }
         notes.addAll(new YamlMigrator(plugin, "messages", RESOURCE, file,
-                Versions.MESSAGES, Messages::steps).run(user));
+                Versions.MESSAGES, (cfg, from) -> steps(plugin, cfg, from)).run(user));
         index(user);
         refreshPrefix();
         return notes;
     }
 
     /** Reshapes an older messages.yml. See {@link Versions#MESSAGES}. */
-    private static void steps(FileConfiguration cfg, int from) {
+    private static void steps(PracticeCorePlugin plugin, FileConfiguration cfg, int from) {
         // v0 → v1 is the first versioned layout; nothing moved.
         if (from < 2 && "<red><bold>You died".equals(cfg.getString("pvpbot.title.death"))) {
             // v2 shouts the death title; only rewrite the untouched default.
@@ -159,6 +159,13 @@ public final class Messages {
                 }
                 cfg.set("board.pvpbot-lines", updated);
             }
+        }
+        if (from < 9) {
+            // v9 rewords the whole file to the UI style guide. Anything still
+            // at its v8 default is reset so the top-up writes the new text;
+            // an admin's own wording stands.
+            YamlMigrator.resetUntouched(cfg,
+                    Backups.jarDefaults(plugin, "migrations/messages-v8.yml"));
         }
     }
 
@@ -417,5 +424,24 @@ public final class Messages {
 
     public void done(CommandSender to, String text) {
         send(to, "admin.done", "note", text);
+    }
+
+    /** A caution that is not a failure — typically "this needs confirm". */
+    public void warn(CommandSender to, String text) {
+        send(to, "admin.warn", "note", text);
+    }
+
+    /**
+     * The chat-side confirmation pair (style guide R58): a yellow line saying
+     * what will be lost, then a gray line naming the command to run again.
+     */
+    public void confirmPrompt(CommandSender to, String consequence, String command) {
+        warn(to, consequence);
+        send(to, "admin.confirm-hint", "command", command);
+    }
+
+    /** The one usage format (style guide R14): {@code /practice sub <required> [optional]}. */
+    public void usage(CommandSender to, String usage) {
+        send(to, "general.usage", "usage", usage);
     }
 }

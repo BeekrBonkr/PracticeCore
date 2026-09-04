@@ -6,7 +6,6 @@ import me.beekrbonkr.practicecore.beddefense.BedDefenseService;
 import me.beekrbonkr.practicecore.beddefense.BedDefenseState;
 import me.beekrbonkr.practicecore.beddefense.BedDefenseState.Phase;
 import me.beekrbonkr.practicecore.session.PracticeSession;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -30,7 +29,7 @@ public final class BedDefenseSessionMenu extends Menu {
 
     @Override
     protected Component title() {
-        return text("gui.beddefense.session.title");
+        return text("gui.beddefense.session.title", "arena", session.template().displayName());
     }
 
     @Override
@@ -53,11 +52,19 @@ public final class BedDefenseSessionMenu extends Menu {
         BedDefense defense = state.defense();
         boolean guided = state.phase() == Phase.GUIDED;
 
-        set(slot("preview", 10), ItemBuilder.of(icon("preview", Material.SPYGLASS))
-                .name(name("gui.beddefense.session.preview.name"))
-                .lore(lore("gui.beddefense.session.preview.lore"))
-                .build(), event -> {
-            if (defense == null || state.phase() != Phase.PLAY) {
+        boolean canPreview = defense != null && state.phase() == Phase.PLAY;
+        Button preview = Button.of(plugin, icon("preview", Material.PAINTING))
+                .name("gui.beddefense.session.preview.name")
+                .lore("gui.beddefense.session.preview.lore");
+        if (defense == null) {
+            preview.disabled("gui.reason.no-defense");
+        } else if (!canPreview) {
+            preview.disabled("gui.reason.wrong-phase");
+        } else {
+            preview.hint("view");
+        }
+        set(slot("preview", 10), preview.build(), event -> {
+            if (!canPreview) {
                 deny();
                 return;
             }
@@ -74,18 +81,21 @@ public final class BedDefenseSessionMenu extends Menu {
             });
         });
 
-        set(slot("guided", 11), ItemBuilder.of(icon("guided", Material.COMPASS))
-                .name(name(guided ? "gui.beddefense.session.guided.name-exit"
-                        : "gui.beddefense.session.guided.name"))
-                .lore(lore(guided ? "gui.beddefense.session.guided.lore-exit"
-                        : "gui.beddefense.session.guided.lore"))
-                .glow(guided)
-                .build(), event -> {
+        Button guide = Button.of(plugin, icon("guided", Material.LEAD))
+                .name("gui.beddefense.session.guided.name")
+                .lore("gui.beddefense.session.guided.lore", plugin.messages().ref("state",
+                        guided ? "label.state.on" : "label.state.off"));
+        if (defense == null) {
+            guide.disabled("gui.reason.no-defense");
+        } else {
+            guide.glow(guided).hint("toggle");
+        }
+        set(slot("guided", 11), guide.build(), event -> {
             if (defense == null) {
                 deny();
                 return;
             }
-            click();
+            sound(guided ? "menu.toggle-off" : "menu.toggle-on");
             later(() -> {
                 viewer.closeInventory();
                 if (guided) {
@@ -96,11 +106,12 @@ public final class BedDefenseSessionMenu extends Menu {
             });
         });
 
-        set(slot("defense", 12), ItemBuilder.of(defense != null ? defense.icon()
+        set(slot("defense", 12), Button.of(plugin, defense != null ? defense.icon()
                         : icon("defense", Material.RED_BED))
-                .name(name("gui.beddefense.session.defense.name"))
-                .lore(lore("gui.beddefense.session.defense.lore",
-                        "name", defense != null ? defense.name() : raw("gui.none")))
+                .name("gui.beddefense.session.defense.name")
+                .lore("gui.beddefense.session.defense.lore",
+                        "name", defense != null ? defense.name() : raw("gui.none"))
+                .hint("open")
                 .build(), event -> {
             click();
             later(() -> new BedDefenseGalleryMenu(plugin, viewer, this,
@@ -110,17 +121,19 @@ public final class BedDefenseSessionMenu extends Menu {
             }).open());
         });
 
-        set(slot("settings", 13), ItemBuilder.of(icon("settings", Material.COMPARATOR))
-                .name(name("gui.beddefense.session.settings.name"))
-                .lore(lore("gui.beddefense.session.settings.lore"))
+        set(slot("settings", 13), Button.of(plugin, icon("settings", Material.COMPARATOR))
+                .name("gui.beddefense.session.settings.name")
+                .lore("gui.beddefense.session.settings.lore")
+                .hint("open")
                 .build(), event -> {
             click();
             later(() -> new BedDefenseConfigMenu(plugin, viewer, this, session.template()).open());
         });
 
-        set(slot("restart", 14), ItemBuilder.of(icon("restart", Material.CLOCK))
-                .name(name("gui.beddefense.session.restart.name"))
-                .lore(lore("gui.beddefense.session.restart.lore"))
+        set(slot("restart", 14), Button.of(plugin, icon("restart", Material.CLOCK))
+                .name("gui.beddefense.session.restart.name")
+                .lore("gui.beddefense.session.restart.lore")
+                .hint("restart")
                 .build(), event -> {
             click();
             later(() -> {
@@ -134,9 +147,10 @@ public final class BedDefenseSessionMenu extends Menu {
         });
 
         if (defense != null && defense.isAuthor(viewer.getUniqueId())) {
-            set(slot("edit", 20), ItemBuilder.of(icon("edit", Material.WRITABLE_BOOK))
-                    .name(name("gui.beddefense.session.edit.name"))
-                    .lore(lore("gui.beddefense.session.edit.lore", "name", defense.name()))
+            set(slot("edit", 20), Button.of(plugin, icon("edit", Material.WRITABLE_BOOK))
+                    .name("gui.beddefense.session.edit.name")
+                    .lore("gui.beddefense.session.edit.lore", "name", defense.name())
+                    .hint("edit")
                     .build(), event -> {
                 click();
                 later(() -> {
@@ -145,10 +159,11 @@ public final class BedDefenseSessionMenu extends Menu {
                 });
             });
         }
-        set(slot("new", 21), ItemBuilder.of(icon("new", Material.CRAFTING_TABLE))
-                .name(name("gui.beddefense.session.new.name"))
-                .lore(lore("gui.beddefense.session.new.lore",
-                        "radius", String.valueOf(plugin.pcConfig().bedDefenseEditRadius())))
+        set(slot("new", 21), Button.of(plugin, icon("new", Material.CRAFTING_TABLE))
+                .name("gui.beddefense.session.new.name")
+                .lore("gui.beddefense.session.new.lore",
+                        "radius", String.valueOf(plugin.pcConfig().bedDefenseEditRadius()))
+                .hint("open")
                 .build(), event -> {
             click();
             later(() -> {
@@ -156,13 +171,14 @@ public final class BedDefenseSessionMenu extends Menu {
                 service.edit(viewer, null);
             });
         });
-        set(slot("maps", 22), ItemBuilder.of(icon("maps", Material.FILLED_MAP))
-                .name(name("gui.beddefense.session.maps.name"))
-                .lore(lore("gui.beddefense.session.maps.lore"))
+        set(slot("maps", 22), Button.of(plugin, icon("maps", Material.FILLED_MAP))
+                .name("gui.beddefense.session.maps.name")
+                .lore("gui.beddefense.session.maps.lore")
+                .hint("open")
                 .build(), event -> {
             click();
             later(() -> new BedDefenseArenaMenu(plugin, viewer, this).open());
         });
-        closeButton(plugin.guis().slot("beddefense-session.close", 31));
+        nav("beddefense-session");
     }
 }

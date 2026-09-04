@@ -5,7 +5,6 @@ import me.beekrbonkr.practicecore.pvpbot.BotPreset;
 import me.beekrbonkr.practicecore.pvpbot.BotSettings;
 import me.beekrbonkr.practicecore.pvpbot.PvpKit;
 import me.beekrbonkr.practicecore.session.PracticeSession;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -70,8 +69,7 @@ public final class PvpBotSettingsMenu extends Menu {
         toggle(slot("bow", 30), "bow", Material.BOW, settings.bow());
         toggle(slot("block", 31), "block", Material.SHIELD, settings.block());
         toggle(slot("build", 32), "build", Material.WHITE_WOOL, settings.build());
-        backButton(plugin.guis().slot("pvpbot.back", 36));
-        closeButton(plugin.guis().slot("pvpbot.close", 40));
+        nav("pvpbot");
     }
 
     // -------------------------------------------------------------- buttons
@@ -79,14 +77,13 @@ public final class PvpBotSettingsMenu extends Menu {
     private void kitButton(int slot) {
         PvpKit kit = settings.kit();
         if (kit == null) {
-            return; // pvpbot.yml defines no kits; the gallery would be empty
+            return; // pvpbot.yml defines no kits at all — the feature is off
         }
-        set(slot, ItemBuilder.of(kit.icon())
-                .name(name("gui.pvpbot.kit.name"))
-                .lore(lore("gui.pvpbot.kit.lore",
-                        "kit", plugin.botTuning().kits().displayName(kit)))
-                .glow(true)
-                .hideAttributes()
+        set(slot, Button.of(plugin, plugin.guis().buttonMaterial("pvpbot.buttons.kit", Material.CHEST))
+                .name("gui.pvpbot.kit.name")
+                .lore("gui.pvpbot.kit.lore",
+                        "kit", plugin.botTuning().kits().displayName(kit))
+                .hint("open")
                 .build(), event -> {
             click();
             later(() -> new KitsMenu(plugin, viewer, this).open());
@@ -100,16 +97,16 @@ public final class PvpBotSettingsMenu extends Menu {
      */
     private void presetButton(int slot) {
         BotPreset current = settings.matchingPreset();
+        Button button = Button.of(plugin,
+                        plugin.guis().buttonMaterial("pvpbot.buttons.preset", Material.EXPERIENCE_BOTTLE))
+                .name("gui.pvpbot.preset.name")
+                .lore("gui.pvpbot.preset.lore",
+                        plugin.messages().ref("level", presetLabel(current, "long")));
         if (plugin.botTuning().presets().isEmpty()) {
-            return; // no presets configured — the individual knobs still work
+            set(slot, button.disabled("gui.reason.no-presets").build(), event -> deny());
+            return;
         }
-        set(slot, ItemBuilder.of(
-                        plugin.guis().buttonMaterial("pvpbot.buttons.preset", Material.NETHER_STAR))
-                .name(name("gui.pvpbot.preset.name"))
-                .lore(lore("gui.pvpbot.preset.lore",
-                        plugin.messages().ref("level", presetLabel(current, "option"))))
-                .glow(current != null)
-                .build(), event -> {
+        set(slot, button.hint("cycle").build(), event -> {
             click();
             BotPreset next = plugin.botTuning().nextPreset(current);
             if (next == null) {
@@ -128,7 +125,7 @@ public final class PvpBotSettingsMenu extends Menu {
      */
     private Component presetLabel(BotPreset preset, String style) {
         String key = preset == null
-                ? "gui.pvpbot.preset." + style + ".custom" : preset.messageKey(style);
+                ? "label.difficulty." + style + ".custom" : preset.messageKey(style);
         if (!plugin.messages().raw(key).isEmpty()) {
             return plugin.messages().component(key);
         }
@@ -145,44 +142,53 @@ public final class PvpBotSettingsMenu extends Menu {
             case IRON -> Material.IRON_CHESTPLATE;
             case DIAMOND -> Material.DIAMOND_CHESTPLATE;
         };
-        set(slot, ItemBuilder.of(icon)
-                .name(name("gui.pvpbot.gear.name"))
-                .lore(lore("gui.pvpbot.gear.lore", plugin.messages().ref("tier",
-                        "gui.pvpbot.gear.option." + lower(gear.name()))))
+        set(slot, Button.of(plugin, icon)
+                .name("gui.pvpbot.gear.name")
+                .lore("gui.pvpbot.gear.lore", plugin.messages().ref("tier",
+                        "gui.pvpbot.gear.option." + lower(gear.name())))
                 .hideAttributes()
+                .hint("cycle")
                 .build(), event -> save("gear", gear.next().name()));
     }
 
     private void cpsButton(int slot) {
-        set(slot, ItemBuilder.of(
-                        plugin.guis().buttonMaterial("pvpbot.buttons.cps", Material.CLOCK))
-                .name(name("gui.pvpbot.cps.name"))
-                .lore(lore("gui.pvpbot.cps.lore", "cps",
-                        String.valueOf(plugin.botTuning().clicksPerSecond(settings.cps()))))
+        set(slot, Button.of(plugin,
+                        plugin.guis().buttonMaterial("pvpbot.buttons.cps", Material.SUGAR))
+                .name("gui.pvpbot.cps.name")
+                .lore("gui.pvpbot.cps.lore", "cps",
+                        String.valueOf(plugin.botTuning().clicksPerSecond(settings.cps())))
+                .hint("cycle")
                 .build(), event -> save("cps", settings.cps().next().name()));
     }
 
     /** A standard enum-cycling difficulty knob. */
     private void cycle(int slot, String key, Material fallbackIcon,
                        Supplier<String> current, Supplier<String> next) {
-        set(slot, ItemBuilder.of(
+        set(slot, Button.of(plugin,
                         plugin.guis().buttonMaterial("pvpbot.buttons." + key, fallbackIcon))
-                .name(name("gui.pvpbot." + key + ".name"))
-                .lore(lore("gui.pvpbot." + key + ".lore", plugin.messages().ref("level",
-                        "gui.pvpbot." + key + ".option." + lower(current.get()))))
+                .name("gui.pvpbot." + key + ".name")
+                .lore("gui.pvpbot." + key + ".lore", plugin.messages().ref("level",
+                        "gui.pvpbot." + key + ".option." + lower(current.get())))
+                .hint("cycle")
                 .build(), event -> save(key, next.get()));
     }
 
     /** An arsenal on/off switch. */
     private void toggle(int slot, String key, Material fallbackIcon, boolean on) {
-        set(slot, ItemBuilder.of(
+        set(slot, Button.of(plugin,
                         plugin.guis().buttonMaterial("pvpbot.buttons." + key, fallbackIcon))
-                .name(name("gui.pvpbot." + key + ".name"))
-                .lore(lore("gui.pvpbot." + key + ".lore", plugin.messages().ref("state",
-                        on ? "gui.pvpbot.state-on" : "gui.pvpbot.state-off")))
+                .name("gui.pvpbot." + key + ".name")
+                .lore("gui.pvpbot." + key + ".lore", plugin.messages().ref("state",
+                        on ? "label.state.on" : "label.state.off"))
                 .glow(on)
                 .hideAttributes()
-                .build(), event -> save(key, !on));
+                .hint("toggle")
+                .build(), event -> {
+            sound(on ? "menu.toggle-off" : "menu.toggle-on");
+            plugin.stats().setPref(viewer.getUniqueId(), "pvpbot." + key, !on);
+            settings = BotSettings.load(plugin, viewer.getUniqueId());
+            refresh();
+        });
     }
 
     private void save(String key, Object value) {

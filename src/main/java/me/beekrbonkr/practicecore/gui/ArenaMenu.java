@@ -4,7 +4,6 @@ import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.mode.Mode;
 import me.beekrbonkr.practicecore.stats.LeaderboardService;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import me.beekrbonkr.practicecore.util.TimeFormat;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
@@ -47,63 +46,49 @@ public final class ArenaMenu extends PagedMenu<ArenaTemplate> {
 
     @Override
     protected ItemStack emptyIcon() {
-        return ItemBuilder.of(emptyMaterial())
-                .name(name("gui.arenas.empty.name"))
-                .lore(lore("gui.arenas.empty.lore"))
-                .build();
+        return emptyIcon("gui.arenas.empty");
     }
 
     @Override
     protected ItemStack icon(ArenaTemplate template) {
         boolean allowed = plugin.templates().canUse(viewer, template);
-        Material face = plugin.modes().of(template).menuIcon(plugin, template);
+        Button tile = Button.of(plugin, plugin.modes().of(template).menuIcon(plugin, template))
+                .name("gui.arenas.entry-name", "arena", template.displayName());
         // Modes without time boards get a tile without the dead time fields —
         // "Best: none, Rank: none" forever reads as broken, not as unranked.
         if (!plugin.modes().of(template).hasLeaderboards()) {
-            return ItemBuilder.of(allowed ? face : Material.IRON_BARS)
-                    .name(name(allowed ? "gui.arenas.entry-name" : "gui.arenas.entry-name-locked",
-                            "arena", template.displayName()))
-                    .lore(lore("gui.arenas.entry-lore-unranked",
-                            plugin.messages().ref("status", statusLine(template, allowed)),
-                            "arena", template.displayName(),
-                            "mode", modeName(template)))
-                    .build();
+            tile.lore("gui.arenas.entry-lore-unranked",
+                    "arena", template.displayName(),
+                    "mode", modeName(template));
+        } else {
+            long best = plugin.stats().bestMs(viewer.getUniqueId(), template.name());
+            int rank = plugin.leaderboards().rank(template.name(), viewer.getUniqueId());
+            LeaderboardService.Entry record = plugin.leaderboards().record(template.name());
+            tile.lore("gui.arenas.entry-lore",
+                    "arena", template.displayName(),
+                    "mode", modeName(template),
+                    "best", best >= 0 ? TimeFormat.precise(best) : raw("gui.none"),
+                    "rank", rank > 0 ? "#" + rank : raw("gui.none"),
+                    "players", String.valueOf(plugin.leaderboards().size(template.name())),
+                    "finishes", String.valueOf(
+                            plugin.stats().finishes(viewer.getUniqueId(), template.name())),
+                    "record", record != null ? TimeFormat.precise(record.millis()) : raw("gui.none"),
+                    "record-holder", record != null ? record.displayName() : raw("gui.none"));
+            if (rank == 1) {
+                tile.lore("gui.arenas.record-line");
+            }
         }
-        long best = plugin.stats().bestMs(viewer.getUniqueId(), template.name());
-        int rank = plugin.leaderboards().rank(template.name(), viewer.getUniqueId());
-        LeaderboardService.Entry record = plugin.leaderboards().record(template.name());
-        return ItemBuilder.of(allowed ? face : Material.IRON_BARS)
-                .name(name(allowed ? "gui.arenas.entry-name" : "gui.arenas.entry-name-locked",
-                        "arena", template.displayName()))
-                .lore(lore("gui.arenas.entry-lore",
-                        plugin.messages().ref("status", statusLine(template, allowed)),
-                        "arena", template.displayName(),
-                        "mode", modeName(template),
-                        "best", best >= 0 ? TimeFormat.precise(best) : raw("gui.none"),
-                        "rank", rank > 0 ? "#" + rank : raw("gui.none"),
-                        "players", String.valueOf(plugin.leaderboards().size(template.name())),
-                        "finishes", String.valueOf(
-                                plugin.stats().finishes(viewer.getUniqueId(), template.name())),
-                        "record", record != null ? TimeFormat.precise(record.millis()) : raw("gui.none"),
-                        "record-holder", record != null ? record.displayName() : ""))
-                .glow(rank == 1)
-                .build();
-    }
-
-    /**
-     * "Click to play", or why not. Admins additionally see the node that
-     * governs the arena, which is the thing they would go and change.
-     */
-    private Component statusLine(ArenaTemplate template, boolean allowed) {
         if (allowed) {
-            return text("gui.arenas.status-open");
+            tile.hint("play");
+        } else if (viewer.hasPermission("practicecore.arena")) {
+            // Admins see the node that governs the arena — the thing they
+            // would go and change.
+            tile.locked("gui.reason.needs-node",
+                    "node", plugin.templates().permissionFor(template));
+        } else {
+            tile.locked("gui.reason.no-permission");
         }
-        Component locked = text("gui.arenas.status-locked");
-        if (viewer.hasPermission("practicecore.arena")) {
-            locked = locked.append(Component.space()).append(text("gui.arenas.status-locked-node",
-                    "node", plugin.templates().permissionFor(template)));
-        }
-        return locked;
+        return tile.build();
     }
 
     private String modeName(ArenaTemplate template) {
@@ -117,10 +102,11 @@ public final class ArenaMenu extends PagedMenu<ArenaTemplate> {
                 || !plugin.guis().buttonEnabled("beddefense.flat-button")) {
             return;
         }
-        set(plugin.guis().slot("beddefense.flat-button", 51),
-                ItemBuilder.of(plugin.guis().buttonMaterial("beddefense.flat-button", Material.RED_BED))
-                        .name(name("gui.beddefense.arenas.flat-button.name"))
-                        .lore(lore("gui.beddefense.arenas.flat-button.lore"))
+        set(plugin.guis().slot("beddefense.flat-button", footerSlot(2)),
+                Button.of(plugin, plugin.guis().buttonMaterial("beddefense.flat-button", Material.RED_BED))
+                        .name("gui.beddefense.arenas.flat-button.name")
+                        .lore("gui.beddefense.arenas.flat-button.lore")
+                        .hint("open")
                         .build(), event -> {
             click();
             later(() -> new BedDefenseArenaMenu(plugin, viewer, this).open());
@@ -133,7 +119,7 @@ public final class ArenaMenu extends PagedMenu<ArenaTemplate> {
             deny();
             return;
         }
-        click();
+        sound("menu.select");
         if (template.mode().equals(me.beekrbonkr.practicecore.mode.RushMode.ID)) {
             // Rush needs its objective/team/modifier choices before joining.
             later(() -> new RushConfigMenu(plugin, viewer, this, template).open());

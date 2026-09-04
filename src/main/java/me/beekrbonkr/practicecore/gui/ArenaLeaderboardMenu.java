@@ -13,7 +13,6 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -72,12 +71,10 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
 
     @Override
     protected ItemStack emptyIcon() {
-        return ItemBuilder.of(emptyMaterial())
-                .name(name("gui.board.empty.name"))
-                .lore(lore("gui.board.empty.lore"))
-                .build();
+        return emptyIcon("gui.board.empty");
     }
 
+    /** Rows are information, not buttons: no hint, no bold, no glow (R32, R37). */
     @Override
     protected ItemStack icon(LeaderboardService.Entry entry) {
         int rank = plugin.leaderboards().rank(boardKey, entry.uuid());
@@ -86,33 +83,30 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
 
         String nameKey = rank == 1 ? "gui.board.entry-name-first"
                 : self ? "gui.board.entry-name-self" : "gui.board.entry-name";
-        List<Component> lines = new ArrayList<>(lore("gui.board.entry-lore",
-                "rank", String.valueOf(rank),
-                "player", entry.displayName(),
-                "time", TimeFormat.precise(entry.millis()),
-                "behind", leader != null && rank > 1
-                        ? "+" + TimeFormat.precise(entry.millis() - leader.millis())
-                        : raw("gui.none")));
-        if (self) {
-            lines.addAll(lore("gui.board.entry-lore-self-suffix"));
-        }
-        return base(entry, rank)
+        ItemBuilder row = base(entry, rank)
                 .name(name(nameKey, "rank", String.valueOf(rank), "player", entry.displayName()))
-                .lore(lines)
-                .glow(self)
-                .build();
+                .lore(lore("gui.board.entry-lore",
+                        "rank", String.valueOf(rank),
+                        "player", entry.displayName(),
+                        "time", TimeFormat.precise(entry.millis()),
+                        "behind", leader != null && rank > 1
+                                ? "+" + TimeFormat.precise(entry.millis() - leader.millis())
+                                : raw("gui.none")));
+        if (self) {
+            row.lore(lore("gui.board.entry-lore-self-suffix"));
+        }
+        return row.build();
     }
 
     private ItemBuilder base(LeaderboardService.Entry entry, int rank) {
-        int amount = Math.clamp(rank, 1, 64);
         if (plugin.pcConfig().leaderboardHeads()) {
-            return ItemBuilder.of(Material.PLAYER_HEAD, amount).edit(meta -> {
+            return ItemBuilder.of(Material.PLAYER_HEAD).edit(meta -> {
                 if (meta instanceof SkullMeta skull) {
                     skull.setOwningPlayer(Bukkit.getOfflinePlayer(entry.uuid()));
                 }
             });
         }
-        return ItemBuilder.of(rank <= MEDALS.length ? MEDALS[rank - 1] : Material.PAPER, amount);
+        return ItemBuilder.of(rank <= MEDALS.length ? MEDALS[rank - 1] : Material.PAPER);
     }
 
     @Override
@@ -125,25 +119,23 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
         int rank = plugin.leaderboards().rank(boardKey, viewer.getUniqueId());
         long best = plugin.stats().bestMs(viewer.getUniqueId(), boardKey);
         LeaderboardService.Entry ahead = ahead(rank);
-        ItemBuilder standing = ItemBuilder.of(Material.NAME_TAG).name(name("gui.board.standing.name"));
+        Button standing = Button.of(plugin, Material.NAME_TAG).name("gui.board.standing.name");
         if (rank > 0) {
-            standing.lore(lore("gui.board.standing.lore",
+            standing.lore("gui.board.standing.lore",
                     "rank", "#" + rank,
                     "players", String.valueOf(plugin.leaderboards().size(boardKey)),
                     "best", TimeFormat.precise(best),
                     "next", ahead != null ? ahead.displayName() : raw("gui.none"),
-                    "gap", ahead != null ? TimeFormat.precise(best - ahead.millis()) : raw("gui.none")));
+                    "gap", ahead != null ? TimeFormat.precise(best - ahead.millis()) : raw("gui.none"));
         } else {
-            standing.lore(lore("gui.board.standing.lore-none"));
+            standing.lore("gui.board.standing.lore-none");
         }
-        setFooter(47, standing.build());
+        setFooter(footerSlot(0), standing.build());
 
         if (template == null) {
             if (onPlay != null) {
-                set(51, ItemBuilder.of(playIcon != null ? playIcon : Material.RED_BED)
-                        .name(name("gui.board.play-name", "arena", boardName))
-                        .lore(lore("gui.board.play-lore", "arena", boardName))
-                        .build(), event -> {
+                set(footerSlot(2), playButton(playIcon != null ? playIcon : Material.RED_BED),
+                        event -> {
                     click();
                     later(onPlay);
                 });
@@ -151,10 +143,8 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
             return;
         }
         if (plugin.templates().canUse(viewer, template)) {
-            set(51, ItemBuilder.of(plugin.modes().of(template).menuIcon(plugin, template))
-                    .name(name("gui.board.play-name", "arena", boardName))
-                    .lore(lore("gui.board.play-lore", "arena", boardName))
-                    .build(), event -> {
+            set(footerSlot(2), playButton(plugin.modes().of(template).menuIcon(plugin, template)),
+                    event -> {
                 click();
                 // Rush runs arm every objective, so the play button of any of
                 // an arena's boards starts the same run.
@@ -164,6 +154,14 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
                 });
             });
         }
+    }
+
+    private ItemStack playButton(Material icon) {
+        return Button.of(plugin, icon)
+                .name("gui.board.play-name", "arena", boardName)
+                .lore("gui.board.play-lore", "arena", boardName)
+                .hint("play")
+                .build();
     }
 
     private LeaderboardService.Entry ahead(int rank) {

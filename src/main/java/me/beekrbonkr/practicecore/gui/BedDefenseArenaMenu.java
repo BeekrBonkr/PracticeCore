@@ -4,7 +4,6 @@ import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.mode.RushMode;
 import me.beekrbonkr.practicecore.rush.RushMapData;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -35,10 +34,7 @@ public final class BedDefenseArenaMenu extends PagedMenu<ArenaTemplate> {
 
     @Override
     protected ItemStack emptyIcon() {
-        return ItemBuilder.of(emptyMaterial())
-                .name(name("gui.beddefense.arenas.empty.name"))
-                .lore(lore("gui.beddefense.arenas.empty.lore"))
-                .build();
+        return emptyIcon("gui.beddefense.arenas.empty");
     }
 
     @Override
@@ -50,18 +46,20 @@ public final class BedDefenseArenaMenu extends PagedMenu<ArenaTemplate> {
         if (base == null && !data.playableTeams().isEmpty()) {
             base = data.playableTeams().get(0);
         }
-        return ItemBuilder.of(allowed
-                        ? plugin.modes().of(template).menuIcon(plugin, template)
-                        : org.bukkit.Material.IRON_BARS)
-                .name(name(allowed ? "gui.beddefense.arenas.entry-name"
-                        : "gui.arenas.entry-name-locked", "arena", template.displayName()))
-                .lore(lore("gui.beddefense.arenas.entry-lore",
-                        plugin.messages().ref("status", allowed
-                                ? "gui.arenas.status-open" : "gui.arenas.status-locked"),
+        Button button = Button.of(plugin, plugin.modes().of(template).menuIcon(plugin, template))
+                .name("gui.beddefense.arenas.entry-name", "arena", template.displayName())
+                .lore("gui.beddefense.arenas.entry-lore",
                         "arena", template.displayName(),
                         "team", base == null ? raw("gui.none") : RushMode.prettyTeam(base.name()),
-                        "bases", String.valueOf(data.playableTeams().size())))
-                .build();
+                        "bases", String.valueOf(data.playableTeams().size()));
+        if (allowed) {
+            button.hint("open");
+        } else if (viewer.hasPermission("practicecore.arena")) {
+            button.locked("gui.reason.needs-node", "node", plugin.templates().permissionFor(template));
+        } else {
+            button.locked("gui.reason.no-permission");
+        }
+        return button.build();
     }
 
     @Override

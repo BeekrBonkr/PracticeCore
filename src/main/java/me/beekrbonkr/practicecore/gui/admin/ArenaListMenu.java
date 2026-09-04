@@ -1,10 +1,10 @@
 package me.beekrbonkr.practicecore.gui.admin;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
+import me.beekrbonkr.practicecore.gui.Button;
 import me.beekrbonkr.practicecore.gui.Menu;
 import me.beekrbonkr.practicecore.setup.SetupManager;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -17,18 +17,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Every arena, complete or not, for the admin to manage: left-click opens the
- * editor on it, right-click deletes it (behind a confirmation), and the anvil
- * starts a brand-new arena from the admin's WorldEdit clipboard. Layout and
- * text are fixed — see {@link SetupGui}.
+ * Every arena, complete or not, for the admin to manage: click opens the
+ * editor on it, right-click deletes it (behind a confirmation), and the
+ * crafting table starts a brand-new arena from the admin's WorldEdit
+ * clipboard. Text is fixed — see {@link SetupGui}.
  */
 final class ArenaListMenu extends Menu {
-
-    private static final int SLOT_CREATE = 45;
-    private static final int SLOT_PREV = 48;
-    private static final int SLOT_PAGE = 49;
-    private static final int SLOT_NEXT = 50;
-    private static final int SLOT_CLOSE = 53;
 
     private int page;
 
@@ -48,17 +42,18 @@ final class ArenaListMenu extends Menu {
 
     @Override
     protected void render() {
-        frame();
+        border();
         List<ArenaTemplate> arenas = new ArrayList<>(plugin.templates().all());
         int perPage = CONTENT_SLOTS.length;
         int pages = Math.max(1, (arenas.size() + perPage - 1) / perPage);
         page = Math.clamp(page, 0, pages - 1);
 
         if (arenas.isEmpty()) {
-            set(CONTENT_SLOTS[10], SetupGui.button(Material.COBWEB,
-                    "No arenas yet", NamedTextColor.RED,
-                    "Copy a build with //copy, then",
-                    "use the anvil below to create one."));
+            set(CONTENT_SLOTS[10], Button.of(plugin, emptyMaterial())
+                    .name(Component.text("No arenas yet", NamedTextColor.GRAY, TextDecoration.BOLD))
+                    .line(SetupGui.gray("Nothing has been set up on this server."))
+                    .line(SetupGui.gray("Copy a build with //copy, then Create New Arena."))
+                    .build());
         }
         for (int i = 0; i < perPage; i++) {
             int index = page * perPage + i;
@@ -77,60 +72,58 @@ final class ArenaListMenu extends Menu {
             });
         }
 
-        set(SLOT_CREATE, SetupGui.button(Material.ANVIL,
-                "Create New Arena", NamedTextColor.GREEN,
-                "Select your build and run //copy first;",
-                "you will be asked for a name in chat."), event -> {
+        // The primary action sits at the right end of the nav row (R43).
+        set(bottomRow() + 7, SetupGui.control(plugin, Material.CRAFTING_TABLE,
+                        "Create New Arena", NamedTextColor.GREEN,
+                        "Starts a new arena from your",
+                        "WorldEdit clipboard. You will be",
+                        "asked for a name in chat.")
+                .hint("run")
+                .build(), event -> {
             click();
             later(this::promptCreate);
         });
         if (page > 0) {
-            set(SLOT_PREV, SetupGui.button(Material.SPECTRAL_ARROW,
-                    "Previous Page", NamedTextColor.YELLOW), event -> {
+            set(navSlot("nav.previous", 3), SetupGui.control(plugin, Material.SPECTRAL_ARROW,
+                    "Previous Page", NamedTextColor.YELLOW).hint("open").build(), event -> {
                 click();
                 page--;
                 refresh();
             });
         }
         if (page < pages - 1) {
-            set(SLOT_NEXT, SetupGui.button(Material.SPECTRAL_ARROW,
-                    "Next Page", NamedTextColor.YELLOW), event -> {
+            set(navSlot("nav.next", 5), SetupGui.control(plugin, Material.SPECTRAL_ARROW,
+                    "Next Page", NamedTextColor.YELLOW).hint("open").build(), event -> {
                 click();
                 page++;
                 refresh();
             });
         }
         if (pages > 1) {
-            set(SLOT_PAGE, SetupGui.button(Material.MAP,
-                    "Page " + (page + 1) + " of " + pages, NamedTextColor.WHITE));
+            set(navSlot("nav.page", 4), Button.of(plugin, Material.MAP, page + 1)
+                    .name(Component.text("Page " + (page + 1), NamedTextColor.WHITE, TextDecoration.BOLD)
+                            .append(Component.text(" of " + pages, NamedTextColor.GRAY)
+                                    .decoration(TextDecoration.BOLD, false)))
+                    .build());
         }
-        set(SLOT_CLOSE, SetupGui.button(Material.BARRIER, "Close", NamedTextColor.RED),
-                event -> {
-                    click();
-                    later(viewer::closeInventory);
-                });
+        closeButton(navSlot("admin.close", 8));
     }
 
     private ItemStack arenaIcon(ArenaTemplate arena) {
-        return ItemBuilder.of(arena.effectiveIcon())
-                .name(Component.text(arena.name(),
-                        arena.isComplete() ? NamedTextColor.GREEN : NamedTextColor.YELLOW,
-                        TextDecoration.BOLD))
-                .lore(line("Display", arena.displayName()))
-                .lore(line("Mode", arena.mode()))
-                .lore(line("Category", arena.effectiveCategory()))
-                .lore(line("Triggers", String.valueOf(arena.triggers().size())))
-                .lore(line("Status", arena.isComplete() ? "complete" : "incomplete"))
-                .lore(Component.empty())
-                .lore(Component.text("Left-click to edit", NamedTextColor.YELLOW))
-                .lore(Component.text("Right-click to delete", NamedTextColor.RED))
+        boolean complete = arena.isComplete();
+        return Button.of(plugin, arena.effectiveIcon())
+                .name(Component.text(arena.name(), NamedTextColor.WHITE, TextDecoration.BOLD))
+                .line(SetupGui.state("Display", arena.displayName()))
+                .line(SetupGui.state("Mode", arena.mode()))
+                .line(SetupGui.state("Category", arena.effectiveCategory()))
+                .line(SetupGui.state("Triggers", String.valueOf(arena.triggers().size())))
+                .line(SetupGui.state("Status", Component.text(
+                        complete ? "complete" : "incomplete",
+                        complete ? NamedTextColor.GREEN : NamedTextColor.YELLOW)))
+                .hint("edit")
+                .rightHint("delete")
                 .hideAttributes()
                 .build();
-    }
-
-    private static Component line(String key, String value) {
-        return Component.text(key + ": ", NamedTextColor.GRAY)
-                .append(Component.text(value, NamedTextColor.WHITE));
     }
 
     /** Opens the wizard on an arena, then its control panel once it is up. */
@@ -161,19 +154,5 @@ final class ArenaListMenu extends Menu {
                 new SetupActionsMenu(plugin, viewer).open();
             }
         }, 10L);
-    }
-
-    /** Hard-coded gray border — this menu ignores guis.yml on purpose. */
-    private void frame() {
-        ItemStack filler = ItemBuilder.of(Material.GRAY_STAINED_GLASS_PANE)
-                .name(Component.empty())
-                .build();
-        int size = rows() * 9;
-        for (int slot = 0; slot < size; slot++) {
-            int column = slot % 9;
-            if (slot < 9 || slot >= size - 9 || column == 0 || column == 8) {
-                set(slot, filler);
-            }
-        }
     }
 }

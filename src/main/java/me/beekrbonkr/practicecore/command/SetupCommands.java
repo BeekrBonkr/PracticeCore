@@ -47,8 +47,8 @@ final class SetupCommands {
         switch (action) {
             case "start" -> {
                 if (args.length < 3) {
-                    plugin.messages().send(admin, "general.usage", "usage",
-                            "/practice setup start <name> (with your arena on the WorldEdit clipboard)");
+                    plugin.messages().usage(admin, "/practice setup start <name>");
+                    plugin.messages().note(admin, "Copy your arena build to the WorldEdit clipboard first.");
                     return;
                 }
                 wizard.start(admin, SetupManager.normalize(args[2]));
@@ -76,7 +76,7 @@ final class SetupCommands {
             }
             case "display" -> {
                 if (args.length < 3) {
-                    plugin.messages().send(admin, "general.usage", "usage", "/practice setup display <text…>");
+                    plugin.messages().usage(admin, "/practice setup display <text>");
                     return;
                 }
                 wizard.setDisplayName(admin, String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length)));
@@ -86,14 +86,14 @@ final class SetupCommands {
                 // Boolean.parseBoolean would read any typo as false — insist
                 // on a real answer instead of confidently saving the wrong one.
                 if (args.length < 3 || !(args[2].equalsIgnoreCase("true") || args[2].equalsIgnoreCase("false"))) {
-                    plugin.messages().send(admin, "general.usage", "usage", "/practice setup blocks <true|false>");
+                    plugin.messages().usage(admin, "/practice setup blocks <true|false>");
                     return;
                 }
                 wizard.setRequireBlocks(admin, args[2].equalsIgnoreCase("true"));
             }
             case "mode" -> {
                 if (args.length < 3) {
-                    plugin.messages().send(admin, "general.usage", "usage",
+                    plugin.messages().usage(admin,
                             "/practice setup mode <" + String.join("|", plugin.modes().ids()) + ">");
                     return;
                 }
@@ -104,8 +104,8 @@ final class SetupCommands {
                 if (args.length > 2 && args[2].equalsIgnoreCase("clear")) {
                     wizard.clearTriggers(admin);
                 } else {
-                    plugin.messages().send(admin, "general.usage", "usage",
-                            "/practice setup trigger clear (placing a button or plate adds one)");
+                    plugin.messages().usage(admin, "/practice setup trigger clear");
+                    plugin.messages().note(admin, "Placing a button or pressure plate adds a trigger.");
                 }
             }
             case "rush" -> rush(admin, args);
@@ -125,24 +125,24 @@ final class SetupCommands {
         switch (action) {
             case "team" -> {
                 if (args.length < 4) {
-                    plugin.messages().send(admin, "general.usage", "usage",
-                            "/practice setup rush team <color> (stand at that base's spawn)");
+                    plugin.messages().usage(admin, "/practice setup rush team <color>");
+                    plugin.messages().note(admin, "Stand at that base's spawn first.");
                     return;
                 }
                 wizard.rushTeamSpawn(admin, args[3]);
             }
             case "bed" -> {
                 if (args.length < 4) {
-                    plugin.messages().send(admin, "general.usage", "usage",
-                            "/practice setup rush bed <color> (look at that team's bed)");
+                    plugin.messages().usage(admin, "/practice setup rush bed <color>");
+                    plugin.messages().note(admin, "Look at that team's bed first.");
                     return;
                 }
                 wizard.rushBed(admin, args[3]);
             }
             case "gen" -> {
                 if (args.length < 4) {
-                    plugin.messages().send(admin, "general.usage", "usage",
-                            "/practice setup rush gen <iron|gold|diamond|emerald> (stand on the spawner block)");
+                    plugin.messages().usage(admin, "/practice setup rush gen <iron|gold|diamond|emerald>");
+                    plugin.messages().note(admin, "Stand on the spawner block first.");
                     return;
                 }
                 wizard.rushGenerator(admin, args[3]);
@@ -169,7 +169,7 @@ final class SetupCommands {
             return;
         }
         if (args.length < 2) {
-            plugin.messages().send(admin, "general.usage", "usage", "/practice edit <arena>");
+            plugin.messages().usage(admin, "/practice edit <arena>");
             return;
         }
         plugin.setup().edit(admin, SetupManager.normalize(args[1]));

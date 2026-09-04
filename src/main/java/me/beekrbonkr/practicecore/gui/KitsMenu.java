@@ -2,7 +2,6 @@ package me.beekrbonkr.practicecore.gui;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.pvpbot.PvpKit;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -49,8 +48,8 @@ public final class KitsMenu extends Menu {
         while (capacity < CONTENT_SLOTS.length && CONTENT_SLOTS[capacity] <= lastUsable) {
             capacity++;
         }
-        // More kits than the gallery has cells is a config choice, not a bug —
-        // say which ones are unreachable rather than dropping them silently.
+        // STYLE-GUIDE: needs logic change (R47) — this gallery should page
+        // instead of dropping kits beyond its grid.
         if (kits.size() > capacity) {
             plugin.getLogger().warning("pvpbot.yml defines " + kits.size()
                     + " kits but this gallery has room for " + capacity
@@ -70,13 +69,12 @@ public final class KitsMenu extends Menu {
                     deny();
                     return;
                 }
-                click();
+                sound("menu.select");
                 plugin.stats().setPref(viewer.getUniqueId(), "pvpbot.kit", kit.id());
                 refresh();
             });
         }
-        backButton(plugin.guis().slot("pvpbot-kits.back", 36));
-        closeButton(plugin.guis().slot("pvpbot-kits.close", 40));
+        nav("pvpbot-kits");
     }
 
     private PvpKit selectedKit() {
@@ -86,19 +84,23 @@ public final class KitsMenu extends Menu {
     }
 
     private ItemStack tile(PvpKit kit, boolean selected) {
-        List<Component> lines = new ArrayList<>(contentsSummary(kit));
+        Button tile = Button.of(plugin, kit.icon())
+                .name("gui.pvpbot.kits.entry-name", "kit", kitName(plugin, kit))
+                .lore(contentsSummary(kit))
+                .hideAttributes();
         if (kit.hasBlocks()) {
-            lines.addAll(lore("gui.pvpbot.kits.blocks-note"));
+            tile.lore("gui.pvpbot.kits.blocks-note");
         }
-        lines.add(Component.empty());
-        lines.addAll(lore(selected
-                ? "gui.pvpbot.kits.selected" : "gui.pvpbot.kits.click-hint"));
-        return ItemBuilder.of(kit.icon())
-                .name(name("gui.pvpbot.kits.entry-name", "kit", kitName(plugin, kit)))
-                .lore(lines)
-                .glow(selected)
-                .hideAttributes()
-                .build();
+        if (selected) {
+            // Glow says selected; the state line says it in words (R61).
+            tile.line(Component.empty())
+                    .lore("gui.pvpbot.kits.selected")
+                    .glow(true)
+                    .rightHint("view");
+        } else {
+            tile.hint("select").rightHint("view");
+        }
+        return tile.build();
     }
 
     /** "8× Golden Apple"-style lines, armor first, capped so tiles stay tidy. */

@@ -2,16 +2,21 @@ package me.beekrbonkr.practicecore.gui;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.rush.RushShopData;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -22,9 +27,13 @@ import java.util.Map;
  * inventory — the price items removed, the products added — with no MBedwars
  * game in sight.
  *
- * Quick Buy is the player's real MBedwars quick-buy list, read from and
- * written back to their MBedwars profile: sneak-click any item to pin it into
- * the first free slot, sneak-click a pinned item to clear it. Pins made here
+ * <p>Tab and item names come from MBedwars' own data and are shown as it
+ * ships them (style guide R50); everything PracticeCore adds — the Quick Buy
+ * tab, price lines, hints, the close button — follows the guide.
+ *
+ * <p>Quick Buy is the player's real MBedwars quick-buy list, read from and
+ * written back to their MBedwars profile: shift-click any item to pin it into
+ * the first free slot, shift-click a pinned item to clear it. Pins made here
  * appear in real games and vice versa.
  */
 public final class RushShopMenu extends Menu {
@@ -62,6 +71,8 @@ public final class RushShopMenu extends Menu {
         List<RushShopData.Page> pages = shop.pages();
         page = Math.clamp(page, 0, pages.size());
 
+        // The full frame first (R46); the tab row and separator overlay it.
+        border();
         renderTabs(pages);
         renderSeparator();
         if (page == 0) {
@@ -69,15 +80,7 @@ public final class RushShopMenu extends Menu {
         } else {
             renderPage(pages.get(page - 1));
         }
-
-        ItemStack filler = ItemBuilder.of(
-                        plugin.guis().material("filler.material", Material.GRAY_STAINED_GLASS_PANE))
-                .name(Component.empty())
-                .build();
-        for (int slot = 45; slot < 54; slot++) {
-            set(slot, filler);
-        }
-        closeButton(plugin.guis().slot("rushshop.close", 49));
+        nav("rushshop");
     }
 
     // ----------------------------------------------------------------- tabs
@@ -97,6 +100,7 @@ public final class RushShopMenu extends Menu {
 
     private void switchTo(int index) {
         if (index == page) {
+            deny();
             return;
         }
         click();
@@ -105,15 +109,19 @@ public final class RushShopMenu extends Menu {
     }
 
     private ItemStack quickBuyTab(boolean selected) {
-        return ItemBuilder.of(plugin.guis()
-                        .buttonMaterial("rushshop.quickbuy", Material.NETHER_STAR))
-                .name(name("gui.rushshop.quickbuy.name"))
-                .lore(lore(selected ? "gui.rushshop.tab-selected" : "gui.rushshop.tab-lore"))
-                .glow(selected)
-                .build();
+        Button tab = Button.of(plugin, plugin.guis()
+                        .buttonMaterial("rushshop.quickbuy", Material.GOLD_BLOCK))
+                .name("gui.rushshop.quickbuy.name")
+                .glow(selected);
+        if (selected) {
+            tab.line(name("gui.rushshop.tab-selected"));
+        } else {
+            tab.hint("view");
+        }
+        return tab.build();
     }
 
-    /** The page's own icon with our tab hint appended, glowing when selected. */
+    /** The page's own icon with our state or hint appended, glowing when selected. */
     private ItemStack tab(RushShopData.Page tab, boolean selected) {
         ItemStack icon = tab.icon().clone();
         ItemMeta meta = icon.getItemMeta();
@@ -121,19 +129,20 @@ public final class RushShopMenu extends Menu {
             if (!meta.hasDisplayName() && tab.displayName() != null
                     && !tab.displayName().isBlank()) {
                 // MBedwars display names carry legacy § color codes.
-                meta.displayName(net.kyori.adventure.text.serializer.legacy
-                        .LegacyComponentSerializer.legacySection()
+                meta.displayName(LegacyComponentSerializer.legacySection()
                         .deserialize(tab.displayName())
-                        .decoration(net.kyori.adventure.text.format
-                                .TextDecoration.ITALIC, false));
+                        .decoration(TextDecoration.ITALIC, false));
             }
             List<Component> lines = new ArrayList<>(
                     meta.hasLore() && meta.lore() != null ? meta.lore() : List.of());
-            lines.addAll(lore(selected ? "gui.rushshop.tab-selected" : "gui.rushshop.tab-lore"));
+            if (!lines.isEmpty()) {
+                lines.add(Component.empty());
+            }
+            lines.add(name(selected ? "gui.rushshop.tab-selected" : "gui.hint.click.view"));
             meta.lore(lines);
             if (selected) {
-                meta.addEnchant(org.bukkit.enchantments.Enchantment.UNBREAKING, 1, true);
-                meta.addItemFlags(org.bukkit.inventory.ItemFlag.HIDE_ENCHANTS);
+                meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
             }
             icon.setItemMeta(meta);
         }
@@ -142,11 +151,11 @@ public final class RushShopMenu extends Menu {
 
     /** The MBedwars-style indicator row: green pane under the open tab. */
     private void renderSeparator() {
-        ItemStack plain = ItemBuilder.of(plugin.guis()
+        ItemStack plain = Button.of(plugin, plugin.guis()
                         .material("rushshop.separator", Material.GRAY_STAINED_GLASS_PANE))
                 .name(Component.empty())
                 .build();
-        ItemStack marker = ItemBuilder.of(plugin.guis()
+        ItemStack marker = Button.of(plugin, plugin.guis()
                         .material("rushshop.separator-selected", Material.LIME_STAINED_GLASS_PANE))
                 .name(Component.empty())
                 .build();
@@ -159,10 +168,10 @@ public final class RushShopMenu extends Menu {
 
     private void renderQuickBuy() {
         List<String> pins = plugin.rush().quickBuyIds(viewer.getUniqueId());
-        ItemStack empty = ItemBuilder.of(plugin.guis()
+        ItemStack empty = Button.of(plugin, plugin.guis()
                         .material("rushshop.quickbuy-empty", Material.RED_STAINED_GLASS_PANE))
-                .name(name("gui.rushshop.quickbuy.empty-name"))
-                .lore(lore("gui.rushshop.quickbuy.empty-lore"))
+                .name("gui.rushshop.quickbuy.empty-name")
+                .lore("gui.rushshop.quickbuy.empty-lore")
                 .build();
         for (int cell = 0; cell < GRID.length; cell++) {
             RushShopData.Entry entry = cell < pins.size()
@@ -222,6 +231,12 @@ public final class RushShopMenu extends Menu {
         return -1;
     }
 
+    /**
+     * The product's own MBedwars icon and lore, then our block: price lines,
+     * the pin state, and either the buy hints or — unaffordable — the
+     * {@code Unavailable: cannot afford} line in place of them (R54). The
+     * click still goes to {@link #buy}, which re-checks the purse.
+     */
     private ItemStack entryIcon(RushShopData.Entry entry, boolean onQuickBuy) {
         ItemStack icon = entry.icon().clone();
         ItemMeta meta = icon.getItemMeta();
@@ -229,36 +244,44 @@ public final class RushShopMenu extends Menu {
             boolean affordable = entry.affordableWith(viewer.getInventory());
             List<Component> lines = new ArrayList<>(
                     meta.hasLore() && meta.lore() != null ? meta.lore() : List.of());
+            if (!lines.isEmpty()) {
+                lines.add(Component.empty());
+            }
             for (RushShopData.Price price : entry.prices()) {
-                lines.add(plugin.messages().name("gui.rushshop.price-line",
+                lines.add(name("gui.rushshop.price-line",
                         "amount", String.valueOf(price.amount()),
                         "currency", prettyMaterial(price.material())));
             }
-            lines.addAll(lore(affordable
-                    ? "gui.rushshop.click-to-buy" : "gui.rushshop.cannot-afford"));
-            if (onQuickBuy) {
-                lines.addAll(lore("gui.rushshop.quickbuy.unpin-hint"));
-            } else if (plugin.rush().isQuickBuyPinned(viewer.getUniqueId(), entry.id())) {
-                lines.addAll(lore("gui.rushshop.quickbuy.pinned"));
-            } else {
-                lines.addAll(lore("gui.rushshop.quickbuy.pin-hint"));
+            boolean pinned = onQuickBuy
+                    || plugin.rush().isQuickBuyPinned(viewer.getUniqueId(), entry.id());
+            if (pinned) {
+                lines.add(name("gui.rushshop.quickbuy.pinned"));
             }
+            lines.add(Component.empty());
+            if (affordable) {
+                lines.add(name("gui.hint.click.buy"));
+            } else {
+                lines.add(plugin.messages().name("gui.unavailable",
+                        plugin.messages().ref("reason", "gui.reason.cannot-afford")));
+            }
+            lines.add(name(pinned ? "gui.hint.shift.unpin" : "gui.hint.shift.pin"));
             meta.lore(lines);
             icon.setItemMeta(meta);
         }
         return icon;
     }
 
+    // STYLE-GUIDE: duplicated in RushDefenseMenu.pretty; a shared util is
+    // outside this pass (F7 also wants these strings translatable).
     private static String prettyMaterial(Material material) {
-        String lower = material.name().replace('_', ' ').toLowerCase(java.util.Locale.ROOT);
-        return lower.substring(0, 1).toUpperCase(java.util.Locale.ROOT) + lower.substring(1);
+        String lower = material.name().replace('_', ' ').toLowerCase(Locale.ROOT);
+        return lower.substring(0, 1).toUpperCase(Locale.ROOT) + lower.substring(1);
     }
 
     // ------------------------------------------------------------- purchase
 
-    /** Sneak-click pins and unpins; a plain click buys — like MBedwars. */
-    private void clickEntry(RushShopData.Entry entry,
-                            org.bukkit.event.inventory.InventoryClickEvent event) {
+    /** Shift-click pins and unpins; a plain click buys — like MBedwars. */
+    private void clickEntry(RushShopData.Entry entry, InventoryClickEvent event) {
         if (event.isShiftClick()) {
             togglePin(entry);
             return;
