@@ -63,10 +63,10 @@ run:
   # <time>
   finished-pb: '<prefix><green>Finished in <white><time><green> — new personal best!'
   # <time> <best>
-  finished: '<prefix><gray>Finished in <white><time><gray> (best <white><best><gray>)'
+  finished: '<prefix><gray>Finished in <white><time><gray> (best <white><best><gray>).'
   # <time>
-  finished-first: '<prefix><gray>Finished in <white><time>'
-  failed: '<prefix><gray>You fell! Resetting…'
+  finished-first: '<prefix><gray>Finished in <white><time><gray>.'
+  failed: '<prefix><gray>You fell — resetting.'
   restarted: '<prefix><gray>Run restarted.'
   timer-not-started: '<yellow>The timer has not started yet'
   title:
@@ -79,11 +79,11 @@ run:
     behind: '<gray>+<delta> off your best'
     first: '<gray>Run complete'
   # <player> <arena> <time> <previous-holder> <delta>
-  record-broadcast: '<prefix><gold><player> <gray>set a new record on <white><arena> <dark_gray>— <yellow><time>'
-  record-broadcast-beaten: '<prefix><gold><player> <gray>set a new record on <white><arena> <dark_gray>— <yellow><time> <dark_gray>(beat <previous-holder> by <delta>)'
+  record-broadcast: '<prefix><gold><player> <gray>set a new record on <white><arena> <gray>— <white><time><gray>!'
+  record-broadcast-beaten: '<prefix><gold><player> <gray>set a new record on <white><arena> <gray>— <white><time><gray>, beating <white><previous-holder><gray> by <white><delta><gray>!'
   # Quieter than the record shout — an improved personal best, not a takeover.
   # <player> <arena> <time> <improvement>
-  pb-broadcast: '<prefix><gray><player> beat their personal best on <white><arena> <dark_gray>— <gray><time> (-<improvement>)'
+  pb-broadcast: '<prefix><gray><player> beat their personal best on <white><arena> <gray>— <white><time> <gray>(<white>-<improvement><gray>).'
 
 build:
   out-of-bounds: '<red>Out of bounds'
@@ -93,9 +93,9 @@ mlg:
   # Shown when the bucket is used while still standing on the platform.
   jump-first: '<red>Clutch on the way down, not before'
   # <streak>
-  success: '<prefix><green>MLG! <gray>Streak: <white><streak>'
+  success: '<prefix><green>MLG landed. <gray>Streak: <white><streak><gray>.'
   # <streak> — the clutch that beat your highest streak ever
-  success-best: '<prefix><green>MLG! <gray>Streak: <white><streak> <gold>— new best!'
+  success-best: '<prefix><green>MLG landed. <gray>Streak: <white><streak> <gray>— new best!'
 
 # Spectator mode: /practice spectate, the main menu's Spectate button, and
 # the three hotbar tools every spectator carries.
@@ -123,28 +123,34 @@ spectate:
   watcher-left: '<prefix><gray><player> stopped spectating you.'
   # Action bar when a spectator drifts too far and is pulled back.
   leash: '<gray>Pulled back to the arena you are spectating'
+  # Hotbar tools (style guide R66): description, blank, right-click hint.
   item:
     teleport:
       # <target>
-      name: '<aqua><bold>Teleport to <target>'
+      name: '<white><bold>Teleport to <target>'
       lore:
-        - '<gray>Right-click to snap back'
-        - '<gray>to the player you watch.'
+        - '<gray>Snap back to the player'
+        - '<gray>you are watching.'
+        - ''
+        - '<yellow>Right-click to teleport'
     menu:
       name: '<white><bold>Switch Player'
       lore:
-        - '<gray>Right-click to pick another'
-        - '<gray>player to spectate.'
+        - '<gray>Pick another player to watch.'
+        - ''
+        - '<yellow>Right-click to open'
     leave:
       name: '<red><bold>Stop Spectating'
       lore:
-        - '<gray>Right-click to head back'
-        - '<gray>into an arena of your own.'
+        - '<gray>Head back into an arena'
+        - '<gray>of your own.'
+        - ''
+        - '<yellow>Right-click to leave'
 
 rush:
   not-configured: '<prefix><red>This rush arena has no playable team base — tell an admin.'
   # Action bar on finishing a casual run.
-  records-disabled: '<yellow>Casual run — play competitive to set records'
+  records-disabled: '<yellow>Not ranked — play competitive to set records'
   mbedwars-missing: '<prefix><red>MBedwars is not installed — there is nothing to import from.'
   shop-unavailable: '<prefix><red>The shop needs MBedwars installed on this server.'
   shop-empty: '<prefix><red>The MBedwars shop has nothing usable in practice.'
@@ -165,25 +171,32 @@ rush:
   quickbuy-full: '<red>Quick Buy is full — remove something first'
   # The teleporter special item: channel, cancel, land. <seconds>
   teleporter-channel: '<gray>Teleporting in <yellow><seconds>s<gray>… stand still'
-  teleporter-cancelled: '<red>Teleport cancelled — you moved'
+  teleporter-cancelled: '<red>Teleport canceled — you moved'
   teleporter-done: '<gray>Back at your base'
   # The tracker special item. <team> <distance>
   tracker: '<gray>Nearest target: <white><team> <dark_gray>— <yellow><distance>m <gray>(compass set)'
   tracker-nothing: '<yellow>Nothing left to track'
+  # Titles on a combat-run death and respawn (style guide R20 — rush no
+  # longer borrows the PvP bot's keys). <seconds>
+  title:
+    death: '<red><bold>YOU DIED'
+    death-sub: '<gray>Respawning in <yellow><seconds><gray>…'
+    respawned: '<green><bold>FIGHT'
+    respawned-sub: ''
   # Defender bots (combat runs).
   bots:
     # Floats over each defender's head. <team> <health>
-    tag: '<red><team> Defender <dark_red>♥ <white><health>'
+    tag: '<gray><team> Defender <red>♥ <white><health>'
     # A defender fell but its bed still stands — it will be back. <team>
     defender-down: '<yellow><team> defender down — it respawns while their bed stands'
     # A defender fell after its bed was gone: out for good. <team>
     defender-eliminated: '<prefix><green>A <white><team></white> defender is eliminated — no bed, no respawn.'
     # The player broke a team's bed on a combat run. <team>
-    bed-destroyed: '<prefix><gold>Bed destroyed! <gray><white><team></white> defenders can no longer respawn.'
+    bed-destroyed: '<prefix><gold>Bed destroyed. <gray><white><team></white> defenders can no longer respawn.'
     # One enemy team fully out — the wipe that ends the run. <team>
     team-wiped: '<prefix><gold><bold>TEAM WIPE!</bold> <gray>Team <white><team></white> is out — bed gone, every defender down.'
     # A defender killed the player: a bedwars respawn, not a failed run.
-    player-died: '<prefix><red>You were slain — your bed still stands, so you respawn at your base. Bought items are lost.'
+    player-died: '<prefix><red>You were slain. Your bed still stands, so you respawn at your base; bought items are lost.'
 
 # The PvP bot spar: an endless fight against an AI opponent. No timer, no
 # leaderboard — kills, deaths and combos live on the sidebar.
@@ -198,22 +211,22 @@ pvpbot:
   # 3-second respawn countdown (<seconds>); K/D lives in the chat summary.
   title:
     death: '<red><bold>YOU DIED'
-    respawn-sub: '<gray>Respawning in <yellow><seconds><gray>...'
+    respawn-sub: '<gray>Respawning in <yellow><seconds><gray>…'
     respawned: '<green><bold>FIGHT'
     respawned-sub: ''
     kill: '<green><bold>Bot slain'
     kill-sub: '<gray>Kills <green><kills> <dark_gray>/ <gray>Deaths <red><deaths>'
   # Action bar counting down the bot's own 3-second respawn. <seconds>
-  respawn-bar: '<gray>Bot respawns in <yellow><seconds><gray>...'
+  respawn-bar: '<gray>Bot respawns in <yellow><seconds><gray>…'
   # Chat summary after each stock; <hearts> is the health points (half-hearts)
   # the survivor had left.
   chat:
-    bot-killed-player: '<prefix><red>Bot killed player <dark_gray>(<gray>bot had <red><hearts>❤<gray> left<dark_gray>)'
-    player-killed-bot: '<prefix><green>Player killed bot <dark_gray>(<gray>you had <red><hearts>❤<gray> left<dark_gray>)'
+    bot-killed-player: '<prefix><red>The bot killed you <dark_gray>(<gray>it had <white><hearts>❤<gray> left<dark_gray>).'
+    player-killed-bot: '<prefix><green>You killed the bot <dark_gray>(<gray>you had <white><hearts>❤<gray> left<dark_gray>).'
     # Round results sent to everyone spectating the fight. <player> is the
     # practicing player; <hearts> the health the victor had left.
-    spectator-bot-killed: '<prefix><red>The bot killed <white><player> <dark_gray>(<gray>bot had <red><hearts>❤<gray> left<dark_gray>)'
-    spectator-player-killed: '<prefix><green><player> killed the bot <dark_gray>(<gray><player> had <red><hearts>❤<gray> left<dark_gray>)'
+    spectator-bot-killed: '<prefix><red>The bot killed <white><player> <dark_gray>(<gray>it had <white><hearts>❤<gray> left<dark_gray>).'
+    spectator-player-killed: '<prefix><green><white><player><green> killed the bot <dark_gray>(<gray>they had <white><hearts>❤<gray> left<dark_gray>).'
     # The session stats were wiped because the bot's difficulty or settings
     # changed — numbers against one opponent must not blend into another's.
     stats-reset: '<prefix><gray>Bot settings changed — your session stats were reset.'
@@ -276,7 +289,7 @@ board:
     - '<gray>Streak: <white><streak>'
     - '<gray>Best: <white><best>'
   # The PvP bot spar board: session stats, no timer. <difficulty> is the
-  # named preset the bot's knobs currently add up to (gui.pvpbot.preset.short),
+  # named preset the bot's knobs currently add up to (label.difficulty.short),
   # or Custom for a hand-tuned mix. Stats reset when the bot's settings
   # change. <accuracy> is hits landed over swings thrown; <kd> kills over
   # deaths; <dodged> bot attacks that failed to land on you.
@@ -364,23 +377,24 @@ beddefense:
   no-defense: '<prefix><yellow>There is no bed defense to build yet — design one in the editor, or pick one from the gallery.'
   forced-edit: '<prefix><yellow>No bed defenses exist yet, so you are in the <white>editor<yellow>: build one around your bed and save it.'
   # <id>
-  unknown: '<prefix><red>No bed defense with id ''<id>''.'
+  unknown: '<prefix><red>No bed defense with id <white><id><red>.'
   not-owner: '<prefix><red>That is not one of your bed defenses.'
   competitive-needs-shop: '<prefix><yellow>Competitive needs the MBedwars shop to buy blocks from — this round plays as practice.'
   # <name>
   deleted: '<prefix><gray>Deleted the bed defense <white><name><gray>.'
   # Action bar at the end of a practice round.
-  records-disabled: '<gray>Practice rounds are not ranked — play competitive'
+  records-disabled: '<yellow>Not ranked — play competitive to set records'
   # The hint floating over the bed at the start of a round. Blank to disable.
   hologram: '<yellow>Drop a block or use the menu<newline><gray>to preview this defense'
   # Board names: <name> is the defense's name.
   board-name: '<name> (Bed Defense)'
   board-name-strict: '<name> (Bed Defense, strict order)'
-  list-empty: '<prefix><gray>No bed defenses to play yet. Design one: <white>/practice beddefense edit'
+  list-empty: '<prefix><gray>No bed defenses to play yet. Design one with <white>/practice beddefense edit<gray>.'
   # <count>
   list-header: '<prefix><gray>Bed defenses you can play (<white><count><gray>):'
   # <id> <name> <author> <likes> <players> <blocks>
-  list-entry: '<dark_gray> • <white><name> <dark_gray>by <gray><author> <dark_gray>— <yellow><likes> likes<dark_gray>, <gray><players> players<dark_gray>, <gray><blocks> blocks <dark_gray>[<click:run_command:''/practice beddefense play <id>''><green>play</click><dark_gray>]'
+  # The name is clickable: it runs the play command (style guide R15).
+  list-entry: '<dark_gray> • <click:run_command:''/practice beddefense play <id>''><hover:show_text:''<yellow>Click to play<newline><gray>/practice beddefense play <id>''><white><name></hover></click> <dark_gray>by <gray><author> <gray>— <white><likes><gray> likes, <white><players><gray> players, <white><blocks><gray> blocks'
   like:
     # <name>
     added: '<prefix><green>You liked <white><name><green>.'
@@ -411,12 +425,12 @@ beddefense:
     not-in-editor: '<red>Previews are for playing — save the build first'
   guided:
     entered: '<prefix><gray>Guided building: the glowing block is the next one to place. Untimed.'
-    from-attempt: '<prefix><yellow>Timer cancelled. <gray>Guided building: the glowing block is the next one to place.'
+    from-attempt: '<prefix><yellow>Timer canceled. <gray>Guided building: the glowing block is the next one to place.'
     exited: '<prefix><gray>Guidance off — the next attempt is timed again.'
     # <material> <step> <total>
     next: '<gray>Next: <white><material> <dark_gray>(<step>/<total>)'
     # <name>
-    done: '<prefix><green>Defense complete! <gray>Resetting for a timed attempt.'
+    done: '<prefix><green>Defense complete. <gray>Resetting for a timed attempt.'
   edit:
     # <radius>
     entered: '<prefix><gray>Editor: build within <white><radius><gray> blocks of the bed, then save from the bed defense item.'
@@ -433,7 +447,7 @@ beddefense:
     loaded: '<prefix><gray>Loaded <white><name><gray> into the editor.'
     reset: '<prefix><gray>Build cleared.'
     # <max>
-    name-prompt: '<gold>Name your bed defense (up to <max> characters).'
+    name-prompt: '<prefix><yellow>Name your bed defense in chat (up to <max> characters).'
     # <name>
     name-set: '<prefix><green>Named <white><name><green>.'
     # <max>
@@ -444,24 +458,24 @@ beddefense:
     # <name> <author> <id>
     duplicate-title: '<red><bold>Already exists'
     duplicate-subtitle: '<gray><name> <dark_gray>by <gray><author>'
-    duplicate: '<prefix><red>That bed defense already exists: <white><name> <gray>by <author>.'
+    duplicate: '<prefix><red>That bed defense already exists: <white><name> <gray>by <white><author><gray>.'
     duplicate-actions: '<dark_gray>[<click:run_command:''/practice beddefense play <id>''><hover:show_text:''Play <name>''><green>Play it</hover></click><dark_gray>] [<click:run_command:''/practice beddefense like <id>''><hover:show_text:''Like <name>''><gold>Like it</hover></click><dark_gray>] [<click:run_command:''/practice beddefense favorite <id>''><hover:show_text:''Favorite <name>''><aqua>Favorite it</hover></click><dark_gray>]'
 
 protect:
   pearls-disabled: '<prefix><red>Ender pearls are disabled in practice.'
-  gamemode-locked: '<prefix><red>Leave practice before changing gamemode (/practice leave).'
+  gamemode-locked: '<prefix><red>Leave practice before changing gamemode: <white>/practice leave<red>.'
 
 world:
   unavailable: '<prefix><red>The practice world is unavailable — tell an admin.'
-  entry-denied: '<prefix><red>Use /practice join to enter the practice world.'
+  entry-denied: '<prefix><red>Use <white>/practice join<red> to enter the practice world.'
 
 leave:
   # <server>
-  sending: '<prefix><gray>Sending you to <white><server><gray>…'
+  sending: '<prefix><gray>Sending you to <white><server><gray>.'
 
 menu:
   # <menu> <menus>
-  unknown: '<prefix><red>No menu named ''<menu>''. Menus: <white><menus>'
+  unknown: '<prefix><red>No menu named <white><menu><red>. Menus: <white><menus><red>.'
   item-locked: '<yellow>You need that to get back out'
   # <slot>
   item-given: '<prefix><green>Practice menu item added to hotbar slot <white><slot><green>.'
@@ -478,9 +492,9 @@ sidebar:
 
 arena:
   # <arena>
-  unknown: '<prefix><red>No arena named ''<arena>''. See /practice list.'
+  unknown: '<prefix><red>No arena named <white><arena><red>. See <white>/practice list<red>.'
   # <arena>
-  incomplete: '<prefix><red>Arena ''<arena>'' is not fully configured.'
+  incomplete: '<prefix><red>Arena <white><arena><red> is not fully configured.'
   # <arena>
   locked: '<prefix><red>You do not have access to the <white><arena><red> arena.'
   none-available: '<prefix><red>There are no arenas you can join.'
@@ -488,10 +502,11 @@ arena:
   broken-trigger: '<prefix><red>This arena''s finish trigger is misconfigured — tell an admin.'
   schematic-failed: '<prefix><red>Could not load the arena schematic — tell an admin.'
   paste-failed: '<prefix><red>Failed to build your arena — tell an admin.'
-  list-empty: '<prefix><gray>No arenas are available. Admins: <white>/practice setup start <name>'
+  list-empty: '<prefix><gray>No arenas are available yet. Admins: <white>/practice setup start <name><gray>.'
   list-header: '<prefix><gray>Arenas:'
   # <arena> <display> <mode> <locked>
-  list-entry: '<dark_gray> • <white><arena> <dark_gray>— <gray><display> <dark_gray>[<mode>]<locked>'
+  # The name is clickable: it runs the join command (style guide R15).
+  list-entry: '<dark_gray> • <click:run_command:''/practice join <arena>''><hover:show_text:''<yellow>Click to play<newline><gray>/practice join <arena>''><white><arena></hover></click> <gray>— <display> <dark_gray>[<mode>]<locked>'
   list-locked-suffix: ' <red>(locked)'
 
 leaderboard:
@@ -500,27 +515,28 @@ leaderboard:
   # <arena>
   header: '<prefix><gray>Top times — <white><arena><gray>:'
   # <rank> <player> <time>
-  entry: '<dark_gray> #<rank> <white><player> <dark_gray>— <yellow><time>'
+  entry: '<dark_gray> #<rank> <white><player> <gray>— <white><time>'
   # <rank> <total>
-  your-rank: '<dark_gray> … you are #<rank> of <total>'
+  your-rank: '<dark_gray>   <gray>You are <white>#<rank><gray> of <white><total><gray>.'
   # <arena>
-  rush-pick-board: '<prefix><gray>''<arena>'' is a rush arena; pick a board: <white><arena>#bed<gray>, <white><arena>#emerald<gray>, <white><arena>#diamond<gray> or <white><arena>#team_wipe<gray>.'
+  rush-pick-board: '<prefix><gray><white><arena><gray> is a rush arena — pick a board: <white><arena>#bed<gray>, <white><arena>#emerald<gray>, <white><arena>#diamond<gray> or <white><arena>#team_wipe<gray>.'
   # /practice top beddefense — the bed defense boards live in the menu.
   beddefense-pick-board: '<prefix><gray>Bed defense boards are kept per defense: open <white>/practice menu leaderboards<gray>, or name one as <white>beddefense#<id><gray>.'
   # Arenas of modes that score in-session (MLG streaks, PvP bot spars).
-  not-ranked: '<prefix><gray>''<arena>'' has no time leaderboard — its mode is scored in-session, on the sidebar.'
+  not-ranked: '<prefix><gray><white><arena><gray> has no time leaderboard — its mode is scored in-session, on the sidebar.'
 
 stats:
   # <player>
-  unknown-player: '<prefix><red>No player named ''<player>'' in the plugin''s records.'
+  unknown-player: '<prefix><red>No player named <white><player><red> in the plugin''s records.'
   # <player>
   empty: '<prefix><gray><player> has no recorded times.'
   # <player>
   header: '<prefix><gray>Personal bests — <white><player><gray>:'
   # <arena> <time> <rank> <finishes>
-  entry: '<dark_gray> • <white><arena> <dark_gray>— <yellow><time> <dark_gray>(#<rank>, <finishes> run(s))'
+  # The arena name is clickable: it opens that board (style guide R15).
+  entry: '<dark_gray> • <click:run_command:''/practice top <arena>''><hover:show_text:''<yellow>Click to view<newline><gray>/practice top <arena>''><white><arena></hover></click> <gray>— <white><time> <dark_gray>(#<rank>, <finishes> run(s))'
   # <arena> <time> <finishes>
-  entry-unranked: '<dark_gray> • <white><arena> <dark_gray>— <yellow><time> <dark_gray>(<finishes> run(s))'
+  entry-unranked: '<dark_gray> • <white><arena> <gray>— <white><time> <dark_gray>(<finishes> run(s))'
   # <player>
   reset-notice: '<prefix><gray>An admin reset your practice personal bests.'
   # Clicking a stats entry whose arena has since been deleted.
@@ -551,13 +567,17 @@ help:
     - '<dark_gray> • <gray>place buttons or plates <dark_gray>— each adds a finish trigger (<white>/practice setup trigger clear<gray> restarts)'
     - '<dark_gray> • <white>/practice setup gui <dark_gray>— do all of this from a menu instead'
     - '<dark_gray> • <white>/practice setup kit [load] <dark_gray>— save your inventory as the kit'
-    - '<dark_gray> • <white>/practice setup save | cancel | info'
+    - '<dark_gray> • <white>/practice setup <save|cancel|info>'
     - '<prefix><gray>Editing an existing arena:'
     - '<dark_gray> • <white>/practice edit <arena> <dark_gray>— reopen it with every setting pre-loaded'
     - '<dark_gray> • <white>/practice setup capture <dark_gray>— save in-world changes into the schematic'
     - '<dark_gray> • <white>/practice setup schematic <dark_gray>— replace it from your WorldEdit clipboard'
-    - '<dark_gray> • <white>/practice setup display <text> | icon [material] | permission <node|default>'
-    - '<dark_gray> • <white>/practice setup mode <id> | category <name|default> | blocks <true|false>'
+    - '<dark_gray> • <white>/practice setup display <text> <dark_gray>— the name players see'
+    - '<dark_gray> • <white>/practice setup icon [material] <dark_gray>— the menu icon (held item if omitted)'
+    - '<dark_gray> • <white>/practice setup permission [node] <dark_gray>— gate it, or reset to the default node'
+    - '<dark_gray> • <white>/practice setup mode <id> <dark_gray>— bridging, bedbreak, mlg, rush, pvpbot, …'
+    - '<dark_gray> • <white>/practice setup category [name] <dark_gray>— the Play category, or reset'
+    - '<dark_gray> • <white>/practice setup blocks <true|false> <dark_gray>— whether a PB needs placed blocks'
     - '<dark_gray> • <white>/practice setup rush … <dark_gray>— team spawns, beds, generators, dealers (rush mode)'
     - '<dark_gray> • <white>/practice setup pvpbot bot <dark_gray>— the bot''s spawn point (pvpbot mode)'
   setup-rush:
@@ -580,9 +600,35 @@ help:
   pb:
     - '<dark_gray> • <white>/practice pb reset <player> [arena|all] <dark_gray>— wipe personal bests'
   world:
-    - '<dark_gray> • <white>/practice world info|regen <dark_gray>— practice world management'
+    - '<dark_gray> • <white>/practice world <info|regen> <dark_gray>— practice world management'
   reload:
     - '<dark_gray> • <white>/practice reload <dark_gray>— reload config, messages and arenas'
+  # The full /practice arena reference.
+  arena-detail:
+    - '<prefix><gray>Arena administration:'
+    - '<dark_gray> • <white>/practice arena list <dark_gray>— every saved arena and its access'
+    - '<dark_gray> • <white>/practice arena info <arena> <dark_gray>— one arena''s settings'
+    - '<dark_gray> • <white>/practice arena default [arena|none] <dark_gray>— the arena /practice join uses'
+    - '<dark_gray> • <white>/practice arena delete <arena> confirm <dark_gray>— remove it and every time on it'
+    - '<dark_gray> • <white>/practice arena permission <arena> <node|default|none> <dark_gray>— who may play it'
+    - '<dark_gray> • <white>/practice arena display <arena> <text> <dark_gray>— the name players see'
+    - '<dark_gray> • <white>/practice arena icon <arena> <material|auto> <dark_gray>— the menu icon'
+    - '<dark_gray> • <white>/practice arena blocks <arena> <true|false> <dark_gray>— whether a PB needs placed blocks'
+  # The full /practice world reference.
+  world-detail:
+    - '<prefix><gray>Practice world:'
+    - '<dark_gray> • <white>/practice world info <dark_gray>— world and grid status'
+    - '<dark_gray> • <white>/practice world regen confirm <dark_gray>— delete and rebuild it from nothing'
+  # The full /practice rush reference.
+  rush-detail:
+    - '<prefix><gray>Rush maps from MBedwars:'
+    - '<dark_gray> • <white>/practice rush list <dark_gray>— every MBedwars arena on this server'
+    - '<dark_gray> • <white>/practice rush import <arena> [overwrite] <dark_gray>— pull one map'
+    - '<dark_gray> • <white>/practice rush importall [teams:<n>] [size:<n>] [category:<name>] [overwrite] <dark_gray>— pull every matching map'
+  # The /practice pb reference.
+  pb-detail:
+    - '<prefix><gray>Personal bests:'
+    - '<dark_gray> • <white>/practice pb reset <player> [arena|all] <dark_gray>— wipe personal bests'
 
 # ---------------------------------------------------------------- admin text
 
@@ -609,10 +655,10 @@ setup:
   pasting-title: '<yellow><bold>Loading'
   pasting-subtitle: '<gray>Pasting <white><arena><gray>…'
   # <arena> <holder>
-  busy: '<prefix><red>Setup is already in progress by <white><holder><red> on ''<arena>''.'
+  busy: '<prefix><red>Setup is already in progress by <white><holder><red> on <white><arena><red>.'
   clipboard-empty: '<prefix><red>Your WorldEdit clipboard is empty. Select your arena build and run //copy first.'
   # <arena>
-  exists: '<prefix><red>Arena ''<arena>'' already exists. Use <white>/practice edit <arena><red> instead.'
+  exists: '<prefix><red>Arena <white><arena><red> already exists. Use <white>/practice edit <arena><red> instead.'
   bad-name: '<prefix><red>Arena names must match [a-z0-9_-], max 32 characters.'
   # <width> <length> <max>
   too-big: '<prefix><red>Schematic is <width>×<length> blocks; the limit is <max> so neighboring arenas can never overlap.'
@@ -625,16 +671,16 @@ setup:
   none-active: '<prefix><red>No setup in progress. Start with <white>/practice setup start <name><red> or <white>/practice edit <arena><red>.'
   # <arena>
   left-session: '<prefix><gray>Ended your practice session on <white><arena><gray> to open the editor.'
-  world-unavailable: '<prefix><red>The practice world is unavailable — run /practice world regen confirm.'
+  world-unavailable: '<prefix><red>The practice world is unavailable — run <white>/practice world regen confirm<red>.'
   # <arena>
-  started: '<prefix><green>Configuring ''<arena>''. Steps:'
+  started: '<prefix><green>Configuring <white><arena><green>. Steps:'
   start-steps:
     - '<dark_gray> 1. <gray>Stand at the player spawn and run <white>/practice setup spawn'
     - '<dark_gray> 2. <gray>Place the given button or pressure plate at the finish (place several for multiple finishes)'
     - '<dark_gray> 3. <gray>Optional: arrange your inventory, then <white>/practice setup kit'
     - '<dark_gray> 4. <white>/practice setup save <gray>(or <white>/practice setup cancel<gray>)'
   # <arena>
-  editing: '<prefix><green>Editing ''<arena>''. Everything is pre-loaded — change what you like.'
+  editing: '<prefix><green>Editing <white><arena><green>. Everything is pre-loaded — change what you like.'
   edit-steps:
     - '<dark_gray> • <gray>Reshape the arena in-world, then <white>/practice setup capture <gray>to bake it in'
     - '<dark_gray> • <white>/practice setup info <gray>shows the current state'
@@ -648,36 +694,36 @@ setup:
   trigger-button: 'button'
   trigger-plate: 'pressure plate'
   # <data>
-  trigger-invalid: '<prefix><red>This arena''s saved trigger block is invalid (''<data>'') — place a new button or plate.'
-  not-captured-hint: '<yellow>Blocks placed during setup are only saved by /practice setup capture'
+  trigger-invalid: '<prefix><red>This arena''s saved trigger block is invalid (<white><data><red>) — place a new button or plate.'
+  not-captured-hint: '<yellow>Run /practice setup capture to keep these blocks'
   # <count>
   kit-saved: '<prefix><green>Kit saved (<count> stack(s)).'
   kit-saved-with-item: '<prefix><gray>The practice menu item is included.'
   kit-empty: '<prefix><red>This arena has no kit saved yet.'
   kit-loaded: '<prefix><green>Kit loaded into your inventory. Rearrange it, then <white>/practice setup kit<green>.'
   # <item>
-  kit-warning: '<prefix><yellow>Warning: <item> in the kit can skip or break runs (kept anyway).'
+  kit-warning: '<prefix><yellow><white><item><yellow> in the kit can skip or break runs (kept anyway).'
   # <name>
-  display-set: '<prefix><green>Display name set to ''<name>''.'
+  display-set: '<prefix><green>Display name set to <white><name><green>.'
   # <material>
-  icon-set: '<prefix><green>Menu icon set to <material>.'
-  icon-need-item: '<prefix><red>Hold the item you want as the menu icon, or name one: <white>/practice setup icon <material>'
+  icon-set: '<prefix><green>Menu icon set to <white><material><green>.'
+  icon-need-item: '<prefix><red>Hold the item you want as the menu icon, or name one: <white>/practice setup icon <material><red>.'
   # <material>
-  icon-invalid: '<prefix><red>''<material>'' is not an item material.'
+  icon-invalid: '<prefix><red><white><material><red> is not an item material.'
   # <node>
-  permission-set: '<prefix><green>Arena gated behind ''<node>''.'
+  permission-set: '<prefix><green>Arena gated behind <white><node><green>.'
   permission-cleared: '<prefix><green>Permission reset to this arena''s default node.'
   blocks-required: '<prefix><green>Personal bests now require at least one placed block.'
   blocks-not-required: '<prefix><green>Personal bests no longer require placed blocks.'
   # <mode> <modes>
-  mode-set: '<prefix><green>Mode set to ''<mode>''.'
-  mode-unknown: '<prefix><red>Unknown mode ''<mode>''. Known: <modes>'
+  mode-set: '<prefix><green>Mode set to <white><mode><green>.'
+  mode-unknown: '<prefix><red>Unknown mode <white><mode><red>. Known: <white><modes><red>.'
   # <category>
-  category-set: '<prefix><green>Category set to ''<category>'' — saving moves the arena into templates/<category>/.'
+  category-set: '<prefix><green>Category set to <white><category><green> — saving moves the arena into <white>templates/<category>/<green>.'
   category-cleared: '<prefix><green>Category reset to this arena''s mode — saving moves its folder back into templates/.'
   category-bad-name: '<prefix><red>Categories are folder names: [a-z0-9_-], max 32 characters.'
   # <category> <error>
-  category-move-failed: '<prefix><red>Saved, but the arena could not be moved into category ''<category>'': <error>'
+  category-move-failed: '<prefix><red>Saved, but the arena could not be moved into category <white><category><red>: <error>'
   captured: '<prefix><green>Arena captured — the schematic now matches what you see.'
   # <error>
   capture-failed: '<prefix><red>Could not capture the arena: <error>'
@@ -685,18 +731,18 @@ setup:
   schematic-replaced-hint: '<prefix><gray>Check the spawn and finish trigger — their offsets may no longer line up.'
   # <error>
   schematic-replace-failed: '<prefix><red>Could not replace the schematic: <error>'
-  need-spawn: '<prefix><red>Set the spawn first: <white>/practice setup spawn'
+  need-spawn: '<prefix><red>Set the spawn first: <white>/practice setup spawn<red>.'
   need-trigger: '<prefix><red>Place the finish button or pressure plate first.'
   # <error>
   save-failed: '<prefix><red>Could not write arena.yml: <error>'
   # <arena>
-  saved: '<prefix><green>Arena ''<arena>'' saved — <white>/practice join <arena>'
+  saved: '<prefix><green>Arena <white><arena><green> saved. Play it with <white>/practice join <arena><green>.'
   # <arena>
-  updated: '<prefix><green>Arena ''<arena>'' updated — <white>/practice join <arena>'
+  updated: '<prefix><green>Arena <white><arena><green> updated. Play it with <white>/practice join <arena><green>.'
   cancelled: '<prefix><gray>Setup canceled; nothing was saved.'
   edit-cancelled: '<prefix><gray>Edit canceled; the saved arena is unchanged.'
   # <arena> <editing>
-  info-header: '<prefix><gray><editing> arena ''<white><arena><gray>'''
+  info-header: '<prefix><gray><editing> arena <white><arena><gray>:'
   # <key> <value>
   info-line: '<dark_gray>   <key>: <white><value>'
   info-ready: '<prefix><green>Ready to save.'
@@ -709,10 +755,10 @@ setup:
   # <type>
   rush-generator-set: '<prefix><green>Rush <white><type><green> generator set on the block below you.'
   # <type>
-  rush-bad-generator: '<prefix><red>''<type>'' is not a generator type. Use iron, gold, diamond or emerald.'
+  rush-bad-generator: '<prefix><red><white><type><red> is not a generator type. Use iron, gold, diamond or emerald.'
   rush-dealer-set: '<prefix><green>Rush shop dealer spot set where you stand.'
   rush-cleared: '<prefix><green>Rush layout cleared — teams, generators and dealers removed.'
-  rush-need-base: '<prefix><red>A rush arena needs at least one team with both a spawn and a bed: <white>/practice setup rush team <color><red> and <white>/practice setup rush bed <color>'
+  rush-need-base: '<prefix><red>A rush arena needs at least one team with both a spawn and a bed: <white>/practice setup rush team <color><red> and <white>/practice setup rush bed <color><red>.'
   pvpbot-spawn-set: '<prefix><green>Bot spawn set where you stand. Without one, the bot spawns a few blocks ahead of the player spawn.'
   pvpbot-cleared: '<prefix><green>PvP bot layout cleared — the bot spawn marker was removed.'
 

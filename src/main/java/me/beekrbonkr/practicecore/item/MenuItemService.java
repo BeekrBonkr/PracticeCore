@@ -32,6 +32,8 @@ public final class MenuItemService {
      * it defines the item rather than being something the plugin says.
      */
     public ItemStack create() {
+        // STYLE-GUIDE: needs logic change (R23) — name/lore should move to
+        // messages.yml item.menu.* with a config.yml migration step.
         return ItemBuilder.of(plugin.pcConfig().menuItemMaterial())
                 .name(Text.item(plugin.pcConfig().menuItemName()))
                 .lore(Text.itemLore(plugin.pcConfig().menuItemLore()))
