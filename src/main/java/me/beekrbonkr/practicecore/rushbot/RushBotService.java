@@ -496,7 +496,7 @@ public final class RushBotService {
         plugin.settings().applyToSession(player);
         plugin.sessions().regiveKit(player, session);
         plugin.messages().send(player, "rush.bots.player-died");
-        plugin.messages().title(player, "pvpbot.title.death", "pvpbot.title.respawn-sub",
+        plugin.messages().title(player, "rush.title.death", "rush.title.death-sub",
                 "seconds", String.valueOf(Math.max(1, (hold + 19) / 20)));
         plugin.sounds().play(player, "pvpbot.player-death");
         // Defenders go back to defending instead of camping the corpse.
@@ -548,8 +548,8 @@ public final class RushBotService {
         if (state.playerHoldTicks() == 0) {
             player.removePotionEffect(PotionEffectType.BLINDNESS);
             player.removePotionEffect(PotionEffectType.SLOWNESS);
-            plugin.messages().title(player, "pvpbot.title.respawned",
-                    "pvpbot.title.respawned-sub");
+            plugin.messages().title(player, "rush.title.respawned",
+                    "rush.title.respawned-sub");
             return;
         }
         if (player.getWorld() == session.spawn().getWorld()
@@ -557,7 +557,7 @@ public final class RushBotService {
             plugin.sessions().teleportInternal(player, session.spawn());
         }
         if (state.playerHoldTicks() % 20 == 0) {
-            plugin.messages().title(player, "pvpbot.title.death", "pvpbot.title.respawn-sub",
+            plugin.messages().title(player, "rush.title.death", "rush.title.death-sub",
                     "seconds", String.valueOf(Math.max(1, (state.playerHoldTicks() + 19) / 20)));
         }
     }
