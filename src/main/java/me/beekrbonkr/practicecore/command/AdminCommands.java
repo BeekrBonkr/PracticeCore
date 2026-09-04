@@ -72,8 +72,8 @@ final class AdminCommands {
             return;
         }
         if (!action.equals("info") && template.name().equals(plugin.setup().activeName())) {
-            msg().problem(sender, "'" + template.name() + "' is open in the setup wizard — "
-                    + "finish or cancel that first, or use /practice setup " + action + ".");
+            msg().problem(sender, "Arena " + template.name() + " is open in the setup wizard. "
+                    + "Finish or cancel that first, or use /practice setup " + action + ".");
             return;
         }
         switch (action) {
@@ -81,7 +81,7 @@ final class AdminCommands {
             case "delete" -> deleteArena(sender, template, args);
             case "permission" -> {
                 if (args.length < 4) {
-                    msg().send(sender, "general.usage", "usage", "/practice arena permission <arena> <node|default|none>");
+                    msg().usage(sender, "/practice arena permission <arena> <node|default|none>");
                     return;
                 }
                 String node = args[3];
@@ -93,7 +93,7 @@ final class AdminCommands {
             }
             case "display" -> {
                 if (args.length < 4) {
-                    msg().send(sender, "general.usage", "usage", "/practice arena display <arena> <text…>");
+                    msg().usage(sender, "/practice arena display <arena> <text>");
                     return;
                 }
                 template.setDisplayName(String.join(" ", Arrays.copyOfRange(args, 3, args.length)));
@@ -101,7 +101,7 @@ final class AdminCommands {
             }
             case "icon" -> {
                 if (args.length < 4) {
-                    msg().send(sender, "general.usage", "usage", "/practice arena icon <arena> <material|auto>");
+                    msg().usage(sender, "/practice arena icon <arena> <material|auto>");
                     return;
                 }
                 if (args[3].equalsIgnoreCase("auto")) {
@@ -121,7 +121,7 @@ final class AdminCommands {
                 // Boolean.parseBoolean would read any typo as false — insist
                 // on a real answer instead of confidently saving the wrong one.
                 if (args.length < 4 || !(args[3].equalsIgnoreCase("true") || args[3].equalsIgnoreCase("false"))) {
-                    msg().send(sender, "general.usage", "usage", "/practice arena blocks <arena> <true|false>");
+                    msg().usage(sender, "/practice arena blocks <arena> <true|false>");
                     return;
                 }
                 boolean require = args[3].equalsIgnoreCase("true");
@@ -143,7 +143,7 @@ final class AdminCommands {
             String current = plugin.pcConfig().defaultArenaName();
             msg().note(sender, "Default arena: " + (current.isEmpty() ? "none" : current)
                     + (plugin.templates().defaultArena() == null && !current.isEmpty()
-                        ? " (not a finished arena — currently unused)" : ""));
+                        ? " (not a finished arena — currently unused)" : "") + ".");
             msg().note(sender, "Set it with /practice arena default <arena|none>.");
             return;
         }
@@ -163,7 +163,7 @@ final class AdminCommands {
             return;
         }
         plugin.setConfigValue("default-arena.name", template.name());
-        msg().done(sender, "Default arena set to '" + template.name() + "'.");
+        msg().done(sender, "Default arena set to " + template.name() + ".");
         msg().note(sender, "Applies to: bare /practice join"
                 + (plugin.pcConfig().defaultArenaOnWorldEnter() ? ", practice-world entry" : "")
                 + (plugin.pcConfig().defaultArenaOnServerJoin() ? ", server join" : "")
@@ -172,7 +172,7 @@ final class AdminCommands {
 
     private void listArenas(CommandSender sender) {
         if (plugin.templates().all().isEmpty()) {
-            msg().note(sender, "No arenas exist. Create one with /practice setup start <name>.");
+            msg().note(sender, "No arenas exist yet. Create one with /practice setup start <name>.");
             return;
         }
         String preferred = plugin.pcConfig().defaultArenaName();
@@ -188,7 +188,7 @@ final class AdminCommands {
     }
 
     private void arenaInfo(CommandSender sender, ArenaTemplate template) {
-        msg().note(sender, "Arena '" + template.name() + "'");
+        msg().note(sender, "Arena " + template.name() + ":");
         msg().note(sender, "  display-name: " + template.displayName());
         msg().note(sender, "  mode: " + template.mode());
         msg().note(sender, "  complete: " + template.isComplete());
@@ -210,18 +210,18 @@ final class AdminCommands {
     private void deleteArena(CommandSender sender, ArenaTemplate template, String[] args) {
         boolean confirmed = args.length > 3 && args[3].equalsIgnoreCase("confirm");
         if (!confirmed) {
-            msg().problem(sender, "This permanently deletes the arena folder, its schematic, "
-                    + "its leaderboard and every recorded time on it.");
-            msg().note(sender, "Run /practice arena delete " + template.name() + " confirm to go ahead.");
+            msg().confirmPrompt(sender, "This permanently deletes the arena folder, its schematic, "
+                    + "its leaderboard and every recorded time on it.",
+                    "/practice arena delete " + template.name() + " confirm");
             return;
         }
         String name = template.name();
         if (!plugin.templates().deleteCompletely(name, wiped -> msg().done(sender,
-                "Leaderboard for '" + name + "' cleared (" + wiped + " player record(s))."))) {
-            msg().problem(sender, "Could not delete '" + name + "'.");
+                "Leaderboard for " + name + " cleared (" + wiped + " player record(s))."))) {
+            msg().problem(sender, "Could not delete " + name + ".");
             return;
         }
-        msg().done(sender, "Deleted arena '" + name + "'. Clearing its recorded times…");
+        msg().done(sender, "Deleted arena " + name + ". Clearing its recorded times.");
     }
 
     private void persist(CommandSender sender, ArenaTemplate template, String message) {
@@ -235,14 +235,7 @@ final class AdminCommands {
     }
 
     private void arenaHelp(CommandSender sender) {
-        msg().note(sender, "/practice arena list");
-        msg().note(sender, "/practice arena info <arena>");
-        msg().note(sender, "/practice arena default [arena|none]");
-        msg().note(sender, "/practice arena display <arena> <text…>");
-        msg().note(sender, "/practice arena icon <arena> <material|auto>");
-        msg().note(sender, "/practice arena permission <arena> <node|default|none>");
-        msg().note(sender, "/practice arena blocks <arena> <true|false>");
-        msg().note(sender, "/practice arena delete <arena> confirm");
+        msg().send(sender, "help.arena-detail");
     }
 
     // ------------------------------------------------------------------- pb
@@ -252,7 +245,7 @@ final class AdminCommands {
             resetPb(sender, args);
             return;
         }
-        msg().note(sender, "/practice pb reset <player> [arena|all] — wipe personal bests");
+        msg().send(sender, "help.pb-detail");
     }
 
     private void resetPb(CommandSender sender, String[] args) {
@@ -261,12 +254,12 @@ final class AdminCommands {
             return;
         }
         if (args.length < 3) {
-            msg().send(sender, "general.usage", "usage", "/practice pb reset <player> [arena|all]");
+            msg().usage(sender, "/practice pb reset <player> [arena|all]");
             return;
         }
         Optional<UUID> resolved = plugin.stats().uuidOf(args[2]);
         if (resolved.isEmpty()) {
-            msg().problem(sender, "No player named '" + args[2] + "' in the plugin's records "
+            msg().problem(sender, "No player named " + args[2] + " in the plugin's records "
                     + "(" + plugin.stats().knownPlayerCount() + " known).");
             return;
         }
@@ -284,13 +277,13 @@ final class AdminCommands {
             if (plugin.templates().get(scope) == null
                     && plugin.rush().resolveStatsKey(scope) == null
                     && plugin.bedDefenses().resolveStatsKey(scope) == null) {
-                msg().problem(sender, "No arena named '" + scope + "'. Use 'all' to wipe everything.");
+                msg().problem(sender, "No arena named " + scope + ". Use all to wipe everything.");
                 return;
             }
             boolean wiped = plugin.stats().resetTemplate(target, scope);
             msg().done(sender, wiped
-                    ? "Wiped " + name + "'s times on '" + scope + "'."
-                    : name + " had no times on '" + scope + "'.");
+                    ? "Wiped " + name + "'s times on " + scope + "."
+                    : name + " had no times on " + scope + ".");
         }
         refreshBoards(target);
         Player online = Bukkit.getPlayer(target);
@@ -330,7 +323,7 @@ final class AdminCommands {
         } else if (sender instanceof Player player) {
             target = player;
         } else {
-            msg().send(sender, "general.usage", "usage", "/practice item <player>");
+            msg().usage(sender, "/practice item <player>");
             return;
         }
         plugin.menuItems().give(target);
@@ -355,9 +348,10 @@ final class AdminCommands {
         if (result.ok()) {
             msg().done(sender, "PracticeCore reloaded.");
         } else if (result.needsConfirm()) {
-            msg().problem(sender, "Nothing was changed — confirmation required.");
+            msg().confirmPrompt(sender, "Nothing was changed yet — this reload needs confirming.",
+                    "/practice reload confirm");
         } else {
-            msg().problem(sender, "Reload failed; the previous settings are still running.");
+            msg().problem(sender, "Reload failed. The previous settings are still running.");
             plugin.getLogger().warning("Reload requested by " + sender.getName()
                     + " failed: " + String.join(" | ", result.notes()));
         }
@@ -374,18 +368,15 @@ final class AdminCommands {
         switch (action) {
             case "info" -> worldInfo(sender);
             case "regen", "regenerate" -> regenerateWorld(sender, args);
-            default -> {
-                msg().note(sender, "/practice world info — practice world and grid status");
-                msg().note(sender, "/practice world regen confirm — delete and rebuild it from nothing");
-            }
+            default -> msg().send(sender, "help.world-detail");
         }
     }
 
     private void worldInfo(CommandSender sender) {
         World world = plugin.worldService().world();
-        msg().note(sender, "Practice world '" + plugin.pcConfig().worldName() + "'");
+        msg().note(sender, "Practice world " + plugin.pcConfig().worldName() + ":");
         if (world == null) {
-            msg().problem(sender, "  not loaded — run /practice world regen confirm");
+            msg().problem(sender, "  Not loaded — run /practice world regen confirm.");
             return;
         }
         msg().note(sender, "  players inside: " + world.getPlayers().size()
@@ -395,7 +386,7 @@ final class AdminCommands {
                 + plugin.pcConfig().baseY());
         msg().note(sender, "  loaded chunks: " + world.getLoadedChunks().length);
         msg().note(sender, "  setup wizard: " + Optional.ofNullable(plugin.setup().activeName())
-                .map(name -> "open on '" + name + "'").orElse("idle"));
+                .map(name -> "open on " + name).orElse("idle"));
     }
 
     private void regenerateWorld(CommandSender sender, String[] args) {
@@ -403,25 +394,25 @@ final class AdminCommands {
         int running = plugin.sessions().all().size();
         String wizard = plugin.setup().activeName();
         if (!confirmed) {
-            msg().problem(sender, "This unloads, deletes and rebuilds '"
-                    + plugin.pcConfig().worldName() + "' from nothing.");
+            msg().warn(sender, "This unloads, deletes and rebuilds "
+                    + plugin.pcConfig().worldName() + " from nothing.");
             if (running > 0) {
                 msg().note(sender, running + " player(s) are practicing — they are restored to "
                         + "where they came from first, so nothing is lost.");
             }
             if (wizard != null) {
-                msg().note(sender, "The setup wizard on '" + wizard
-                        + "' will be canceled; unsaved changes to it are lost.");
+                msg().note(sender, "The setup wizard on " + wizard
+                        + " will be canceled; unsaved changes to it are lost.");
             }
             msg().note(sender, "Arenas, kits and leaderboards are untouched — only the world is rebuilt.");
-            msg().note(sender, "Run /practice world regen confirm to go ahead.");
+            msg().send(sender, "admin.confirm-hint", "command", "/practice world regen confirm");
             return;
         }
         try {
             msg().note(sender, "Regenerating the practice world — sessions are being"
-                    + " restored and the world rebuilt…");
+                    + " restored and the world rebuilt.");
             int ended = plugin.worldService().regenerate();
-            msg().done(sender, "Practice world regenerated; the grid starts again at slot 0."
+            msg().done(sender, "Practice world regenerated. The grid starts again at slot 0."
                     + (ended > 0 ? " " + ended + " session(s) were ended and restored." : ""));
         } catch (RuntimeException e) {
             msg().problem(sender, "Regeneration failed: " + e.getMessage());

@@ -171,7 +171,7 @@ public final class PvpBotMode implements Mode {
         }
         me.beekrbonkr.practicecore.pvpbot.BotPreset preset = fight.settings.matchingPreset();
         String difficultyKey = preset == null
-                ? "gui.pvpbot.preset.short.custom" : preset.messageKey("short");
+                ? "label.difficulty.short.custom" : preset.messageKey("short");
         Component difficulty = plugin.messages().raw(difficultyKey).isEmpty()
                 ? Component.text(preset == null ? "Custom" : preset.configuredName())
                 : plugin.messages().component(difficultyKey);

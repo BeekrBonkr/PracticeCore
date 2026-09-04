@@ -58,12 +58,7 @@ final class RushCommands {
             case "list" -> list(sender);
             case "import" -> importArena(sender, args);
             case "importall" -> importAll(sender, args);
-            default -> {
-                msg().note(sender, "/practice rush list — MBedwars arenas available to import");
-                msg().note(sender, "/practice rush import <mbedwars-arena> [name] [overwrite]");
-                msg().note(sender, "/practice rush importall teams:<n> size:<n> "
-                        + "[category:<name>] [overwrite] — either or both filters");
-            }
+            default -> msg().send(sender, "help.rush-detail");
         }
     }
 
@@ -92,8 +87,7 @@ final class RushCommands {
             return;
         }
         if (args.length < 3) {
-            msg().send(sender, "general.usage", "usage",
-                    "/practice rush import <mbedwars-arena> [name] [overwrite]");
+            msg().usage(sender, "/practice rush import <arena> [name] [overwrite]");
             return;
         }
         boolean overwrite = args[args.length - 1].equalsIgnoreCase("overwrite");
@@ -116,13 +110,13 @@ final class RushCommands {
             return;
         }
         if (plugin.templates().get(name) != null && !overwrite) {
-            msg().problem(sender, "Arena '" + name + "' already exists. Append 'overwrite' to replace "
+            msg().problem(sender, "Arena " + name + " already exists. Append overwrite to replace "
                     + "its schematic and rush layout (times and kit are kept).");
             return;
         }
         importOne(sender, imported, name, null, ok -> {
             if (ok) {
-                msg().note(sender, "Players find it under the Rush category — /practice join " + name);
+                msg().note(sender, "Players find it under the Rush category: /practice join " + name + ".");
             }
         });
     }
@@ -157,18 +151,17 @@ final class RushCommands {
                 } else if (arg.equals("overwrite")) {
                     overwrite = true;
                 } else {
-                    msg().problem(sender, "Unknown filter '" + args[i] + "'.");
+                    msg().problem(sender, "Unknown filter " + args[i] + ".");
                     return;
                 }
             } catch (NumberFormatException e) {
-                msg().problem(sender, "'" + args[i] + "' needs a number after the colon.");
+                msg().problem(sender, "Filter " + args[i] + " needs a number after the colon.");
                 return;
             }
         }
         if (teams == null && size == null) {
-            msg().send(sender, "general.usage", "usage",
-                    "/practice rush importall teams:<n> size:<n> [category:<name>] [overwrite]"
-                            + " — either or both filters");
+            msg().usage(sender, "/practice rush importall [teams:<n>] [size:<n>] [category:<name>] [overwrite]");
+            msg().note(sender, "Give at least one of teams: or size:.");
             return;
         }
         List<MBedwarsHook.ArenaSummary> matches = new ArrayList<>();
@@ -189,7 +182,7 @@ final class RushCommands {
             category = deriveCategory(teams, size);
         }
         msg().note(sender, "Importing " + matches.size() + " arena(s) matching "
-                + filterLabel(teams, size) + " into category '" + category + "'…");
+                + filterLabel(teams, size) + " into category " + category + ".");
         if (!plugin.schematics().supportsAsyncEdits()) {
             msg().note(sender, "Without FastAsyncWorldEdit each capture runs on the main "
                     + "thread — expect stalls. Installing FAWE makes this lag-free.");
@@ -208,10 +201,10 @@ final class RushCommands {
         MBedwarsHook.ArenaSummary summary = queue.poll();
         if (summary == null) {
             msg().done(sender, "Mass import finished: " + counters[0] + " imported, "
-                    + counters[1] + " skipped, " + counters[2] + " failed — category '"
-                    + category + "'.");
+                    + counters[1] + " skipped, " + counters[2] + " failed — category "
+                    + category + ".");
             if (counters[0] > 0) {
-                msg().note(sender, "Players find them under the '" + category + "' category. "
+                msg().note(sender, "Players find them under the " + category + " category. "
                         + "Give it an icon and display name in guis.yml (categories.entries).");
             }
             return;
@@ -224,8 +217,8 @@ final class RushCommands {
             return;
         }
         if (plugin.templates().get(name) != null && !overwrite) {
-            msg().note(sender, " • " + summary.name() + " — '" + name
-                    + "' already exists, skipped (append 'overwrite' to replace).");
+            msg().note(sender, " • " + summary.name() + " — " + name
+                    + " already exists, skipped (append overwrite to replace).");
             counters[1]++;
             runBatch(sender, queue, category, overwrite, counters);
             return;
@@ -299,7 +292,7 @@ final class RushCommands {
             return;
         }
         if (!imported.status().equals("STOPPED") && !imported.status().equals("LOBBY")) {
-            msg().note(sender, "MBedwars arena '" + imported.name() + "' is " + imported.status()
+            msg().note(sender, "MBedwars arena " + imported.name() + " is " + imported.status()
                     + " — the captured blocks may include mid-game changes.");
         }
         Location origin = new Location(imported.world(),
@@ -317,8 +310,8 @@ final class RushCommands {
         }
         // The capture can run for seconds on a big map — say so before the
         // silence, or the admin is left wondering whether anything happened.
-        msg().note(sender, "Capturing '" + imported.name() + "' (" + width + "×" + length
-                + " blocks)…");
+        msg().note(sender, "Capturing " + imported.name() + " (" + width + "×" + length
+                + " blocks).");
         Runnable capture = () -> {
             try {
                 Clipboard clipboard = plugin.schematics()
@@ -409,12 +402,12 @@ final class RushCommands {
                 // The registered arena survives untouched — only the schematic
                 // on disk was already re-captured, which a later re-import
                 // will overwrite again.
-                msg().problem(sender, "No team of '" + imported.name()
-                        + "' has both a spawn and a standing bed — nothing to practice. "
-                        + "'" + name + "' was left as it was; re-import once the map is whole.");
+                msg().problem(sender, "No team of " + imported.name()
+                        + " has both a spawn and a standing bed — nothing to practice. "
+                        + name + " was left as it was; re-import once the map is whole.");
             } else {
-                msg().problem(sender, "No team of '" + imported.name()
-                        + "' has both a spawn and a standing bed — nothing to practice. Not saved.");
+                msg().problem(sender, "No team of " + imported.name()
+                        + " has both a spawn and a standing bed — nothing to practice. Not saved.");
                 plugin.templates().deleteUnregistered(name);
             }
             whenDone.accept(false);
@@ -448,13 +441,13 @@ final class RushCommands {
             try {
                 plugin.templates().moveToCategory(template, category);
             } catch (IOException e) {
-                msg().problem(sender, "'" + name + "' could not be moved into templates/"
+                msg().problem(sender, "Arena " + name + " could not be moved into templates/"
                         + category + "/ (" + e.getMessage() + ") — it keeps its old category.");
             }
         }
         plugin.templates().register(template);
-        msg().done(sender, (existing != null ? "Re-imported" : "Imported") + " '" + imported.name()
-                + "' as rush arena '" + name + "': " + width + "×" + length + " blocks, "
+        msg().done(sender, (existing != null ? "Re-imported" : "Imported") + " " + imported.name()
+                + " as rush arena " + name + ": " + width + "×" + length + " blocks, "
                 + imported.teams().size() + " team(s) (" + beds + " with beds), "
                 + imported.spawners().size() + " generator(s), "
                 + imported.dealers().size() + " dealer(s).");

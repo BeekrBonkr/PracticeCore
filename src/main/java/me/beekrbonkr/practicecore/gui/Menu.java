@@ -38,6 +38,8 @@ public abstract class Menu implements InventoryHolder {
     private final Menu parent;
     private final Map<Integer, Consumer<InventoryClickEvent>> actions = new HashMap<>();
     private Inventory inventory;
+    /** Slot of a destructive control awaiting its second click, or -1. */
+    private int armed = -1;
 
     protected Menu(PracticeCorePlugin plugin, Player viewer, Menu parent) {
         this.plugin = plugin;
@@ -56,6 +58,7 @@ public abstract class Menu implements InventoryHolder {
         if (inventory == null) {
             inventory = Bukkit.createInventory(this, rows() * 9, title());
         }
+        armed = -1;
         redraw();
         viewer.openInventory(inventory);
         // One consistent open cue across every menu; refresh() stays silent.
@@ -84,9 +87,17 @@ public abstract class Menu implements InventoryHolder {
 
     public void handleClick(InventoryClickEvent event) {
         event.setCancelled(true);
-        Consumer<InventoryClickEvent> action = actions.get(event.getRawSlot());
+        int slot = event.getRawSlot();
+        boolean disarm = armed >= 0 && slot != armed;
+        if (disarm) {
+            // Any other click stands the armed control down (R56).
+            armed = -1;
+        }
+        Consumer<InventoryClickEvent> action = actions.get(slot);
         if (action != null) {
             action.accept(event);
+        } else if (disarm) {
+            refresh();
         }
     }
 
@@ -126,13 +137,40 @@ public abstract class Menu implements InventoryHolder {
         }
     }
 
+    // ----------------------------------------------------------- navigation
+
+    /** First slot of the bottom row: nav lives there in every menu (R43). */
+    protected int bottomRow() {
+        return (rows() - 1) * 9;
+    }
+
+    /**
+     * A nav slot: the admin's override under {@code path} if set, else the
+     * style guide position on the bottom row. {@code column} is 0 for back,
+     * 3/4/5 for previous/page/next, 8 for close, 1/2/6/7 for footer extras.
+     */
+    protected int navSlot(String path, int column) {
+        return plugin.guis().slot(path, bottomRow() + column);
+    }
+
+    /**
+     * Back at the bottom-left corner (only with a parent) and Close at the
+     * bottom-right. {@code path} is the menu's guis.yml section, so an admin
+     * can still move either through {@code <path>.back.slot} / {@code .close.slot}.
+     */
+    protected void nav(String path) {
+        backButton(navSlot(path + ".back", 0));
+        closeButton(navSlot(path + ".close", 8));
+    }
+
     protected void backButton(int slot) {
         if (parent == null) {
             return;
         }
-        set(slot, ItemBuilder.of(plugin.guis().buttonMaterial("nav.back", Material.ARROW))
-                .name(name("gui.back"))
-                .lore(lore("gui.back-lore"))
+        set(slot, Button.of(plugin, plugin.guis().buttonMaterial("nav.back", Material.ARROW))
+                .name("gui.back")
+                .lore("gui.back-lore")
+                .hint("open")
                 .build(), event -> {
             click();
             later(parent::open);
@@ -140,12 +178,42 @@ public abstract class Menu implements InventoryHolder {
     }
 
     protected void closeButton(int slot) {
-        set(slot, ItemBuilder.of(plugin.guis().buttonMaterial("nav.close", Material.BARRIER))
-                .name(name("gui.close"))
+        set(slot, Button.of(plugin, plugin.guis().buttonMaterial("nav.close", Material.BARRIER))
+                .name("gui.close")
+                .lore("gui.close-lore")
+                .hint("close")
                 .build(), event -> {
             click();
             later(viewer::closeInventory);
         });
+    }
+
+    // ----------------------------------------------------- destructive arm
+
+    /** Whether this slot's destructive control is waiting for its confirm click. */
+    protected boolean isArmed(int slot) {
+        return armed == slot;
+    }
+
+    /** First click of a destructive control: arm it and redraw (R56). */
+    protected void arm(int slot) {
+        armed = slot;
+        click();
+        refresh();
+    }
+
+    /** The confirm click landed; the control executes now. */
+    protected void disarm() {
+        armed = -1;
+        sound("menu.select");
+    }
+
+    /** An empty-list icon in the style-guide shape (R42). */
+    protected ItemStack emptyIcon(String key) {
+        return Button.of(plugin, emptyMaterial())
+                .name(key + ".name")
+                .lore(key + ".lore")
+                .build();
     }
 
     /** Icon shown in the middle of an empty list menu. */

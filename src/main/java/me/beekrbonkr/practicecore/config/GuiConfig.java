@@ -24,7 +24,7 @@ public final class GuiConfig {
 
     public GuiConfig(PracticeCorePlugin plugin) {
         this.plugin = plugin;
-        this.file = new ConfigFile(plugin, "guis", RESOURCE, Versions.GUIS, GuiConfig::steps,
+        this.file = new ConfigFile(plugin, "guis", RESOURCE, Versions.GUIS, (cfg, from) -> steps(plugin, cfg, from),
                 java.util.Set.of("categories.entries"));
     }
 
@@ -39,7 +39,8 @@ public final class GuiConfig {
     }
 
     /** Reshapes an older guis.yml. See {@link Versions#GUIS}. */
-    private static void steps(org.bukkit.configuration.file.FileConfiguration cfg, int from) {
+    private static void steps(PracticeCorePlugin plugin,
+                              org.bukkit.configuration.file.FileConfiguration cfg, int from) {
         // v0 → v1 is the first versioned layout; nothing moved.
         if (from < 2) {
             // v2 grows the rush menu to five rows so the defender-bot buttons
@@ -83,6 +84,14 @@ public final class GuiConfig {
             if ("END_STONE".equalsIgnoreCase(cfg.getString("rush.buttons.defense.material", ""))) {
                 cfg.set("rush.buttons.defense.material", null);
             }
+        }
+        if (from < 6) {
+            // v6 is the UI style guide: nav slots are computed from the row
+            // count and several icons were reassigned. Layout values still at
+            // their v5 defaults are reset so the new defaults apply; an
+            // admin's own arrangement stands.
+            YamlMigrator.resetUntouched(cfg,
+                    Backups.jarDefaults(plugin, "migrations/guis-v5.yml"));
         }
     }
 

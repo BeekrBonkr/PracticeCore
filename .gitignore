@@ -4,3 +4,7 @@ build/
 *.iml
 .vscode/
 run/
+
+# UI redesign working documents (kept local, not shipped)
+UI_AUDIT.md
+docs/UI_STYLE_GUIDE.md

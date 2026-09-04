@@ -30,6 +30,8 @@ import java.util.UUID;
 public final class PracticeCommand implements CommandExecutor, TabCompleter {
 
     /** Every menu a player can open directly with /practice menu <menu>. */
+    // STYLE-GUIDE: needs logic change (R22) — tab completion should drop
+    // "leaderboards" for senders without practicecore.leaderboard.
     private static final List<String> MENUS = List.of(
             "main", "arenas", "categories", "leaderboards", "stats", "settings", "beddefense");
 
@@ -264,7 +266,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
             if (sender instanceof Player player) {
                 openLeaderboards(player);
             } else {
-                msg().send(sender, "general.usage", "usage", "/practice top <arena>");
+                msg().usage(sender, "/practice top <arena>");
             }
             return;
         }

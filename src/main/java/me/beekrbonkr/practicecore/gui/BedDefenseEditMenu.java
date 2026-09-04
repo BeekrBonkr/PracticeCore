@@ -5,7 +5,6 @@ import me.beekrbonkr.practicecore.beddefense.BedDefense;
 import me.beekrbonkr.practicecore.beddefense.BedDefenseService;
 import me.beekrbonkr.practicecore.beddefense.BedDefenseState;
 import me.beekrbonkr.practicecore.session.PracticeSession;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -13,13 +12,12 @@ import org.bukkit.entity.Player;
 /**
  * The editor's menu: name the build, save it (and go play it), load one of
  * your own, wipe the build, choose whether it publishes, or leave the
- * editor.
+ * editor. Clearing and deleting both arm on the first click (R56).
  */
 public final class BedDefenseEditMenu extends Menu {
 
     private final PracticeSession session;
     private final BedDefenseState state;
-    private boolean deleteArmed;
 
     public BedDefenseEditMenu(PracticeCorePlugin plugin, Player viewer, PracticeSession session,
                               BedDefenseState state) {
@@ -54,25 +52,30 @@ public final class BedDefenseEditMenu extends Menu {
         int blocks = state.editSequence().size();
         BedDefense source = state.editSourceId() == null ? null
                 : service.store().get(state.editSourceId());
+        boolean published = state.editPublished();
+        var visibility = plugin.messages().ref("visibility",
+                published ? "label.state.public" : "label.state.private");
 
-        set(slot("name", 10), ItemBuilder.of(icon("name", Material.NAME_TAG))
-                .name(name("gui.beddefense.editor.name.name"))
-                .lore(lore("gui.beddefense.editor.name.lore", "name", name))
+        set(slot("name", 10), Button.of(plugin, icon("name", Material.NAME_TAG))
+                .name("gui.beddefense.editor.name.name")
+                .lore("gui.beddefense.editor.name.lore", "name", name)
+                .hint("rename")
                 .build(), event -> {
             click();
             later(() -> service.promptName(viewer, session, state, null));
         });
 
-        set(slot("save", 11), ItemBuilder.of(icon("save", Material.LIME_DYE))
-                .name(name("gui.beddefense.editor.save.name"))
-                .lore(lore(source != null ? "gui.beddefense.editor.save.lore-update"
+        Button save = Button.of(plugin, icon("save", Material.EMERALD))
+                .name("gui.beddefense.editor.save.name")
+                .lore(source != null ? "gui.beddefense.editor.save.lore-update"
                                 : "gui.beddefense.editor.save.lore",
-                        plugin.messages().ref("visibility", state.editPublished()
-                                ? "gui.beddefense.gallery.visibility-public"
-                                : "gui.beddefense.gallery.visibility-private"),
-                        "name", name, "blocks", String.valueOf(blocks)))
-                .glow(blocks > 0)
-                .build(), event -> {
+                        visibility, "name", name, "blocks", String.valueOf(blocks));
+        if (blocks == 0) {
+            save.disabled("gui.reason.no-blocks");
+        } else {
+            save.hint("save");
+        }
+        set(slot("save", 11), save.build(), event -> {
             if (blocks == 0) {
                 deny();
                 plugin.messages().send(viewer, "beddefense.edit.empty");
@@ -86,11 +89,16 @@ public final class BedDefenseEditMenu extends Menu {
         });
 
         var mine = service.store().ownedBy(viewer.getUniqueId());
-        set(slot("load", 12), ItemBuilder.of(icon("load", Material.BOOK))
-                .name(name("gui.beddefense.editor.load.name"))
-                .lore(lore(mine.isEmpty() ? "gui.beddefense.editor.load.lore-none"
-                        : "gui.beddefense.editor.load.lore", "count", String.valueOf(mine.size())))
-                .build(), event -> {
+        Button load = Button.of(plugin, icon("load", Material.BOOKSHELF))
+                .name("gui.beddefense.editor.load.name")
+                .lore(mine.isEmpty() ? "gui.beddefense.editor.load.lore-none"
+                        : "gui.beddefense.editor.load.lore", "count", String.valueOf(mine.size()));
+        if (mine.isEmpty()) {
+            load.disabled("gui.reason.nothing-to-load");
+        } else {
+            load.hint("open");
+        }
+        set(slot("load", 12), load.build(), event -> {
             if (mine.isEmpty()) {
                 deny();
                 return;
@@ -103,25 +111,40 @@ public final class BedDefenseEditMenu extends Menu {
             }).open());
         });
 
-        set(slot("reset", 13), ItemBuilder.of(icon("reset", Material.BARRIER))
-                .name(name("gui.beddefense.editor.reset.name"))
-                .lore(lore("gui.beddefense.editor.reset.lore", "blocks", String.valueOf(blocks)))
-                .build(), event -> {
-            click();
+        int resetSlot = slot("reset", 13);
+        Button reset = Button.of(plugin, icon("reset", Material.RED_DYE));
+        if (isArmed(resetSlot)) {
+            reset.name("gui.beddefense.editor.reset.name-armed")
+                    .lore("gui.beddefense.editor.reset.lore-armed")
+                    .glow(true)
+                    .hint("confirm")
+                    .line(name("gui.beddefense.actions.delete.cancel-line"));
+        } else {
+            reset.name("gui.beddefense.editor.reset.name")
+                    .lore("gui.beddefense.editor.reset.lore", "blocks", String.valueOf(blocks))
+                    .hint("run");
+        }
+        set(resetSlot, reset.build(), event -> {
+            if (!isArmed(resetSlot)) {
+                arm(resetSlot);
+                return;
+            }
+            disarm();
             later(() -> {
                 viewer.closeInventory();
                 service.editReset(viewer, state);
             });
         });
 
-        boolean published = state.editPublished();
-        set(slot("visibility", 14), ItemBuilder.of(icon("visibility",
-                        published ? Material.ENDER_EYE : Material.ENDER_PEARL))
-                .name(name("gui.beddefense.editor.visibility.name"))
-                .lore(lore("gui.beddefense.editor.visibility.lore", plugin.messages().ref("state",
-                        published ? "gui.beddefense.gallery.visibility-public"
-                                : "gui.beddefense.gallery.visibility-private")))
+        set(slot("visibility", 14), Button.of(plugin, published
+                        ? icon("visibility", Material.LANTERN)
+                        : plugin.guis().material("beddefense-editor.buttons.visibility.material-private",
+                                Material.SOUL_LANTERN))
+                .name("gui.beddefense.editor.visibility.name")
+                .lore("gui.beddefense.editor.visibility.lore", plugin.messages().ref("state",
+                        published ? "label.state.public" : "label.state.private"))
                 .glow(published)
+                .hint("toggle")
                 .build(), event -> {
             sound(published ? "menu.toggle-off" : "menu.toggle-on");
             state.setEditPublished(!published);
@@ -132,21 +155,25 @@ public final class BedDefenseEditMenu extends Menu {
         });
 
         if (source != null && source.isAuthor(viewer.getUniqueId())) {
-            set(slot("delete", 15), ItemBuilder.of(icon("delete",
-                            deleteArmed ? Material.TNT : Material.LAVA_BUCKET))
-                    .name(name(deleteArmed ? "gui.beddefense.actions.delete.name-armed"
-                            : "gui.beddefense.actions.delete.name"))
-                    .lore(lore(deleteArmed ? "gui.beddefense.actions.delete.lore-armed"
-                            : "gui.beddefense.actions.delete.lore"))
-                    .glow(deleteArmed)
-                    .build(), event -> {
-                if (!deleteArmed) {
-                    click();
-                    deleteArmed = true;
-                    refresh();
+            int deleteSlot = slot("delete", 15);
+            Button delete = Button.of(plugin, icon("delete", Material.LAVA_BUCKET));
+            if (isArmed(deleteSlot)) {
+                delete.name("gui.beddefense.editor.delete.name-armed")
+                        .lore("gui.beddefense.editor.delete.lore-armed")
+                        .glow(true)
+                        .hint("confirm")
+                        .line(name("gui.beddefense.actions.delete.cancel-line"));
+            } else {
+                delete.name("gui.beddefense.editor.delete.name")
+                        .lore("gui.beddefense.editor.delete.lore")
+                        .hint("delete");
+            }
+            set(deleteSlot, delete.build(), event -> {
+                if (!isArmed(deleteSlot)) {
+                    arm(deleteSlot);
                     return;
                 }
-                sound("menu.select");
+                disarm();
                 service.delete(viewer, source);
                 state.setEditSourceId(null);
                 later(() -> {
@@ -156,9 +183,10 @@ public final class BedDefenseEditMenu extends Menu {
             });
         }
 
-        set(slot("exit", 16), ItemBuilder.of(icon("exit", Material.OAK_DOOR))
-                .name(name("gui.beddefense.editor.exit.name"))
-                .lore(lore("gui.beddefense.editor.exit.lore"))
+        set(slot("exit", 16), Button.of(plugin, icon("exit", Material.OAK_DOOR))
+                .name("gui.beddefense.editor.exit.name")
+                .lore("gui.beddefense.editor.exit.lore")
+                .hint("leave")
                 .build(), event -> {
             click();
             later(() -> {
@@ -166,6 +194,6 @@ public final class BedDefenseEditMenu extends Menu {
                 service.leaveEditor(viewer, session, state);
             });
         });
-        closeButton(plugin.guis().slot("beddefense-editor.close", 31));
+        nav("beddefense-editor");
     }
 }
