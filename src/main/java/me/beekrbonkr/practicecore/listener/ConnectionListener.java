@@ -27,6 +27,8 @@ public final class ConnectionListener implements Listener {
         // Keeps the name index current so admin commands can tab-complete and
         // resolve this player long after they have gone offline.
         plugin.stats().touch(player);
+        // Gallery tiles name authors; a renamed designer shows their new name.
+        plugin.bedDefenses().store().updateAuthorName(id, player.getName());
         // Bot disguise profiles must reach this client before it tracks any
         // bot entity, or running fights' bots stay invisible to them.
         plugin.pvpBot().handleJoin(player);
@@ -69,6 +71,7 @@ public final class ConnectionListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onQuit(PlayerQuitEvent event) {
+        plugin.bedDefenses().forget(event.getPlayer().getUniqueId());
         Player player = event.getPlayer();
         if (plugin.setup().isAdmin(player.getUniqueId())) {
             plugin.setup().handleQuit(player);

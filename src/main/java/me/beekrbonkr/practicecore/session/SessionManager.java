@@ -101,6 +101,16 @@ public final class SessionManager {
      * "you can't join that" never costs someone the arena they were in.
      */
     public void join(Player player, ArenaTemplate template) {
+        join(player, template, plugin.modes().of(template));
+    }
+
+    /**
+     * Joins an arena under a mode other than the template's own. Bed defense
+     * practice runs on rush maps this way: the arena.yml stays a rush arena,
+     * the session runs the bed defense rules.
+     */
+    public void join(Player player, ArenaTemplate template,
+                     me.beekrbonkr.practicecore.mode.Mode mode) {
         UUID id = player.getUniqueId();
         Messages msg = plugin.messages();
         if (pendingJoins.contains(id)) {
@@ -113,7 +123,7 @@ public final class SessionManager {
                 msg.send(player, "session.preparing");
                 return;
             }
-            if (current.template().name().equals(template.name())) {
+            if (current.template().name().equals(template.name()) && current.mode() == mode) {
                 restart(player); // "switching" to where you already are is a restart
                 return;
             }
@@ -137,7 +147,6 @@ public final class SessionManager {
         }
         // Validate everything a hand-edited arena.yml could get wrong before a
         // slot is taken — an aborted join must leave no arena behind.
-        me.beekrbonkr.practicecore.mode.Mode mode = plugin.modes().of(template);
         boolean needsTrigger = mode.requiresTrigger();
         if (template.spawnOffset() == null || (needsTrigger && !template.hasTriggers())) {
             msg.send(player, "arena.broken");

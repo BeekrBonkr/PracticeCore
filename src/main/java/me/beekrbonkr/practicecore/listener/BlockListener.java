@@ -53,7 +53,7 @@ public final class BlockListener implements Listener {
         }
         session.tracker().recordPlace(event.getBlock(), event.getBlockReplacedState().getBlockData());
         if (state == SessionState.READY
-                && session.mode().startsTimerOnFirstBlock(plugin.pcConfig())) {
+                && session.mode().startsTimerOnFirstBlock(plugin, session)) {
             session.setState(SessionState.ACTIVE);
             session.startTimer();
         }

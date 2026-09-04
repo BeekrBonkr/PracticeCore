@@ -110,6 +110,23 @@ public final class ArenaMenu extends PagedMenu<ArenaTemplate> {
         return plugin.modes().get(template.mode()).map(Mode::displayName).orElse(template.mode());
     }
 
+    /** With categories off there is no category tile — the flat list carries the button. */
+    @Override
+    protected void renderFooter() {
+        if (category != null || plugin.bedDefenses().maps(viewer).isEmpty()
+                || !plugin.guis().buttonEnabled("beddefense.flat-button")) {
+            return;
+        }
+        set(plugin.guis().slot("beddefense.flat-button", 51),
+                ItemBuilder.of(plugin.guis().buttonMaterial("beddefense.flat-button", Material.RED_BED))
+                        .name(name("gui.beddefense.arenas.flat-button.name"))
+                        .lore(lore("gui.beddefense.arenas.flat-button.lore"))
+                        .build(), event -> {
+            click();
+            later(() -> new BedDefenseArenaMenu(plugin, viewer, this).open());
+        });
+    }
+
     @Override
     protected void onEntryClick(ArenaTemplate template, InventoryClickEvent event) {
         if (!plugin.templates().canUse(viewer, template)) {

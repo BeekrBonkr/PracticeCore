@@ -113,3 +113,18 @@ spectate:
   start: 'BLOCK_NOTE_BLOCK_PLING 0.7 1.5'
   # The compass tool snapping back to the target.
   teleport: 'ENTITY_ENDERMAN_TELEPORT 0.5 1.4'
+
+beddefense:
+  # Entering a preview, and each block the preview lays down.
+  preview-enter: 'BLOCK_NOTE_BLOCK_CHIME 0.6 1.2'
+  preview-step: 'BLOCK_STONE_PLACE 0.6 1.1'
+  # Guided building switching on.
+  guided-enter: 'BLOCK_NOTE_BLOCK_PLING 0.6 1.4'
+  # A block placed out of sequence on a strict-order round.
+  wrong-order: 'BLOCK_NOTE_BLOCK_BASS 0.7 0.7'
+  # A defense saved; a save refused because that defense already exists.
+  saved: 'ENTITY_PLAYER_LEVELUP 0.8 1.2'
+  duplicate: 'ENTITY_VILLAGER_NO 0.8 1.0'
+  # Liking and favoriting a defense.
+  like: 'ENTITY_EXPERIENCE_ORB_PICKUP 0.6 1.6'
+  favorite: 'BLOCK_NOTE_BLOCK_BELL 0.5 1.4'

@@ -23,7 +23,10 @@ import me.beekrbonkr.practicecore.listener.TeleportListener;
 import me.beekrbonkr.practicecore.listener.MlgListener;
 import me.beekrbonkr.practicecore.listener.PvpBotListener;
 import me.beekrbonkr.practicecore.listener.RushListener;
+import me.beekrbonkr.practicecore.beddefense.BedDefenseService;
+import me.beekrbonkr.practicecore.listener.BedDefenseListener;
 import me.beekrbonkr.practicecore.mode.BedBreakMode;
+import me.beekrbonkr.practicecore.mode.BedDefenseMode;
 import me.beekrbonkr.practicecore.mode.BridgingMode;
 import me.beekrbonkr.practicecore.mode.MlgMode;
 import me.beekrbonkr.practicecore.mode.PvpBotMode;
@@ -80,6 +83,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
     private InventoryValidator inventoryValidator;
     private ChatPrompts prompts;
     private RushService rush;
+    private BedDefenseService bedDefenses;
     private PvpBotService pvpBot;
     private me.beekrbonkr.practicecore.rushbot.RushBotService rushBots;
     private SpectateService spectate;
@@ -117,6 +121,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         modes.register(new BridgingMode());
         modes.register(new BedBreakMode());
         modes.register(new RushMode());
+        modes.register(new BedDefenseMode());
         modes.register(new MlgMode());
         modes.register(new PvpBotMode());
 
@@ -141,6 +146,8 @@ public final class PracticeCorePlugin extends JavaPlugin {
         inventoryValidator = new InventoryValidator(this);
         prompts = new ChatPrompts(this);
         rush = new RushService(this);
+        bedDefenses = new BedDefenseService(this);
+        bedDefenses.store().load().forEach(note -> getLogger().warning(note));
         pvpBot = new PvpBotService(this);
         rushBots = new me.beekrbonkr.practicecore.rushbot.RushBotService(this);
         spectate = new SpectateService(this);
@@ -158,6 +165,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         pm.registerEvents(new MenuListener(), this);
         pm.registerEvents(new MenuItemListener(this), this);
         pm.registerEvents(new RushListener(this), this);
+        pm.registerEvents(new BedDefenseListener(this), this);
         pm.registerEvents(new MlgListener(this), this);
         pm.registerEvents(new PvpBotListener(this), this);
         pm.registerEvents(new me.beekrbonkr.practicecore.rushbot.RushBotListener(this), this);
@@ -185,6 +193,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         speedometer.startTask();
         inventoryValidator.startTask();
         rush.startTask();
+        bedDefenses.startTask();
         pvpBot.startTask();
         rushBots.startTask();
         spectate.startTask();
@@ -217,6 +226,10 @@ public final class PracticeCorePlugin extends JavaPlugin {
         }
         if (rush != null) {
             rush.shutdown();
+        }
+        if (bedDefenses != null) {
+            bedDefenses.shutdown();
+            bedDefenses.store().flushSync();
         }
         if (pvpBot != null) {
             pvpBot.shutdown();
@@ -424,6 +437,8 @@ public final class PracticeCorePlugin extends JavaPlugin {
         speedometer.restartTask();
         inventoryValidator.restartTask();
         rush.restartTask();
+        bedDefenses.restartTask();
+        notes.addAll(bedDefenses.store().load());
         pvpBot.restartTask();
         rushBots.restartTask();
         spectate.restartTask();
@@ -578,6 +593,10 @@ public final class PracticeCorePlugin extends JavaPlugin {
 
     public RushService rush() {
         return rush;
+    }
+
+    public BedDefenseService bedDefenses() {
+        return bedDefenses;
     }
 
     public InventoryValidator validator() {
