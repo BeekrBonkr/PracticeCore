@@ -36,10 +36,9 @@ main:
     play: {enabled: true, slot: 10, material: COMPASS}
     random: {enabled: true, slot: 11, material: ENDER_EYE}
     leaderboards: {enabled: true, slot: 12, material: GOLD_INGOT}
-    stats: {enabled: true, slot: 13, material: WRITABLE_BOOK}
+    stats: {enabled: true, slot: 13, material: BOOK}
     restart: {enabled: true, slot: 14, material: CLOCK}
-    # material is the icon while the sidebar is shown; material-off while hidden.
-    sidebar: {enabled: true, slot: 15, material: ITEM_FRAME, material-off: GLOW_ITEM_FRAME}
+    sidebar: {enabled: true, slot: 15, material: OAK_SIGN}
     help: {enabled: true, slot: 16, material: PAPER}
     # Only rendered during a PvP bot session.
     bot: {enabled: true, slot: 20, material: ZOMBIE_HEAD}
@@ -55,7 +54,7 @@ settings:
     night-vision: {enabled: true, slot: 11, material: GOLDEN_CARROT}
     # The wool button's icon always shows the currently selected color.
     wool-color: {enabled: true, slot: 13}
-    time: {enabled: true, slot: 15, material: CLOCK}
+    time: {enabled: true, slot: 15, material: DAYLIGHT_DETECTOR}
 
 # The rush pre-join menu: team base, match modifiers, defender bots, start.
 # With no bots every objective is armed on every run; with bots the run
@@ -122,11 +121,11 @@ rushboards:
 pvpbot:
   rows: 5
   buttons:
-    kit: {slot: 11}
-    preset: {slot: 13, material: NETHER_STAR}
+    kit: {slot: 11, material: CHEST}
+    preset: {slot: 13, material: EXPERIENCE_BOTTLE}
     gear: {slot: 15}
     evasiveness: {slot: 19, material: FEATHER}
-    cps: {slot: 20, material: CLOCK}
+    cps: {slot: 20, material: SUGAR}
     accuracy: {slot: 21, material: TARGET}
     combos: {slot: 22, material: RABBIT_FOOT}
     reach: {slot: 23, material: STICK}
@@ -140,7 +139,8 @@ pvpbot:
 pvpbot-kits:
   rows: 5
 
-# The full-inventory kit preview window.
+# The full-inventory kit preview window. The one menu whose Back and Close
+# sit on the top row: the grid below mirrors a real inventory.
 pvpbot-preview:
   back: {slot: 0}
   close: {slot: 8}

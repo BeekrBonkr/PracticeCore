@@ -2,7 +2,6 @@ package me.beekrbonkr.practicecore.gui;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.settings.SettingsService;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import net.kyori.adventure.text.Component;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
@@ -38,8 +37,9 @@ public final class SettingsMenu extends Menu {
         if (plugin.guis().buttonEnabled("settings.buttons.night-vision")) {
             set(plugin.guis().slot("settings.buttons.night-vision", 11), nightVisionIcon(),
                     event -> {
+                        boolean on = !plugin.settings().nightVision(viewer.getUniqueId());
                         plugin.settings().toggleNightVision(viewer);
-                        click();
+                        sound(on ? "menu.toggle-on" : "menu.toggle-off");
                         refresh();
                     });
         }
@@ -57,19 +57,18 @@ public final class SettingsMenu extends Menu {
                 refresh();
             });
         }
-        backButton(plugin.guis().slot("settings.back", 18));
-        closeButton(plugin.guis().slot("settings.close", 26));
+        nav("settings");
     }
 
     private ItemStack nightVisionIcon() {
         boolean on = plugin.settings().nightVision(viewer.getUniqueId());
-        return ItemBuilder.of(plugin.guis()
+        return Button.of(plugin, plugin.guis()
                         .buttonMaterial("settings.buttons.night-vision", Material.GOLDEN_CARROT))
-                .name(name("gui.settings.night-vision.name"))
-                .lore(lore("gui.settings.night-vision.lore", plugin.messages().ref("state",
-                        on ? "gui.settings.night-vision.state-on"
-                           : "gui.settings.night-vision.state-off")))
+                .name("gui.settings.night-vision.name")
+                .lore("gui.settings.night-vision.lore", plugin.messages().ref("state",
+                        on ? "label.state.on" : "label.state.off"))
                 .glow(on)
+                .hint("toggle")
                 .build();
     }
 
@@ -81,22 +80,24 @@ public final class SettingsMenu extends Menu {
         if (icon == null) {
             icon = Material.WHITE_WOOL;
         }
-        return ItemBuilder.of(icon)
-                .name(name("gui.settings.wool-color.name"))
-                .lore(lore("gui.settings.wool-color.lore",
+        return Button.of(plugin, icon)
+                .name("gui.settings.wool-color.name")
+                .lore("gui.settings.wool-color.lore",
                         "color", color == null
                                 ? raw("gui.settings.wool-color.default")
-                                : color.name().toLowerCase(Locale.ROOT).replace('_', ' ')))
-                .glow(color != null)
+                                : color.name().toLowerCase(Locale.ROOT).replace('_', ' '))
+                .hint("cycle")
+                .rightHint("cycle-back")
                 .build();
     }
 
     private ItemStack timeIcon() {
         SettingsService.TimeOfDay time = plugin.settings().timeOfDay(viewer.getUniqueId());
-        return ItemBuilder.of(plugin.guis().buttonMaterial("settings.buttons.time", Material.CLOCK))
-                .name(name("gui.settings.time.name"))
-                .lore(lore("gui.settings.time.lore", "time", raw(time.messageKey())))
-                .glow(time != SettingsService.TimeOfDay.DEFAULT)
+        return Button.of(plugin, plugin.guis()
+                        .buttonMaterial("settings.buttons.time", Material.DAYLIGHT_DETECTOR))
+                .name("gui.settings.time.name")
+                .lore("gui.settings.time.lore", "time", raw(time.messageKey()))
+                .hint("cycle")
                 .build();
     }
 }
