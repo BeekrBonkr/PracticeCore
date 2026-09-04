@@ -169,26 +169,29 @@ beddefense:
     team: {slot: 13}
     # Row 2 — the defense (icon follows the chosen one) and the round rules.
     defense: {slot: 20, material: RED_BED}
-    # material while competitive; material-practice while practicing.
-    mode: {slot: 22, material: NETHER_STAR, material-practice: WHITE_WOOL}
-    strict: {slot: 23, material: COMPARATOR}
+    # material while practicing; material-competitive while competitive.
+    mode: {slot: 22, material: LEVER, material-competitive: NETHER_STAR}
+    strict: {slot: 23, material: CHAIN}
     shuffle: {slot: 24, material: ENDER_EYE}
-    timer: {slot: 25, material: CLOCK}
+    timer: {slot: 25, material: REPEATER}
     # Row 3 — design your own: fresh, or one of yours.
     new: {slot: 30, material: CRAFTING_TABLE}
     edit: {slot: 32, material: WRITABLE_BOOK}
-    # Row 4 — go.
-    start: {slot: 40, material: LIME_DYE}
+    # Row 4 — go. material for practice; material-competitive while competitive.
+    start: {slot: 40, material: LIME_DYE, material-competitive: NETHER_STAR}
   # With categories off, the flat arena and leaderboard lists carry this
   # button instead of a category tile.
   flat-button: {enabled: true, slot: 51, material: RED_BED}
 
 # The defense gallery: public / mine / favorites tabs along the footer.
+# The Mine tab's icon is always the viewer's own head.
 beddefense-gallery:
   tabs:
     public: {slot: 46, material: BOOKSHELF}
-    mine: {slot: 47, material: WRITABLE_BOOK}
-    favorites: {slot: 51, material: NETHER_STAR}
+    mine: {slot: 47}
+    favorites: {slot: 51, material: AMETHYST_SHARD}
+  # The strict-order board's icon; the any-order board uses the defense's own.
+  strict-board-material: CHAIN
 
 # One defense's actions (right-click on a gallery tile).
 beddefense-actions:
@@ -197,19 +200,20 @@ beddefense-actions:
     # The play tile's icon is the defense's own.
     play: {slot: 11}
     like: {slot: 12, material: GOLD_NUGGET}
-    favorite: {slot: 13, material: NETHER_STAR}
+    favorite: {slot: 13, material: AMETHYST_SHARD}
     board: {slot: 14, material: GOLD_INGOT}
     # Only on your own defenses (delete: also admins).
     edit: {slot: 20, material: WRITABLE_BOOK}
-    visibility: {slot: 21}
-    delete: {slot: 22}
+    # material while public; material-private while private.
+    visibility: {slot: 21, material: LANTERN, material-private: SOUL_LANTERN}
+    delete: {slot: 22, material: LAVA_BUCKET}
 
 # The in-arena menu behind the bed defense hotbar item while playing.
 beddefense-session:
   rows: 4
   buttons:
-    preview: {slot: 10, material: SPYGLASS}
-    guided: {slot: 11, material: COMPASS}
+    preview: {slot: 10, material: PAINTING}
+    guided: {slot: 11, material: LEAD}
     defense: {slot: 12}
     settings: {slot: 13, material: COMPARATOR}
     restart: {slot: 14, material: CLOCK}
@@ -222,11 +226,11 @@ beddefense-editor:
   rows: 4
   buttons:
     name: {slot: 10, material: NAME_TAG}
-    save: {slot: 11, material: LIME_DYE}
-    load: {slot: 12, material: BOOK}
-    reset: {slot: 13, material: BARRIER}
-    visibility: {slot: 14}
-    delete: {slot: 15}
+    save: {slot: 11, material: EMERALD}
+    load: {slot: 12, material: BOOKSHELF}
+    reset: {slot: 13, material: RED_DYE}
+    visibility: {slot: 14, material: LANTERN, material-private: SOUL_LANTERN}
+    delete: {slot: 15, material: LAVA_BUCKET}
     exit: {slot: 16, material: OAK_DOOR}
 
 # Arena categories. An arena's category is the folder its own folder sits in:
