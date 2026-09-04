@@ -12,7 +12,7 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 7
+config-version: 8
 
 prefix: '<gold>Practice <dark_gray>» '
 
@@ -325,6 +325,128 @@ board:
     combat-line: '<gray>Beds: <white><beds> <dark_gray>• <gray>Defenders: <white><defenders> <dark_gray>• <gray>Deaths: <red><deaths>'
     casual-line: '<dark_gray>Not ranked — play competitive'
 
+  beddefense:
+    # <arena> <team> <mode> <defense> <time>
+    lines:
+      - ''
+      - '<gray>Map: <white><arena>'
+      - '<gray>Base: <white><team>'
+      - '<gray>Mode: <mode>'
+      - '<gray>Defense: <white><defense>'
+      - ''
+      - '<gray>Time: <time>'
+      - ''
+    mode-competitive: '<gold>Competitive'
+    mode-practice: '<white>Practice'
+    mode-preview: '<aqua>Preview'
+    mode-guided: '<green>Guided'
+    mode-edit: '<yellow>Editor'
+    unnamed: 'unnamed'
+    # <placed> <total>
+    progress-line: '<gray>Blocks: <white><placed><dark_gray>/<white><total>'
+    # Competitive: your best on this defense. <best>
+    best-line: '<gray>Best: <white><best>'
+    casual-line: '<dark_gray>Not ranked — play competitive'
+    # Guided: the block the marker points at. <material>
+    next-line: '<gray>Next: <white><material>'
+    # Preview: how far the animation is. <step> <total>
+    preview-line: '<gray>Step: <white><step><dark_gray>/<white><total>'
+    # Editor. <blocks> <radius>
+    edit-line: '<gray>Placed: <white><blocks> <dark_gray>(radius <radius>)'
+
+# Bed defense practice: chat, action bar and title text. Menus are under
+# gui.beddefense further down, the sidebar under board.beddefense.
+beddefense:
+  # The name the category picker and leaderboards show the mode under (when
+  # guis.yml categories.entries has no 'beddefense' entry of its own).
+  category-name: 'Bed Defense'
+  not-a-rush-map: '<prefix><red>Bed defense practice needs a rush map with a team base and bed.'
+  no-defense: '<prefix><yellow>There is no bed defense to build yet — design one in the editor, or pick one from the gallery.'
+  forced-edit: '<prefix><yellow>No bed defenses exist yet, so you are in the <white>editor<yellow>: build one around your bed and save it.'
+  # <id>
+  unknown: '<prefix><red>No bed defense with id ''<id>''.'
+  not-owner: '<prefix><red>That is not one of your bed defenses.'
+  competitive-needs-shop: '<prefix><yellow>Competitive needs the MBedwars shop to buy blocks from — this round plays as practice.'
+  # <name>
+  deleted: '<prefix><gray>Deleted the bed defense <white><name><gray>.'
+  # Action bar at the end of a practice round.
+  records-disabled: '<gray>Practice rounds are not ranked — play competitive'
+  # The hint floating over the bed at the start of a round. Blank to disable.
+  hologram: '<yellow>Drop a block or use the menu<newline><gray>to preview this defense'
+  # Board names: <name> is the defense's name.
+  board-name: '<name> (Bed Defense)'
+  board-name-strict: '<name> (Bed Defense, strict order)'
+  list-empty: '<prefix><gray>No bed defenses to play yet. Design one: <white>/practice beddefense edit'
+  # <count>
+  list-header: '<prefix><gray>Bed defenses you can play (<white><count><gray>):'
+  # <id> <name> <author> <likes> <players> <blocks>
+  list-entry: '<dark_gray> • <white><name> <dark_gray>by <gray><author> <dark_gray>— <yellow><likes> likes<dark_gray>, <gray><players> players<dark_gray>, <gray><blocks> blocks <dark_gray>[<click:run_command:''/practice beddefense play <id>''><green>play</click><dark_gray>]'
+  like:
+    # <name>
+    added: '<prefix><green>You liked <white><name><green>.'
+    removed: '<prefix><gray>Like removed from <white><name><gray>.'
+    own: '<prefix><red>You cannot like your own bed defense.'
+  favorite:
+    # <name>
+    added: '<prefix><green><white><name><green> added to your favorites.'
+    removed: '<prefix><gray><white><name><gray> removed from your favorites.'
+  visibility:
+    # <name>
+    public: '<prefix><green><white><name><green> is now public — everyone can play it.'
+    private: '<prefix><gray><white><name><gray> is now private — only you can play it.'
+  strict:
+    # A block placed out of sequence. <material> <step> <total>
+    wrong-order: '<red>Wrong order — next is <white><material> <gray>(<step>/<total>)'
+  preview:
+    # <name>
+    entered: '<prefix><gray>Previewing <white><name><gray>. Use the hotbar to step through it; drop or use the exit item to leave.'
+    exited: '<prefix><gray>Preview over — back to building.'
+    # <step> <total> <material>
+    step: '<gray>Block <white><step><gray>/<white><total> <dark_gray>— <gray><material>'
+    start: '<gray>At the start'
+    done: '<green>That is the whole defense'
+    playing: '<gray>Playing'
+    paused: '<gray>Paused'
+    no-building: '<red>Not while previewing'
+    not-in-editor: '<red>Previews are for playing — save the build first'
+  guided:
+    entered: '<prefix><gray>Guided building: the glowing block is the next one to place. Untimed.'
+    from-attempt: '<prefix><yellow>Timer cancelled. <gray>Guided building: the glowing block is the next one to place.'
+    exited: '<prefix><gray>Guidance off — the next attempt is timed again.'
+    # <material> <step> <total>
+    next: '<gray>Next: <white><material> <dark_gray>(<step>/<total>)'
+    # <name>
+    done: '<prefix><green>Defense complete! <gray>Resetting for a timed attempt.'
+  edit:
+    # <radius>
+    entered: '<prefix><gray>Editor: build within <white><radius><gray> blocks of the bed, then save from the bed defense item.'
+    exit: '<prefix><gray>Leaving the editor.'
+    out-of-radius: '<red>Too far from the bed'
+    # <material>
+    not-allowed: '<red><material> is not a bed defense block'
+    bed-protected: '<red>The bed stays'
+    empty: '<prefix><red>Nothing to save — place some blocks around the bed first.'
+    # <name> <blocks>
+    saved: '<prefix><green>Saved <white><name><green> (<blocks> blocks). It is private; publish it from the gallery to share it.'
+    saved-public: '<prefix><green>Saved and published <white><name><green> (<blocks> blocks).'
+    # <name>
+    loaded: '<prefix><gray>Loaded <white><name><gray> into the editor.'
+    reset: '<prefix><gray>Build cleared.'
+    # <max>
+    name-prompt: '<gold>Name your bed defense (up to <max> characters).'
+    # <name>
+    name-set: '<prefix><green>Named <white><name><green>.'
+    # <max>
+    name-invalid: '<prefix><red>That name will not do — 1 to <max> printable characters.'
+    # <max>
+    limit: '<prefix><red>You already have <max> saved bed defenses. Delete one to make room.'
+    # A save refused because the exact same defense already exists.
+    # <name> <author> <id>
+    duplicate-title: '<red><bold>Already exists'
+    duplicate-subtitle: '<gray><name> <dark_gray>by <gray><author>'
+    duplicate: '<prefix><red>That bed defense already exists: <white><name> <gray>by <author>.'
+    duplicate-actions: '<dark_gray>[<click:run_command:''/practice beddefense play <id>''><hover:show_text:''Play <name>''><green>Play it</hover></click><dark_gray>] [<click:run_command:''/practice beddefense like <id>''><hover:show_text:''Like <name>''><gold>Like it</hover></click><dark_gray>] [<click:run_command:''/practice beddefense favorite <id>''><hover:show_text:''Favorite <name>''><aqua>Favorite it</hover></click><dark_gray>]'
+
 protect:
   pearls-disabled: '<prefix><red>Ender pearls are disabled in practice.'
   gamemode-locked: '<prefix><red>Leave practice before changing gamemode (/practice leave).'
@@ -383,6 +505,8 @@ leaderboard:
   your-rank: '<dark_gray> … you are #<rank> of <total>'
   # <arena>
   rush-pick-board: '<prefix><gray>''<arena>'' is a rush arena; pick a board: <white><arena>#bed<gray>, <white><arena>#emerald<gray>, <white><arena>#diamond<gray> or <white><arena>#team_wipe<gray>.'
+  # /practice top beddefense — the bed defense boards live in the menu.
+  beddefense-pick-board: '<prefix><gray>Bed defense boards are kept per defense: open <white>/practice menu leaderboards<gray>, or name one as <white>beddefense#<id><gray>.'
   # Arenas of modes that score in-session (MLG streaks, PvP bot spars).
   not-ranked: '<prefix><gray>''<arena>'' has no time leaderboard — its mode is scored in-session, on the sidebar.'
 
@@ -411,6 +535,7 @@ help:
     - '<dark_gray> • <white>/practice list <dark_gray>— available arenas'
     - '<dark_gray> • <white>/practice stats [player] <dark_gray>— personal bests'
     - '<dark_gray> • <white>/practice top [arena] <dark_gray>— leaderboards'
+    - '<dark_gray> • <white>/practice beddefense <dark_gray>— bed defense practice: maps, gallery, editor'
     - '<dark_gray> • <white>/practice sidebar <dark_gray>— show or hide the live timer'
     - '<dark_gray> • <white>/practice spectate [player] <dark_gray>— watch someone practice'
     - '<dark_gray> • <white>/spectate <player> <dark_gray>— the same, one word shorter'
@@ -1455,3 +1580,483 @@ gui:
       - ''
       - '<gray>You are <white><rank>'
       - '<yellow>Click for the full board'
+
+  # Bed defense practice — every menu of the mode.
+  beddefense:
+    # The map picker (the mode's category tile opens it).
+    arenas:
+      title: '<dark_gray><bold>Bed Defense'
+      empty:
+        name: '<red>No maps available'
+        lore:
+          - '<gray>Bed defense practice runs on rush'
+          - '<gray>maps — import or build one first.'
+      # <arena>
+      entry-name: '<green><bold><arena>'
+      # <arena> <team> <bases> <status>
+      entry-lore:
+        - '<gray>Mode: <white>Bed Defense'
+        - ''
+        - '<gray>Your base: <white><team> <dark_gray>(<bases> available)'
+        - ''
+        - '<status>'
+      # The flat arena list's button (categories off).
+      flat-button:
+        name: '<red><bold>Bed Defense'
+        lore:
+          - '<gray>Build saved bed defenses'
+          - '<gray>against the clock.'
+          - ''
+          - '<yellow>Click to choose a map'
+    # The setup menu. <arena>
+    title: '<dark_gray><bold>Bed Defense — <arena>'
+    state-on: '<green>on'
+    state-off: '<red>off'
+    defense:
+      name: '<red><bold>Bed Defense'
+      # <name> <author> <blocks> <available>
+      lore:
+        - '<gray>The defense you build this round.'
+        - ''
+        - '<gray>Chosen: <white><name> <dark_gray>by <author>'
+        - '<gray>Blocks: <white><blocks>'
+        - '<dark_gray><available> to choose from'
+        - '<yellow>Click to browse the gallery'
+      # Nothing chosen yet, but there are defenses to pick. <available>
+      lore-none:
+        - '<gray>The defense you build this round.'
+        - ''
+        - '<gray>Chosen: <white>none <dark_gray>(the first available)'
+        - '<dark_gray><available> to choose from'
+        - '<yellow>Click to browse the gallery'
+      lore-none-exist:
+        - '<gray>The defense you build this round.'
+        - ''
+        - '<red>No bed defenses exist yet.'
+        - '<gray>Design the first one below.'
+    mode:
+      name: '<gold><bold>Mode'
+      # <mode>
+      lore:
+        - '<gray>Competitive is a real match start:'
+        - '<gray>sword, armor, generators and shop —'
+        - '<gray>blocks are bought. Practice hands'
+        - '<gray>you the defense''s exact blocks.'
+        - ''
+        - '<gray>Mode: <mode>'
+        - '<gold>Only competitive is ranked.'
+        - '<yellow>Click to switch'
+      option:
+        competitive: '<gold>Competitive'
+        practice: '<white>Practice'
+    strict:
+      name: '<aqua><bold>Strict Order'
+      # <state>
+      lore:
+        - '<gray>Blocks must go down in the'
+        - '<gray>order the designer placed them.'
+        - '<gray>Kept on its own leaderboard.'
+        - ''
+        - '<gray>Currently: <state>'
+        - '<yellow>Click to toggle'
+    shuffle:
+      name: '<light_purple><bold>Shuffle'
+      # <pool>
+      lore:
+        - '<gray>A different defense every round,'
+        - '<gray>drawn from a pool.'
+        - ''
+        - '<gray>Pool: <white><pool>'
+        - '<dark_gray>Practice only.'
+        - '<yellow>Click to cycle'
+      lore-competitive:
+        - '<gray>A different defense every round.'
+        - ''
+        - '<dark_gray>Competitive builds the chosen'
+        - '<dark_gray>defense — shuffle is off.'
+      option:
+        off: 'off'
+        favorites: 'your favorites'
+        public: 'every public defense'
+    timer:
+      name: '<yellow><bold>Timer Start'
+      # <start>
+      lore:
+        - '<gray>When the clock starts.'
+        - ''
+        - '<gray>Starts on: <white><start>'
+        - '<yellow>Click to switch'
+      lore-competitive:
+        - '<gray>When the clock starts.'
+        - ''
+        - '<gray>Starts on: <white><start>'
+        - '<dark_gray>Competitive always times from'
+        - '<dark_gray>the first movement.'
+      option:
+        move: 'first movement'
+        first_block: 'first block placed'
+    new:
+      name: '<green><bold>Design a Defense'
+      # <radius>
+      lore:
+        - '<gray>Open the editor with an empty bed:'
+        - '<gray>build anything within <white><radius>'
+        - '<gray>blocks, name it, save it.'
+        - ''
+        - '<yellow>Click to start designing'
+    edit:
+      name: '<green><bold>Edit One of Mine'
+      # <count>
+      lore:
+        - '<gray>Load one of your saved defenses'
+        - '<gray>into the editor.'
+        - ''
+        - '<gray>Saved: <white><count>'
+        - '<yellow>Click to choose'
+      lore-none:
+        - '<gray>Load one of your saved defenses'
+        - '<gray>into the editor.'
+        - ''
+        - '<dark_gray>You have none saved yet.'
+    start:
+      name: '<green><bold>Start Practice'
+      name-competitive: '<gold><bold>Start Competitive'
+      name-apply: '<green><bold>Apply and Restart'
+      # <arena> <defense> <mode> <strict> <shuffle> <timer> <ranked>
+      lore:
+        - '<gray>Map: <white><arena>'
+        - '<gray>Defense: <white><defense>'
+        - ''
+        - '<yellow>Round rules'
+        - '<dark_gray> • <gray>Mode: <mode>'
+        - '<dark_gray> • <gray>Strict order: <strict>'
+        - '<dark_gray> • <gray>Shuffle: <white><shuffle>'
+        - '<dark_gray> • <gray>Timer starts on: <white><timer>'
+        - ''
+        - '<ranked>'
+        - '<yellow>Click to play'
+      ranked: '<gold>Times are recorded and ranked.'
+      unranked: '<red>Practice rounds are not ranked.'
+      # With no defense anywhere to build, Start becomes this.
+      name-design: '<green><bold>Design the First Defense'
+      lore-design:
+        - '<gray>Nobody has saved a bed defense'
+        - '<gray>yet. Build one around your bed,'
+        - '<gray>save it, and practice it.'
+        - ''
+        - '<yellow>Click to open the editor'
+    # The gallery. <tab>
+    gallery:
+      title: '<dark_gray><bold>Defenses — <tab>'
+      tab:
+        public: 'Public'
+        mine: 'Mine'
+        favorites: 'Favorites'
+      # <tab>
+      tab-name: '<white><bold><tab>'
+      # <count>
+      tab-lore:
+        - '<gray><count> defense(s)'
+        - '<yellow>Click to view'
+      empty:
+        public:
+          name: '<red>Nothing published yet'
+          lore:
+            - '<gray>Design a defense and publish'
+            - '<gray>it to see it here.'
+        mine:
+          name: '<red>You have no defenses'
+          lore:
+            - '<gray>Design one in the editor.'
+        favorites:
+          name: '<red>No favorites yet'
+          lore:
+            - '<gray>Right-click a defense in the'
+            - '<gray>gallery to favorite it.'
+      # <name>
+      tile-name: '<green><bold><name>'
+      tile-name-own: '<aqua><bold><name>'
+      # <name> <author> <blocks> <reach> <likes> <players> <completions>
+      # <best> <record> <record-holder> <visibility> <liked> <favorite>
+      tile-lore:
+        - '<gray>By <white><author> <dark_gray>• <visibility>'
+        - '<gray>Blocks: <white><blocks> <dark_gray>• <gray>Reach: <white><reach>'
+        - ''
+        - '<gold>♥ <likes> <dark_gray>• <gray><players> players <dark_gray>• <gray><completions> builds'
+        - '<gray>Your best: <white><best>'
+        - '<gray>Record: <white><record> <dark_gray><record-holder>'
+        - '<liked> <dark_gray>• <favorite>'
+        - ''
+      visibility-public: '<green>public'
+      visibility-private: '<gray>private'
+      liked-yes: '<gold>Liked'
+      liked-no: '<dark_gray>Not liked'
+      favorite-yes: '<aqua>Favorite'
+      favorite-no: '<dark_gray>Not a favorite'
+      # <count> <material>
+      kind-line: '<dark_gray> · <gray><count>× <material>'
+      actions:
+        - ''
+        - '<yellow>Click to build this one'
+        - '<yellow>Right-click for options'
+      actions-selected:
+        - ''
+        - '<green>Currently chosen'
+        - '<yellow>Right-click for options'
+      actions-edit:
+        - ''
+        - '<yellow>Click to load into the editor'
+        - '<yellow>Right-click for options'
+    # One defense's actions. <name>
+    actions:
+      title: '<dark_gray><bold><name>'
+      play:
+        name: '<green><bold>Build It'
+        # <name>
+        lore:
+          - '<gray>Choose <white><name><gray> for'
+          - '<gray>your next rounds.'
+          - ''
+          - '<yellow>Click to choose'
+      like:
+        name: '<gold><bold>Like'
+        # <state> <likes>
+        lore:
+          - '<gray>Likes rank the public gallery.'
+          - ''
+          - '<gray>Likes: <white><likes>'
+          - '<gray>You: <state>'
+          - '<yellow>Click to toggle'
+      favorite:
+        name: '<aqua><bold>Favorite'
+        # <state>
+        lore:
+          - '<gray>Your private bookmark — and the'
+          - '<gray>pool shuffle can draw from.'
+          - ''
+          - '<gray>You: <state>'
+          - '<yellow>Click to toggle'
+      board:
+        name: '<gold><bold>Leaderboard'
+        # <players> <record> <record-holder> <rank>
+        lore:
+          - '<gray>Players ranked: <white><players>'
+          - '<gray>Record: <white><record>'
+          - '<gray>Held by: <white><record-holder>'
+          - ''
+          - '<gray>You are <white><rank>'
+          - '<yellow>Click for the boards'
+      edit:
+        name: '<green><bold>Edit'
+        lore:
+          - '<gray>Load it into the editor.'
+          - ''
+          - '<yellow>Click to edit'
+      visibility:
+        name: '<white><bold>Visibility'
+        # <state>
+        lore:
+          - '<gray>Public defenses appear in the'
+          - '<gray>gallery for everyone.'
+          - ''
+          - '<gray>Currently: <state>'
+          - '<yellow>Click to toggle'
+      delete:
+        name: '<red><bold>Delete'
+        lore:
+          - '<gray>Remove this defense and every'
+          - '<gray>time recorded on it.'
+          - ''
+          - '<yellow>Click, then click again'
+        name-armed: '<red><bold>Delete — click again'
+        lore-armed:
+          - '<red>This cannot be undone.'
+          - ''
+          - '<yellow>Click again to delete'
+    # The leaderboards. <name>
+    boards:
+      title: '<dark_gray><bold>Bed Defense · boards'
+      title-one: '<dark_gray><bold><name> · boards'
+      # The flat leaderboard list's button (categories off).
+      flat-button:
+        name: '<red><bold>Bed Defense'
+        lore:
+          - '<gray>One board per defense.'
+          - ''
+          - '<yellow>Click to browse'
+      empty:
+        name: '<red>No times yet'
+        lore:
+          - '<gray>Competitive rounds put times here.'
+      # <board>
+      entry-name: '<gold><bold><board>'
+      # <name> <author> <players> <record> <record-holder> <rank>
+      entry-lore:
+        - '<gray>By <white><author>'
+        - '<gray>Players ranked: <white><players>'
+        - '<gray>Record: <white><record>'
+        - '<gray>Held by: <white><record-holder>'
+        - ''
+        - '<gray>You are <white><rank>'
+        - '<yellow>Click for the full board'
+    # The in-arena menu behind the bed defense item.
+    session:
+      title: '<dark_gray><bold>Bed Defense'
+      preview:
+        name: '<aqua><bold>Preview'
+        lore:
+          - '<gray>Watch the defense build itself,'
+          - '<gray>block by block, and step through'
+          - '<gray>it. Mid-attempt this becomes'
+          - '<gray>guided building instead.'
+          - ''
+          - '<dark_gray>Dropping any item does the same.'
+          - '<yellow>Click to preview'
+      guided:
+        name: '<green><bold>Guided Building'
+        lore:
+          - '<gray>The next block glows where it'
+          - '<gray>belongs until you place it.'
+          - '<gray>Untimed.'
+          - ''
+          - '<yellow>Click to start'
+        name-exit: '<green><bold>Stop Guiding'
+        lore-exit:
+          - '<gray>Back to timed attempts.'
+          - ''
+          - '<yellow>Click to stop'
+      defense:
+        name: '<red><bold>Change Defense'
+        # <name>
+        lore:
+          - '<gray>Building: <white><name>'
+          - ''
+          - '<yellow>Click to browse the gallery'
+      settings:
+        name: '<gold><bold>Round Settings'
+        lore:
+          - '<gray>Mode, strict order, shuffle,'
+          - '<gray>timer start, your base.'
+          - ''
+          - '<yellow>Click to open'
+      restart:
+        name: '<yellow><bold>Restart'
+        lore:
+          - '<gray>Reset the arena and the clock.'
+          - ''
+          - '<yellow>Click to restart'
+      edit:
+        name: '<green><bold>Edit This Defense'
+        # <name>
+        lore:
+          - '<gray>Open <white><name><gray> in the editor.'
+          - ''
+          - '<yellow>Click to edit'
+      new:
+        name: '<green><bold>Design a Defense'
+        # <radius>
+        lore:
+          - '<gray>Open the editor with an empty bed.'
+          - ''
+          - '<yellow>Click to start designing'
+      maps:
+        name: '<white><bold>Other Maps'
+        lore:
+          - '<gray>Practice on a different map.'
+          - ''
+          - '<yellow>Click to choose'
+    # The editor's menu behind the same item.
+    editor:
+      title: '<dark_gray><bold>Defense Editor'
+      unnamed: '<dark_gray>(unnamed)'
+      name:
+        name: '<white><bold>Name'
+        # <name>
+        lore:
+          - '<gray>Currently: <white><name>'
+          - ''
+          - '<yellow>Click to rename in chat'
+      save:
+        name: '<green><bold>Save and Play'
+        # <name> <blocks> <visibility>
+        lore:
+          - '<gray>Save <white><name><gray> (<blocks> blocks)'
+          - '<gray>as <visibility><gray>, then build it.'
+          - ''
+          - '<yellow>Click to save'
+        lore-update:
+          - '<gray>Save changes to <white><name>'
+          - '<gray>(<blocks> blocks) as <visibility><gray>,'
+          - '<gray>then build it.'
+          - ''
+          - '<yellow>Click to save'
+      load:
+        name: '<aqua><bold>Load'
+        # <count>
+        lore:
+          - '<gray>Replace the build with one of'
+          - '<gray>your saved defenses.'
+          - ''
+          - '<gray>Saved: <white><count>'
+          - '<yellow>Click to choose'
+        lore-none:
+          - '<gray>Replace the build with one of'
+          - '<gray>your saved defenses.'
+          - ''
+          - '<dark_gray>You have none saved yet.'
+      reset:
+        name: '<red><bold>Clear Build'
+        # <blocks>
+        lore:
+          - '<gray>Remove every block placed'
+          - '<gray>(<white><blocks><gray> so far).'
+          - ''
+          - '<yellow>Click to clear'
+      visibility:
+        name: '<white><bold>Visibility'
+        # <state>
+        lore:
+          - '<gray>Public defenses appear in the'
+          - '<gray>gallery for everyone.'
+          - ''
+          - '<gray>Saves as: <state>'
+          - '<yellow>Click to toggle'
+      exit:
+        name: '<yellow><bold>Leave Editor'
+        lore:
+          - '<gray>Back to building the chosen'
+          - '<gray>defense. Unsaved work is lost.'
+          - ''
+          - '<yellow>Click to leave'
+    # The mode's hotbar items.
+    items:
+      menu:
+        name: '<red><bold>Bed Defense'
+        lore:
+          - '<gray>Right-click for preview, guided'
+          - '<gray>building, settings and the editor.'
+      previous:
+        name: '<white><bold>Previous Block'
+        lore:
+          - '<gray>Right-click to step back'
+      play:
+        name: '<green><bold>Play'
+        lore:
+          - '<gray>Right-click to play the preview'
+      pause:
+        name: '<gold><bold>Pause'
+        lore:
+          - '<gray>Right-click to pause the preview'
+      next:
+        name: '<white><bold>Next Block'
+        lore:
+          - '<gray>Right-click to step forward'
+      guided:
+        name: '<green><bold>Guided Building'
+        lore:
+          - '<gray>Right-click to build it yourself'
+          - '<gray>with the next block pointed out'
+      exit:
+        name: '<red><bold>Leave Preview'
+        lore:
+          - '<gray>Right-click to go back to building'

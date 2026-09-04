@@ -282,7 +282,8 @@ final class AdminCommands {
         } else {
             // Rush composite keys ("map#bed") are valid wipe scopes too.
             if (plugin.templates().get(scope) == null
-                    && plugin.rush().resolveStatsKey(scope) == null) {
+                    && plugin.rush().resolveStatsKey(scope) == null
+                    && plugin.bedDefenses().resolveStatsKey(scope) == null) {
                 msg().problem(sender, "No arena named '" + scope + "'. Use 'all' to wipe everything.");
                 return;
             }

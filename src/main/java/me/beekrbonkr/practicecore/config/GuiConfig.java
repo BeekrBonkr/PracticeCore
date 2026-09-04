@@ -19,9 +19,11 @@ public final class GuiConfig {
 
     private static final String RESOURCE = "guis.yml";
 
+    private final PracticeCorePlugin plugin;
     private final ConfigFile file;
 
     public GuiConfig(PracticeCorePlugin plugin) {
+        this.plugin = plugin;
         this.file = new ConfigFile(plugin, "guis", RESOURCE, Versions.GUIS, GuiConfig::steps,
                 java.util.Set.of("categories.entries"));
     }
@@ -122,6 +124,14 @@ public final class GuiConfig {
         String configured = file.string("categories.entries." + category + ".name", "");
         if (!configured.isBlank()) {
             return configured;
+        }
+        if (category.equals(me.beekrbonkr.practicecore.mode.BedDefenseMode.ID)
+                && plugin.messages() != null) {
+            // The synthetic bed defense category names itself from messages.yml.
+            String named = plugin.messages().raw("beddefense.category-name");
+            if (!named.isBlank()) {
+                return named;
+            }
         }
         String cleaned = category.replace('_', ' ').replace('-', ' ');
         return cleaned.isEmpty() ? category

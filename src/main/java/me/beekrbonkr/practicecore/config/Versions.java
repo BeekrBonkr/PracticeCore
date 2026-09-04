@@ -11,23 +11,25 @@ package me.beekrbonkr.practicecore.config;
 public final class Versions {
 
     /**
-     * config.yml — admin-editable. v6 raises the untouched competitive
-     * defender lineup from 0 to 4 per team, so the competitive team-wipe
-     * preset has a lineup to pin.
+     * config.yml — admin-editable. v7 adds the bed defense practice section
+     * (additive); v6 raised the untouched competitive defender lineup from 0
+     * to 4 per team, so the competitive team-wipe preset has a lineup to pin.
      */
-    public static final int CONFIG = 6;
+    public static final int CONFIG = 7;
 
     /**
-     * messages.yml — admin-editable. v7 adds the rush TNT modifier, the rush
-     * preset tiles and the leaderboard category picker (all additive).
+     * messages.yml — admin-editable. v8 adds bed defense practice; v7 the
+     * rush TNT modifier, the rush preset tiles and the leaderboard category
+     * picker (all additive).
      */
-    public static final int MESSAGES = 7;
+    public static final int MESSAGES = 8;
 
     /**
-     * guis.yml — admin-editable menu layout. v4 adds the rush TNT modifier
-     * and the preset row along the rush menu's bottom border (additive).
+     * guis.yml — admin-editable menu layout. v5 adds the bed defense menus;
+     * v4 the rush TNT modifier and the preset row along the rush menu's
+     * bottom border (both additive).
      */
-    public static final int GUIS = 4;
+    public static final int GUIS = 5;
 
     /** sounds.yml — admin-editable sound cues. */
     public static final int SOUNDS = 1;
@@ -46,6 +48,9 @@ public final class Versions {
 
     /** snapshots/&lt;uuid&gt;.yml — plugin-owned crash-recovery state. */
     public static final int SNAPSHOT = 1;
+
+    /** defenses/&lt;id&gt;.yml — plugin-owned, player-authored bed defenses. */
+    public static final int DEFENSE = 1;
 
     /** Key used in admin-facing files. */
     public static final String KEY = "config-version";

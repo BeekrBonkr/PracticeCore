@@ -56,6 +56,21 @@ public interface Mode {
     }
 
     /**
+     * The session-aware form of {@link #startsTimerOnMove(me.beekrbonkr.practicecore.PCConfig)}:
+     * modes whose timer rule depends on what the player is doing right now
+     * (a preview flies around without starting anything) answer here. The
+     * default is the config-only answer.
+     */
+    default boolean startsTimerOnMove(PracticeCorePlugin plugin, PracticeSession session) {
+        return startsTimerOnMove(plugin.pcConfig());
+    }
+
+    /** Session-aware form of {@link #startsTimerOnFirstBlock(me.beekrbonkr.practicecore.PCConfig)}. */
+    default boolean startsTimerOnFirstBlock(PracticeCorePlugin plugin, PracticeSession session) {
+        return startsTimerOnFirstBlock(plugin.pcConfig());
+    }
+
+    /**
      * Whether this run may set a personal best and rank on the leaderboard.
      * The default is the template's blocks-required rule; modes with
      * advantage-granting modifiers tighten it.

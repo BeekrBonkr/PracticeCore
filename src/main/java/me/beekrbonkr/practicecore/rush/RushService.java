@@ -882,7 +882,8 @@ public final class RushService {
         }
     }
 
-    private int nearbyDrops(Location spot, Material material) {
+    /** Items of a material lying within the generator cap radius of a spot. */
+    public int nearbyDrops(Location spot, Material material) {
         double radius = plugin.pcConfig().rushGeneratorCapRadius();
         double radiusSq = radius * radius;
         int total = 0;

@@ -80,6 +80,9 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
                 keys.add(template.name());
             }
         }
+        for (var defense : plugin.bedDefenses().store().all()) {
+            keys.addAll(plugin.bedDefenses().statsKeys(defense));
+        }
         return keys;
     }
 
@@ -112,11 +115,13 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
                 "behind", record != null && rank > 1
                         ? "+" + TimeFormat.precise(best - record.millis())
                         : raw("gui.none")));
-        if (template == null) {
+        var defense = plugin.bedDefenses().resolveStatsKey(arena);
+        if (template == null && defense == null) {
             lines.addAll(lore("gui.stats.entry-lore-missing", "arena", arena));
         }
         return ItemBuilder.of(template != null
-                        ? plugin.modes().of(template).menuIcon(plugin, template) : Material.PAPER)
+                        ? plugin.modes().of(template).menuIcon(plugin, template)
+                        : defense != null ? defense.getKey().icon() : Material.PAPER)
                 .name(name("gui.stats.entry-name", "arena", display))
                 .lore(lines)
                 .glow(rank == 1)
@@ -139,12 +144,33 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
             return template.displayName();
         }
         var rush = plugin.rush().resolveStatsKey(key);
-        return rush != null ? plugin.rush().displayFor(rush.getKey(), rush.getValue()) : key;
+        if (rush != null) {
+            return plugin.rush().displayFor(rush.getKey(), rush.getValue());
+        }
+        var defense = plugin.bedDefenses().resolveStatsKey(key);
+        return defense != null
+                ? plugin.bedDefenses().displayFor(defense.getKey(), defense.getValue()) : key;
     }
 
     @Override
     protected void onEntryClick(Map.Entry<String, Long> entry, InventoryClickEvent event) {
         ArenaTemplate template = templateFor(entry.getKey());
+        var defense = plugin.bedDefenses().resolveStatsKey(entry.getKey());
+        if (template == null && defense != null) {
+            if (!viewer.hasPermission("practicecore.leaderboard")) {
+                deny();
+                plugin.messages().send(viewer, "permission.leaderboard");
+                return;
+            }
+            click();
+            later(() -> new ArenaLeaderboardMenu(plugin, viewer, this, entry.getKey(),
+                    plugin.bedDefenses().displayFor(defense.getKey(), defense.getValue()),
+                    defense.getKey().icon(), () -> {
+                viewer.closeInventory();
+                plugin.bedDefenses().play(viewer, defense.getKey());
+            }).open());
+            return;
+        }
         if (template == null) {
             deny();
             plugin.messages().send(viewer, "stats.arena-gone");

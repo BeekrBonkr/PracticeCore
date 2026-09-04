@@ -34,8 +34,13 @@ public final class ChatPrompts implements Listener {
 
     /** Asks in chat and captures the next line the player types. */
     public void prompt(Player player, String question, Consumer<String> callback) {
+        prompt(player, Component.text(question, NamedTextColor.GOLD), callback);
+    }
+
+    /** The same, with a question already styled (player-facing prompts read messages.yml). */
+    public void prompt(Player player, Component question, Consumer<String> callback) {
         pending.put(player.getUniqueId(), callback);
-        player.sendMessage(Component.text(question, NamedTextColor.GOLD));
+        player.sendMessage(question);
         player.sendMessage(Component.text("Type your answer in chat, or 'cancel' to abort.",
                 NamedTextColor.GRAY));
     }
