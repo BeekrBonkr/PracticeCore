@@ -73,6 +73,15 @@ public final class DefenseFrame {
                 && loc.getBlockZ() == foot.getBlockZ();
     }
 
+    /**
+     * True for any block lower than the bed. Nothing may be built there: a
+     * defense that digs under the bed would be carved into the island, and
+     * a player tunnelling below it during a round is bypassing the defense.
+     */
+    public boolean belowBed(Location loc) {
+        return loc.getBlockY() < head.getBlockY();
+    }
+
     /** Chebyshev distance from the nearer of the two bed blocks. */
     public int distance(Location loc) {
         Location foot = foot();

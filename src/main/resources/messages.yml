@@ -361,6 +361,8 @@ beddefense:
   # guis.yml categories.entries has no 'beddefense' entry of its own).
   category-name: 'Bed Defense'
   not-a-rush-map: '<prefix><red>Bed defense practice needs a rush map with a team base and bed.'
+  # Action bar. Blocks may never go lower than the bed, in the editor or a round.
+  below-bed: '<red>Nothing goes under the bed'
   no-defense: '<prefix><yellow>There is no bed defense to build yet — design one in the editor, or pick one from the gallery.'
   forced-edit: '<prefix><yellow>No bed defenses exist yet, so you are in the <white>editor<yellow>: build one around your bed and save it.'
   # <id>
