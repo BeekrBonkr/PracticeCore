@@ -1,15 +1,20 @@
 package me.beekrbonkr.practicecore.gui.admin;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
+import me.beekrbonkr.practicecore.gui.Button;
 import me.beekrbonkr.practicecore.gui.Menu;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
 /**
  * "Are you sure?" for arena deletion — the GUI twin of the command's
- * {@code confirm} argument. Layout and text are fixed — see {@link SetupGui}.
+ * {@code confirm} argument, in the confirm-menu shape (style guide R57):
+ * the subject in the middle, the destructive choice in red on the left,
+ * the safe one in yellow on the right, and Close also keeping the arena.
+ * Text is fixed — see {@link SetupGui}.
  */
 final class ConfirmDeleteMenu extends Menu {
 
@@ -32,32 +37,40 @@ final class ConfirmDeleteMenu extends Menu {
 
     @Override
     protected void render() {
-        set(13, SetupGui.button(Material.RED_BED, arena, NamedTextColor.WHITE,
-                "Deleting removes the arena folder,",
-                "its schematic, its leaderboard and",
-                "every recorded time on it.",
-                "This cannot be undone."));
-        set(11, SetupGui.button(Material.LIME_CONCRETE, "Delete Forever", NamedTextColor.GREEN),
-                event -> {
-                    click();
-                    later(this::delete);
-                });
-        set(15, SetupGui.button(Material.RED_CONCRETE, "Keep It", NamedTextColor.RED),
-                event -> {
-                    click();
-                    later(() -> parent().open());
-                });
+        border();
+        set(13, Button.of(plugin, Material.RED_BED)
+                .name(Component.text(arena, NamedTextColor.WHITE, TextDecoration.BOLD))
+                .line(SetupGui.gray("Deleting removes the arena folder,"))
+                .line(SetupGui.gray("its schematic, its leaderboard and"))
+                .line(SetupGui.gray("every recorded time on it."))
+                .line(Component.text("This cannot be undone.", NamedTextColor.RED))
+                .build());
+        set(11, SetupGui.control(plugin, Material.LAVA_BUCKET, "Delete Forever", NamedTextColor.RED)
+                .hint("confirm")
+                .build(), event -> {
+            sound("menu.select");
+            later(this::delete);
+        });
+        set(15, SetupGui.control(plugin, Material.BARRIER, "Keep It", NamedTextColor.YELLOW,
+                        "Nothing changes.")
+                .hint("cancel")
+                .build(), event -> {
+            click();
+            later(() -> parent().open());
+        });
+        closeButton(navSlot("admin.close", 8));
     }
 
     private void delete() {
         viewer.closeInventory();
         boolean deleted = plugin.templates().deleteCompletely(arena, wiped ->
-                viewer.sendMessage(Component.text("Leaderboard for '" + arena + "' cleared ("
-                        + wiped + " player record(s)).", NamedTextColor.GREEN)));
-        viewer.sendMessage(deleted
-                ? Component.text("Deleted arena '" + arena + "'. Clearing its recorded times…",
-                        NamedTextColor.GREEN)
-                : Component.text("Could not delete '" + arena + "'.", NamedTextColor.RED));
+                plugin.messages().done(viewer, "Leaderboard for " + arena + " cleared ("
+                        + wiped + " player record(s))."));
+        if (deleted) {
+            plugin.messages().done(viewer, "Deleted arena " + arena + ". Clearing its recorded times.");
+        } else {
+            plugin.messages().problem(viewer, "Could not delete " + arena + ".");
+        }
         new ArenaListMenu(plugin, viewer).open();
     }
 }
