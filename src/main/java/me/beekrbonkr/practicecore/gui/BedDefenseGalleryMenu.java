@@ -4,7 +4,6 @@ import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.beddefense.BedDefense;
 import me.beekrbonkr.practicecore.beddefense.BedDefenseService;
 import me.beekrbonkr.practicecore.beddefense.BlockKinds;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import me.beekrbonkr.practicecore.util.TimeFormat;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
@@ -12,6 +11,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -82,10 +82,7 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
 
     @Override
     protected ItemStack emptyIcon() {
-        return ItemBuilder.of(emptyMaterial())
-                .name(name("gui.beddefense.gallery.empty." + tab.key() + ".name"))
-                .lore(lore("gui.beddefense.gallery.empty." + tab.key() + ".lore"))
-                .build();
+        return emptyIcon("gui.beddefense.gallery.empty." + tab.key());
     }
 
     @Override
@@ -99,8 +96,7 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
         List<Component> lines = new ArrayList<>(lore("gui.beddefense.gallery.tile-lore",
                 TagResolver.resolver(
                         plugin.messages().ref("visibility", defense.published()
-                                ? "gui.beddefense.gallery.visibility-public"
-                                : "gui.beddefense.gallery.visibility-private"),
+                                ? "label.state.public" : "label.state.private"),
                         plugin.messages().ref("liked", defense.likedBy(viewer.getUniqueId())
                                 ? "gui.beddefense.gallery.liked-yes"
                                 : "gui.beddefense.gallery.liked-no"),
@@ -116,7 +112,7 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
                 "completions", String.valueOf(defense.completions()),
                 "best", best >= 0 ? TimeFormat.precise(best) : raw("gui.none"),
                 "record", record != null ? TimeFormat.precise(record.millis()) : raw("gui.none"),
-                "record-holder", record != null ? record.displayName() : ""));
+                "record-holder", record != null ? record.displayName() : raw("gui.none")));
         // What it is made of, most of first.
         List<Map.Entry<Material, Integer>> kinds = new ArrayList<>(defense.kindCounts().entrySet());
         kinds.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
@@ -125,15 +121,22 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
                     "count", String.valueOf(entry.getValue()),
                     "material", BlockKinds.pretty(entry.getKey())));
         }
-        lines.addAll(lore(purpose == Purpose.EDIT ? "gui.beddefense.gallery.actions-edit"
-                : selected ? "gui.beddefense.gallery.actions-selected"
-                : "gui.beddefense.gallery.actions"));
-        return ItemBuilder.of(defense.icon())
-                .name(name(own ? "gui.beddefense.gallery.tile-name-own"
-                        : "gui.beddefense.gallery.tile-name", "name", defense.name()))
+        boolean chosen = selected && purpose == Purpose.SELECT;
+        if (chosen) {
+            lines.add(Component.empty());
+            lines.add(name("gui.beddefense.gallery.selected-line"));
+        }
+        Button tile = Button.of(plugin, defense.icon())
+                .name(own ? "gui.beddefense.gallery.tile-name-own"
+                        : "gui.beddefense.gallery.tile-name", "name", defense.name())
                 .lore(lines)
-                .glow(selected && purpose == Purpose.SELECT)
-                .build();
+                .glow(chosen);
+        if (purpose == Purpose.EDIT) {
+            tile.hint("edit");
+        } else if (!chosen) {
+            tile.hint("select");
+        }
+        return tile.rightHint("options").build();
     }
 
     @Override
@@ -166,12 +169,12 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
         if (purpose == Purpose.EDIT) {
             return; // only your own can be edited — no other tab applies
         }
-        tabButton(Tab.PUBLIC, plugin.guis().slot("beddefense-gallery.tabs.public", 46),
+        tabButton(Tab.PUBLIC, plugin.guis().slot("beddefense-gallery.tabs.public", footerSlot(0)),
                 plugin.guis().buttonMaterial("beddefense-gallery.tabs.public", Material.BOOKSHELF));
-        tabButton(Tab.MINE, plugin.guis().slot("beddefense-gallery.tabs.mine", 47),
-                plugin.guis().buttonMaterial("beddefense-gallery.tabs.mine", Material.WRITABLE_BOOK));
-        tabButton(Tab.FAVORITES, plugin.guis().slot("beddefense-gallery.tabs.favorites", 51),
-                plugin.guis().buttonMaterial("beddefense-gallery.tabs.favorites", Material.NETHER_STAR));
+        tabButton(Tab.MINE, plugin.guis().slot("beddefense-gallery.tabs.mine", footerSlot(1)),
+                Material.PLAYER_HEAD);
+        tabButton(Tab.FAVORITES, plugin.guis().slot("beddefense-gallery.tabs.favorites", footerSlot(2)),
+                plugin.guis().buttonMaterial("beddefense-gallery.tabs.favorites", Material.AMETHYST_SHARD));
     }
 
     private void tabButton(Tab which, int slot, Material material) {
@@ -181,12 +184,24 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
             case MINE -> plugin.bedDefenses().store().ownedBy(viewer.getUniqueId()).size();
             case FAVORITES -> plugin.bedDefenses().favorites(viewer.getUniqueId()).size();
         };
-        set(slot, ItemBuilder.of(material)
-                .name(name("gui.beddefense.gallery.tab-name",
-                        "tab", raw("gui.beddefense.gallery.tab." + which.key())))
-                .lore(lore("gui.beddefense.gallery.tab-lore", "count", String.valueOf(count)))
-                .glow(current)
-                .build(), event -> {
+        Button button = Button.of(plugin, material)
+                .name("gui.beddefense.gallery.tab-name",
+                        "tab", raw("gui.beddefense.gallery.tab." + which.key()))
+                .lore(current ? "gui.beddefense.gallery.tab-lore-current"
+                        : "gui.beddefense.gallery.tab-lore", "count", String.valueOf(count))
+                .glow(current);
+        if (!current) {
+            button.hint("view");
+        }
+        ItemStack item = button.build();
+        if (which == Tab.MINE) {
+            // The Mine tab wears the viewer's own head.
+            if (item.getItemMeta() instanceof SkullMeta skull) {
+                skull.setOwningPlayer(viewer);
+                item.setItemMeta(skull);
+            }
+        }
+        set(slot, item, event -> {
             if (current) {
                 deny();
                 return;

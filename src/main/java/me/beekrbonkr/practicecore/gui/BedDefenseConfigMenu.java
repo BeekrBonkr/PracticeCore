@@ -7,13 +7,11 @@ import me.beekrbonkr.practicecore.mode.RushMode;
 import me.beekrbonkr.practicecore.rush.RushMapData;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
 import me.beekrbonkr.practicecore.util.DyeColors;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 
 import java.util.List;
 import java.util.UUID;
@@ -57,6 +55,10 @@ public final class BedDefenseConfigMenu extends Menu {
         return plugin.guis().buttonMaterial("beddefense.buttons." + button, def);
     }
 
+    private Material competitiveIcon(String button, Material def) {
+        return plugin.guis().material("beddefense.buttons." + button + ".material-competitive", def);
+    }
+
     private UUID id() {
         return viewer.getUniqueId();
     }
@@ -80,12 +82,15 @@ public final class BedDefenseConfigMenu extends Menu {
         newButton(slot("new", 30));
         editButton(slot("edit", 32));
         startButton(slot("start", 40));
-        backButton(plugin.guis().slot("beddefense.back", 45));
-        closeButton(plugin.guis().slot("beddefense.close", 53));
+        nav("beddefense");
     }
 
     private void save() {
         plugin.bedDefenses().saveSelection(id(), selection);
+    }
+
+    private TagResolver state(boolean on) {
+        return plugin.messages().ref("state", on ? "label.state.on" : "label.state.off");
     }
 
     // ----------------------------------------------------------------- team
@@ -101,12 +106,18 @@ public final class BedDefenseConfigMenu extends Menu {
         Material wool = current == null ? Material.WHITE_WOOL
                 : DyeColors.wool(DyeColors.parse(current.name(), DyeColor.WHITE));
         RushMapData.TeamBase chosen = current;
-        set(slot, ItemBuilder.of(wool)
-                .name(name("gui.rush.team.name"))
-                .lore(lore("gui.rush.team.lore",
-                        "team", teamName, "count", String.valueOf(teams.size())))
-                .build(), event -> {
-            if (teams.size() <= 1) {
+        boolean single = teams.size() <= 1;
+        Button button = Button.of(plugin, wool)
+                .name("gui.beddefense.team.name")
+                .lore("gui.beddefense.team.lore",
+                        "team", teamName, "count", String.valueOf(teams.size()));
+        if (single) {
+            button.disabledKeepIcon("gui.reason.only-one-team");
+        } else {
+            button.hint("cycle").rightHint("cycle-back");
+        }
+        set(slot, button.build(), event -> {
+            if (single) {
                 deny();
                 return;
             }
@@ -129,20 +140,25 @@ public final class BedDefenseConfigMenu extends Menu {
     private void defenseButton(int slot) {
         BedDefense defense = plugin.bedDefenses().store().get(selection.defense());
         List<BedDefense> playable = plugin.bedDefenses().store().playableBy(id());
-        ItemBuilder builder = ItemBuilder.of(defense != null ? defense.icon() : icon("defense", Material.RED_BED))
-                .name(name("gui.beddefense.defense.name"));
+        Button button = Button.of(plugin, defense != null ? defense.icon() : icon("defense", Material.RED_BED))
+                .name("gui.beddefense.defense.name");
         if (defense != null) {
-            builder.lore(lore("gui.beddefense.defense.lore",
+            button.lore("gui.beddefense.defense.lore",
                     "name", defense.name(),
                     "author", defense.authorName(),
                     "blocks", String.valueOf(defense.blocks().size()),
-                    "available", String.valueOf(playable.size())));
+                    "available", String.valueOf(playable.size()));
         } else {
-            builder.lore(lore(playable.isEmpty()
+            button.lore(playable.isEmpty()
                     ? "gui.beddefense.defense.lore-none-exist" : "gui.beddefense.defense.lore-none",
-                    "available", String.valueOf(playable.size())));
+                    "available", String.valueOf(playable.size()));
         }
-        set(slot, builder.glow(defense != null).build(), event -> {
+        if (playable.isEmpty()) {
+            button.disabled("gui.reason.no-defenses");
+        } else {
+            button.glow(defense != null).hint("open");
+        }
+        set(slot, button.build(), event -> {
             if (playable.isEmpty()) {
                 deny();
                 return;
@@ -158,17 +174,17 @@ public final class BedDefenseConfigMenu extends Menu {
 
     private void modeButton(int slot) {
         boolean competitive = selection.competitive();
-        set(slot, ItemBuilder.of(competitive
-                        ? icon("mode", Material.NETHER_STAR)
-                        : plugin.guis().material("beddefense.buttons.mode.material-practice",
-                                Material.WHITE_WOOL))
-                .name(name("gui.beddefense.mode.name"))
-                .lore(lore("gui.beddefense.mode.lore", plugin.messages().ref("mode", competitive
+        set(slot, Button.of(plugin, competitive
+                        ? competitiveIcon("mode", Material.NETHER_STAR)
+                        : icon("mode", Material.LEVER))
+                .name("gui.beddefense.mode.name")
+                .lore("gui.beddefense.mode.lore", plugin.messages().ref("mode", competitive
                         ? "gui.beddefense.mode.option.competitive"
-                        : "gui.beddefense.mode.option.practice")))
+                        : "gui.beddefense.mode.option.practice"))
                 .glow(competitive)
+                .hint("toggle")
                 .build(), event -> {
-            click();
+            sound(competitive ? "menu.toggle-off" : "menu.toggle-on");
             selection = selection.withCompetitive(!competitive);
             save();
             refresh();
@@ -177,13 +193,13 @@ public final class BedDefenseConfigMenu extends Menu {
 
     private void strictButton(int slot) {
         boolean strict = selection.strictOrder();
-        set(slot, ItemBuilder.of(icon("strict", Material.COMPARATOR))
-                .name(name("gui.beddefense.strict.name"))
-                .lore(lore("gui.beddefense.strict.lore", plugin.messages().ref("state",
-                        strict ? "gui.beddefense.state-on" : "gui.beddefense.state-off")))
+        set(slot, Button.of(plugin, icon("strict", Material.CHAIN))
+                .name("gui.beddefense.strict.name")
+                .lore("gui.beddefense.strict.lore", state(strict))
                 .glow(strict)
+                .hint("toggle")
                 .build(), event -> {
-            click();
+            sound(strict ? "menu.toggle-off" : "menu.toggle-on");
             selection = selection.withStrictOrder(!strict);
             save();
             refresh();
@@ -193,13 +209,16 @@ public final class BedDefenseConfigMenu extends Menu {
     private void shuffleButton(int slot) {
         BedDefenseSelection.Shuffle shuffle = selection.shuffle();
         boolean pinned = selection.competitive();
-        set(slot, ItemBuilder.of(icon("shuffle", Material.ENDER_EYE))
-                .name(name("gui.beddefense.shuffle.name"))
-                .lore(lore(pinned ? "gui.beddefense.shuffle.lore-competitive"
-                                : "gui.beddefense.shuffle.lore",
-                        plugin.messages().ref("pool", shuffle.messageKey())))
-                .glow(!pinned && shuffle != BedDefenseSelection.Shuffle.OFF)
-                .build(), event -> {
+        Button button = Button.of(plugin, icon("shuffle", Material.ENDER_EYE))
+                .name("gui.beddefense.shuffle.name")
+                .lore(pinned ? "gui.beddefense.shuffle.lore-competitive" : "gui.beddefense.shuffle.lore",
+                        plugin.messages().ref("pool", shuffle.messageKey()));
+        if (pinned) {
+            button.disabled("gui.reason.pinned-competitive");
+        } else {
+            button.glow(shuffle != BedDefenseSelection.Shuffle.OFF).hint("cycle");
+        }
+        set(slot, button.build(), event -> {
             if (pinned) {
                 deny();
                 return;
@@ -214,13 +233,17 @@ public final class BedDefenseConfigMenu extends Menu {
     private void timerButton(int slot) {
         BedDefenseSelection.TimerStart start = selection.timerStart();
         boolean pinned = selection.competitive();
-        set(slot, ItemBuilder.of(icon("timer", Material.CLOCK))
-                .name(name("gui.beddefense.timer.name"))
-                .lore(lore(pinned ? "gui.beddefense.timer.lore-competitive"
-                                : "gui.beddefense.timer.lore",
+        Button button = Button.of(plugin, icon("timer", Material.REPEATER))
+                .name("gui.beddefense.timer.name")
+                .lore(pinned ? "gui.beddefense.timer.lore-competitive" : "gui.beddefense.timer.lore",
                         plugin.messages().ref("start", (pinned
-                                ? BedDefenseSelection.TimerStart.MOVE : start).messageKey())))
-                .build(), event -> {
+                                ? BedDefenseSelection.TimerStart.MOVE : start).messageKey()));
+        if (pinned) {
+            button.disabled("gui.reason.pinned-competitive");
+        } else {
+            button.hint("cycle");
+        }
+        set(slot, button.build(), event -> {
             if (pinned) {
                 deny();
                 return;
@@ -235,10 +258,11 @@ public final class BedDefenseConfigMenu extends Menu {
     // --------------------------------------------------------------- editor
 
     private void newButton(int slot) {
-        set(slot, ItemBuilder.of(icon("new", Material.CRAFTING_TABLE))
-                .name(name("gui.beddefense.new.name"))
-                .lore(lore("gui.beddefense.new.lore",
-                        "radius", String.valueOf(plugin.pcConfig().bedDefenseEditRadius())))
+        set(slot, Button.of(plugin, icon("new", Material.CRAFTING_TABLE))
+                .name("gui.beddefense.new.name")
+                .lore("gui.beddefense.new.lore",
+                        "radius", String.valueOf(plugin.pcConfig().bedDefenseEditRadius()))
+                .hint("open")
                 .build(), event -> {
             click();
             plugin.bedDefenses().requestEdit(id(), null);
@@ -251,11 +275,16 @@ public final class BedDefenseConfigMenu extends Menu {
 
     private void editButton(int slot) {
         List<BedDefense> mine = plugin.bedDefenses().store().ownedBy(id());
-        set(slot, ItemBuilder.of(icon("edit", Material.WRITABLE_BOOK))
-                .name(name("gui.beddefense.edit.name"))
-                .lore(lore(mine.isEmpty() ? "gui.beddefense.edit.lore-none" : "gui.beddefense.edit.lore",
-                        "count", String.valueOf(mine.size())))
-                .build(), event -> {
+        Button button = Button.of(plugin, icon("edit", Material.WRITABLE_BOOK))
+                .name("gui.beddefense.edit.name")
+                .lore(mine.isEmpty() ? "gui.beddefense.edit.lore-none" : "gui.beddefense.edit.lore",
+                        "count", String.valueOf(mine.size()));
+        if (mine.isEmpty()) {
+            button.disabled("gui.reason.nothing-saved");
+        } else {
+            button.hint("open");
+        }
+        set(slot, button.build(), event -> {
             if (mine.isEmpty()) {
                 deny();
                 return;
@@ -276,9 +305,10 @@ public final class BedDefenseConfigMenu extends Menu {
         List<BedDefense> playable = plugin.bedDefenses().store().playableBy(id());
         BedDefense chosen = plugin.bedDefenses().store().get(selection.defense());
         if (playable.isEmpty()) {
-            set(slot, ItemBuilder.of(icon("start", Material.LIME_DYE))
-                    .name(name("gui.beddefense.start.name-design"))
-                    .lore(lore("gui.beddefense.start.lore-design"))
+            set(slot, Button.of(plugin, icon("new", Material.CRAFTING_TABLE))
+                    .name("gui.beddefense.start.name-design")
+                    .lore("gui.beddefense.start.lore-design")
+                    .hint("open")
                     .build(), event -> {
                 click();
                 plugin.bedDefenses().requestEdit(id(), null);
@@ -293,16 +323,18 @@ public final class BedDefenseConfigMenu extends Menu {
         String defenseLabel = chosen != null ? chosen.name()
                 : selection.shuffle() != BedDefenseSelection.Shuffle.OFF && !competitive
                         ? raw(selection.shuffle().messageKey()) : playable.get(0).name();
-        set(slot, ItemBuilder.of(icon("start", competitive ? Material.NETHER_STAR : Material.LIME_DYE))
-                .name(name(inSession() ? "gui.beddefense.start.name-apply"
+        set(slot, Button.of(plugin, competitive
+                        ? competitiveIcon("start", Material.NETHER_STAR)
+                        : icon("start", Material.LIME_DYE))
+                .name(inSession() ? "gui.beddefense.start.name-apply"
                         : competitive ? "gui.beddefense.start.name-competitive"
-                        : "gui.beddefense.start.name"))
-                .lore(lore("gui.beddefense.start.lore", TagResolver.resolver(
+                        : "gui.beddefense.start.name")
+                .lore("gui.beddefense.start.lore", TagResolver.resolver(
                         plugin.messages().ref("mode", competitive
                                 ? "gui.beddefense.mode.option.competitive"
                                 : "gui.beddefense.mode.option.practice"),
                         plugin.messages().ref("strict", selection.strictOrder()
-                                ? "gui.beddefense.state-on" : "gui.beddefense.state-off"),
+                                ? "label.state.on" : "label.state.off"),
                         plugin.messages().ref("shuffle", competitive
                                 ? BedDefenseSelection.Shuffle.OFF.messageKey()
                                 : selection.shuffle().messageKey()),
@@ -312,8 +344,8 @@ public final class BedDefenseConfigMenu extends Menu {
                         plugin.messages().ref("ranked", competitive
                                 ? "gui.beddefense.start.ranked" : "gui.beddefense.start.unranked")),
                         "arena", template.displayName(),
-                        "defense", defenseLabel))
-                .glow(competitive)
+                        "defense", defenseLabel)
+                .hint("play")
                 .build(), event -> {
             click();
             save();
