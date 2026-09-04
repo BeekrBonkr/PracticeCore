@@ -41,6 +41,11 @@ config file format versions (`config-version`) migrate automatically on start.
   team showed white wool on the base picker and undyed leather on defender
   bots. Every string-to-color lookup now goes through one helper that folds
   the MBedwars and chat-color aliases onto dye colors.
+- **The block list follows your shop.** With MBedwars installed the blocks a
+  defense may use are read off the item shop (every plain block product it
+  sells), so a shop that stocks end stone bricks instead of end stone gets
+  bricks in the editor and in practice kits; `beddefense.blocks` in
+  `config.yml` is the fallback without it.
 - `config.yml` v7 (`beddefense:` section), `messages.yml` v8 and `guis.yml`
   v5, all additive. The mode SPI gained session-aware timer-start hooks.
 

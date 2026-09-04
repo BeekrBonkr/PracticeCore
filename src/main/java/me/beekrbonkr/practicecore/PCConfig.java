@@ -112,6 +112,7 @@ public final class PCConfig {
     private final me.beekrbonkr.practicecore.rush.RushSelection.BotArmor rushBotsCompetitiveArmor;
     private final me.beekrbonkr.practicecore.rush.RushSelection.BotSword rushBotsCompetitiveSword;
 
+    private final boolean bedDefenseBlocksFromShop;
     private final List<Material> bedDefenseBlocks;
     private final boolean bedDefenseWaterBuckets;
     private final int bedDefenseEditRadius;
@@ -351,9 +352,11 @@ public final class PCConfig {
                         + "' under beddefense.blocks is not a block this server knows — skipped.");
             }
         }
+        this.bedDefenseBlocksFromShop = cfg.getBoolean("beddefense.blocks-from-shop", true);
         this.bedDefenseBlocks = defenseBlocks.isEmpty()
                 ? List.of(Material.WHITE_WOOL, Material.OAK_PLANKS, Material.END_STONE,
-                        Material.GLASS, Material.OBSIDIAN, Material.TERRACOTTA, Material.LADDER)
+                        Material.END_STONE_BRICKS, Material.GLASS, Material.OBSIDIAN,
+                        Material.TERRACOTTA, Material.LADDER)
                 : List.copyOf(defenseBlocks);
         this.bedDefenseWaterBuckets = cfg.getBoolean("beddefense.water-buckets", true);
         this.bedDefenseEditRadius = Math.clamp(cfg.getInt("beddefense.edit-radius", 10), 1, 32);
@@ -899,7 +902,12 @@ public final class PCConfig {
 
     // ----------------------------------------------------------- bed defense
 
-    /** The block kinds a bed defense may be made of (normalized, see BlockKinds). */
+    /** Whether the block list is read off the MBedwars shop when it is present. */
+    public boolean bedDefenseBlocksFromShop() {
+        return bedDefenseBlocksFromShop;
+    }
+
+    /** The configured block kinds (normalized, see BlockKinds) — the fallback list. */
     public List<Material> bedDefenseBlocks() {
         return bedDefenseBlocks;
     }
