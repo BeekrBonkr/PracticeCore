@@ -47,6 +47,9 @@ public final class RushListener implements Listener {
             return;
         }
         PracticeSession session = plugin.sessions().get(player.getUniqueId());
+        if (session != null && session.mode() instanceof me.beekrbonkr.practicecore.mode.BedDefenseMode) {
+            return; // bed defense generators: resources for the shop, nothing more
+        }
         if (session == null || !(session.mode() instanceof RushMode mode)) {
             event.setCancelled(true); // someone else's objective, or no session
             return;
@@ -94,7 +97,8 @@ public final class RushListener implements Listener {
         }
         Player player = event.getPlayer();
         PracticeSession session = plugin.sessions().get(player.getUniqueId());
-        if (session == null || !(session.mode() instanceof RushMode)) {
+        if (session == null || !(session.mode() instanceof RushMode
+                || session.mode() instanceof me.beekrbonkr.practicecore.mode.BedDefenseMode)) {
             return;
         }
         SessionState state = session.state();

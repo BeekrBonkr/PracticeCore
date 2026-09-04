@@ -46,7 +46,16 @@ public final class LeaderboardCategoryMenu extends PagedMenu<String> {
                     .add(template);
         }
         byCategory = grouped;
-        return List.copyOf(grouped.keySet());
+        List<String> categories = new ArrayList<>(grouped.keySet());
+        if (!plugin.bedDefenses().store().isEmpty()) {
+            categories.add(me.beekrbonkr.practicecore.mode.BedDefenseMode.ID);
+        }
+        return List.copyOf(categories);
+    }
+
+    private boolean bedDefense(String category) {
+        return category.equals(me.beekrbonkr.practicecore.mode.BedDefenseMode.ID)
+                && !byCategory.containsKey(category);
     }
 
     @Override
@@ -59,6 +68,16 @@ public final class LeaderboardCategoryMenu extends PagedMenu<String> {
 
     @Override
     protected ItemStack icon(String category) {
+        if (bedDefense(category)) {
+            Material configured = plugin.guis().categoryIcon(category);
+            return ItemBuilder.of(configured != null ? configured : Material.RED_BED)
+                    .name(name("gui.leaderboards.categories.entry-name",
+                            "category", plugin.guis().categoryName(category)))
+                    .lore(lore("gui.leaderboards.categories.entry-lore",
+                            "category", plugin.guis().categoryName(category),
+                            "count", String.valueOf(plugin.bedDefenses().store().all().size())))
+                    .build();
+        }
         List<ArenaTemplate> arenas = byCategory.getOrDefault(category, List.of());
         return ItemBuilder.of(categoryIcon(category, arenas))
                 .name(name("gui.leaderboards.categories.entry-name",
@@ -82,6 +101,10 @@ public final class LeaderboardCategoryMenu extends PagedMenu<String> {
     @Override
     protected void onEntryClick(String category, InventoryClickEvent event) {
         click();
+        if (bedDefense(category)) {
+            later(() -> new BedDefenseBoardsMenu(plugin, viewer, this).open());
+            return;
+        }
         later(() -> new LeaderboardMenu(plugin, viewer, this, category).open());
     }
 }

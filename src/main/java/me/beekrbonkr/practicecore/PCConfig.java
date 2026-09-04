@@ -112,6 +112,21 @@ public final class PCConfig {
     private final me.beekrbonkr.practicecore.rush.RushSelection.BotArmor rushBotsCompetitiveArmor;
     private final me.beekrbonkr.practicecore.rush.RushSelection.BotSword rushBotsCompetitiveSword;
 
+    private final List<Material> bedDefenseBlocks;
+    private final boolean bedDefenseWaterBuckets;
+    private final int bedDefenseEditRadius;
+    private final int bedDefenseMaxPerPlayer;
+    private final int bedDefenseNameMaxLength;
+    private final boolean bedDefenseEmeraldForObsidian;
+    private final Material bedDefenseItemMaterial;
+    private final int bedDefenseItemSlot;
+    private final int bedDefensePreviewStepTicks;
+    private final Map<String, Material> bedDefensePreviewMaterials;
+    private final Map<String, Integer> bedDefensePreviewSlots;
+    private final int bedDefenseGuideBlinkTicks;
+    private final int bedDefenseHologramTicks;
+    private final double bedDefenseHologramHideDistance;
+
     private final int mlgPlatformRadius;
     private final Material mlgPlatformMaterial;
     private final int mlgPadRadius;
@@ -323,6 +338,47 @@ public final class PCConfig {
         }
         this.rushBotsCompetitiveSword = competitiveSword;
 
+        List<Material> defenseBlocks = new ArrayList<>();
+        for (String name : cfg.getStringList("beddefense.blocks")) {
+            Material parsed = Material.matchMaterial(name);
+            if (parsed != null && parsed.isBlock()) {
+                Material kind = me.beekrbonkr.practicecore.beddefense.BlockKinds.normalize(parsed);
+                if (!defenseBlocks.contains(kind)) {
+                    defenseBlocks.add(kind);
+                }
+            } else if (plugin != null) {
+                plugin.getLogger().warning("config.yml: '" + name
+                        + "' under beddefense.blocks is not a block this server knows — skipped.");
+            }
+        }
+        this.bedDefenseBlocks = defenseBlocks.isEmpty()
+                ? List.of(Material.WHITE_WOOL, Material.OAK_PLANKS, Material.END_STONE,
+                        Material.GLASS, Material.OBSIDIAN, Material.TERRACOTTA, Material.LADDER)
+                : List.copyOf(defenseBlocks);
+        this.bedDefenseWaterBuckets = cfg.getBoolean("beddefense.water-buckets", true);
+        this.bedDefenseEditRadius = Math.clamp(cfg.getInt("beddefense.edit-radius", 10), 1, 32);
+        this.bedDefenseMaxPerPlayer = Math.clamp(cfg.getInt("beddefense.max-per-player", 25), 1, 1000);
+        this.bedDefenseNameMaxLength = Math.clamp(cfg.getInt("beddefense.name-max-length", 24), 1, 64);
+        this.bedDefenseEmeraldForObsidian = cfg.getBoolean("beddefense.emerald-for-obsidian", true);
+        this.bedDefenseItemMaterial = material(cfg.getString("beddefense.item.material"), Material.RED_BED);
+        this.bedDefenseItemSlot = Math.clamp(cfg.getInt("beddefense.item.slot", 7), 0, 8);
+        this.bedDefensePreviewStepTicks = Math.clamp(cfg.getInt("beddefense.preview.step-ticks", 8), 1, 200);
+        Map<String, Material> previewMaterials = new LinkedHashMap<>();
+        Map<String, Integer> previewSlots = new LinkedHashMap<>();
+        readPreviewItem(cfg, previewMaterials, previewSlots, "previous", Material.ARROW, 2);
+        readPreviewItem(cfg, previewMaterials, previewSlots, "play", Material.LIME_DYE, 3);
+        readPreviewItem(cfg, previewMaterials, previewSlots, "pause", Material.ORANGE_DYE, 3);
+        readPreviewItem(cfg, previewMaterials, previewSlots, "next", Material.SPECTRAL_ARROW, 4);
+        readPreviewItem(cfg, previewMaterials, previewSlots, "guided", Material.COMPASS, 6);
+        readPreviewItem(cfg, previewMaterials, previewSlots, "exit", Material.BARRIER, 8);
+        this.bedDefensePreviewMaterials = Map.copyOf(previewMaterials);
+        this.bedDefensePreviewSlots = Map.copyOf(previewSlots);
+        this.bedDefenseGuideBlinkTicks = Math.clamp(cfg.getInt("beddefense.guided.blink-ticks", 8), 2, 200);
+        this.bedDefenseHologramTicks = (int) Math.round(
+                Math.clamp(cfg.getDouble("beddefense.hologram.seconds", 8.0), 0.0, 600.0) * 20);
+        this.bedDefenseHologramHideDistance =
+                Math.max(0, cfg.getDouble("beddefense.hologram.hide-distance", 4.0));
+
         this.mlgPlatformRadius = Math.max(0, cfg.getInt("mlg.platform-radius", 1));
         this.mlgPlatformMaterial = material(cfg.getString("mlg.platform-material"), Material.GLASS);
         this.mlgPadRadius = Math.max(0, cfg.getInt("mlg.pad-radius", 5));
@@ -388,6 +444,14 @@ public final class PCConfig {
         this.titleFadeOutMs = Math.max(0, cfg.getInt("effects.title-fade-out-ms", 400));
         this.titleHoldMs = Math.max(0, cfg.getInt("effects.title-hold-ms", 15000));
         this.titleDelayTicks = Math.max(0, cfg.getInt("effects.title-delay-ticks", 10));
+    }
+
+    private void readPreviewItem(FileConfiguration cfg, Map<String, Material> materials,
+                                 Map<String, Integer> slots, String item,
+                                 Material defMaterial, int defSlot) {
+        materials.put(item, material(cfg.getString("beddefense.preview.items." + item + ".material"),
+                defMaterial));
+        slots.put(item, Math.clamp(cfg.getInt("beddefense.preview.items." + item + ".slot", defSlot), 0, 8));
     }
 
     private void readSpectateTool(FileConfiguration cfg, Map<String, Material> materials,
@@ -831,6 +895,66 @@ public final class PCConfig {
 
     public me.beekrbonkr.practicecore.rush.RushSelection.BotSword rushBotsCompetitiveSword() {
         return rushBotsCompetitiveSword;
+    }
+
+    // ----------------------------------------------------------- bed defense
+
+    /** The block kinds a bed defense may be made of (normalized, see BlockKinds). */
+    public List<Material> bedDefenseBlocks() {
+        return bedDefenseBlocks;
+    }
+
+    public boolean bedDefenseWaterBuckets() {
+        return bedDefenseWaterBuckets;
+    }
+
+    public int bedDefenseEditRadius() {
+        return bedDefenseEditRadius;
+    }
+
+    public int bedDefenseMaxPerPlayer() {
+        return bedDefenseMaxPerPlayer;
+    }
+
+    public int bedDefenseNameMaxLength() {
+        return bedDefenseNameMaxLength;
+    }
+
+    public boolean bedDefenseEmeraldForObsidian() {
+        return bedDefenseEmeraldForObsidian;
+    }
+
+    public Material bedDefenseItemMaterial() {
+        return bedDefenseItemMaterial;
+    }
+
+    public int bedDefenseItemSlot() {
+        return bedDefenseItemSlot;
+    }
+
+    public int bedDefensePreviewStepTicks() {
+        return bedDefensePreviewStepTicks;
+    }
+
+    public Material bedDefensePreviewItemMaterial(String item) {
+        return bedDefensePreviewMaterials.getOrDefault(item, Material.PAPER);
+    }
+
+    public int bedDefensePreviewItemSlot(String item) {
+        return bedDefensePreviewSlots.getOrDefault(item, 4);
+    }
+
+    public int bedDefenseGuideBlinkTicks() {
+        return bedDefenseGuideBlinkTicks;
+    }
+
+    /** Ticks the bed hologram lingers; 0 disables it. */
+    public int bedDefenseHologramTicks() {
+        return bedDefenseHologramTicks;
+    }
+
+    public double bedDefenseHologramHideDistance() {
+        return bedDefenseHologramHideDistance;
     }
 
     // ------------------------------------------------------------------- mlg

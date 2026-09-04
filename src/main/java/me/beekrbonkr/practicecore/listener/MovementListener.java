@@ -57,7 +57,7 @@ public final class MovementListener implements Listener {
             return;
         }
         if (state == SessionState.READY
-                && session.mode().startsTimerOnMove(plugin.pcConfig())
+                && session.mode().startsTimerOnMove(plugin, session)
                 && !sameBlock(to, session.spawn())) {
             session.setState(SessionState.ACTIVE);
             session.startTimer();

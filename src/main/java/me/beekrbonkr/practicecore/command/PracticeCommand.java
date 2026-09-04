@@ -31,18 +31,20 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
 
     /** Every menu a player can open directly with /practice menu <menu>. */
     private static final List<String> MENUS = List.of(
-            "main", "arenas", "categories", "leaderboards", "stats", "settings");
+            "main", "arenas", "categories", "leaderboards", "stats", "settings", "beddefense");
 
     private final PracticeCorePlugin plugin;
     private final SetupCommands setup;
     private final AdminCommands admin;
     private final RushCommands rush;
+    private final BedDefenseCommands bedDefense;
 
     public PracticeCommand(PracticeCorePlugin plugin) {
         this.plugin = plugin;
         this.setup = new SetupCommands(plugin);
         this.admin = new AdminCommands(plugin);
         this.rush = new RushCommands(plugin);
+        this.bedDefense = new BedDefenseCommands(plugin);
     }
 
     private Messages msg() {
@@ -64,6 +66,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
             case "setup" -> setup.setup(sender, args);
             case "edit" -> setup.edit(sender, args);
             case "rush" -> rush.rush(sender, args);
+            case "beddefense", "bd", "defense" -> bedDefense.beddefense(sender, args);
             case "arena" -> admin.arena(sender, args);
             case "pb" -> admin.pb(sender, args);
             case "item" -> admin.item(sender, args);
@@ -223,6 +226,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
             }
             case "stats" -> new StatsMenu(plugin, player, null).open();
             case "settings" -> new SettingsMenu(plugin, player, null).open();
+            case "beddefense" -> new me.beekrbonkr.practicecore.gui.BedDefenseArenaMenu(plugin, player, null).open();
             default -> msg().send(player, "menu.unknown",
                     "menu", args[1],
                     "menus", String.join(", ", MENUS));
@@ -281,14 +285,20 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
             }
             key = template.name();
             display = template.displayName();
+        } else if (args[1].equalsIgnoreCase(me.beekrbonkr.practicecore.mode.BedDefenseMode.ID)) {
+            msg().send(sender, "leaderboard.beddefense-pick-board");
+            return;
         } else {
             var rushBoard = plugin.rush().resolveStatsKey(args[1].toLowerCase(Locale.ROOT));
-            if (rushBoard == null) {
+            var defenseBoard = plugin.bedDefenses().resolveStatsKey(args[1].toLowerCase(Locale.ROOT));
+            if (rushBoard == null && defenseBoard == null) {
                 msg().send(sender, "arena.unknown", "arena", args[1]);
                 return;
             }
             key = args[1].toLowerCase(Locale.ROOT);
-            display = plugin.rush().displayFor(rushBoard.getKey(), rushBoard.getValue());
+            display = rushBoard != null
+                    ? plugin.rush().displayFor(rushBoard.getKey(), rushBoard.getValue())
+                    : plugin.bedDefenses().displayFor(defenseBoard.getKey(), defenseBoard.getValue());
         }
         List<LeaderboardService.Entry> top = plugin.leaderboards()
                 .top(key, plugin.pcConfig().leaderboardSize());
@@ -445,6 +455,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
                     ? filter(plugin.templates().names(), args[1]) : List.of();
             case "setup" -> setup.complete(sender, args);
             case "rush" -> rush.complete(sender, args);
+            case "beddefense", "bd", "defense" -> bedDefense.complete(sender, args);
             case "arena" -> admin.completeArena(sender, args);
             case "pb" -> admin.completePb(sender, args);
             case "item" -> args.length == 2 && sender.hasPermission("practicecore.item")

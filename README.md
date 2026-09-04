@@ -29,6 +29,9 @@ At a glance, the five modes:
 - **rush**: an empty bedwars map (hand-built or imported straight from
   MBedwars) with every objective armed: enemy bed, emerald, diamond, first one
   wins, each with its own leaderboard.
+- **beddefense**: build a saved bed defense at your base against the clock,
+  from a gallery of player-designed defenses with likes, favorites, a
+  block-by-block preview, guided building and an in-world editor.
 - **mlg**: water-bucket clutches from a random drop height; the score is your
   streak.
 - **pvpbot**: an endless spar against an AI opponent that strafes, combos,
@@ -38,7 +41,7 @@ At a glance, the five modes:
 
 - [How it works](#how-it-works)
 - [The modes](#the-modes): [bridging](#bridging) · [bedbreak](#bedbreak) ·
-  [rush](#rush) · [mlg](#mlg) · [pvpbot](#pvpbot) ([Tuning the bot](#tuning-the-bot))
+  [rush](#rush) · [beddefense](#beddefense) · [mlg](#mlg) · [pvpbot](#pvpbot) ([Tuning the bot](#tuning-the-bot))
 - [Spectator mode](#spectator-mode)
 - [Configuration](#configuration)
 - [Messages](#messages)
@@ -256,6 +259,92 @@ hand-built rush arenas play fine without it (dealer clicks then explain the
 shop is unavailable). Generator pacing is configurable under `rush:` in
 `config.yml` (`iron-interval-ticks`, `gold-interval-ticks`,
 `generator-item-cap`, `base-generators-default`).
+
+### beddefense
+
+Bed defense practice: you spawn at a team base of a rush map, your own bed
+standing, and build a saved **bed defense** around it as fast as you can. The
+mode has no arenas of its own, every rush map is a bed defense map, and the
+Play menu lists it as its own **Bed Defense** category (with categories off,
+a button on the flat arena list). Picking a map opens the bed defense setup
+menu, not the rush one.
+
+The defenses are designed by players, not shipped: the plugin comes with none
+on purpose, and the first player in is put straight into the **editor** to
+build one. A defense is the blocks placed within ten blocks of the bed, in
+the order they were placed, stored relative to the bed so it fits any base on
+any map, rotated with the bed's facing. When a defense is chosen for a round
+its footprint is **carved out of the map**, so a design made on an open
+island fits a bed tucked against a wall.
+
+**A round is complete** when every block of the defense stands with the right
+kind of material at the right spot, in any order. Kinds, not exact blocks:
+any wool is wool, any planks are planks, any terracotta is terracotta, so
+your wool-color setting and shop purchases all count. Only water **source**
+blocks count (flowing water never does), and a waterlogged ladder is a
+ladder. **Strict order** is a toggle that requires the designer's sequence,
+kept on its own boards.
+
+Two ways to play, chosen in the setup menu:
+
+- **Competitive**: a real match opening: sword, team-dyed leather, the
+  base's iron and gold generators and the mirrored MBedwars shop; blocks are
+  bought. When the defense needs obsidian the map's emerald generators run
+  too. The timer starts on first movement, shuffle is off, and these are the
+  only rounds recorded and ranked. Without MBedwars there is no shop to buy
+  from, so competitive plays as practice and says so.
+- **Practice**: the same start with the defense's exact blocks already in the
+  kit (one water bucket per water block). Rearrange the kit once and it deals
+  the same way every time. Extras: **shuffle** (a different defense every
+  round from your favorites or the public gallery) and **timer start** (first
+  movement or first block).
+
+Boards are kept **per defense**, not per map (`beddefense#<id>`, plus
+`beddefense#<id>#strict`), and appear under their own category in the
+leaderboards menu; the gallery tile shows your best. Records and personal
+bests broadcast exactly like every other mode.
+
+**Preview**: drop any item (or use the bed defense item's menu) before an
+attempt starts and the defense assembles itself block by block in front of
+you while you fly around it, with hotbar items to play, pause, step forward
+and back, switch to guided building, or leave. A hologram over the bed says
+so at the start of each round and fades after a few seconds or when you walk
+up. Nothing can be placed or broken during a preview.
+
+**Guided building**: the next block in the designer's order floats over its
+spot, glowing and blinking, until you place it. Untimed. Dropping an item
+*mid-attempt* switches to guided building instead of a preview, the timer
+is cancelled but the blocks you already placed stay, and the preview hotbar
+has a guided item too. Coming from a competitive round you are handed the
+blocks. Finishing a guided build resets for a timed attempt.
+
+**The editor**: from the setup menu (a fresh bed, or one of your own saved
+defenses), from the in-arena menu, or forced on you when no defense exists
+yet. You get full stacks of every allowed block (`beddefense.blocks` in
+`config.yml`, plus water buckets) that refill as you build, may place only
+within the radius, and break only your own blocks, instantly. The bed
+defense item opens the editor menu: **name** (asked in chat), **save** (and
+go play it), **load** one of yours, **clear**, **visibility** and **leave**.
+Saving refuses a defense that already exists, any published one or one of
+your own with the exact same blocks (order ignored), with a title, a chat
+line, and clickable **Play it / Like it / Favorite it** actions for the
+original. Your own saved defenses can be reshaped under the same id, keeping
+their likes and boards.
+
+**The gallery** (the setup menu's defense button, or the in-arena menu) has
+three tabs: **Public**, sorted by likes, then by how many different players
+have built it; **Mine**; and **Favorites**. Left-click chooses a defense,
+right-click opens its actions: like (public, one per player), favorite (your
+private bookmark, also a shuffle pool), its boards, and, on your own, edit,
+publish/unpublish and delete (two clicks). Admins may delete anyone's.
+`/practice beddefense` opens the map picker; `play|like|favorite|publish|
+unpublish|edit|delete <id>` and `list` do the same from chat.
+
+Defenses live in `defenses/<id>.yml`, one file each, shared by everyone;
+`/practice reload` re-reads them. Tuning is under `beddefense:` in
+`config.yml`: the block list, the editor radius, defenses per player, name
+length, preview speed, the marker's blink, the hologram, and the hotbar
+items.
 
 ### mlg
 
@@ -747,6 +836,7 @@ re-read the file.
 | `/practice setup …` | `practicecore.setup` | Arena configuration wizard |
 | `/practice edit <arena>` | `practicecore.setup` | Reopen a saved arena |
 | `/practice rush import\|importall\|list` | `practicecore.setup` | Pull rush maps from MBedwars (one, or all matching a shape) |
+| `/practice beddefense [play\|like\|favorite\|publish\|unpublish\|edit\|delete <id>\|list]` | `practicecore.use` | Bed defense practice: maps, gallery actions, editor |
 | `/practice arena …` | `practicecore.arena` | Administer saved arenas |
 | `/practice item [player]` | `practicecore.item` | Get the hotbar menu item |
 | `/practice pb reset <player> [arena\|all]` | `practicecore.pb.reset` | Wipe personal bests |
