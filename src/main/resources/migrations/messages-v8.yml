@@ -12,13 +12,13 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 9
+config-version: 8
 
 prefix: '<gold>Practice <dark_gray>» '
 
 general:
   players-only: '<prefix><red>That has to be run in-game.'
-  # <usage> — always "/practice sub <required> [optional]"; never prose (style guide R14).
+  # <usage>
   usage: '<prefix><red>Usage: <white><usage>'
 
 permission:
@@ -587,18 +587,12 @@ help:
 # ---------------------------------------------------------------- admin text
 
 admin:
-  # Free-form admin output. Color is severity (style guide R4): gray info,
-  # red failure, green done, yellow caution.
   # <note>
   note: '<prefix><gray><note>'
   # <note>
   problem: '<prefix><red><note>'
   # <note>
   done: '<prefix><green><note>'
-  # <note> — a caution that is not a failure, e.g. "this needs confirm".
-  warn: '<prefix><yellow><note>'
-  # <command> — the second line of every chat-side confirmation (R58).
-  confirm-hint: '<prefix><gray>Run <white><command><gray> to go ahead.'
 
 setup:
   # Action bar while the wizard pastes an arena — big maps take a moment.
@@ -718,111 +712,15 @@ setup:
 
 # ------------------------------------------------------------ GUI menu text
 
-# Shared labels used by menus AND by chat, boards and broadcasts.
-label:
-  # Boolean state words. The word carries the meaning; the color decorates (R31).
-  state:
-    on: '<green>on'
-    off: '<red>off'
-    shown: '<green>shown'
-    hidden: '<red>hidden'
-    public: '<green>public'
-    private: '<gray>private'
-    selected: '<green>selected'
-  # Rush objective names — boards, stats, broadcasts and the rush menus.
-  objective:
-    bed: 'Bed Rush'
-    emerald: 'Emerald Rush'
-    diamond: 'Diamond Rush'
-    team_wipe: 'Team Wipe'
-  # PvP bot difficulty presets, keyed by preset id. `long` carries a
-  # tagline for menus; `short` is the bare name for the sidebar.
-  difficulty:
-    long:
-      rookie: '<green>Rookie <dark_gray>— slow hands, soft aim'
-      brawler: '<yellow>Brawler <dark_gray>— a fair fight'
-      veteran: '<red>Veteran <dark_gray>— sharp and relentless'
-      demon: '<dark_red>Demon <dark_gray>— frame-perfect menace'
-      unfair: '<dark_purple><bold>Unfair</bold> <dark_gray>— it read your habits before you had them'
-      suffer: '<red><bold>Suffer</bold> <dark_gray>— nothing it does is impossible; all of it is'
-      custom: '<white>Custom <dark_gray>— your own mix'
-    short:
-      rookie: '<green>Rookie'
-      brawler: '<yellow>Brawler'
-      veteran: '<red>Veteran'
-      demon: '<dark_red>Demon'
-      unfair: '<dark_purple><bold>Unfair'
-      suffer: '<red><bold>Suffer'
-      custom: '<white>Custom'
-
 gui:
-  none: '<dark_gray>—'
-  # Navigation chrome, identical in every menu (R45).
-  back: '<yellow><bold>Back'
+  none: '—'
+  back: '<yellow>Back'
   back-lore: '<gray>Return to the previous menu.'
-  close: '<red><bold>Close'
-  close-lore: '<gray>Close this menu.'
-  previous-page: '<yellow><bold>Previous Page'
-  next-page: '<yellow><bold>Next Page'
+  close: '<red>Close'
+  previous-page: '<yellow>Previous page'
+  next-page: '<yellow>Next page'
   # <page> <pages>
-  page: '<white><bold>Page <page> <gray>of <pages>'
-  # The closed click-hint vocabulary (R32). Every clickable control ends
-  # with one of these; menus append them, so lore keys never contain them.
-  hint:
-    click:
-      open: '<yellow>Click to open'
-      select: '<yellow>Click to select'
-      play: '<yellow>Click to play'
-      view: '<yellow>Click to view'
-      toggle: '<yellow>Click to toggle'
-      cycle: '<yellow>Click to cycle'
-      confirm: '<yellow>Click to confirm'
-      cancel: '<yellow>Click to cancel'
-      close: '<yellow>Click to close'
-      run: '<yellow>Click to run'
-      delete: '<yellow>Click to delete'
-      edit: '<yellow>Click to edit'
-      save: '<yellow>Click to save'
-      buy: '<yellow>Click to buy'
-      rename: '<yellow>Click to rename'
-      leave: '<yellow>Click to leave'
-      restart: '<yellow>Click to restart'
-    right:
-      cycle-back: '<yellow>Right-click to cycle back'
-      view: '<yellow>Right-click to view'
-      options: '<yellow>Right-click for options'
-      delete: '<yellow>Right-click to delete'
-      load: '<yellow>Right-click to load'
-      prompt: '<yellow>Right-click to type a name'
-    shift:
-      pin: '<dark_gray>Shift-click to pin to Quick Buy'
-      unpin: '<dark_gray>Shift-click to unpin from Quick Buy'
-  # The last lore line of a control that cannot act right now / is locked (R51, R52).
-  # <reason>
-  unavailable: '<red>Unavailable: <gray><reason>'
-  # <reason>
-  locked: '<red>Locked: <gray><reason>'
-  # Short lowercase reasons, inserted into the two lines above.
-  reason:
-    only-one-team: 'only one team base'
-    pinned-competitive: 'pinned by competitive mode'
-    no-defense: 'no defense chosen'
-    nothing-to-load: 'nothing to load'
-    nothing-saved: 'nothing saved yet'
-    already-selected: 'already selected'
-    needs-spawn: 'needs a spawn first'
-    needs-trigger: 'needs a finish trigger first'
-    no-blocks: 'place some blocks first'
-    wrong-phase: 'not while previewing'
-    cannot-afford: 'cannot afford'
-    no-presets: 'no difficulty presets configured'
-    no-arenas: 'no arenas you can play'
-    no-permission: 'no permission'
-    # <node>
-    needs-node: 'needs <white><node>'
-    gone: 'no longer exists'
-    offline: 'went offline'
-    own-defense: 'you cannot like your own'
+  page: '<white>Page <page> <gray>of <pages>'
 
   main:
     title: '<dark_gray><bold>Practice'
@@ -1118,6 +1016,13 @@ gui:
   rush:
     # <arena>
     title: '<dark_gray><bold>Rush — <arena>'
+    objective:
+      # Plain labels — used in boards, stats and broadcasts.
+      option:
+        bed: 'Bed Rush'
+        emerald: 'Emerald Rush'
+        diamond: 'Diamond Rush'
+        team_wipe: 'Team Wipe'
     team:
       name: '<white><bold>Team Base'
       # <team> <count>
@@ -1444,6 +1349,23 @@ gui:
         - ''
         - '<gray>Difficulty: <level>'
         - '<yellow>Click to cycle'
+      option:
+        rookie: '<green>Rookie <dark_gray>— slow hands, soft aim'
+        brawler: '<yellow>Brawler <dark_gray>— a fair fight'
+        veteran: '<red>Veteran <dark_gray>— sharp and relentless'
+        demon: '<dark_red>Demon <dark_gray>— frame-perfect menace'
+        unfair: '<dark_purple><bold>Unfair</bold> <dark_gray>— it read your habits before you had them'
+        suffer: '<red><bold>Suffer</bold> <dark_gray>— nothing it does is impossible; all of it is'
+        custom: '<light_purple>Custom <dark_gray>— your own mix'
+      # The same names without their tagline, for the sidebar's Difficulty line.
+      short:
+        rookie: '<green>Rookie'
+        brawler: '<yellow>Brawler'
+        veteran: '<red>Veteran'
+        demon: '<dark_red>Demon'
+        unfair: '<dark_purple><bold>Unfair'
+        suffer: '<red><bold>Suffer'
+        custom: '<light_purple>Custom'
     # The kit gallery.
     kits:
       title: '<dark_gray><bold>Kits'

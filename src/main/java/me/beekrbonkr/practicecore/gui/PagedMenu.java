@@ -1,7 +1,6 @@
 package me.beekrbonkr.practicecore.gui;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -31,8 +30,20 @@ public abstract class PagedMenu<T> extends Menu {
     /** Shown in the middle of the grid when there is nothing to list. */
     protected abstract ItemStack emptyIcon();
 
-    /** Hook for extra items in the nav row (slots 46, 47, 51, 52). */
+    /**
+     * Hook for extra items on the nav row. Use {@link #footerSlot} so they
+     * land on the four cells paging never touches (R43).
+     */
     protected void renderFooter() {
+    }
+
+    /**
+     * The nav-row cells free for a menu's own buttons: 0 and 1 from the left
+     * (secondary), 2 and 3 from the right (primary).
+     */
+    protected int footerSlot(int index) {
+        int[] columns = {1, 2, 7, 6};
+        return bottomRow() + columns[Math.clamp(index, 0, 3)];
     }
 
     @Override
@@ -62,9 +73,10 @@ public abstract class PagedMenu<T> extends Menu {
         }
 
         if (page > 0) {
-            set(plugin.guis().slot("nav.previous", 48),
-                    ItemBuilder.of(plugin.guis().buttonMaterial("nav.previous", Material.SPECTRAL_ARROW))
-                    .name(name("gui.previous-page"))
+            set(navSlot("nav.previous", 3),
+                    Button.of(plugin, plugin.guis().buttonMaterial("nav.previous", Material.SPECTRAL_ARROW))
+                    .name("gui.previous-page")
+                    .hint("open")
                     .build(), event -> {
                 click();
                 page--;
@@ -72,9 +84,10 @@ public abstract class PagedMenu<T> extends Menu {
             });
         }
         if (page < pages - 1) {
-            set(plugin.guis().slot("nav.next", 50),
-                    ItemBuilder.of(plugin.guis().buttonMaterial("nav.next", Material.SPECTRAL_ARROW))
-                    .name(name("gui.next-page"))
+            set(navSlot("nav.next", 5),
+                    Button.of(plugin, plugin.guis().buttonMaterial("nav.next", Material.SPECTRAL_ARROW))
+                    .name("gui.next-page")
+                    .hint("open")
                     .build(), event -> {
                 click();
                 page++;
@@ -82,15 +95,15 @@ public abstract class PagedMenu<T> extends Menu {
             });
         }
         if (pages > 1) {
-            set(plugin.guis().slot("nav.page", 49),
-                    ItemBuilder.of(plugin.guis().buttonMaterial("nav.page", Material.MAP), page + 1)
-                    .name(name("gui.page",
+            set(navSlot("nav.page", 4),
+                    Button.of(plugin, plugin.guis().buttonMaterial("nav.page", Material.MAP), page + 1)
+                    .name("gui.page",
                             "page", String.valueOf(page + 1),
-                            "pages", String.valueOf(pages)))
+                            "pages", String.valueOf(pages))
                     .build());
         }
-        backButton(plugin.guis().slot("nav.back", 45));
-        closeButton(plugin.guis().slot("nav.close", 53));
+        backButton(navSlot("nav.back", 0));
+        closeButton(navSlot("nav.close", 8));
         renderFooter();
     }
 

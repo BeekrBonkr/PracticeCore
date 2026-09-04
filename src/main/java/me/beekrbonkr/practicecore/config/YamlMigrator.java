@@ -168,6 +168,45 @@ public final class YamlMigrator {
         return parents;
     }
 
+    /**
+     * Drops every leaf still equal to what an older build shipped, so the
+     * top-up rewrites it with the current default (comments included). A
+     * value the admin edited never matches and therefore stands. Keys the
+     * old build shipped that the new one no longer has are dropped too, when
+     * untouched. Used when a release rewords a whole file — the alternative
+     * is an admin's file silently keeping every old string forever.
+     *
+     * @param old the previous version's bundled copy, from {@code migrations/}
+     */
+    public static void resetUntouched(FileConfiguration cfg, YamlConfiguration old) {
+        if (old == null) {
+            return;
+        }
+        for (String key : old.getKeys(true)) {
+            if (old.isConfigurationSection(key) || key.equals(Versions.KEY)) {
+                continue;
+            }
+            if (!cfg.contains(key, true)) {
+                continue;
+            }
+            Object mine = cfg.get(key);
+            Object theirs = old.get(key);
+            boolean same = mine == null ? theirs == null
+                    : mine instanceof List<?> a && theirs instanceof List<?> b ? a.equals(b)
+                    : String.valueOf(mine).equals(String.valueOf(theirs));
+            if (same) {
+                cfg.set(key, null);
+            }
+        }
+        // A section emptied out by the resets would otherwise linger as "{}".
+        for (String key : new ArrayList<>(cfg.getKeys(true))) {
+            if (cfg.isConfigurationSection(key)
+                    && cfg.getConfigurationSection(key).getKeys(false).isEmpty()) {
+                cfg.set(key, null);
+            }
+        }
+    }
+
     /** Moves a value to a new path, leaving the old one removed. */
     public static void move(FileConfiguration cfg, String from, String to) {
         if (!cfg.contains(from, true)) {

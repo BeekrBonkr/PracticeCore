@@ -10,22 +10,19 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 6
+config-version: 5
 
 # The glass pane border drawn around every menu.
 filler:
   material: GRAY_STAINED_GLASS_PANE
 
-# Navigation, identical in every menu: Back bottom-left, Close bottom-right,
-# paging in the bottom-middle, whatever the row count. Slots here and under a
-# menu's own back:/close: are OVERRIDES — leave them out and the plugin puts
-# each control in its style-guide position for that menu's height.
+# Navigation row shared by every paged menu (six-row menus).
 nav:
-  back: {material: ARROW}
-  previous: {material: SPECTRAL_ARROW}
-  page: {material: MAP}
-  next: {material: SPECTRAL_ARROW}
-  close: {material: BARRIER}
+  back: {slot: 45, material: ARROW}
+  previous: {slot: 48, material: SPECTRAL_ARROW}
+  page: {slot: 49, material: MAP}
+  next: {slot: 50, material: SPECTRAL_ARROW}
+  close: {slot: 53, material: BARRIER}
   # Icon shown in the middle of an empty list.
   empty-material: COBWEB
 
@@ -51,6 +48,8 @@ main:
 # The per-player settings menu.
 settings:
   rows: 3
+  back: {slot: 18}
+  close: {slot: 26}
   buttons:
     night-vision: {enabled: true, slot: 11, material: GOLDEN_CARROT}
     # The wool button's icon always shows the currently selected color.
@@ -66,6 +65,8 @@ settings:
 # preset strip along the bottom border for one-click starts.
 rush:
   rows: 6
+  back: {slot: 45}
+  close: {slot: 53}
   buttons:
     # Row 1 — where the run starts. The icon is always the team's own wool.
     team: {slot: 13}
@@ -106,11 +107,15 @@ rush:
 # preset's own (or its outermost material).
 rush-defenses:
   rows: 5
+  back: {slot: 36}
+  close: {slot: 44}
 
 # The PvP bot settings menu, opened by the in-arena settings item.
 # The kit and gear buttons' icons follow the current selection.
 pvpbot:
   rows: 5
+  back: {slot: 36}
+  close: {slot: 40}
   buttons:
     kit: {slot: 11}
     preset: {slot: 13, material: NETHER_STAR}
@@ -129,6 +134,8 @@ pvpbot:
 # The PvP kit gallery (left-click selects, right-click previews).
 pvpbot-kits:
   rows: 5
+  back: {slot: 36}
+  close: {slot: 40}
 
 # The full-inventory kit preview window.
 pvpbot-preview:
@@ -139,6 +146,7 @@ pvpbot-preview:
 # the MBedwars HypixelV2 shop: Quick Buy first, page tabs beside it, a
 # separator row marking the open tab, and the items in the grid below.
 rushshop:
+  close: {slot: 49}
   # The Quick Buy tab's icon.
   quickbuy: {material: NETHER_STAR}
   # The separator row: the plain pane, and the pane under the open tab.
@@ -154,6 +162,8 @@ rushshop:
 # and under which rules, the editor, then go.
 beddefense:
   rows: 6
+  back: {slot: 45}
+  close: {slot: 53}
   buttons:
     # Row 1 — the team base. The icon is always the team's own wool.
     team: {slot: 13}
@@ -183,6 +193,8 @@ beddefense-gallery:
 # One defense's actions (right-click on a gallery tile).
 beddefense-actions:
   rows: 4
+  back: {slot: 27}
+  close: {slot: 35}
   buttons:
     # The play tile's icon is the defense's own.
     play: {slot: 11}
@@ -197,6 +209,7 @@ beddefense-actions:
 # The in-arena menu behind the bed defense hotbar item while playing.
 beddefense-session:
   rows: 4
+  close: {slot: 31}
   buttons:
     preview: {slot: 10, material: SPYGLASS}
     guided: {slot: 11, material: COMPASS}
@@ -210,6 +223,7 @@ beddefense-session:
 # The editor's menu behind the same item while designing.
 beddefense-editor:
   rows: 4
+  close: {slot: 31}
   buttons:
     name: {slot: 10, material: NAME_TAG}
     save: {slot: 11, material: LIME_DYE}

@@ -40,7 +40,7 @@ public enum RushObjective {
 
     /** messages.yml key for this objective's display name. */
     public String messageKey() {
-        return "gui.rush.objective.option." + id();
+        return "label.objective." + id();
     }
 
     /** The stats/leaderboard key for one arena under this objective. */
