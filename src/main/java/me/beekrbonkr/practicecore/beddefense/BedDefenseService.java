@@ -81,6 +81,61 @@ public final class BedDefenseService {
         return store;
     }
 
+    // --------------------------------------------------------- block kinds
+
+    /** Resolved once per load; cleared with the shop cache on reload. */
+    private List<Material> allowedKinds;
+
+    /**
+     * The block kinds a defense may be made of. With
+     * {@code beddefense.blocks-from-shop} on and MBedwars present, this is
+     * whatever the server's own item shop sells as blocks — so a server
+     * that stocks end stone bricks instead of end stone gets bricks in the
+     * editor and in practice kits, and a competitive round can always buy
+     * what a defense needs. Otherwise (or when the shop yields nothing) it
+     * is the {@code beddefense.blocks} list.
+     */
+    public List<Material> allowedKinds() {
+        if (allowedKinds != null) {
+            return allowedKinds;
+        }
+        List<Material> kinds = new ArrayList<>();
+        if (plugin.pcConfig().bedDefenseBlocksFromShop()) {
+            kinds.addAll(shopBlockKinds());
+        }
+        if (kinds.isEmpty()) {
+            kinds.addAll(plugin.pcConfig().bedDefenseBlocks());
+        }
+        allowedKinds = List.copyOf(kinds);
+        return allowedKinds;
+    }
+
+    /** Every plain block product in the MBedwars shop, as normalized kinds, shop order. */
+    private List<Material> shopBlockKinds() {
+        List<Material> kinds = new ArrayList<>();
+        var shop = plugin.rush().shopSnapshot();
+        if (shop == null) {
+            return kinds;
+        }
+        for (var page : shop.pages()) {
+            for (var entry : page.entries()) {
+                for (var product : entry.products()) {
+                    Material material = product.stack().getType();
+                    if (product.specialType() != null || !material.isBlock()
+                            || material == Material.TNT || org.bukkit.Tag.BEDS.isTagged(material)
+                            || org.bukkit.Tag.SHULKER_BOXES.isTagged(material)) {
+                        continue; // explosives, beds and storage are not defense blocks
+                    }
+                    Material kind = BlockKinds.normalize(material);
+                    if (!kinds.contains(kind)) {
+                        kinds.add(kind);
+                    }
+                }
+            }
+        }
+        return kinds;
+    }
+
     private Messages msg() {
         return plugin.messages();
     }
@@ -634,7 +689,7 @@ public final class BedDefenseService {
             items.add(new ItemStack(sword));
         }
         if (phase == Phase.EDIT) {
-            for (Material kind : plugin.pcConfig().bedDefenseBlocks()) {
+            for (Material kind : allowedKinds()) {
                 items.add(new ItemStack(kind == Material.WHITE_WOOL ? kitWool(player) : kind, 64));
             }
             if (plugin.pcConfig().bedDefenseWaterBuckets()) {
@@ -1192,7 +1247,7 @@ public final class BedDefenseService {
         if (kind == Material.WATER) {
             return plugin.pcConfig().bedDefenseWaterBuckets();
         }
-        return plugin.pcConfig().bedDefenseBlocks().contains(kind);
+        return allowedKinds().contains(kind);
     }
 
     /** Records a placed (or poured) editor block in the sequence and refills the hand. */
@@ -1471,6 +1526,7 @@ public final class BedDefenseService {
 
     public void restartTask() {
         shutdown();
+        allowedKinds = null; // the shop may have changed with the reload
         startTask();
     }
 

@@ -320,8 +320,11 @@ blocks. Finishing a guided build resets for a timed attempt.
 
 **The editor**: from the setup menu (a fresh bed, or one of your own saved
 defenses), from the in-arena menu, or forced on you when no defense exists
-yet. You get full stacks of every allowed block (`beddefense.blocks` in
-`config.yml`, plus water buckets) that refill as you build, may place only
+yet. You get full stacks of every allowed block that refill as you build:
+with MBedwars installed that is every plain block your own item shop sells
+(`beddefense.blocks-from-shop`), so a shop stocking end stone bricks hands
+out bricks; without it, the `beddefense.blocks` list in `config.yml`. Water
+comes as buckets either way. You may place only
 within the radius, and break only your own blocks, instantly. The bed
 defense item opens the editor menu: **name** (asked in chat), **save** (and
 go play it), **load** one of yours, **clear**, **visibility** and **leave**.

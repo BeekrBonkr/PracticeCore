@@ -332,9 +332,16 @@ rush:
 # the plugin ships none on purpose.
 beddefense:
   # The blocks a bed defense may be made of — what the editor hands out and
-  # what a practice kit is measured in. Colors and wood types never matter:
-  # any wool is "wool", any planks are "planks". Water comes as buckets.
-  blocks: [WHITE_WOOL, OAK_PLANKS, END_STONE, GLASS, OBSIDIAN, TERRACOTTA, LADDER]
+  # what a practice kit is measured in. With blocks-from-shop on and MBedwars
+  # installed the list is read off your item shop: every plain block product
+  # it sells (explosives, beds and storage aside), so a shop stocking end
+  # stone bricks instead of end stone gets bricks here too, and a competitive
+  # round can always buy what a defense needs. The `blocks` list below is the
+  # fallback without MBedwars (or with blocks-from-shop off). Colors and wood
+  # types never matter: any wool is "wool", any planks are "planks". Water
+  # comes as buckets.
+  blocks-from-shop: true
+  blocks: [WHITE_WOOL, OAK_PLANKS, END_STONE, END_STONE_BRICKS, GLASS, OBSIDIAN, TERRACOTTA, LADDER]
   water-buckets: true
   # How far from the bed (blocks, on every axis) the editor lets you build.
   edit-radius: 10
