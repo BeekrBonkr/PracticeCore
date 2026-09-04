@@ -1,6 +1,7 @@
 package me.beekrbonkr.practicecore.settings;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
+import me.beekrbonkr.practicecore.util.DyeColors;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -63,11 +64,7 @@ public final class SettingsService {
         if (name.equalsIgnoreCase("DEFAULT")) {
             return null; // the common case — not worth an exception
         }
-        try {
-            return DyeColor.valueOf(name.toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
+        return DyeColors.parse(name);
     }
 
     public TimeOfDay timeOfDay(UUID player) {
@@ -210,6 +207,6 @@ public final class SettingsService {
     }
 
     public static Material woolOf(DyeColor color) {
-        return Material.matchMaterial(color.name() + "_WOOL");
+        return DyeColors.wool(color);
     }
 }

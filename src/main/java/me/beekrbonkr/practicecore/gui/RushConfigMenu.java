@@ -7,6 +7,7 @@ import me.beekrbonkr.practicecore.rush.RushMapData;
 import me.beekrbonkr.practicecore.rush.RushPreset;
 import me.beekrbonkr.practicecore.rush.RushSelection;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
+import me.beekrbonkr.practicecore.util.DyeColors;
 import me.beekrbonkr.practicecore.util.ItemBuilder;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
@@ -129,15 +130,7 @@ public final class RushConfigMenu extends Menu {
         if (team == null) {
             return Material.WHITE_WOOL;
         }
-        String name = team.name().toUpperCase(Locale.ROOT);
-        DyeColor color;
-        try {
-            color = DyeColor.valueOf(name.equals("AQUA") ? "LIGHT_BLUE" : name);
-        } catch (IllegalArgumentException e) {
-            color = DyeColor.WHITE;
-        }
-        Material wool = Material.matchMaterial(color.name() + "_WOOL");
-        return wool != null ? wool : Material.WHITE_WOOL;
+        return DyeColors.wool(DyeColors.parse(team.name(), DyeColor.WHITE));
     }
 
     // ------------------------------------------------------------ modifiers

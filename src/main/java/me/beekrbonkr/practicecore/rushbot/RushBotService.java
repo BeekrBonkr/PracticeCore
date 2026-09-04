@@ -12,6 +12,7 @@ import me.beekrbonkr.practicecore.rush.RushState;
 import me.beekrbonkr.practicecore.session.PracticeSession;
 import me.beekrbonkr.practicecore.session.SessionState;
 import me.beekrbonkr.practicecore.snapshot.PlayerSnapshot;
+import me.beekrbonkr.practicecore.util.DyeColors;
 import org.bukkit.Bukkit;
 import org.bukkit.DyeColor;
 import org.bukkit.Location;
@@ -242,12 +243,8 @@ public final class RushBotService {
 
     /** The dye color matching an MBedwars team name, or null for exotic names. */
     private static org.bukkit.Color teamColor(String team) {
-        String name = team.toUpperCase(Locale.ROOT);
-        try {
-            return DyeColor.valueOf(name.equals("AQUA") ? "LIGHT_BLUE" : name).getColor();
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
+        DyeColor color = DyeColors.parse(team);
+        return color != null ? color.getColor() : null;
     }
 
     private void spawnTag(RushBot bot) {
