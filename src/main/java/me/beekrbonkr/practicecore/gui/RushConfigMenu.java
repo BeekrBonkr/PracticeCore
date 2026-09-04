@@ -2,37 +2,36 @@ package me.beekrbonkr.practicecore.gui;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.mode.RushMode;
+import me.beekrbonkr.practicecore.pvpbot.BotPreset;
 import me.beekrbonkr.practicecore.rush.RushDefense;
 import me.beekrbonkr.practicecore.rush.RushMapData;
 import me.beekrbonkr.practicecore.rush.RushPreset;
 import me.beekrbonkr.practicecore.rush.RushSelection;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
 import me.beekrbonkr.practicecore.util.DyeColors;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.event.inventory.InventoryClickEvent;
 
 import java.util.List;
 import java.util.Locale;
 
 /**
  * Pre-join setup for one rush map: pick the team base, dial the difficulty
- * modifiers, then start — casually with those modifiers, or <b>competitive</b>,
- * the fixed ranked loadout (no starting items, defenses on, generators on)
- * that is the only way onto the leaderboards. There is no objective to
- * choose — every one the map supports is armed, and whichever is completed
- * first ends the run. Every change is persisted immediately, so a plain
- * /practice join later replays the same choices.
+ * modifiers, then start — a practice run with those modifiers, or
+ * <b>competitive</b>, the fixed ranked loadout (no starting items, defenses
+ * on, generators on) that is the only way onto the leaderboards. There is no
+ * objective to choose — every one the map supports is armed, and whichever
+ * is completed first ends the run. Every change is persisted immediately, so
+ * a plain /practice join later replays the same choices.
  *
  * <p>The layout reads top to bottom as the order the choices are actually
  * made: <em>where you start</em> (the base) on the first row, <em>what you
  * start with and what stands in your way</em> (the six match modifiers) on
  * the second, <em>who is waiting for you</em> (the defender lineup) on the
- * third, and <em>go</em> (casual / competitive) on the fourth. The casual
+ * third, and <em>go</em> (practice / competitive) on the fourth. The practice
  * start carries a summary of everything set above it, so nobody has to hover
  * a row of buttons to find out what they are about to play. The bottom row
  * holds the one-click presets ({@link RushPreset}): each writes a known-good
@@ -67,6 +66,14 @@ public final class RushConfigMenu extends Menu {
         return plugin.guis().slot("rush.buttons." + button, def);
     }
 
+    private Material icon(String button, Material def) {
+        return plugin.guis().buttonMaterial("rush.buttons." + button, def);
+    }
+
+    private void save() {
+        plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+    }
+
     @Override
     protected void render() {
         border();
@@ -87,8 +94,7 @@ public final class RushConfigMenu extends Menu {
         startButton(slot("start", 39));
         competitiveButton(slot("competitive", 41));
         presetButtons();
-        backButton(plugin.guis().slot("rush.back", 45));
-        closeButton(plugin.guis().slot("rush.close", 53));
+        nav("rush");
     }
 
     // ----------------------------------------------------------------- team
@@ -100,12 +106,17 @@ public final class RushConfigMenu extends Menu {
             current = teams.get(0);
         }
         String teamName = current == null ? raw("gui.none") : RushMode.prettyTeam(current.name());
-        set(slot, ItemBuilder.of(teamWool(current))
-                .name(name("gui.rush.team.name"))
-                .lore(lore("gui.rush.team.lore",
+        Button button = Button.of(plugin, teamWool(current))
+                .name("gui.rush.team.name")
+                .lore("gui.rush.team.lore",
                         "team", teamName,
-                        "count", String.valueOf(teams.size())))
-                .build(), event -> {
+                        "count", String.valueOf(teams.size()));
+        if (teams.size() <= 1) {
+            button.disabled("gui.reason.only-one-team");
+        } else {
+            button.hint("cycle").rightHint("cycle-back");
+        }
+        set(slot, button.build(), event -> {
             if (teams.size() <= 1) {
                 deny();
                 return;
@@ -134,56 +145,53 @@ public final class RushConfigMenu extends Menu {
     }
 
     // ------------------------------------------------------------ modifiers
+    // Cyclers carry their value on a state line and never glow (R37): glow
+    // is for selected/on, and "some blocks" is a value, not a state.
 
     private void blocksButton(int slot) {
         RushSelection.BlockTier tier = selection.blocks();
-        set(slot, ItemBuilder.of(
-                        plugin.guis().buttonMaterial("rush.buttons.blocks", Material.WHITE_WOOL),
-                        Math.max(1, tier.amount()))
-                .name(name("gui.rush.blocks.name"))
-                .lore(lore("gui.rush.blocks.lore", "amount",
-                        tier.amount() == 0 ? raw("gui.none") : String.valueOf(tier.amount())))
-                .glow(tier.amount() > 0)
+        set(slot, Button.of(plugin, icon("blocks", Material.WHITE_WOOL), Math.max(1, tier.amount()))
+                .name("gui.rush.blocks.name")
+                .lore("gui.rush.blocks.lore", "amount",
+                        tier.amount() == 0 ? raw("gui.none") : String.valueOf(tier.amount()))
+                .hint("cycle")
                 .build(), event -> {
             click();
             selection = selection.withBlocks(tier.next());
-            plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+            save();
             refresh();
         });
     }
 
     private void currencyButton(int slot) {
         RushSelection.CurrencyTier tier = selection.currency();
-        set(slot, ItemBuilder.of(
-                        plugin.guis().buttonMaterial("rush.buttons.currency", Material.IRON_INGOT),
-                        Math.max(1, tier.iron()))
-                .name(name("gui.rush.currency.name"))
-                .lore(lore("gui.rush.currency.lore",
+        set(slot, Button.of(plugin, icon("currency", Material.IRON_INGOT), Math.max(1, tier.iron()))
+                .name("gui.rush.currency.name")
+                .lore("gui.rush.currency.lore",
                         "iron", tier.iron() == 0 ? raw("gui.none") : String.valueOf(tier.iron()),
-                        "gold", tier.gold() == 0 ? raw("gui.none") : String.valueOf(tier.gold())))
-                .glow(tier.iron() > 0)
+                        "gold", tier.gold() == 0 ? raw("gui.none") : String.valueOf(tier.gold()))
+                .hint("cycle")
                 .build(), event -> {
             click();
             selection = selection.withCurrency(tier.next());
-            plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+            save();
             refresh();
         });
     }
 
     private void pickaxeButton(int slot) {
         RushSelection.PickaxeTier tier = selection.pickaxe();
-        Material icon = tier.item() != null ? tier.item()
-                : plugin.guis().buttonMaterial("rush.buttons.pickaxe", Material.IRON_PICKAXE);
-        set(slot, ItemBuilder.of(icon)
-                .name(name("gui.rush.pickaxe.name"))
-                .lore(lore("gui.rush.pickaxe.lore", plugin.messages().ref("tier",
-                        "gui.rush.pickaxe.option." + tier.name().toLowerCase(Locale.ROOT))))
-                .glow(tier.item() != null)
+        Material icon = tier.item() != null ? tier.item() : icon("pickaxe", Material.IRON_PICKAXE);
+        set(slot, Button.of(plugin, icon)
+                .name("gui.rush.pickaxe.name")
+                .lore("gui.rush.pickaxe.lore", plugin.messages().ref("tier",
+                        "gui.rush.pickaxe.option." + tier.name().toLowerCase(Locale.ROOT)))
                 .hideAttributes()
+                .hint("cycle")
                 .build(), event -> {
             click();
             selection = selection.withPickaxe(tier.next());
-            plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+            save();
             refresh();
         });
     }
@@ -195,20 +203,20 @@ public final class RushConfigMenu extends Menu {
      */
     private void defenseButton(int slot) {
         RushDefense preset = plugin.pcConfig().rushDefense(selection.defense());
-        set(slot, ItemBuilder.of(
-                        plugin.guis().buttonMaterial("rush.buttons.defense", preset.menuIcon()))
-                .name(name("gui.rush.defense.name"))
-                .lore(lore("gui.rush.defense.lore",
+        set(slot, Button.of(plugin, icon("defense", preset.menuIcon()))
+                .name("gui.rush.defense.name")
+                .lore("gui.rush.defense.lore",
                         "preset", defenseName(preset),
-                        "layers", String.valueOf(preset.reach())))
-                .glow(preset.builds())
+                        "layers", String.valueOf(preset.reach()))
                 .hideAttributes()
+                .hint("open")
                 .build(), event -> {
             click();
-            later(() -> new RushDefenseMenu(plugin, viewer, this, selection.defense(), picked -> {
-                selection = selection.withDefense(picked.id());
-                plugin.rush().saveSelection(viewer.getUniqueId(), selection);
-            }).open());
+            later(() -> new RushDefenseMenu(plugin, viewer, this, template, selection.defense(),
+                    picked -> {
+                        selection = selection.withDefense(picked.id());
+                        save();
+                    }).open());
         });
     }
 
@@ -220,16 +228,16 @@ public final class RushConfigMenu extends Menu {
 
     private void generatorsButton(int slot) {
         boolean on = selection.baseGenerators();
-        set(slot, ItemBuilder.of(
-                        plugin.guis().buttonMaterial("rush.buttons.generators", Material.FURNACE))
-                .name(name("gui.rush.generators.name"))
-                .lore(lore("gui.rush.generators.lore", plugin.messages().ref("state",
-                        on ? "gui.rush.generators.state-on" : "gui.rush.generators.state-off")))
+        set(slot, Button.of(plugin, icon("generators", Material.FURNACE))
+                .name("gui.rush.generators.name")
+                .lore("gui.rush.generators.lore", plugin.messages().ref("state",
+                        on ? "label.state.on" : "label.state.off"))
                 .glow(on)
+                .hint("toggle")
                 .build(), event -> {
-            click();
+            sound(on ? "menu.toggle-off" : "menu.toggle-on");
             selection = selection.withBaseGenerators(!on);
-            plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+            save();
             refresh();
         });
     }
@@ -237,17 +245,15 @@ public final class RushConfigMenu extends Menu {
     /** Starter TNT — it auto-ignites on place, so it is demolition fuel. */
     private void tntButton(int slot) {
         RushSelection.TntTier tier = selection.tnt();
-        set(slot, ItemBuilder.of(
-                        plugin.guis().buttonMaterial("rush.buttons.tnt", Material.TNT),
-                        Math.max(1, tier.amount()))
-                .name(name("gui.rush.tnt.name"))
-                .lore(lore("gui.rush.tnt.lore", "amount",
-                        tier.amount() == 0 ? raw("gui.none") : String.valueOf(tier.amount())))
-                .glow(tier.amount() > 0)
+        set(slot, Button.of(plugin, icon("tnt", Material.TNT), Math.max(1, tier.amount()))
+                .name("gui.rush.tnt.name")
+                .lore("gui.rush.tnt.lore", "amount",
+                        tier.amount() == 0 ? raw("gui.none") : String.valueOf(tier.amount()))
+                .hint("cycle")
                 .build(), event -> {
             click();
             selection = selection.withTnt(tier.next());
-            plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+            save();
             refresh();
         });
     }
@@ -258,19 +264,18 @@ public final class RushConfigMenu extends Menu {
     private void botsButton(int slot) {
         int bots = selection.bots();
         int max = plugin.pcConfig().rushBotsMaxPerTeam();
-        set(slot, ItemBuilder.of(
-                        plugin.guis().buttonMaterial("rush.buttons.bots", Material.ZOMBIE_HEAD),
-                        Math.max(1, bots))
-                .name(name("gui.rush.bots.name"))
-                .lore(lore("gui.rush.bots.lore", "count",
-                        bots == 0 ? raw("gui.none") : String.valueOf(bots)))
-                .glow(bots > 0)
+        set(slot, Button.of(plugin, icon("bots", Material.ZOMBIE_HEAD), Math.max(1, bots))
+                .name("gui.rush.bots.name")
+                .lore("gui.rush.bots.lore", "count",
+                        bots == 0 ? raw("gui.none") : String.valueOf(bots))
+                .hint("cycle")
+                .rightHint("cycle-back")
                 .build(), event -> {
             click();
             int next = event.isRightClick()
                     ? Math.floorMod(bots - 1, max + 1) : (bots + 1) % (max + 1);
             selection = selection.withBots(next);
-            plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+            save();
             refresh();
         });
     }
@@ -282,13 +287,15 @@ public final class RushConfigMenu extends Menu {
         Component label = current == null
                 ? name("gui.rush.bot-difficulty.default")
                 : presetLabel(current);
-        set(slot, ItemBuilder.of(
-                        plugin.guis().buttonMaterial("rush.buttons.bot-difficulty",
-                                Material.NETHER_STAR))
-                .name(name("gui.rush.bot-difficulty.name"))
-                .lore(lore("gui.rush.bot-difficulty.lore",
-                        plugin.messages().ref("level", label)))
-                .build(), event -> {
+        Button button = Button.of(plugin, icon("bot-difficulty", Material.EXPERIENCE_BOTTLE))
+                .name("gui.rush.bot-difficulty.name")
+                .lore("gui.rush.bot-difficulty.lore", plugin.messages().ref("level", label));
+        if (presets.isEmpty()) {
+            button.disabled("gui.reason.no-presets");
+        } else {
+            button.hint("cycle");
+        }
+        set(slot, button.build(), event -> {
             if (presets.isEmpty()) {
                 deny();
                 return;
@@ -296,17 +303,19 @@ public final class RushConfigMenu extends Menu {
             click();
             var next = plugin.botTuning().nextPreset(current);
             selection = selection.withBotDifficulty(next == null ? "" : next.id());
-            plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+            save();
             refresh();
         });
     }
 
     /** A preset's short label, reusing the PvP bot's own difficulty names. */
-    private Component presetLabel(me.beekrbonkr.practicecore.pvpbot.BotPreset preset) {
+    private Component presetLabel(BotPreset preset) {
         String key = preset.messageKey("short");
         if (!plugin.messages().raw(key).isEmpty()) {
             return plugin.messages().component(key);
         }
+        // STYLE-GUIDE: needs logic change (F8) — a custom preset with no
+        // label.difficulty.* key renders uncolored.
         return Component.text(preset.configuredName().isEmpty()
                 ? preset.id() : preset.configuredName());
     }
@@ -314,30 +323,32 @@ public final class RushConfigMenu extends Menu {
     private void botArmorButton(int slot) {
         RushSelection.BotArmor armor = selection.botArmor();
         Material icon = armor.piece("CHESTPLATE");
-        set(slot, ItemBuilder.of(icon != null ? icon : Material.LEATHER_CHESTPLATE)
-                .name(name("gui.rush.bot-armor.name"))
-                .lore(lore("gui.rush.bot-armor.lore", plugin.messages().ref("tier",
-                        "gui.rush.bot-armor.option." + armor.name().toLowerCase(Locale.ROOT))))
+        set(slot, Button.of(plugin, icon != null ? icon : Material.LEATHER_CHESTPLATE)
+                .name("gui.rush.bot-armor.name")
+                .lore("gui.rush.bot-armor.lore", plugin.messages().ref("tier",
+                        "gui.rush.bot-armor.option." + armor.name().toLowerCase(Locale.ROOT)))
                 .hideAttributes()
+                .hint("cycle")
                 .build(), event -> {
             click();
             selection = selection.withBotArmor(armor.next());
-            plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+            save();
             refresh();
         });
     }
 
     private void botSwordButton(int slot) {
         RushSelection.BotSword sword = selection.botSword();
-        set(slot, ItemBuilder.of(sword.item())
-                .name(name("gui.rush.bot-sword.name"))
-                .lore(lore("gui.rush.bot-sword.lore", plugin.messages().ref("tier",
-                        "gui.rush.bot-sword.option." + sword.name().toLowerCase(Locale.ROOT))))
+        set(slot, Button.of(plugin, sword.item())
+                .name("gui.rush.bot-sword.name")
+                .lore("gui.rush.bot-sword.lore", plugin.messages().ref("tier",
+                        "gui.rush.bot-sword.option." + sword.name().toLowerCase(Locale.ROOT)))
                 .hideAttributes()
+                .hint("cycle")
                 .build(), event -> {
             click();
             selection = selection.withBotSword(sword.next());
-            plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+            save();
             refresh();
         });
     }
@@ -345,16 +356,16 @@ public final class RushConfigMenu extends Menu {
     // ----------------------------------------------------------------- start
 
     private void startButton(int slot) {
-        set(slot, ItemBuilder.of(
-                        plugin.guis().buttonMaterial("rush.buttons.start", Material.LIME_DYE))
-                .name(name("gui.rush.start.name"))
-                .lore(lore("gui.rush.start.lore", summary(),
+        set(slot, Button.of(plugin, icon("start", Material.LIME_DYE))
+                .name("gui.rush.start.name")
+                .lore("gui.rush.start.lore", summary(),
                         "arena", template.displayName(),
-                        "team", teamLabel()))
+                        "team", teamLabel())
+                .hint("play")
                 .build(), event -> {
             click();
             plugin.rush().setCompetitive(viewer.getUniqueId(), false);
-            plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+            save();
             if (selection.team() != null) {
                 plugin.rush().saveTeam(viewer.getUniqueId(), template, selection.team());
             }
@@ -396,7 +407,7 @@ public final class RushConfigMenu extends Menu {
                                 "layers", String.valueOf(defense.reach()))
                         : msg.component("gui.none")),
                 msg.ref("generators", selection.baseGenerators()
-                        ? "gui.rush.generators.state-on" : "gui.rush.generators.state-off"),
+                        ? "label.state.on" : "label.state.off"),
                 msg.ref("defenders", selection.combat()
                         ? msg.component("gui.rush.summary.defenders",
                                 msg.ref("difficulty", defenderDifficulty()),
@@ -426,15 +437,14 @@ public final class RushConfigMenu extends Menu {
 
     /**
      * Instant start under the fixed ranked loadout: generators on, no
-     * starting items, defenses on. The stored casual modifiers are left
+     * starting items, defenses on. The stored practice modifiers are left
      * untouched underneath — competitive pins them only for the run.
      */
     private void competitiveButton(int slot) {
-        set(slot, ItemBuilder.of(
-                        plugin.guis().buttonMaterial("rush.buttons.competitive", Material.NETHER_STAR))
-                .name(name("gui.rush.competitive.name"))
-                .lore(lore("gui.rush.competitive.lore", "arena", template.displayName()))
-                .glow(true)
+        set(slot, Button.of(plugin, icon("competitive", Material.NETHER_STAR))
+                .name("gui.rush.competitive.name")
+                .lore("gui.rush.competitive.lore", "arena", template.displayName())
+                .hint("play")
                 .build(), event -> {
             click();
             plugin.rush().setCompetitive(viewer.getUniqueId(), true);
@@ -453,7 +463,8 @@ public final class RushConfigMenu extends Menu {
      * known-good dial positions over the stored selection and starts the run
      * — the fastest route into a specific kind of practice. Presets the
      * config has switched off (a zero-defender competitive lineup, bots
-     * capped at none) are simply not offered.
+     * capped at none) are simply not offered. The preset whose dials match
+     * the current selection glows — it is the one "selected" (R37).
      */
     private void presetButtons() {
         for (RushPreset preset : RushPreset.values()) {
@@ -461,16 +472,18 @@ public final class RushConfigMenu extends Menu {
                     || !plugin.guis().buttonEnabled(preset.buttonKey())) {
                 continue;
             }
+            boolean applied = preset.apply(selection, plugin.pcConfig()).equals(selection);
             set(plugin.guis().slot(preset.buttonKey(), preset.defaultSlot()),
-                    ItemBuilder.of(plugin.guis().buttonMaterial(preset.buttonKey(), preset.icon()))
-                            .name(name(preset.messageKey("name")))
-                            .lore(lore(preset.messageKey("lore"), "arena", template.displayName()))
-                            .glow(preset.competitive())
+                    Button.of(plugin, plugin.guis().buttonMaterial(preset.buttonKey(), preset.icon()))
+                            .name(preset.messageKey("name"))
+                            .lore(preset.messageKey("lore"), "arena", template.displayName())
+                            .glow(applied)
                             .hideAttributes()
+                            .hint("play")
                             .build(), event -> {
-                click();
+                sound("menu.select");
                 selection = preset.apply(selection, plugin.pcConfig());
-                plugin.rush().saveSelection(viewer.getUniqueId(), selection);
+                save();
                 plugin.rush().setCompetitive(viewer.getUniqueId(), preset.competitive());
                 if (selection.team() != null) {
                     plugin.rush().saveTeam(viewer.getUniqueId(), template, selection.team());

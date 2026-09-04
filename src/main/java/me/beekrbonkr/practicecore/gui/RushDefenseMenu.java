@@ -2,7 +2,7 @@ package me.beekrbonkr.practicecore.gui;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.rush.RushDefense;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
+import me.beekrbonkr.practicecore.template.ArenaTemplate;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -24,19 +24,22 @@ import java.util.function.Consumer;
  */
 public final class RushDefenseMenu extends Menu {
 
+    private final ArenaTemplate template;
     private final String selected;
     private final Consumer<RushDefense> onPick;
 
     public RushDefenseMenu(PracticeCorePlugin plugin, Player viewer, Menu parent,
-                           String selected, Consumer<RushDefense> onPick) {
+                           ArenaTemplate template, String selected,
+                           Consumer<RushDefense> onPick) {
         super(plugin, viewer, parent);
+        this.template = template;
         this.selected = selected;
         this.onPick = onPick;
     }
 
     @Override
     protected Component title() {
-        return text("gui.rush.defenses.title");
+        return text("gui.rush.defenses.title", "arena", template.displayName());
     }
 
     @Override
@@ -57,6 +60,8 @@ public final class RushDefenseMenu extends Menu {
             capacity++;
         }
         if (presets.size() > capacity) {
+            // STYLE-GUIDE: needs logic change (R47) — a gallery that can
+            // overflow its grid should page instead of truncating.
             plugin.getLogger().warning("config.yml defines " + presets.size()
                     + " rush.defense-presets but this gallery has room for " + capacity
                     + " — the rest are not shown. Raise rush-defenses.rows in guis.yml.");
@@ -69,7 +74,7 @@ public final class RushDefenseMenu extends Menu {
                     deny();
                     return;
                 }
-                click();
+                sound("menu.select");
                 onPick.accept(preset);
                 later(() -> {
                     if (parent() != null) {
@@ -80,27 +85,31 @@ public final class RushDefenseMenu extends Menu {
                 });
             });
         }
-        backButton(plugin.guis().slot("rush-defenses.back", 36));
-        closeButton(plugin.guis().slot("rush-defenses.close", 44));
+        nav("rush-defenses");
     }
 
+    /**
+     * The chosen preset glows and carries a "Currently: selected" state line
+     * instead of a click hint (R37, R61); every other tile invites a click.
+     */
     private ItemStack tile(RushDefense preset, boolean current) {
-        List<Component> lore = new ArrayList<>(lore("gui.rush.defenses.tile-lore",
-                "layers", String.valueOf(preset.reach())));
+        Button tile = Button.of(plugin, preset.menuIcon())
+                .name("gui.rush.defenses.tile-name", "preset", presetName(preset))
+                .lore("gui.rush.defenses.tile-lore", "layers", String.valueOf(preset.reach()))
+                .hideAttributes();
         // Outermost first: the order a rusher digs through them.
         List<Material> layers = preset.layers();
         for (int i = layers.size() - 1; i >= 0; i--) {
-            lore.add(plugin.messages().name("gui.rush.defenses.layer-line",
+            tile.line(name("gui.rush.defenses.layer-line",
                     "depth", String.valueOf(layers.size() - i),
                     "material", pretty(layers.get(i))));
         }
-        lore.addAll(lore(current ? "gui.rush.defenses.selected" : "gui.rush.defenses.select"));
-        return ItemBuilder.of(preset.menuIcon())
-                .name(name("gui.rush.defenses.tile-name", "preset", presetName(preset)))
-                .lore(lore)
-                .glow(current)
-                .hideAttributes()
-                .build();
+        if (current) {
+            tile.line(Component.empty()).line(name("gui.rush.defenses.selected")).glow(true);
+        } else {
+            tile.hint("select");
+        }
+        return tile.build();
     }
 
     /**
@@ -114,6 +123,8 @@ public final class RushDefenseMenu extends Menu {
     }
 
     /** END_STONE → "End stone". */
+    // STYLE-GUIDE: duplicated in RushShopMenu.prettyMaterial; a shared util
+    // is outside this pass (F7 also wants these strings translatable).
     static String pretty(Material material) {
         String lower = material.name().replace('_', ' ').toLowerCase(Locale.ROOT);
         return lower.substring(0, 1).toUpperCase(Locale.ROOT) + lower.substring(1);
