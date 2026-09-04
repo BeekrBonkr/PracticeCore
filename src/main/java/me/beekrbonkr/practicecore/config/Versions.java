@@ -18,22 +18,25 @@ public final class Versions {
     public static final int CONFIG = 7;
 
     /**
-     * messages.yml — admin-editable. v9 is the UI style guide: every menu
-     * name, lore and chat line was reworded, shared labels moved under
-     * {@code label.} and lore click-hints under {@code gui.hint.}. Values an
-     * admin never touched are reset to the new wording; edited ones stand.
-     * v8 added bed defense practice; v7 the rush TNT modifier.
+     * messages.yml — admin-editable. v10 drops strict order: its toggle,
+     * board name and wrong-order warning are gone, and the lines that listed
+     * it lose that entry. v9 is the UI style guide: every menu name, lore and
+     * chat line was reworded, shared labels moved under {@code label.} and
+     * lore click-hints under {@code gui.hint.}. Values an admin never touched
+     * are reset to the new wording; edited ones stand. v8 added bed defense
+     * practice; v7 the rush TNT modifier.
      */
-    public static final int MESSAGES = 9;
+    public static final int MESSAGES = 10;
 
     /**
-     * guis.yml — admin-editable menu layout. v6 is the UI style guide: back
-     * and close now default to the bottom corners of every menu, computed
-     * from its row count, and icons were reassigned so one material means
-     * one thing. Values an admin never touched are reset; edited ones stand.
-     * v5 added the bed defense menus.
+     * guis.yml — admin-editable menu layout. v7 removes the bed defense
+     * strict-order button and closes the gap it left in that row. v6 is the
+     * UI style guide: back and close now default to the bottom corners of
+     * every menu, computed from its row count, and icons were reassigned so
+     * one material means one thing. Values an admin never touched are reset;
+     * edited ones stand. v5 added the bed defense menus.
      */
-    public static final int GUIS = 6;
+    public static final int GUIS = 7;
 
     /** sounds.yml — admin-editable sound cues. */
     public static final int SOUNDS = 1;

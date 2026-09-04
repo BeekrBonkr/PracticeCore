@@ -171,9 +171,8 @@ beddefense:
     defense: {slot: 20, material: RED_BED}
     # material while practicing; material-competitive while competitive.
     mode: {slot: 22, material: LEVER, material-competitive: NETHER_STAR}
-    strict: {slot: 23, material: CHAIN}
-    shuffle: {slot: 24, material: ENDER_EYE}
-    timer: {slot: 25, material: REPEATER}
+    shuffle: {slot: 23, material: ENDER_EYE}
+    timer: {slot: 24, material: REPEATER}
     # Row 3 — design your own: fresh, or one of yours.
     new: {slot: 30, material: CRAFTING_TABLE}
     edit: {slot: 32, material: WRITABLE_BOOK}
@@ -190,8 +189,6 @@ beddefense-gallery:
     public: {slot: 46, material: BOOKSHELF}
     mine: {slot: 47}
     favorites: {slot: 51, material: AMETHYST_SHARD}
-  # The strict-order board's icon; the any-order board uses the defense's own.
-  strict-board-material: CHAIN
 
 # One defense's actions (right-click on a gallery tile).
 beddefense-actions:

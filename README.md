@@ -282,8 +282,7 @@ kind of material at the right spot, in any order. Kinds, not exact blocks:
 any wool is wool, any planks are planks, any terracotta is terracotta, so
 your wool-color setting and shop purchases all count. Only water **source**
 blocks count (flowing water never does), and a waterlogged ladder is a
-ladder. **Strict order** is a toggle that requires the designer's sequence,
-kept on its own boards.
+ladder.
 
 Two ways to play, chosen in the setup menu:
 
@@ -299,9 +298,9 @@ Two ways to play, chosen in the setup menu:
   round from your favorites or the public gallery) and **timer start** (first
   movement or first block).
 
-Boards are kept **per defense**, not per map (`beddefense#<id>`, plus
-`beddefense#<id>#strict`), and appear under their own category in the
-leaderboards menu; the gallery tile shows your best. Records and personal
+Boards are kept **per defense**, not per map (`beddefense#<id>`), and appear
+under their own category in the leaderboards menu; the gallery tile shows
+your best. Records and personal
 bests broadcast exactly like every other mode.
 
 **Preview**: drop any item (or use the bed defense item's menu) before an

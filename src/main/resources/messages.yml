@@ -390,7 +390,6 @@ beddefense:
   hologram: '<yellow>Drop a block or use the menu<newline><gray>to preview this defense'
   # Board names: <name> is the defense's name.
   board-name: '<name> (Bed Defense)'
-  board-name-strict: '<name> (Bed Defense, strict order)'
   list-empty: '<prefix><gray>No bed defenses to play yet. Design one with <white>/practice beddefense edit<gray>.'
   # <count>
   list-header: '<prefix><gray>Bed defenses you can play (<white><count><gray>):'
@@ -410,9 +409,6 @@ beddefense:
     # <name>
     public: '<prefix><green><white><name><green> is now public — everyone can play it.'
     private: '<prefix><gray><white><name><gray> is now private — only you can play it.'
-  strict:
-    # A block placed out of sequence. <material> <step> <total>
-    wrong-order: '<red>Wrong order — next is <white><material> <gray>(<step>/<total>)'
   preview:
     # <name>
     entered: '<prefix><gray>Previewing <white><name><gray>. Use the hotbar to step through it; drop or use the exit item to leave.'
@@ -1683,15 +1679,6 @@ gui:
       option:
         competitive: '<gold>Competitive'
         practice: '<white>Practice'
-    strict:
-      name: '<white><bold>Strict Order'
-      # <state>
-      lore:
-        - '<gray>Blocks must go down in the order'
-        - '<gray>the designer placed them.'
-        - '<gray>Kept on its own leaderboard.'
-        - ''
-        - '<gray>Currently: <state>'
     shuffle:
       name: '<white><bold>Shuffle'
       # <pool>
@@ -1748,13 +1735,12 @@ gui:
       name: '<green><bold>Start Practice'
       name-competitive: '<gold><bold>Start Competitive'
       name-apply: '<green><bold>Apply and Restart'
-      # <arena> <defense> <mode> <strict> <shuffle> <timer> <ranked>
+      # <arena> <defense> <mode> <shuffle> <timer> <ranked>
       lore:
         - '<gray>Map: <white><arena>'
         - '<gray>Defense: <white><defense>'
         - ''
         - '<gray>Mode: <mode>'
-        - '<gray>Strict order: <strict>'
         - '<gray>Shuffle: <white><shuffle>'
         - '<gray>Timer starts on: <white><timer>'
         - ''
@@ -1925,8 +1911,8 @@ gui:
       settings:
         name: '<white><bold>Round Settings'
         lore:
-          - '<gray>Mode, strict order, shuffle,'
-          - '<gray>timer start and your base.'
+          - '<gray>Mode, shuffle, timer start'
+          - '<gray>and your base.'
       restart:
         name: '<yellow><bold>Restart'
         lore:
