@@ -940,57 +940,51 @@ gui:
       - '<gray>Arenas: <white><count>'
 
   arenas:
-    title: '<dark_gray><bold>Arenas'
+    title: '<dark_gray><bold>Play'
     # <category>
-    title-category: '<dark_gray><bold><category>'
+    title-category: '<dark_gray><bold>Play — <category>'
     empty:
-      name: '<red>No arenas available'
+      name: '<gray><bold>No arenas yet'
       lore:
-        - '<gray>Nothing has been set up yet, or'
-        - '<gray>you lack permission for them all.'
+        - '<gray>Nothing has been set up, or you'
+        - '<gray>lack permission for them all.'
     # <arena>
     entry-name: '<green><bold><arena>'
-    entry-name-locked: '<red><bold><arena>'
-    # <mode> <best> <rank> <players> <finishes> <record> <record-holder> <status>
+    # <mode> <best> <rank> <players> <finishes> <record> <record-holder>
     entry-lore:
       - '<gray>Mode: <white><mode>'
       - ''
       - '<gray>Your best: <white><best>'
       - '<gray>Your rank: <white><rank> <dark_gray>of <players>'
-      - '<gray>Runs finished: <white><finishes>'
-      - '<gray>Record: <white><record> <dark_gray><record-holder>'
-      - ''
-      - '<status>'
+      - '<gray>Runs: <white><finishes>'
+      - '<gray>Record: <white><record>'
+      - '<gray>Held by: <white><record-holder>'
     # Tiles for modes without shared time boards (MLG streaks, PvP bot spar):
-    # no dead best/rank/record fields. <mode> <status>
+    # no dead best/rank/record fields. <mode>
     entry-lore-unranked:
       - '<gray>Mode: <white><mode>'
       - ''
       - '<gray>Scored in-session — no time board.'
-      - ''
-      - '<status>'
-    status-open: '<yellow>Click to play'
-    status-locked: '<red>You do not have access to this arena.'
-    # <node>
-    status-locked-node: '<dark_gray>needs <node>'
+    # Appended when the viewer holds the arena record (R35).
+    record-line:
+      - '<gold>You hold the record'
 
   spectate:
-    title: '<dark_gray><bold>Spectate a player'
+    title: '<dark_gray><bold>Spectate'
     empty:
-      name: '<red>Nobody is practicing'
+      name: '<gray><bold>No players yet'
       lore:
+        - '<gray>Nobody is practicing right now.'
         - '<gray>Players appear here the moment'
         - '<gray>they enter an arena.'
     entry:
       # <player>
-      name: '<aqua><bold><player>'
+      name: '<white><bold><player>'
       # <arena> <mode> <watchers>
       lore:
         - '<gray>Arena: <white><arena>'
         - '<gray>Mode: <white><mode>'
         - '<gray>Spectators: <white><watchers>'
-        - ''
-        - '<yellow>Click to spectate'
 
   leaderboards:
     title: '<dark_gray><bold>Leaderboards'
@@ -1004,35 +998,36 @@ gui:
       entry-name: '<gold><bold><category>'
       # <category> <count>
       entry-lore:
-        - '<gray><count> arena(s) with boards'
-        - ''
-        - '<yellow>Click to browse'
+        - '<gray>Arenas with boards: <white><count>'
     empty:
-      name: '<red>No arenas yet'
+      name: '<gray><bold>No leaderboards yet'
       lore:
-        - '<gray>Leaderboards appear once arenas exist.'
+        - '<gray>Boards appear once an arena'
+        - '<gray>has been finished.'
     # <arena>
     entry-name: '<gold><bold><arena>'
     # <players> <record> <record-holder> <rank>
     entry-lore:
-      - '<gray>Players ranked: <white><players>'
+      - '<gray>Players: <white><players>'
       - '<gray>Record: <white><record>'
       - '<gray>Held by: <white><record-holder>'
       - ''
-      - '<gray>You are <white><rank>'
-      - '<yellow>Click for the full board'
+      - '<gray>Your rank: <white><rank>'
+    record-line:
+      - '<gold>You hold the record'
 
   board:
     # <arena>
-    title: '<dark_gray><bold><arena> · top times'
+    title: '<dark_gray><bold>Top Times — <arena>'
     empty:
-      name: '<red>No times yet'
+      name: '<gray><bold>No times yet'
       lore:
         - '<gray>Be the first to finish this arena.'
+    # Rows are information, not buttons: no bold (R32).
     # <rank> <player>
-    entry-name: '<white><bold>#<rank> <player>'
-    entry-name-first: '<gold><bold>#<rank> <player>'
-    entry-name-self: '<aqua><bold>#<rank> <player>'
+    entry-name: '<white>#<rank> <player>'
+    entry-name-first: '<gold>#<rank> <player>'
+    entry-name-self: '<aqua>#<rank> <player>'
     # <time> <behind>
     entry-lore:
       - '<gray>Time: <white><time>'
@@ -1041,7 +1036,7 @@ gui:
       - ''
       - '<aqua>That''s you.'
     standing:
-      name: '<aqua><bold>Your standing'
+      name: '<aqua>Your Standing'
       # <rank> <players> <best> <next> <gap>
       lore:
         - '<gray>Rank: <white><rank> <dark_gray>of <players>'
@@ -1054,39 +1049,37 @@ gui:
     # <arena>
     play-name: '<green><bold>Play <arena>'
     play-lore:
-      - '<yellow>Click to join'
+      - '<gray>Join this arena now.'
 
   stats:
-    title-self: '<dark_gray><bold>Your stats'
     # <player>
-    title-other: '<dark_gray><bold><player>''s stats'
+    title: '<dark_gray><bold>Stats — <player>'
     empty-self:
-      name: '<red>No times recorded'
+      name: '<gray><bold>No times yet'
       lore:
         - '<gray>Finish a run and it shows up here.'
     empty-other:
-      name: '<red>No times recorded'
+      name: '<gray><bold>No times yet'
       lore:
-        - '<gray>This player has not finished a run yet.'
+        - '<gray>This player has not finished a run.'
     # <arena>
     entry-name: '<white><bold><arena>'
     # <best> <last> <finishes> <rank> <players> <behind>
     entry-lore:
       - '<gray>Best: <white><best>'
       - '<gray>Last: <white><last>'
-      - '<gray>Runs finished: <white><finishes>'
+      - '<gray>Runs: <white><finishes>'
       - '<gray>Rank: <white><rank> <dark_gray>of <players>'
-      - '<gray>Off the record by: <white><behind>'
-    entry-lore-missing:
-      - ''
-      - '<dark_gray>This arena no longer exists.'
+      - '<gray>Behind record: <white><behind>'
+    record-line:
+      - '<gold>You hold the record'
     summary:
       # <player> <arenas> <finishes> <records>
-      name: '<aqua><bold><player>'
+      name: '<aqua><player>'
       lore:
         - '<gray>Arenas completed: <white><arenas>'
-        - '<gray>Total runs finished: <white><finishes>'
-        - '<gray>Arena records held: <white><records>'
+        - '<gray>Runs: <white><finishes>'
+        - '<gray>Records held: <white><records>'
 
   rush:
     # <arena>

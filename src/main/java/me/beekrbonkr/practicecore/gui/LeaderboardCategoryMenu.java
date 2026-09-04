@@ -2,7 +2,6 @@ package me.beekrbonkr.practicecore.gui;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -60,47 +59,41 @@ public final class LeaderboardCategoryMenu extends PagedMenu<String> {
 
     @Override
     protected ItemStack emptyIcon() {
-        return ItemBuilder.of(emptyMaterial())
-                .name(name("gui.leaderboards.empty.name"))
-                .lore(lore("gui.leaderboards.empty.lore"))
-                .build();
+        return emptyIcon("gui.leaderboards.empty");
     }
 
     @Override
     protected ItemStack icon(String category) {
-        if (bedDefense(category)) {
-            Material configured = plugin.guis().categoryIcon(category);
-            return ItemBuilder.of(configured != null ? configured : Material.RED_BED)
-                    .name(name("gui.leaderboards.categories.entry-name",
-                            "category", plugin.guis().categoryName(category)))
-                    .lore(lore("gui.leaderboards.categories.entry-lore",
-                            "category", plugin.guis().categoryName(category),
-                            "count", String.valueOf(plugin.bedDefenses().store().all().size())))
-                    .build();
-        }
-        List<ArenaTemplate> arenas = byCategory.getOrDefault(category, List.of());
-        return ItemBuilder.of(categoryIcon(category, arenas))
-                .name(name("gui.leaderboards.categories.entry-name",
-                        "category", plugin.guis().categoryName(category)))
-                .lore(lore("gui.leaderboards.categories.entry-lore",
+        int count = bedDefense(category)
+                ? plugin.bedDefenses().store().all().size()
+                : byCategory.getOrDefault(category, List.of()).size();
+        return Button.of(plugin, categoryIcon(category))
+                .name("gui.leaderboards.categories.entry-name",
+                        "category", plugin.guis().categoryName(category))
+                .lore("gui.leaderboards.categories.entry-lore",
                         "category", plugin.guis().categoryName(category),
-                        "count", String.valueOf(arenas.size())))
+                        "count", String.valueOf(count))
+                .hint("open")
                 .build();
     }
 
     /** Configured icon, else the first arena's icon, else a fallback. */
-    private Material categoryIcon(String category, List<ArenaTemplate> arenas) {
+    private Material categoryIcon(String category) {
         Material configured = plugin.guis().categoryIcon(category);
         if (configured != null) {
             return configured;
         }
+        if (bedDefense(category)) {
+            return Material.RED_BED;
+        }
+        List<ArenaTemplate> arenas = byCategory.getOrDefault(category, List.of());
         return arenas.isEmpty() ? Material.GRASS_BLOCK
                 : plugin.modes().of(arenas.get(0)).menuIcon(plugin, arenas.get(0));
     }
 
     @Override
     protected void onEntryClick(String category, InventoryClickEvent event) {
-        click();
+        sound("menu.select");
         if (bedDefense(category)) {
             later(() -> new BedDefenseBoardsMenu(plugin, viewer, this).open());
             return;
