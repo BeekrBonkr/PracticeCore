@@ -713,6 +713,26 @@ public final class RushService {
     /** Per-player quick-buy pins, mirrored from the MBedwars profile. */
     private final java.util.Map<UUID, List<String>> quickBuy = new java.util.HashMap<>();
 
+    /**
+     * The shop snapshot, taken on first use and held until reload; null when
+     * MBedwars is missing or its shop cannot be read. Other modes (bed
+     * defense) read the block list off it.
+     */
+    public RushShopData shopSnapshot() {
+        try {
+            if (!MBedwarsHook.available()) {
+                return null;
+            }
+            if (shopCache == null) {
+                shopCache = MBedwarsHook.shopSnapshot();
+            }
+            return shopCache;
+        } catch (LinkageError | RuntimeException e) {
+            plugin.getLogger().severe("MBedwars shop hook failed — incompatible MBedwars version? " + e);
+            return null;
+        }
+    }
+
     /** Opens the mirrored MBedwars shop, or explains why it can't. */
     public void openShop(Player player) {
         RushShopData shop;
@@ -882,7 +902,8 @@ public final class RushService {
         }
     }
 
-    private int nearbyDrops(Location spot, Material material) {
+    /** Items of a material lying within the generator cap radius of a spot. */
+    public int nearbyDrops(Location spot, Material material) {
         double radius = plugin.pcConfig().rushGeneratorCapRadius();
         double radiusSq = radius * radius;
         int total = 0;

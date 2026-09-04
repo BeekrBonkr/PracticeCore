@@ -16,7 +16,7 @@
 #   guis.yml     — menu layout: slots, icons, rows
 #   sounds.yml   — every sound cue
 #   pvpbot.yml   — the PvP bot's difficulty tuning and its kits
-config-version: 6
+config-version: 7
 
 world:
   # Name of the ephemeral practice world. Its folder is DELETED and recreated
@@ -325,6 +325,56 @@ rush:
       difficulty: veteran
       armor: IRON
       sword: IRON
+
+# Bed defense practice. Runs on rush maps: you spawn at your team base and
+# build a saved bed defense against the clock. Defenses are designed by
+# players in the editor and stored under defenses/ (shared by everyone);
+# the plugin ships none on purpose.
+beddefense:
+  # The blocks a bed defense may be made of — what the editor hands out and
+  # what a practice kit is measured in. With blocks-from-shop on and MBedwars
+  # installed the list is read off your item shop: every plain block product
+  # it sells (explosives, beds and storage aside), so a shop stocking end
+  # stone bricks instead of end stone gets bricks here too, and a competitive
+  # round can always buy what a defense needs. The `blocks` list below is the
+  # fallback without MBedwars (or with blocks-from-shop off). Colors and wood
+  # types never matter: any wool is "wool", any planks are "planks". Water
+  # comes as buckets.
+  blocks-from-shop: true
+  blocks: [WHITE_WOOL, OAK_PLANKS, END_STONE, END_STONE_BRICKS, GLASS, OBSIDIAN, TERRACOTTA, LADDER]
+  water-buckets: true
+  # How far from the bed (blocks, on every axis) the editor lets you build.
+  edit-radius: 10
+  # Saved defenses one player may own, and how long a name may be.
+  max-per-player: 25
+  name-max-length: 24
+  # Competitive rounds turn the map's emerald generators on when the defense
+  # needs obsidian — the shop is the only way to get any.
+  emerald-for-obsidian: true
+  # The bed defense hotbar item (menu, preview, editor). Slot 0-8.
+  item:
+    material: RED_BED
+    slot: 7
+  preview:
+    # Ticks between blocks while a preview plays itself.
+    step-ticks: 8
+    # The preview hotbar: step back, play/pause, step forward, switch to
+    # guided building, leave the preview.
+    items:
+      previous: {material: ARROW, slot: 2}
+      play: {material: LIME_DYE, slot: 3}
+      pause: {material: ORANGE_DYE}
+      next: {material: SPECTRAL_ARROW, slot: 4}
+      guided: {material: COMPASS, slot: 6}
+      exit: {material: BARRIER, slot: 8}
+  guided:
+    # The next-block marker blinks on this beat (ticks on, ticks off).
+    blink-ticks: 8
+  # The hint floating over the bed at the start of a round — how to open a
+  # preview. Gone after this many seconds, or when the player gets this close.
+  hologram:
+    seconds: 8
+    hide-distance: 4.0
 
 # MLG water-bucket practice. These are the server-wide defaults; any arena's
 # own settings.mlg in its arena.yml overrides the keys it names.

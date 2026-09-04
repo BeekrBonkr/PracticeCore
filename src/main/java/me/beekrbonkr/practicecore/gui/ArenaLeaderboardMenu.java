@@ -26,9 +26,13 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
     private static final Material[] MEDALS = {
             Material.GOLD_INGOT, Material.IRON_INGOT, Material.COPPER_INGOT};
 
+    /** Null for boards that belong to no arena (bed defenses). */
     private final ArenaTemplate template;
     private final String boardKey;
     private final String boardName;
+    /** For arena-less boards: the play button's icon and what it does. */
+    private final Material playIcon;
+    private final Runnable onPlay;
 
     public ArenaLeaderboardMenu(PracticeCorePlugin plugin, Player viewer, Menu parent, ArenaTemplate template) {
         this(plugin, viewer, parent, template, template.name(), template.displayName());
@@ -40,6 +44,20 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
         this.template = template;
         this.boardKey = boardKey;
         this.boardName = boardName;
+        this.playIcon = null;
+        this.onPlay = null;
+    }
+
+    /** A board with no arena behind it: bed defenses are keyed per defense, not per map. */
+    public ArenaLeaderboardMenu(PracticeCorePlugin plugin, Player viewer, Menu parent,
+                                String boardKey, String boardName, Material playIcon,
+                                Runnable onPlay) {
+        super(plugin, viewer, parent);
+        this.template = null;
+        this.boardKey = boardKey;
+        this.boardName = boardName;
+        this.playIcon = playIcon;
+        this.onPlay = onPlay;
     }
 
     @Override
@@ -120,6 +138,18 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
         }
         setFooter(47, standing.build());
 
+        if (template == null) {
+            if (onPlay != null) {
+                set(51, ItemBuilder.of(playIcon != null ? playIcon : Material.RED_BED)
+                        .name(name("gui.board.play-name", "arena", boardName))
+                        .lore(lore("gui.board.play-lore", "arena", boardName))
+                        .build(), event -> {
+                    click();
+                    later(onPlay);
+                });
+            }
+            return;
+        }
         if (plugin.templates().canUse(viewer, template)) {
             set(51, ItemBuilder.of(plugin.modes().of(template).menuIcon(plugin, template))
                     .name(name("gui.board.play-name", "arena", boardName))

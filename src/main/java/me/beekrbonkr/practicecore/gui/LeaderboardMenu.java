@@ -90,6 +90,23 @@ public final class LeaderboardMenu extends PagedMenu<ArenaTemplate> {
                 .build();
     }
 
+    /** With categories off, the bed defense boards hang off the flat list. */
+    @Override
+    protected void renderFooter() {
+        if (category != null || plugin.bedDefenses().store().isEmpty()
+                || !plugin.guis().buttonEnabled("beddefense.flat-button")) {
+            return;
+        }
+        set(plugin.guis().slot("beddefense.flat-button", 51),
+                ItemBuilder.of(plugin.guis().buttonMaterial("beddefense.flat-button", Material.RED_BED))
+                        .name(name("gui.beddefense.boards.flat-button.name"))
+                        .lore(lore("gui.beddefense.boards.flat-button.lore"))
+                        .build(), event -> {
+            click();
+            later(() -> new BedDefenseBoardsMenu(plugin, viewer, this).open());
+        });
+    }
+
     @Override
     protected void onEntryClick(ArenaTemplate template, InventoryClickEvent event) {
         click();
