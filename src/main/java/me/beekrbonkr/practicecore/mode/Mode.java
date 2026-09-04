@@ -88,6 +88,16 @@ public interface Mode {
         return true;
     }
 
+    /**
+     * Whether a personal best from this run also goes on the public
+     * leaderboard. False keeps the time in the player's own stats — best,
+     * last and finish count — without ranking it against anyone. Only
+     * consulted for a run that is both recorded and PB-eligible.
+     */
+    default boolean ranked(PracticeCorePlugin plugin, PracticeSession session) {
+        return true;
+    }
+
     /** Whether the action-bar speedometer runs for sessions of this mode. */
     default boolean showsSpeedometer() {
         return false;

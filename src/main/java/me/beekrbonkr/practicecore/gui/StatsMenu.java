@@ -1,6 +1,7 @@
 package me.beekrbonkr.practicecore.gui;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
+import me.beekrbonkr.practicecore.beddefense.BedDefenseService;
 import me.beekrbonkr.practicecore.mode.RushMode;
 import me.beekrbonkr.practicecore.rush.RushObjective;
 import me.beekrbonkr.practicecore.stats.LeaderboardService;
@@ -118,6 +119,8 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
         }
         if (template == null && defense == null) {
             tile.disabled("gui.reason.gone");
+        } else if (BedDefenseService.isPracticeStatsKey(arena)) {
+            tile.disabledKeepIcon("gui.reason.not-ranked");
         } else if (!viewer.hasPermission("practicecore.leaderboard")) {
             tile.locked("gui.reason.no-permission");
         } else {
@@ -146,13 +149,18 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
             return plugin.rush().displayFor(rush.getKey(), rush.getValue());
         }
         var defense = plugin.bedDefenses().resolveStatsKey(key);
-        return defense != null ? plugin.bedDefenses().displayFor(defense) : key;
+        return defense != null ? plugin.bedDefenses().displayForKey(key, defense) : key;
     }
 
     @Override
     protected void onEntryClick(Map.Entry<String, Long> entry, InventoryClickEvent event) {
         ArenaTemplate template = templateFor(entry.getKey());
         var defense = plugin.bedDefenses().resolveStatsKey(entry.getKey());
+        if (BedDefenseService.isPracticeStatsKey(entry.getKey())) {
+            deny();
+            plugin.messages().send(viewer, "stats.practice-only");
+            return;
+        }
         if (template == null && defense != null) {
             if (!viewer.hasPermission("practicecore.leaderboard")) {
                 deny();

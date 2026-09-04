@@ -288,20 +288,25 @@ Two ways to play, chosen in the setup menu:
 
 - **Competitive**: a real match opening: sword, team-dyed leather, the
   base's iron and gold generators and the mirrored MBedwars shop; blocks are
-  bought. When the defense needs obsidian the map's emerald generators run
-  too. The timer starts on first movement, shuffle is off, and these are the
-  only rounds recorded and ranked. Without MBedwars there is no shop to buy
-  from, so competitive plays as practice and says so.
+  bought. When the defense needs obsidian an emerald generator runs on your
+  own base gold spawner, so obsidian never costs a trip out to the middle.
+  The timer starts on first movement, shuffle is off, and these are the only
+  rounds ranked against other players. Without MBedwars there is no shop to
+  buy from, so competitive plays as practice and says so.
 - **Practice**: the same start with the defense's exact blocks already in the
   kit (one water bucket per water block). Rearrange the kit once and it deals
-  the same way every time. Extras: **shuffle** (a different defense every
+  the same way every time. Practice keeps a personal best of its own, shown
+  on your sidebar and in `/practice stats`, but it is never ranked or
+  broadcast — the blocks are handed to you, so the times are not comparable
+  with competitive ones. Extras: **shuffle** (a different defense every
   round from your favorites or the public gallery) and **timer start** (first
   movement or first block).
 
-Boards are kept **per defense**, not per map (`beddefense#<id>`), and appear
-under their own category in the leaderboards menu; the gallery tile shows
-your best. Records and personal
-bests broadcast exactly like every other mode.
+Boards are kept **per defense**, not per map: `beddefense#<id>` is the ranked
+competitive board and appears under its own category in the leaderboards
+menu, while `beddefense#<id>#practice` holds your private practice bests.
+Competitive records and personal bests broadcast exactly like every other
+mode; practice ones stay with you.
 
 **Preview**: drop any item (or use the bed defense item's menu) before an
 attempt starts and the defense assembles itself block by block in front of

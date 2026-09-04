@@ -385,11 +385,13 @@ beddefense:
   # <name>
   deleted: '<prefix><gray>Deleted the bed defense <white><name><gray>.'
   # Action bar at the end of a practice round.
-  records-disabled: '<yellow>Not ranked — play competitive to set records'
+  records-disabled: '<yellow>Practice best saved — play competitive to be ranked'
   # The hint floating over the bed at the start of a round. Blank to disable.
   hologram: '<yellow>Drop a block or use the menu<newline><gray>to preview this defense'
   # Board names: <name> is the defense's name.
   board-name: '<name> (Bed Defense)'
+  # Practice times are kept per defense too, but only the player sees them.
+  board-name-practice: '<name> (Bed Defense, practice)'
   list-empty: '<prefix><gray>No bed defenses to play yet. Design one with <white>/practice beddefense edit<gray>.'
   # <count>
   list-header: '<prefix><gray>Bed defenses you can play (<white><count><gray>):'
@@ -519,6 +521,8 @@ leaderboard:
   # <arena>
   rush-pick-board: '<prefix><gray><white><arena><gray> is a rush arena — pick a board: <white><arena>#bed<gray>, <white><arena>#emerald<gray>, <white><arena>#diamond<gray> or <white><arena>#team_wipe<gray>.'
   # /practice top beddefense — the bed defense boards live in the menu.
+  # /practice top on a practice key — those times are never ranked.
+  beddefense-practice: '<prefix><gray>Practice times are yours alone and are not ranked. Your best is in <white>/practice stats<gray>.'
   beddefense-pick-board: '<prefix><gray>Bed defense boards are kept per defense: open <white>/practice menu leaderboards<gray>, or name one as <white>beddefense#<id><gray>.'
   # Arenas of modes that score in-session (MLG streaks, PvP bot spars).
   not-ranked: '<prefix><gray><white><arena><gray> has no time leaderboard — its mode is scored in-session, on the sidebar.'
@@ -539,6 +543,8 @@ stats:
   reset-notice: '<prefix><gray>An admin reset your practice personal bests.'
   # Clicking a stats entry whose arena has since been deleted.
   arena-gone: '<prefix><red>That arena no longer exists.'
+  # Clicking a practice tile: there is no ranking behind it to open.
+  practice-only: '<prefix><gray>Practice times are yours alone — no ranking to open. Play competitive to be ranked.'
 
 help:
   player:
@@ -868,6 +874,7 @@ gui:
     # <node>
     needs-node: 'needs <white><node>'
     gone: 'no longer exists'
+    not-ranked: 'practice times are yours alone'
     offline: 'went offline'
     own-defense: 'you cannot like your own'
     no-defenses: 'no defenses yet'
