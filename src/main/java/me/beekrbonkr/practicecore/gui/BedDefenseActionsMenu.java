@@ -142,7 +142,11 @@ public final class BedDefenseActionsMenu extends Menu {
         if (canView) {
             board.hint("view");
         } else {
-            board.locked("gui.reason.needs-node", "node", "practicecore.leaderboard");
+            if (viewer.hasPermission("practicecore.arena")) {
+                board.locked("gui.reason.needs-node", "node", "practicecore.leaderboard");
+            } else {
+                board.locked("gui.reason.no-permission");
+            }
         }
         set(slot("board", 14), board.build(), event -> {
             if (!canView) {
