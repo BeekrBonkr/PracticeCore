@@ -264,7 +264,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
             if (sender instanceof Player player) {
                 openLeaderboards(player);
             } else {
-                msg().send(sender, "general.usage", "usage", "/practice top <arena>");
+                msg().usage(sender, "/practice top <arena>");
             }
             return;
         }
