@@ -370,10 +370,10 @@ public final class PracticeCorePlugin extends JavaPlugin {
                 notes.add(running + " player(s) are practicing and would be restored first.");
             }
             if (wizard != null) {
-                notes.add("The setup wizard is open on '" + wizard
-                        + "' (unsaved changes would be lost).");
+                notes.add("The setup wizard is open on " + wizard
+                        + " (unsaved changes would be lost).");
             }
-            notes.add("Run /practice reload confirm to go ahead.");
+            // The command that asked prints the confirm prompt (style guide R58).
             return ReloadResult.confirm(notes);
         }
 
@@ -418,7 +418,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         if (interrupts) {
             if (wizard != null) {
                 setup.cancelAll();
-                notes.add("Canceled the setup wizard on '" + wizard + "'.");
+                notes.add("Canceled the setup wizard on " + wizard + ".");
             }
             if (watching > 0) {
                 spectate.endAllSync();
@@ -450,8 +450,8 @@ public final class PracticeCorePlugin extends JavaPlugin {
         worldService.applyWorldSettings();
 
         if (!pcConfig.worldName().equals(previous.worldName())) {
-            notes.add("world.name changed '" + previous.worldName() + "' → '" + pcConfig.worldName()
-                    + "'. Run /practice world regen confirm to build it — the old world is"
+            notes.add("world.name changed from " + previous.worldName() + " to " + pcConfig.worldName()
+                    + ". Run /practice world regen confirm to build it — the old world is"
                     + " still the one in use until you do.");
         }
         notes.add("Loaded " + templates.all().size() + " arena(s), "

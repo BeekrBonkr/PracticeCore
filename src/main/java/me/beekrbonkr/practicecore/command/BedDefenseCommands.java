@@ -73,14 +73,15 @@ public final class BedDefenseCommands {
                 }
             }
             case "list" -> list(player);
-            default -> msg().send(player, "general.usage",
-                    "usage", "/practice beddefense [play|like|favorite|publish|unpublish|edit|delete <id>|list]");
+            default -> msg().usage(player,
+                    "/practice beddefense <play|like|favorite|publish|unpublish|edit|delete> [id]");
         }
     }
 
     private void withDefense(Player player, String[] args, java.util.function.Consumer<BedDefense> action) {
         if (args.length < 3) {
-            msg().send(player, "general.usage", "usage", "/practice beddefense " + args[1] + " <id>");
+            // The canonical spelling, whatever the player typed (style guide R14).
+            msg().usage(player, "/practice beddefense " + args[1].toLowerCase(java.util.Locale.ROOT) + " <id>");
             return;
         }
         BedDefense defense = service().store().get(args[2]);
