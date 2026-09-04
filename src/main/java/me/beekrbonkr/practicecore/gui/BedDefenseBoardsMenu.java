@@ -4,7 +4,6 @@ import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.beddefense.BedDefense;
 import me.beekrbonkr.practicecore.beddefense.BedDefenseService;
 import me.beekrbonkr.practicecore.stats.LeaderboardService;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import me.beekrbonkr.practicecore.util.TimeFormat;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
@@ -65,10 +64,7 @@ public final class BedDefenseBoardsMenu extends PagedMenu<BedDefenseBoardsMenu.B
 
     @Override
     protected ItemStack emptyIcon() {
-        return ItemBuilder.of(emptyMaterial())
-                .name(name("gui.beddefense.boards.empty.name"))
-                .lore(lore("gui.beddefense.boards.empty.lore"))
-                .build();
+        return emptyIcon("gui.beddefense.boards.empty");
     }
 
     @Override
@@ -76,17 +72,20 @@ public final class BedDefenseBoardsMenu extends PagedMenu<BedDefenseBoardsMenu.B
         String key = board.key();
         LeaderboardService.Entry record = plugin.leaderboards().record(key);
         int rank = plugin.leaderboards().rank(key, viewer.getUniqueId());
-        return ItemBuilder.of(board.strict() ? Material.COMPARATOR : board.defense().icon())
-                .name(name("gui.beddefense.boards.entry-name",
-                        "board", plugin.bedDefenses().displayFor(board.defense(), board.strict())))
-                .lore(lore("gui.beddefense.boards.entry-lore",
+        Material icon = board.strict()
+                ? plugin.guis().material("beddefense-gallery.strict-board-material", Material.CHAIN)
+                : board.defense().icon();
+        return Button.of(plugin, icon)
+                .name("gui.beddefense.boards.entry-name",
+                        "board", plugin.bedDefenses().displayFor(board.defense(), board.strict()))
+                .lore("gui.beddefense.boards.entry-lore",
                         "name", board.defense().name(),
                         "author", board.defense().authorName(),
                         "players", String.valueOf(plugin.leaderboards().size(key)),
                         "record", record != null ? TimeFormat.precise(record.millis()) : raw("gui.none"),
                         "record-holder", record != null ? record.displayName() : raw("gui.none"),
-                        "rank", rank > 0 ? "#" + rank : raw("gui.none")))
-                .glow(rank == 1)
+                        "rank", rank > 0 ? "#" + rank : raw("gui.none"))
+                .hint("view")
                 .build();
     }
 
