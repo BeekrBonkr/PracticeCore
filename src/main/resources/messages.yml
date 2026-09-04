@@ -768,8 +768,8 @@ setup:
 label:
   # Boolean state words. The word carries the meaning; the color decorates (R31).
   state:
-    on: '<green>on'
-    off: '<red>off'
+    'on': '<green>on'
+    'off': '<red>off'
     shown: '<green>shown'
     hidden: '<red>hidden'
     public: '<green>public'
@@ -1514,7 +1514,7 @@ gui:
         - ''
         - '<gray>Level: <white><level>'
       option:
-        off: 'off'
+        'off': 'off'
         some: 'some'
         full: 'full'
         unfair: 'unfair'
@@ -1701,7 +1701,7 @@ gui:
         - ''
         - '<gray>Pool: <white>off'
       option:
-        off: 'off'
+        'off': 'off'
         favorites: 'your favorites'
         public: 'every public defense'
     timer:
