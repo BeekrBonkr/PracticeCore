@@ -18,7 +18,9 @@ public final class Versions {
     public static final int CONFIG = 7;
 
     /**
-     * messages.yml — admin-editable. v10 drops strict order: its toggle,
+     * messages.yml — admin-editable. v11 rewords the bed defense practice
+     * notice now that practice rounds keep a personal best. v10 drops
+     * strict order: its toggle,
      * board name and wrong-order warning are gone, and the lines that listed
      * it lose that entry. v9 is the UI style guide: every menu name, lore and
      * chat line was reworded, shared labels moved under {@code label.} and
@@ -26,7 +28,7 @@ public final class Versions {
      * are reset to the new wording; edited ones stand. v8 added bed defense
      * practice; v7 the rush TNT modifier.
      */
-    public static final int MESSAGES = 10;
+    public static final int MESSAGES = 11;
 
     /**
      * guis.yml — admin-editable menu layout. v7 removes the bed defense

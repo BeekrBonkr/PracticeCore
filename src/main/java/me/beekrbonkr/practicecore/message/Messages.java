@@ -192,6 +192,20 @@ public final class Messages {
                 cfg.set("gui.beddefense.session.settings.lore", null);
             }
         }
+        if (from < 11) {
+            // v11: a practice round now keeps a personal best, so the old
+            // "nothing is recorded" notice is wrong. An untouched line is
+            // dropped for top-up to rewrite; an admin's own wording stands,
+            // even though it now undersells what practice does.
+            if ("<yellow>Not ranked — play competitive to set records"
+                    .equals(cfg.getString("beddefense.records-disabled"))) {
+                cfg.set("beddefense.records-disabled", null);
+            }
+            if ("<dark_gray>Not ranked — play competitive"
+                    .equals(cfg.getString("board.beddefense.casual-line"))) {
+                cfg.set("board.beddefense.casual-line", null);
+            }
+        }
     }
 
     private void index(FileConfiguration cfg) {

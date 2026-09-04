@@ -128,6 +128,9 @@ Start a server with a copy of an existing `plugins/PracticeCore/` folder so the 
 - [ ] Config menu row 2 reads Defense, Mode, Shuffle, Timer Start with no empty slot between them, on a fresh `guis.yml` and on one upgraded from v6
 - [ ] Leaderboards list one board per defense, and no board is named "strict order"
 - [ ] Start button lore no longer has a `Strict order:` line
+- [ ] Practice round: finishing shows a personal best, the sidebar reads `Best:` plus `Your own best — not ranked`, and nothing is broadcast to the server
+- [ ] `/practice stats` shows a `(Bed Defense, practice)` tile that is disabled with `practice times are yours alone`; the competitive tile still opens its ranking
+- [ ] Competitive round on a defense with obsidian: emeralds drop on your own base gold spawner, and the map's middle emerald spawners stay dead
 - [ ] Session menu: Preview is a painting and is disabled outside the play phase; Guided Building's name never changes
 
 ### Spectate
