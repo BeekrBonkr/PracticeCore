@@ -3,7 +3,6 @@ package me.beekrbonkr.practicecore.gui;
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.beddefense.BedDefense;
 import me.beekrbonkr.practicecore.beddefense.BedDefenseService;
-import me.beekrbonkr.practicecore.util.ItemBuilder;
 import me.beekrbonkr.practicecore.util.TimeFormat;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
@@ -14,14 +13,13 @@ import java.util.function.Consumer;
 /**
  * Everything you can do with one bed defense besides building it: like,
  * favorite, see its boards, and — for your own — edit, publish or delete.
- * Deleting takes two clicks on the same button, so a slip never costs a
- * design.
+ * Deleting arms on the first click and executes on the second (style
+ * guide R56), so a slip never costs a design.
  */
 public final class BedDefenseActionsMenu extends Menu {
 
     private final BedDefense defense;
     private final Consumer<BedDefense> onPick;
-    private boolean deleteArmed;
 
     public BedDefenseActionsMenu(PracticeCorePlugin plugin, Player viewer, Menu parent,
                                  BedDefense defense, Consumer<BedDefense> onPick) {
@@ -66,9 +64,10 @@ public final class BedDefenseActionsMenu extends Menu {
             return;
         }
 
-        set(slot("play", 11), ItemBuilder.of(defense.icon())
-                .name(name("gui.beddefense.actions.play.name"))
-                .lore(lore("gui.beddefense.actions.play.lore", "name", defense.name()))
+        set(slot("play", 11), Button.of(plugin, defense.icon())
+                .name("gui.beddefense.actions.play.name")
+                .lore("gui.beddefense.actions.play.lore", "name", defense.name())
+                .hint("play")
                 .build(), event -> {
             sound("menu.select");
             if (onPick != null) {
@@ -94,45 +93,59 @@ public final class BedDefenseActionsMenu extends Menu {
         });
 
         boolean liked = defense.likedBy(viewer.getUniqueId());
-        set(slot("like", 12), ItemBuilder.of(icon("like", Material.GOLD_NUGGET))
-                .name(name("gui.beddefense.actions.like.name"))
-                .lore(lore("gui.beddefense.actions.like.lore",
+        Button like = Button.of(plugin, icon("like", Material.GOLD_NUGGET))
+                .name("gui.beddefense.actions.like.name")
+                .lore("gui.beddefense.actions.like.lore",
                         plugin.messages().ref("state", liked
                                 ? "gui.beddefense.gallery.liked-yes" : "gui.beddefense.gallery.liked-no"),
-                        "likes", String.valueOf(defense.likeCount())))
-                .glow(liked)
-                .build(), event -> {
-            if (service.toggleLike(viewer, defense) == null) {
+                        "likes", String.valueOf(defense.likeCount()))
+                .glow(liked);
+        if (own) {
+            like.disabled("gui.reason.own-defense");
+        } else {
+            like.hint("toggle");
+        }
+        set(slot("like", 12), like.build(), event -> {
+            if (own || service.toggleLike(viewer, defense) == null) {
                 deny();
+                return;
             }
+            sound(liked ? "menu.toggle-off" : "menu.toggle-on");
             refresh();
         });
 
         boolean favorite = service.isFavorite(viewer.getUniqueId(), defense);
-        set(slot("favorite", 13), ItemBuilder.of(icon("favorite", Material.NETHER_STAR))
-                .name(name("gui.beddefense.actions.favorite.name"))
-                .lore(lore("gui.beddefense.actions.favorite.lore", plugin.messages().ref("state",
+        set(slot("favorite", 13), Button.of(plugin, icon("favorite", Material.AMETHYST_SHARD))
+                .name("gui.beddefense.actions.favorite.name")
+                .lore("gui.beddefense.actions.favorite.lore", plugin.messages().ref("state",
                         favorite ? "gui.beddefense.gallery.favorite-yes"
-                                : "gui.beddefense.gallery.favorite-no")))
+                                : "gui.beddefense.gallery.favorite-no"))
                 .glow(favorite)
+                .hint("toggle")
                 .build(), event -> {
             service.toggleFavorite(viewer, defense);
+            sound(favorite ? "menu.toggle-off" : "menu.toggle-on");
             refresh();
         });
 
         String key = BedDefenseService.statsKey(defense.id(), false);
         var record = plugin.leaderboards().record(key);
         int rank = plugin.leaderboards().rank(key, viewer.getUniqueId());
-        set(slot("board", 14), ItemBuilder.of(icon("board", Material.GOLD_INGOT))
-                .name(name("gui.beddefense.actions.board.name"))
-                .lore(lore("gui.beddefense.actions.board.lore",
+        boolean canView = viewer.hasPermission("practicecore.leaderboard");
+        Button board = Button.of(plugin, icon("board", Material.GOLD_INGOT))
+                .name("gui.beddefense.actions.board.name")
+                .lore("gui.beddefense.actions.board.lore",
                         "players", String.valueOf(plugin.leaderboards().size(key)),
                         "record", record != null ? TimeFormat.precise(record.millis()) : raw("gui.none"),
                         "record-holder", record != null ? record.displayName() : raw("gui.none"),
-                        "rank", rank > 0 ? "#" + rank : raw("gui.none")))
-                .glow(rank == 1)
-                .build(), event -> {
-            if (!viewer.hasPermission("practicecore.leaderboard")) {
+                        "rank", rank > 0 ? "#" + rank : raw("gui.none"));
+        if (canView) {
+            board.hint("view");
+        } else {
+            board.locked("gui.reason.needs-node", "node", "practicecore.leaderboard");
+        }
+        set(slot("board", 14), board.build(), event -> {
+            if (!canView) {
                 deny();
                 return;
             }
@@ -141,9 +154,10 @@ public final class BedDefenseActionsMenu extends Menu {
         });
 
         if (own) {
-            set(slot("edit", 20), ItemBuilder.of(icon("edit", Material.WRITABLE_BOOK))
-                    .name(name("gui.beddefense.actions.edit.name"))
-                    .lore(lore("gui.beddefense.actions.edit.lore"))
+            set(slot("edit", 20), Button.of(plugin, icon("edit", Material.WRITABLE_BOOK))
+                    .name("gui.beddefense.actions.edit.name")
+                    .lore("gui.beddefense.actions.edit.lore")
+                    .hint("edit")
                     .build(), event -> {
                 click();
                 later(() -> {
@@ -151,34 +165,43 @@ public final class BedDefenseActionsMenu extends Menu {
                     service.edit(viewer, defense);
                 });
             });
-            set(slot("visibility", 21), ItemBuilder.of(icon("visibility",
-                            defense.published() ? Material.ENDER_EYE : Material.ENDER_PEARL))
-                    .name(name("gui.beddefense.actions.visibility.name"))
-                    .lore(lore("gui.beddefense.actions.visibility.lore", plugin.messages().ref("state",
-                            defense.published() ? "gui.beddefense.gallery.visibility-public"
-                                    : "gui.beddefense.gallery.visibility-private")))
-                    .glow(defense.published())
+            boolean published = defense.published();
+            set(slot("visibility", 21), Button.of(plugin, published
+                            ? icon("visibility", Material.LANTERN)
+                            : plugin.guis().material("beddefense-actions.buttons.visibility.material-private",
+                                    Material.SOUL_LANTERN))
+                    .name("gui.beddefense.actions.visibility.name")
+                    .lore("gui.beddefense.actions.visibility.lore", plugin.messages().ref("state",
+                            published ? "label.state.public" : "label.state.private"))
+                    .glow(published)
+                    .hint("toggle")
                     .build(), event -> {
-                service.setPublished(viewer, defense, !defense.published());
+                sound(published ? "menu.toggle-off" : "menu.toggle-on");
+                service.setPublished(viewer, defense, !published);
                 refresh();
             });
         }
         if (own || admin) {
-            set(slot("delete", 22), ItemBuilder.of(icon("delete",
-                            deleteArmed ? Material.TNT : Material.LAVA_BUCKET))
-                    .name(name(deleteArmed ? "gui.beddefense.actions.delete.name-armed"
-                            : "gui.beddefense.actions.delete.name"))
-                    .lore(lore(deleteArmed ? "gui.beddefense.actions.delete.lore-armed"
-                            : "gui.beddefense.actions.delete.lore"))
-                    .glow(deleteArmed)
-                    .build(), event -> {
-                if (!deleteArmed) {
-                    click();
-                    deleteArmed = true;
-                    refresh();
+            int slot = slot("delete", 22);
+            boolean armed = isArmed(slot);
+            Button delete = Button.of(plugin, icon("delete", Material.LAVA_BUCKET));
+            if (armed) {
+                delete.name("gui.beddefense.actions.delete.name-armed")
+                        .lore("gui.beddefense.actions.delete.lore-armed")
+                        .glow(true)
+                        .hint("confirm")
+                        .line(name("gui.beddefense.actions.delete.cancel-line"));
+            } else {
+                delete.name("gui.beddefense.actions.delete.name")
+                        .lore("gui.beddefense.actions.delete.lore")
+                        .hint("delete");
+            }
+            set(slot, delete.build(), event -> {
+                if (!isArmed(slot)) {
+                    arm(slot);
                     return;
                 }
-                sound("menu.select");
+                disarm();
                 service.delete(viewer, defense);
                 later(() -> {
                     Menu gallery = parent();
@@ -190,7 +213,6 @@ public final class BedDefenseActionsMenu extends Menu {
                 });
             });
         }
-        backButton(plugin.guis().slot("beddefense-actions.back", 27));
-        closeButton(plugin.guis().slot("beddefense-actions.close", 35));
+        nav("beddefense-actions");
     }
 }
