@@ -34,7 +34,7 @@ import java.util.Map;
  * through a gallery.
  *
  * <p>A round is complete when every block of the defense stands with the
- * right kind of material at the right spot, in any order (strict-order is a
+ * right kind of material at the right spot, in any order (guided building is a
  * separate variant with its own boards). Times are keyed per defense, not
  * per map, and only competitive rounds — the match-opening loadout with
  * blocks bought from the shop — are recorded and ranked.
@@ -146,18 +146,15 @@ public final class BedDefenseMode implements Mode {
     }
 
     /**
-     * Boards are kept per defense, not per map: {@code beddefense#<id>} and
-     * the strict-order variant {@code beddefense#<id>#strict}. Before a
-     * round has a defense (join preloads) the chosen one stands in.
+     * Boards are kept per defense, not per map: {@code beddefense#<id>}.
+     * Before a round has a defense (join preloads) the chosen one stands in.
      */
     @Override
     public String statsKey(PracticeCorePlugin plugin, PracticeSession session) {
         BedDefenseState state = state(session);
         BedDefense defense = state != null && state.defense() != null
                 ? state.defense() : plugin.bedDefenses().roundDefense(session.playerId());
-        boolean strict = state != null ? state.selection().strictOrder()
-                : plugin.bedDefenses().selection(session.playerId()).strictOrder();
-        return BedDefenseService.statsKey(defense == null ? "none" : defense.id(), strict);
+        return BedDefenseService.statsKey(defense == null ? "none" : defense.id());
     }
 
     /** Nothing per arena: a defense's boards are purged when the defense is deleted. */
@@ -172,7 +169,7 @@ public final class BedDefenseMode implements Mode {
         if (state == null || state.defense() == null) {
             return session.template().displayName();
         }
-        return plugin.bedDefenses().displayFor(state.defense(), state.selection().strictOrder());
+        return plugin.bedDefenses().displayFor(state.defense());
     }
 
     // ----------------------------------------------------------------- rounds

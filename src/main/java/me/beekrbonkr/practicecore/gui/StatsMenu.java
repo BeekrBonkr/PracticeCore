@@ -101,7 +101,7 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
 
         Button tile = Button.of(plugin, template != null
                         ? plugin.modes().of(template).menuIcon(plugin, template)
-                        : defense != null ? defense.getKey().icon() : Material.PAPER)
+                        : defense != null ? defense.icon() : Material.PAPER)
                 .name("gui.stats.entry-name", "arena", display)
                 .lore("gui.stats.entry-lore",
                         "arena", display,
@@ -146,8 +146,7 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
             return plugin.rush().displayFor(rush.getKey(), rush.getValue());
         }
         var defense = plugin.bedDefenses().resolveStatsKey(key);
-        return defense != null
-                ? plugin.bedDefenses().displayFor(defense.getKey(), defense.getValue()) : key;
+        return defense != null ? plugin.bedDefenses().displayFor(defense) : key;
     }
 
     @Override
@@ -162,10 +161,10 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
             }
             sound("menu.select");
             later(() -> new ArenaLeaderboardMenu(plugin, viewer, this, entry.getKey(),
-                    plugin.bedDefenses().displayFor(defense.getKey(), defense.getValue()),
-                    defense.getKey().icon(), () -> {
+                    plugin.bedDefenses().displayFor(defense),
+                    defense.icon(), () -> {
                 viewer.closeInventory();
-                plugin.bedDefenses().play(viewer, defense.getKey());
+                plugin.bedDefenses().play(viewer, defense);
             }).open());
             return;
         }

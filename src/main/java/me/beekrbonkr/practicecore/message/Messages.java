@@ -167,6 +167,31 @@ public final class Messages {
             YamlMigrator.resetUntouched(cfg,
                     Backups.jarDefaults(plugin, "migrations/messages-v8.yml"));
         }
+        if (from < 10) {
+            // v10 removes strict order. The keys that only described it go;
+            // the two lore lists that mentioned it are lists, which top-up
+            // cannot reach into, so the entry is spliced out of whatever the
+            // admin has — an edited line about strict order is still wrong
+            // once the toggle is gone.
+            cfg.set("beddefense.board-name-strict", null);
+            cfg.set("beddefense.strict", null);
+            cfg.set("gui.beddefense.strict", null);
+            List<String> start = cfg.getStringList("gui.beddefense.start.lore");
+            if (!start.isEmpty()) {
+                List<String> kept = new ArrayList<>();
+                for (String line : start) {
+                    if (!line.contains("<strict>")) {
+                        kept.add(line);
+                    }
+                }
+                cfg.set("gui.beddefense.start.lore", kept);
+            }
+            List<String> settings = cfg.getStringList("gui.beddefense.session.settings.lore");
+            if (settings.equals(List.of("<gray>Mode, strict order, shuffle,",
+                    "<gray>timer start and your base."))) {
+                cfg.set("gui.beddefense.session.settings.lore", null);
+            }
+        }
     }
 
     private void index(FileConfiguration cfg) {

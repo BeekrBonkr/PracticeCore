@@ -24,7 +24,7 @@ Foundation: `gui/Button.java` (one builder for every control), `Menu.nav()` (bac
 | RushBoardPickerMenu | Boards — <arena> | Layout now from the new `rushboards` section of guis.yml |
 | RushShopMenu | Item Shop | Full border, Close bottom-right, Quick Buy = GOLD_BLOCK, unaffordable items say `Unavailable: cannot afford`, pin hints via shift-click lines |
 | BedDefenseArenaMenu | Bed Defense Maps | Own locked-tile keys instead of the generic arena ones |
-| BedDefenseConfigMenu | Bed Defense — <arena> | Own team-base keys; Mode = LEVER, Strict Order = CHAIN, Timer Start = REPEATER, Shuffle = ENDER_EYE; pinned/unavailable controls disabled with reasons |
+| BedDefenseConfigMenu | Bed Defense — <arena> | Own team-base keys; Mode = LEVER, Timer Start = REPEATER, Shuffle = ENDER_EYE; pinned/unavailable controls disabled with reasons |
 | BedDefenseGalleryMenu | Defenses — Public / Mine / Favorites | Tabs at footer slots; Mine tab = your head; Favorites = AMETHYST_SHARD |
 | BedDefenseActionsMenu | <name> | Delete = LAVA_BUCKET inline arm ("Confirm Delete"); Like/Favorite/Visibility play toggle sounds; Leaderboard locked with a reason |
 | BedDefenseBoardsMenu | Boards — Bed Defense / Boards — <name> | Shared board lore skeleton |
@@ -125,6 +125,9 @@ Start a server with a copy of an existing `plugins/PracticeCore/` folder so the 
 - [ ] Gallery tabs at the footer; Mine tab shows your head; empty tabs read `No … yet`
 - [ ] Right-click a tile → actions menu: Like/Favorite/Visibility play toggle sounds; Delete arms to `Confirm Delete` (glowing lava bucket), any other click disarms, second click deletes
 - [ ] Editor: Save and Play disabled with `place some blocks first` when empty; Clear Build arms then clears; Leave Editor is a red door
+- [ ] Config menu row 2 reads Defense, Mode, Shuffle, Timer Start with no empty slot between them, on a fresh `guis.yml` and on one upgraded from v6
+- [ ] Leaderboards list one board per defense, and no board is named "strict order"
+- [ ] Start button lore no longer has a `Strict order:` line
 - [ ] Session menu: Preview is a painting and is disabled outside the play phase; Guided Building's name never changes
 
 ### Spectate

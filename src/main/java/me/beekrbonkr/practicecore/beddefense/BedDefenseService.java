@@ -152,7 +152,6 @@ public final class BedDefenseService {
         return new BedDefenseSelection(
                 stats.prefBool(player, "beddefense.competitive", false),
                 defense,
-                stats.prefBool(player, "beddefense.strict-order", false),
                 BedDefenseSelection.enumOr(BedDefenseSelection.Shuffle.class,
                         stats.pref(player, "beddefense.shuffle", null), defaults.shuffle()),
                 BedDefenseSelection.enumOr(BedDefenseSelection.TimerStart.class,
@@ -185,7 +184,6 @@ public final class BedDefenseService {
         Map<String, Object> values = new LinkedHashMap<>();
         values.put("beddefense.competitive", selection.competitive());
         values.put("beddefense.defense", selection.defense());
-        values.put("beddefense.strict-order", selection.strictOrder());
         values.put("beddefense.shuffle", selection.shuffle().name());
         values.put("beddefense.timer-start", selection.timerStart().name());
         plugin.stats().setPrefs(player, values);
@@ -1134,19 +1132,6 @@ public final class BedDefenseService {
         if (state.frame() != null && state.frame().isBed(block.getLocation())) {
             return "beddefense.edit.bed-protected";
         }
-        if (phase == Phase.PLAY && state.selection().strictOrder()) {
-            Target next = state.nextTarget();
-            Target here = state.targetAt(block.getLocation());
-            if (here != null && next != null
-                    && (here != next || here.block().kind() != placedKind)) {
-                plugin.sounds().play(player, "beddefense.wrong-order");
-                msg().actionBar(player, "beddefense.strict.wrong-order",
-                        "material", BlockKinds.pretty(next.block().kind()),
-                        "step", String.valueOf(state.satisfied() + 1),
-                        "total", String.valueOf(state.targets().size()));
-                return "";
-            }
-        }
         return null;
     }
 
@@ -1482,7 +1467,7 @@ public final class BedDefenseService {
     /** Deletes a defense and every time recorded on it. */
     public void delete(Player actor, BedDefense defense) {
         store.delete(defense);
-        for (String key : List.of(statsKey(defense.id(), false), statsKey(defense.id(), true))) {
+        for (String key : List.of(statsKey(defense.id()), legacyStrictStatsKey(defense.id()))) {
             plugin.leaderboards().forget(key);
             plugin.stats().purgeTemplate(key, wiped -> { });
         }
@@ -1492,33 +1477,40 @@ public final class BedDefenseService {
 
     // ------------------------------------------------------------------ stats
 
-    public static String statsKey(String defenseId, boolean strict) {
-        return "beddefense#" + defenseId + (strict ? "#strict" : "");
+    public static String statsKey(String defenseId) {
+        return "beddefense#" + defenseId;
     }
 
-    /** A board key resolved to its defense and variant, or null for foreign keys. */
-    public Map.Entry<BedDefense, Boolean> resolveStatsKey(String key) {
+    /**
+     * The board key strict-order rounds used to write to. Strict order was
+     * removed, so nothing writes this any more; it is still recognized so
+     * times set before the removal keep resolving to their defense instead
+     * of showing as a dead key.
+     */
+    public static String legacyStrictStatsKey(String defenseId) {
+        return "beddefense#" + defenseId + "#strict";
+    }
+
+    /** A board key resolved to its defense, or null for foreign keys. */
+    public BedDefense resolveStatsKey(String key) {
         if (key == null || !key.startsWith("beddefense#")) {
             return null;
         }
         String rest = key.substring("beddefense#".length());
-        boolean strict = rest.endsWith("#strict");
-        if (strict) {
+        if (rest.endsWith("#strict")) {
             rest = rest.substring(0, rest.length() - "#strict".length());
         }
-        BedDefense defense = store.get(rest);
-        return defense == null ? null : Map.entry(defense, strict);
+        return store.get(rest);
     }
 
-    /** "<name> (Bed Defense)" / "<name> (Bed Defense, strict)" for boards and broadcasts. */
-    public String displayFor(BedDefense defense, boolean strict) {
-        return msg().raw(strict ? "beddefense.board-name-strict" : "beddefense.board-name")
-                .replace("<name>", defense.name());
+    /** "<name> (Bed Defense)" for boards and broadcasts. */
+    public String displayFor(BedDefense defense) {
+        return msg().raw("beddefense.board-name").replace("<name>", defense.name());
     }
 
     /** Every board key a defense can produce. */
     public List<String> statsKeys(BedDefense defense) {
-        return List.of(statsKey(defense.id(), false), statsKey(defense.id(), true));
+        return List.of(statsKey(defense.id()));
     }
 
     // ----------------------------------------------------------------- ticking

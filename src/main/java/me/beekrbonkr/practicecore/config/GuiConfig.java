@@ -93,6 +93,15 @@ public final class GuiConfig {
             YamlMigrator.resetUntouched(cfg,
                     Backups.jarDefaults(plugin, "migrations/guis-v5.yml"));
         }
+        if (from < 7) {
+            // v7 removes the bed defense strict-order button. Shuffle and the
+            // timer slide one slot left to close the gap, but only while they
+            // still sit where v6 put them; an admin's own row stands as-is.
+            cfg.set("beddefense.buttons.strict", null);
+            cfg.set("beddefense-gallery.strict-board-material", null);
+            relocate(cfg, "beddefense.buttons.shuffle.slot", 24, 23);
+            relocate(cfg, "beddefense.buttons.timer.slot", 25, 24);
+        }
     }
 
     /** Moves a slot only while it still sits where the previous version put it. */
