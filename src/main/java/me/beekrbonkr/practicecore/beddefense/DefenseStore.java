@@ -86,9 +86,16 @@ public final class DefenseStore {
             if (kind == null) {
                 continue;
             }
+            int y = toInt(raw.get("y"));
+            if (y < 0) {
+                // The editor never places these; only a hand-edited file can.
+                plugin.getLogger().warning("defenses/" + file.getName()
+                        + " has a block below the bed — dropped.");
+                continue;
+            }
             Object data = raw.get("data");
             blocks.add(new DefenseBlock(
-                    toInt(raw.get("x")), toInt(raw.get("y")), toInt(raw.get("z")),
+                    toInt(raw.get("x")), y, toInt(raw.get("z")),
                     BlockKinds.normalize(kind),
                     data == null ? kind.getKey().toString() : String.valueOf(data)));
         }
