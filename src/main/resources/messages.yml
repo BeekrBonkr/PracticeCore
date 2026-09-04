@@ -827,43 +827,33 @@ gui:
   main:
     title: '<dark_gray><bold>Practice'
     play:
-      name: '<green><bold>Play'
+      name: '<white><bold>Play'
       # <count>
       lore:
         - '<gray>Pick an arena to practice in.'
         - ''
-        - '<dark_gray><count> arena(s) available'
-        - '<yellow>Click to browse'
+        - '<gray>Arenas: <white><count>'
     random:
-      name: '<light_purple><bold>Random Arena'
+      name: '<white><bold>Random Arena'
       lore:
-        - '<gray>Drops you straight into one'
-        - '<gray>of the arenas you can play.'
-        - '<yellow>Click to join'
+        - '<gray>Drops you into one of the'
+        - '<gray>arenas you can play.'
     leaderboards:
       name: '<gold><bold>Leaderboards'
       lore:
         - '<gray>The fastest times on every arena.'
-        - '<yellow>Click to view'
     stats:
-      name: '<aqua><bold>My Stats'
+      name: '<white><bold>My Stats'
       lore:
         - '<gray>Your bests, ranks and run counts.'
-        - '<yellow>Click to view'
     restart:
       name: '<yellow><bold>Restart Run'
       # <arena>
       lore:
-        - '<gray>Wipe your blocks and start over'
+        - '<gray>Wipes your blocks and starts over'
         - '<gray>from the arena spawn.'
         - ''
         - '<gray>Arena: <white><arena>'
-        - '<yellow>Click to restart'
-      lore-idle:
-        - '<gray>Wipe your blocks and start over'
-        - '<gray>from the arena spawn.'
-        - ''
-        - '<red>You are not practicing.'
     sidebar:
       name: '<white><bold>Sidebar'
       # <state>
@@ -871,78 +861,63 @@ gui:
         - '<gray>The live timer scoreboard.'
         - ''
         - '<gray>Currently: <state>'
-        - '<yellow>Click to toggle'
-      state-shown: '<green>shown'
-      state-hidden: '<red>hidden'
     help:
       name: '<white><bold>Help'
       lore:
-        - '<gray>How practice arenas work,'
+        - '<gray>How practice arenas work'
         - '<gray>and every command you can run.'
-        - '<yellow>Click for details'
     # Only shown while sparring the PvP bot.
     bot:
-      name: '<red><bold>Bot Settings'
+      name: '<white><bold>Bot Settings'
       lore:
         - '<gray>Kit, difficulty and the bot''s'
-        - '<gray>arsenal. It pauses while'
+        - '<gray>arsenal. The bot pauses while'
         - '<gray>this menu is open.'
-        - '<yellow>Click to open'
     settings:
-      name: '<light_purple><bold>Settings'
+      name: '<white><bold>Settings'
       lore:
-        - '<gray>Night vision, wool color'
-        - '<gray>and your arena''s time of day.'
-        - '<yellow>Click to open'
+        - '<gray>Night vision, wool color and'
+        - '<gray>your arena''s time of day.'
     spectate:
-      name: '<aqua><bold>Spectate'
+      name: '<white><bold>Spectate'
       lore:
         - '<gray>Watch another player practice'
         - '<gray>without disturbing their run.'
-        - '<yellow>Click to pick a player'
     leave:
       name: '<red><bold>Leave'
       # <destination>
       lore:
-        - '<gray>Restores your inventory, location'
-        - '<gray>and everything else exactly as it was.'
+        - '<gray>Restores your inventory and'
+        - '<gray>location exactly as they were.'
         - ''
         - '<gray>Sends you to: <white><destination>'
-        - '<yellow>Click to leave'
 
   settings:
     title: '<dark_gray><bold>Settings'
     night-vision:
-      name: '<gold><bold>Night Vision'
+      name: '<white><bold>Night Vision'
       # <state>
       lore:
         - '<gray>Permanent night vision while'
         - '<gray>you are practicing.'
         - ''
         - '<gray>Currently: <state>'
-        - '<yellow>Click to toggle'
-      state-on: '<green>enabled'
-      state-off: '<red>disabled'
     wool-color:
       name: '<white><bold>Wool Color'
       # <color>
       lore:
-        - '<gray>The color of the wool in your'
-        - '<gray>kit — and so of your bridges.'
+        - '<gray>Cycles the wool color in your kit.'
         - ''
         - '<gray>Currently: <white><color>'
-        - '<yellow>Click to cycle'
-        - '<yellow>Right-click to cycle back'
       default: 'kit default'
     time:
-      name: '<yellow><bold>Time of Day'
+      name: '<white><bold>Time of Day'
       # <time>
       lore:
         - '<gray>The time of day in your arena.'
         - '<gray>Only you see it.'
         - ''
         - '<gray>Currently: <white><time>'
-        - '<yellow>Click to cycle'
       option:
         default: 'server time'
         day: 'day'
@@ -952,19 +927,17 @@ gui:
         midnight: 'midnight'
 
   categories:
-    title: '<dark_gray><bold>Categories'
+    title: '<dark_gray><bold>Play'
     empty:
-      name: '<red>No arenas available'
+      name: '<gray><bold>No arenas yet'
       lore:
-        - '<gray>Nothing has been set up yet, or'
-        - '<gray>you lack permission for them all.'
+        - '<gray>Nothing has been set up, or you'
+        - '<gray>lack permission for them all.'
     # <category>
-    entry-name: '<green><bold><category>'
+    entry-name: '<white><bold><category>'
     # <category> <count>
     entry-lore:
-      - '<gray><count> arena(s)'
-      - ''
-      - '<yellow>Click to browse'
+      - '<gray>Arenas: <white><count>'
 
   arenas:
     title: '<dark_gray><bold>Arenas'
