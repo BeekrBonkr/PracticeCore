@@ -1125,6 +1125,9 @@ public final class BedDefenseService {
         if (phase == Phase.PREVIEW) {
             return "beddefense.preview.no-building";
         }
+        if (state.frame() != null && state.frame().belowBed(block.getLocation())) {
+            return "beddefense.below-bed"; // every phase: no digging under the bed
+        }
         if (phase == Phase.EDIT) {
             return checkEditPlace(state, block, placedKind);
         }
