@@ -120,8 +120,6 @@ beddefense:
   preview-step: 'BLOCK_STONE_PLACE 0.6 1.1'
   # Guided building switching on.
   guided-enter: 'BLOCK_NOTE_BLOCK_PLING 0.6 1.4'
-  # A block placed out of sequence on a strict-order round.
-  wrong-order: 'BLOCK_NOTE_BLOCK_BASS 0.7 0.7'
   # A defense saved; a save refused because that defense already exists.
   saved: 'ENTITY_PLAYER_LEVELUP 0.8 1.2'
   duplicate: 'ENTITY_VILLAGER_NO 0.8 1.0'

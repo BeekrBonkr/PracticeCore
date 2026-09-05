@@ -16,18 +16,10 @@ import java.util.List;
 
 /**
  * Bed defense leaderboards. Opened from the leaderboards category picker it
- * lists every defense with times on it (any-order and strict boards as
- * separate tiles); opened from a defense's actions it shows just that
- * defense's two boards. Each tile opens the full ranking.
+ * lists every defense with times on it; opened from a defense's actions it
+ * shows just that defense's board. Each tile opens the full ranking.
  */
-public final class BedDefenseBoardsMenu extends PagedMenu<BedDefenseBoardsMenu.Board> {
-
-    /** One board: a defense and whether it is the strict-order variant. */
-    public record Board(BedDefense defense, boolean strict) {
-        String key() {
-            return BedDefenseService.statsKey(defense.id(), strict);
-        }
-    }
+public final class BedDefenseBoardsMenu extends PagedMenu<BedDefense> {
 
     private final BedDefense only;
 
@@ -47,16 +39,14 @@ public final class BedDefenseBoardsMenu extends PagedMenu<BedDefenseBoardsMenu.B
     }
 
     @Override
-    protected List<Board> entries() {
-        List<Board> boards = new ArrayList<>();
+    protected List<BedDefense> entries() {
+        List<BedDefense> boards = new ArrayList<>();
         List<BedDefense> defenses = only != null ? List.of(only)
                 : plugin.bedDefenses().store().playableBy(viewer.getUniqueId());
         for (BedDefense defense : defenses) {
-            for (boolean strict : new boolean[]{false, true}) {
-                Board board = new Board(defense, strict);
-                if (only != null || plugin.leaderboards().size(board.key()) > 0) {
-                    boards.add(board);
-                }
+            if (only != null
+                    || plugin.leaderboards().size(BedDefenseService.statsKey(defense.id())) > 0) {
+                boards.add(defense);
             }
         }
         return boards;
@@ -68,19 +58,16 @@ public final class BedDefenseBoardsMenu extends PagedMenu<BedDefenseBoardsMenu.B
     }
 
     @Override
-    protected ItemStack icon(Board board) {
-        String key = board.key();
+    protected ItemStack icon(BedDefense board) {
+        String key = BedDefenseService.statsKey(board.id());
         LeaderboardService.Entry record = plugin.leaderboards().record(key);
         int rank = plugin.leaderboards().rank(key, viewer.getUniqueId());
-        Material icon = board.strict()
-                ? plugin.guis().material("beddefense-gallery.strict-board-material", Material.CHAIN)
-                : board.defense().icon();
-        return Button.of(plugin, icon)
+        return Button.of(plugin, board.icon())
                 .name("gui.beddefense.boards.entry-name",
-                        "board", plugin.bedDefenses().displayFor(board.defense(), board.strict()))
+                        "board", plugin.bedDefenses().displayFor(board))
                 .lore("gui.beddefense.boards.entry-lore",
-                        "name", board.defense().name(),
-                        "author", board.defense().authorName(),
+                        "name", board.name(),
+                        "author", board.authorName(),
                         "players", String.valueOf(plugin.leaderboards().size(key)),
                         "record", record != null ? TimeFormat.precise(record.millis()) : raw("gui.none"),
                         "record-holder", record != null ? record.displayName() : raw("gui.none"),
@@ -90,13 +77,13 @@ public final class BedDefenseBoardsMenu extends PagedMenu<BedDefenseBoardsMenu.B
     }
 
     @Override
-    protected void onEntryClick(Board board, InventoryClickEvent event) {
+    protected void onEntryClick(BedDefense board, InventoryClickEvent event) {
         click();
-        later(() -> new ArenaLeaderboardMenu(plugin, viewer, this, board.key(),
-                plugin.bedDefenses().displayFor(board.defense(), board.strict()),
-                board.defense().icon(), () -> {
+        later(() -> new ArenaLeaderboardMenu(plugin, viewer, this,
+                BedDefenseService.statsKey(board.id()),
+                plugin.bedDefenses().displayFor(board), board.icon(), () -> {
             viewer.closeInventory();
-            plugin.bedDefenses().play(viewer, board.defense());
+            plugin.bedDefenses().play(viewer, board);
         }).open());
     }
 }

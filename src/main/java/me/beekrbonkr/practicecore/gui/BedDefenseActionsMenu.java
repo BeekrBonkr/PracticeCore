@@ -128,7 +128,7 @@ public final class BedDefenseActionsMenu extends Menu {
             refresh();
         });
 
-        String key = BedDefenseService.statsKey(defense.id(), false);
+        String key = BedDefenseService.statsKey(defense.id());
         var record = plugin.leaderboards().record(key);
         int rank = plugin.leaderboards().rank(key, viewer.getUniqueId());
         boolean canView = viewer.hasPermission("practicecore.leaderboard");

@@ -293,6 +293,11 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
         } else {
             var rushBoard = plugin.rush().resolveStatsKey(args[1].toLowerCase(Locale.ROOT));
             var defenseBoard = plugin.bedDefenses().resolveStatsKey(args[1].toLowerCase(Locale.ROOT));
+            if (me.beekrbonkr.practicecore.beddefense.BedDefenseService
+                    .isPracticeStatsKey(args[1].toLowerCase(Locale.ROOT))) {
+                msg().send(sender, "leaderboard.beddefense-practice");
+                return;
+            }
             if (rushBoard == null && defenseBoard == null) {
                 msg().send(sender, "arena.unknown", "arena", args[1]);
                 return;
@@ -300,7 +305,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
             key = args[1].toLowerCase(Locale.ROOT);
             display = rushBoard != null
                     ? plugin.rush().displayFor(rushBoard.getKey(), rushBoard.getValue())
-                    : plugin.bedDefenses().displayFor(defenseBoard.getKey(), defenseBoard.getValue());
+                    : plugin.bedDefenses().displayFor(defenseBoard);
         }
         List<LeaderboardService.Entry> top = plugin.leaderboards()
                 .top(key, plugin.pcConfig().leaderboardSize());

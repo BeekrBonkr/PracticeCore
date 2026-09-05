@@ -15,12 +15,12 @@ config file format versions (`config-version`) migrate automatically on start.
   a shuffle pool). Boards are kept per defense, not per map, under their own
   leaderboard category.
 - **Two ways to play.** Competitive is a real match opening, sword, team-dyed
-  leather, base generators and the mirrored shop, blocks bought, emerald
-  generators on when the defense needs obsidian, and the only rounds that are
-  recorded and ranked. Practice deals the defense's exact blocks (one water
-  bucket per water block), with shuffle, a timer-start choice, and a
-  strict-order variant that keeps its own boards. Completion is judged by
-  block kind at each spot in any order: any wool is wool, only water source
+  leather, base generators and the mirrored shop, blocks bought, an emerald
+  generator on your own base gold spawner when the defense needs obsidian,
+  and the only rounds that are ranked. Practice deals the defense's exact
+  blocks (one water bucket per water block), with shuffle and a timer-start
+  choice, and keeps a personal best of its own that is never ranked or
+  broadcast. Completion is judged by block kind at each spot in any order: any wool is wool, only water source
   blocks count, a waterlogged ladder is a ladder. A chosen defense's
   footprint is carved out of the map so it fits any base.
 - **Preview and guided building.** Drop any item (or use the bed defense

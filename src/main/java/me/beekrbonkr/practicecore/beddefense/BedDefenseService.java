@@ -152,7 +152,6 @@ public final class BedDefenseService {
         return new BedDefenseSelection(
                 stats.prefBool(player, "beddefense.competitive", false),
                 defense,
-                stats.prefBool(player, "beddefense.strict-order", false),
                 BedDefenseSelection.enumOr(BedDefenseSelection.Shuffle.class,
                         stats.pref(player, "beddefense.shuffle", null), defaults.shuffle()),
                 BedDefenseSelection.enumOr(BedDefenseSelection.TimerStart.class,
@@ -185,7 +184,6 @@ public final class BedDefenseService {
         Map<String, Object> values = new LinkedHashMap<>();
         values.put("beddefense.competitive", selection.competitive());
         values.put("beddefense.defense", selection.defense());
-        values.put("beddefense.strict-order", selection.strictOrder());
         values.put("beddefense.shuffle", selection.shuffle().name());
         values.put("beddefense.timer-start", selection.timerStart().name());
         plugin.stats().setPrefs(player, values);
@@ -589,14 +587,21 @@ public final class BedDefenseService {
 
     /**
      * Arms the player's own base generators — the iron/gold spawners closer
-     * to their spawn than to any other team's — plus the map's emerald
-     * generators when the defense needs obsidian, since that is the only
-     * way to buy it.
+     * to their spawn than to any other team's — plus emeralds when the
+     * defense needs obsidian, since that is the only way to buy it.
+     *
+     * <p>Emeralds drop at the player's own base rather than at the map's
+     * emerald spawners. Those sit in the middle, and walking out to them is
+     * a bridging run, which is not what this mode practices. Exactly one is
+     * armed no matter how many the map has, so the rate stays the map's
+     * rather than a multiple of it.
      */
     private void armGenerators(PracticeSession session, BedDefenseState state, BedDefense defense) {
         RushMapData data = state.data();
         Location origin = session.origin();
         Vector home = state.base().spawn();
+        Location goldSpot = null;
+        Location ironSpot = null;
         for (RushMapData.Generator generator : data.generators()) {
             Material drops;
             int interval;
@@ -609,28 +614,49 @@ public final class BedDefenseService {
                     drops = Material.GOLD_INGOT;
                     interval = plugin.pcConfig().rushGoldIntervalTicks();
                 }
-                case "emerald" -> {
-                    if (!plugin.pcConfig().bedDefenseEmeraldForObsidian()
-                            || !defense.containsKind(Material.OBSIDIAN)) {
-                        continue;
-                    }
-                    drops = Material.EMERALD;
-                    interval = plugin.pcConfig().rushEmeraldIntervalTicks();
-                }
                 default -> {
-                    continue;
+                    continue; // emeralds are placed below; diamonds have no part here
                 }
             }
-            if (drops != Material.EMERALD && !nearestTeamIs(data, generator.offset(), home)) {
+            if (!nearestTeamIs(data, generator.offset(), home)) {
                 continue;
             }
-            Location spot = new Location(origin.getWorld(),
-                    origin.getBlockX() + generator.offset().getBlockX() + 0.5,
-                    origin.getBlockY() + generator.offset().getBlockY() + 1.0,
-                    origin.getBlockZ() + generator.offset().getBlockZ() + 0.5);
+            Location spot = dropSpot(origin, generator.offset());
+            if (drops == Material.GOLD_INGOT) {
+                goldSpot = spot;
+            } else {
+                ironSpot = spot;
+            }
             state.generators().add(new BedDefenseState.Generator(spot, drops,
                     generator.type(), interval));
         }
+        armBaseEmeralds(state, defense, origin, home, goldSpot != null ? goldSpot : ironSpot);
+    }
+
+    /**
+     * One emerald generator on the player's own base gold spawner (iron, or
+     * the spawn itself, when the map gives the base neither). Armed only for
+     * a defense that needs obsidian, and only on a map that has emerald
+     * spawners of its own — a map without them never sold obsidian.
+     */
+    private void armBaseEmeralds(BedDefenseState state, BedDefense defense, Location origin,
+                                 Vector home, Location baseSpot) {
+        if (!plugin.pcConfig().bedDefenseEmeraldForObsidian()
+                || !defense.containsKind(Material.OBSIDIAN)
+                || state.data().generatorsOf("emerald").isEmpty()) {
+            return;
+        }
+        Location spot = baseSpot != null ? baseSpot : dropSpot(origin, home);
+        state.generators().add(new BedDefenseState.Generator(spot, Material.EMERALD,
+                "emerald", plugin.pcConfig().rushEmeraldIntervalTicks()));
+    }
+
+    /** The block above a map offset, centered, in world coordinates. */
+    private static Location dropSpot(Location origin, Vector offset) {
+        return new Location(origin.getWorld(),
+                origin.getBlockX() + offset.getBlockX() + 0.5,
+                origin.getBlockY() + offset.getBlockY() + 1.0,
+                origin.getBlockZ() + offset.getBlockZ() + 0.5);
     }
 
     private static boolean nearestTeamIs(RushMapData data, Vector generator, Vector home) {
@@ -1134,19 +1160,6 @@ public final class BedDefenseService {
         if (state.frame() != null && state.frame().isBed(block.getLocation())) {
             return "beddefense.edit.bed-protected";
         }
-        if (phase == Phase.PLAY && state.selection().strictOrder()) {
-            Target next = state.nextTarget();
-            Target here = state.targetAt(block.getLocation());
-            if (here != null && next != null
-                    && (here != next || here.block().kind() != placedKind)) {
-                plugin.sounds().play(player, "beddefense.wrong-order");
-                msg().actionBar(player, "beddefense.strict.wrong-order",
-                        "material", BlockKinds.pretty(next.block().kind()),
-                        "step", String.valueOf(state.satisfied() + 1),
-                        "total", String.valueOf(state.targets().size()));
-                return "";
-            }
-        }
         return null;
     }
 
@@ -1482,7 +1495,8 @@ public final class BedDefenseService {
     /** Deletes a defense and every time recorded on it. */
     public void delete(Player actor, BedDefense defense) {
         store.delete(defense);
-        for (String key : List.of(statsKey(defense.id(), false), statsKey(defense.id(), true))) {
+        for (String key : List.of(statsKey(defense.id()), practiceStatsKey(defense.id()),
+                legacyStrictStatsKey(defense.id()))) {
             plugin.leaderboards().forget(key);
             plugin.stats().purgeTemplate(key, wiped -> { });
         }
@@ -1492,33 +1506,65 @@ public final class BedDefenseService {
 
     // ------------------------------------------------------------------ stats
 
-    public static String statsKey(String defenseId, boolean strict) {
-        return "beddefense#" + defenseId + (strict ? "#strict" : "");
+    public static String statsKey(String defenseId) {
+        return "beddefense#" + defenseId;
     }
 
-    /** A board key resolved to its defense and variant, or null for foreign keys. */
-    public Map.Entry<BedDefense, Boolean> resolveStatsKey(String key) {
+    /**
+     * Where a practice round's time goes. Practice hands the blocks over
+     * instead of making them be bought, so its times are not comparable
+     * with competitive ones and are kept on a key of their own — personal
+     * bests the player can see, never a public ranking.
+     */
+    public static String practiceStatsKey(String defenseId) {
+        return "beddefense#" + defenseId + "#practice";
+    }
+
+    /** True for a key holding practice times, which are never ranked. */
+    public static boolean isPracticeStatsKey(String key) {
+        return key != null && key.startsWith("beddefense#") && key.endsWith("#practice");
+    }
+
+    /**
+     * The board key strict-order rounds used to write to. Strict order was
+     * removed, so nothing writes this any more; it is still recognized so
+     * times set before the removal keep resolving to their defense instead
+     * of showing as a dead key.
+     */
+    public static String legacyStrictStatsKey(String defenseId) {
+        return "beddefense#" + defenseId + "#strict";
+    }
+
+    /** A board key resolved to its defense, or null for foreign keys. */
+    public BedDefense resolveStatsKey(String key) {
         if (key == null || !key.startsWith("beddefense#")) {
             return null;
         }
         String rest = key.substring("beddefense#".length());
-        boolean strict = rest.endsWith("#strict");
-        if (strict) {
-            rest = rest.substring(0, rest.length() - "#strict".length());
+        for (String suffix : List.of("#practice", "#strict")) {
+            if (rest.endsWith(suffix)) {
+                rest = rest.substring(0, rest.length() - suffix.length());
+                break;
+            }
         }
-        BedDefense defense = store.get(rest);
-        return defense == null ? null : Map.entry(defense, strict);
+        return store.get(rest);
     }
 
-    /** "<name> (Bed Defense)" / "<name> (Bed Defense, strict)" for boards and broadcasts. */
-    public String displayFor(BedDefense defense, boolean strict) {
-        return msg().raw(strict ? "beddefense.board-name-strict" : "beddefense.board-name")
+    /** "<name> (Bed Defense)" for boards and broadcasts. */
+    public String displayFor(BedDefense defense) {
+        return msg().raw("beddefense.board-name").replace("<name>", defense.name());
+    }
+
+    /** The same, named for the key's variant: practice times say so. */
+    public String displayForKey(String key, BedDefense defense) {
+        return msg().raw(isPracticeStatsKey(key)
+                        ? "beddefense.board-name-practice" : "beddefense.board-name")
                 .replace("<name>", defense.name());
     }
 
-    /** Every board key a defense can produce. */
+    /** Every key a defense can hold times under, ranked or not. */
     public List<String> statsKeys(BedDefense defense) {
-        return List.of(statsKey(defense.id(), false), statsKey(defense.id(), true));
+        return List.of(statsKey(defense.id()), practiceStatsKey(defense.id()));
     }
 
     // ----------------------------------------------------------------- ticking

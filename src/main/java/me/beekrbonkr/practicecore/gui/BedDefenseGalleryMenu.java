@@ -91,8 +91,8 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
         boolean own = defense.isAuthor(viewer.getUniqueId());
         boolean selected = defense.id().equals(service.rawSelection(viewer.getUniqueId()).defense());
         long best = plugin.stats().bestMs(viewer.getUniqueId(),
-                BedDefenseService.statsKey(defense.id(), false));
-        var record = plugin.leaderboards().record(BedDefenseService.statsKey(defense.id(), false));
+                BedDefenseService.statsKey(defense.id()));
+        var record = plugin.leaderboards().record(BedDefenseService.statsKey(defense.id()));
         List<Component> lines = new ArrayList<>(lore("gui.beddefense.gallery.tile-lore",
                 TagResolver.resolver(
                         plugin.messages().ref("visibility", defense.published()

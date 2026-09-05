@@ -34,10 +34,11 @@ import java.util.Map;
  * through a gallery.
  *
  * <p>A round is complete when every block of the defense stands with the
- * right kind of material at the right spot, in any order (strict-order is a
+ * right kind of material at the right spot, in any order (guided building is a
  * separate variant with its own boards). Times are keyed per defense, not
- * per map, and only competitive rounds — the match-opening loadout with
- * blocks bought from the shop — are recorded and ranked.
+ * per map. Every finished round keeps a personal best, but only competitive
+ * ones — the match-opening loadout with blocks bought from the shop — are
+ * ranked against other players.
  *
  * <p>Beyond building there are three side phases, all in
  * {@link BedDefenseService}: a block-by-block <b>preview</b>, <b>guided</b>
@@ -103,16 +104,27 @@ public final class BedDefenseMode implements Mode {
         return false;
     }
 
-    /** Only competitive rounds go on the books. */
+    /** Every finished round is timed; preview and editor detours are not. */
     @Override
     public boolean recordsRun(PracticeCorePlugin plugin, PracticeSession session) {
         BedDefenseState state = state(session);
-        return state != null && state.phase() == Phase.PLAY && state.selection().competitive();
+        return state != null && state.phase() == Phase.PLAY;
     }
 
     @Override
     public boolean pbEligible(PracticeCorePlugin plugin, PracticeSession session) {
         return recordsRun(plugin, session);
+    }
+
+    /**
+     * Only competitive rounds are ranked. Practice still keeps a personal
+     * best, on its own key, for the player to measure themselves against;
+     * it is never submitted to a leaderboard or broadcast.
+     */
+    @Override
+    public boolean ranked(PracticeCorePlugin plugin, PracticeSession session) {
+        BedDefenseState state = state(session);
+        return state != null && state.selection().competitive();
     }
 
     // -------------------------------------------------------------- join-time
@@ -146,18 +158,21 @@ public final class BedDefenseMode implements Mode {
     }
 
     /**
-     * Boards are kept per defense, not per map: {@code beddefense#<id>} and
-     * the strict-order variant {@code beddefense#<id>#strict}. Before a
-     * round has a defense (join preloads) the chosen one stands in.
+     * Boards are kept per defense, not per map: {@code beddefense#<id>} for
+     * competitive, {@code beddefense#<id>#practice} for the practice bests
+     * only the player sees. Before a round has a defense (join preloads) the
+     * chosen one stands in.
      */
     @Override
     public String statsKey(PracticeCorePlugin plugin, PracticeSession session) {
         BedDefenseState state = state(session);
         BedDefense defense = state != null && state.defense() != null
                 ? state.defense() : plugin.bedDefenses().roundDefense(session.playerId());
-        boolean strict = state != null ? state.selection().strictOrder()
-                : plugin.bedDefenses().selection(session.playerId()).strictOrder();
-        return BedDefenseService.statsKey(defense == null ? "none" : defense.id(), strict);
+        String id = defense == null ? "none" : defense.id();
+        boolean competitive = state != null ? state.selection().competitive()
+                : plugin.bedDefenses().selection(session.playerId()).competitive();
+        return competitive ? BedDefenseService.statsKey(id)
+                : BedDefenseService.practiceStatsKey(id);
     }
 
     /** Nothing per arena: a defense's boards are purged when the defense is deleted. */
@@ -172,7 +187,7 @@ public final class BedDefenseMode implements Mode {
         if (state == null || state.defense() == null) {
             return session.template().displayName();
         }
-        return plugin.bedDefenses().displayFor(state.defense(), state.selection().strictOrder());
+        return plugin.bedDefenses().displayForKey(statsKey(plugin, session), state.defense());
     }
 
     // ----------------------------------------------------------------- rounds
@@ -318,13 +333,16 @@ public final class BedDefenseMode implements Mode {
                     var next = state.nextTarget();
                     lines.add(msg.component("board.beddefense.next-line",
                             "material", next == null ? none : BlockKinds.pretty(next.block().kind())));
-                } else if (state.selection().competitive()) {
+                } else {
+                    // Both modes keep a best now; the practice one is on its
+                    // own key and goes no further than the player.
                     long best = plugin.stats().bestMs(session.playerId(),
                             statsKey(plugin, session));
                     lines.add(msg.component("board.beddefense.best-line",
                             "best", best >= 0 ? TimeFormat.tenths(best) : none));
-                } else {
-                    lines.add(msg.component("board.beddefense.casual-line"));
+                    if (!state.selection().competitive()) {
+                        lines.add(msg.component("board.beddefense.casual-line"));
+                    }
                 }
             }
             case PREVIEW -> lines.add(msg.component("board.beddefense.preview-line",

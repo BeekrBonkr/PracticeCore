@@ -32,7 +32,7 @@ import org.bukkit.inventory.ItemStack;
 
 /**
  * Bed defense events: placement rules per phase (radius and allowed blocks
- * in the editor, strict order in play), completion checks, the drop-to-
+ * in the editor, nothing under the bed), completion checks, the drop-to-
  * preview gesture, the mode's hotbar items, and keeping those items where
  * they belong.
  */
@@ -64,7 +64,7 @@ public final class BedDefenseListener implements Listener {
     /**
      * Before BlockListener's HIGHEST handler tracks the block: phase rules
      * decide whether it may land at all. A refusal here is what keeps the
-     * editor inside its radius and strict order strict.
+     * editor inside its radius and every phase off the ground under the bed.
      */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPlace(BlockPlaceEvent event) {

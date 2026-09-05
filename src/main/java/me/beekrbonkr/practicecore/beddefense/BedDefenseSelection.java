@@ -15,7 +15,7 @@ import java.util.Locale;
  * times are recorded and ranked. <b>Practice</b> is the same start with the
  * defense's exact blocks already in the kit.
  */
-public record BedDefenseSelection(boolean competitive, String defense, boolean strictOrder,
+public record BedDefenseSelection(boolean competitive, String defense,
                                   Shuffle shuffle, TimerStart timerStart) {
 
     /** Which pool a fresh defense is drawn from every round. */
@@ -44,7 +44,7 @@ public record BedDefenseSelection(boolean competitive, String defense, boolean s
     }
 
     public static BedDefenseSelection defaults() {
-        return new BedDefenseSelection(false, null, false, Shuffle.OFF, TimerStart.MOVE);
+        return new BedDefenseSelection(false, null, Shuffle.OFF, TimerStart.MOVE);
     }
 
     /** Competitive pins the choices that would make times incomparable. */
@@ -52,27 +52,23 @@ public record BedDefenseSelection(boolean competitive, String defense, boolean s
         if (!competitive) {
             return this;
         }
-        return new BedDefenseSelection(true, defense, strictOrder, Shuffle.OFF, TimerStart.MOVE);
+        return new BedDefenseSelection(true, defense, Shuffle.OFF, TimerStart.MOVE);
     }
 
     public BedDefenseSelection withCompetitive(boolean competitive) {
-        return new BedDefenseSelection(competitive, defense, strictOrder, shuffle, timerStart);
+        return new BedDefenseSelection(competitive, defense, shuffle, timerStart);
     }
 
     public BedDefenseSelection withDefense(String defense) {
-        return new BedDefenseSelection(competitive, defense, strictOrder, shuffle, timerStart);
-    }
-
-    public BedDefenseSelection withStrictOrder(boolean strictOrder) {
-        return new BedDefenseSelection(competitive, defense, strictOrder, shuffle, timerStart);
+        return new BedDefenseSelection(competitive, defense, shuffle, timerStart);
     }
 
     public BedDefenseSelection withShuffle(Shuffle shuffle) {
-        return new BedDefenseSelection(competitive, defense, strictOrder, shuffle, timerStart);
+        return new BedDefenseSelection(competitive, defense, shuffle, timerStart);
     }
 
     public BedDefenseSelection withTimerStart(TimerStart timerStart) {
-        return new BedDefenseSelection(competitive, defense, strictOrder, shuffle, timerStart);
+        return new BedDefenseSelection(competitive, defense, shuffle, timerStart);
     }
 
     static <E extends Enum<E>> E enumOr(Class<E> type, String name, E def) {
