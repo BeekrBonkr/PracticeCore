@@ -385,12 +385,13 @@ beddefense:
   # <name>
   deleted: '<prefix><gray>Deleted the bed defense <white><name><gray>.'
   # Action bar at the end of a practice round.
-  records-disabled: '<yellow>Not ranked — play competitive to set records'
+  records-disabled: '<yellow>Practice best saved — play competitive to be ranked'
   # The hint floating over the bed at the start of a round. Blank to disable.
   hologram: '<yellow>Drop a block or use the menu<newline><gray>to preview this defense'
   # Board names: <name> is the defense's name.
   board-name: '<name> (Bed Defense)'
-  board-name-strict: '<name> (Bed Defense, strict order)'
+  # Practice times are kept per defense too, but only the player sees them.
+  board-name-practice: '<name> (Bed Defense, practice)'
   list-empty: '<prefix><gray>No bed defenses to play yet. Design one with <white>/practice beddefense edit<gray>.'
   # <count>
   list-header: '<prefix><gray>Bed defenses you can play (<white><count><gray>):'
@@ -410,9 +411,6 @@ beddefense:
     # <name>
     public: '<prefix><green><white><name><green> is now public — everyone can play it.'
     private: '<prefix><gray><white><name><gray> is now private — only you can play it.'
-  strict:
-    # A block placed out of sequence. <material> <step> <total>
-    wrong-order: '<red>Wrong order — next is <white><material> <gray>(<step>/<total>)'
   preview:
     # <name>
     entered: '<prefix><gray>Previewing <white><name><gray>. Use the hotbar to step through it; drop or use the exit item to leave.'
@@ -523,6 +521,8 @@ leaderboard:
   # <arena>
   rush-pick-board: '<prefix><gray><white><arena><gray> is a rush arena — pick a board: <white><arena>#bed<gray>, <white><arena>#emerald<gray>, <white><arena>#diamond<gray> or <white><arena>#team_wipe<gray>.'
   # /practice top beddefense — the bed defense boards live in the menu.
+  # /practice top on a practice key — those times are never ranked.
+  beddefense-practice: '<prefix><gray>Practice times are yours alone and are not ranked. Your best is in <white>/practice stats<gray>.'
   beddefense-pick-board: '<prefix><gray>Bed defense boards are kept per defense: open <white>/practice menu leaderboards<gray>, or name one as <white>beddefense#<id><gray>.'
   # Arenas of modes that score in-session (MLG streaks, PvP bot spars).
   not-ranked: '<prefix><gray><white><arena><gray> has no time leaderboard — its mode is scored in-session, on the sidebar.'
@@ -543,6 +543,8 @@ stats:
   reset-notice: '<prefix><gray>An admin reset your practice personal bests.'
   # Clicking a stats entry whose arena has since been deleted.
   arena-gone: '<prefix><red>That arena no longer exists.'
+  # Clicking a practice tile: there is no ranking behind it to open.
+  practice-only: '<prefix><gray>Practice times are yours alone — no ranking to open. Play competitive to be ranked.'
 
 help:
   player:
@@ -872,6 +874,7 @@ gui:
     # <node>
     needs-node: 'needs <white><node>'
     gone: 'no longer exists'
+    not-ranked: 'practice times are yours alone'
     offline: 'went offline'
     own-defense: 'you cannot like your own'
     no-defenses: 'no defenses yet'
@@ -1683,15 +1686,6 @@ gui:
       option:
         competitive: '<gold>Competitive'
         practice: '<white>Practice'
-    strict:
-      name: '<white><bold>Strict Order'
-      # <state>
-      lore:
-        - '<gray>Blocks must go down in the order'
-        - '<gray>the designer placed them.'
-        - '<gray>Kept on its own leaderboard.'
-        - ''
-        - '<gray>Currently: <state>'
     shuffle:
       name: '<white><bold>Shuffle'
       # <pool>
@@ -1748,13 +1742,12 @@ gui:
       name: '<green><bold>Start Practice'
       name-competitive: '<gold><bold>Start Competitive'
       name-apply: '<green><bold>Apply and Restart'
-      # <arena> <defense> <mode> <strict> <shuffle> <timer> <ranked>
+      # <arena> <defense> <mode> <shuffle> <timer> <ranked>
       lore:
         - '<gray>Map: <white><arena>'
         - '<gray>Defense: <white><defense>'
         - ''
         - '<gray>Mode: <mode>'
-        - '<gray>Strict order: <strict>'
         - '<gray>Shuffle: <white><shuffle>'
         - '<gray>Timer starts on: <white><timer>'
         - ''
@@ -1925,8 +1918,8 @@ gui:
       settings:
         name: '<white><bold>Round Settings'
         lore:
-          - '<gray>Mode, strict order, shuffle,'
-          - '<gray>timer start and your base.'
+          - '<gray>Mode, shuffle, timer start'
+          - '<gray>and your base.'
       restart:
         name: '<yellow><bold>Restart'
         lore:

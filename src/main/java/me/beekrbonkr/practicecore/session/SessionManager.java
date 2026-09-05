@@ -581,9 +581,10 @@ public final class SessionManager {
         // is announced to the player but no time, count or best is written.
         boolean records = session.mode().recordsRun(plugin, session);
         boolean pbEligible = records && session.mode().pbEligible(plugin, session);
+        boolean ranked = pbEligible && session.mode().ranked(plugin, session);
         long previousBest = session.bestTimeMs();
         boolean pb = records
-                && plugin.stats().record(player.getUniqueId(), arena, millis, pbEligible);
+                && plugin.stats().record(player.getUniqueId(), arena, millis, pbEligible, ranked);
         Messages msg = plugin.messages();
         if (pb) {
             session.setBestTimeMs(millis);
@@ -598,7 +599,9 @@ public final class SessionManager {
                     "arena", displayName);
         }
         announceFinish(player, session, millis, pb, previousBest, displayName);
-        if (pb) {
+        // An unranked best is the player's own business: it shows on their
+        // titles and their stats, and the server hears nothing about it.
+        if (pb && ranked) {
             boolean recordAnnounced = announceRecord(player, session, millis, previousRecord,
                     arena, displayName);
             // A subtle server-wide note for an improved personal best — but

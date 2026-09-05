@@ -96,8 +96,13 @@ public final class StatsStore {
                 .collect(LinkedHashMap::new, (m, e) -> m.put(e.getKey(), e.getValue()), Map::putAll);
     }
 
-    /** Records a finished run; returns true if it set a new personal best. */
-    public boolean record(UUID player, String template, long millis, boolean pbEligible) {
+    /**
+     * Records a finished run; returns true if it set a new personal best.
+     * An unranked best is written to the player's own file but never
+     * submitted to the leaderboard.
+     */
+    public boolean record(UUID player, String template, long millis, boolean pbEligible,
+                          boolean ranked) {
         YamlConfiguration yml = data(player);
         String base = "templates." + template + ".";
         yml.set(base + "last-ms", millis);
@@ -107,7 +112,9 @@ public final class StatsStore {
             long best = yml.getLong(base + "best-ms", -1);
             if (best < 0 || millis < best) {
                 yml.set(base + "best-ms", millis);
-                plugin.leaderboards().submit(player, names.get(player), template, millis);
+                if (ranked) {
+                    plugin.leaderboards().submit(player, names.get(player), template, millis);
+                }
                 pb = true;
             }
         }

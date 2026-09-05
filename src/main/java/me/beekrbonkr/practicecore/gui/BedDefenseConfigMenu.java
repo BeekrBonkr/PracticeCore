@@ -76,9 +76,8 @@ public final class BedDefenseConfigMenu extends Menu {
         teamButton(slot("team", 13));
         defenseButton(slot("defense", 20));
         modeButton(slot("mode", 22));
-        strictButton(slot("strict", 23));
-        shuffleButton(slot("shuffle", 24));
-        timerButton(slot("timer", 25));
+        shuffleButton(slot("shuffle", 23));
+        timerButton(slot("timer", 24));
         newButton(slot("new", 30));
         editButton(slot("edit", 32));
         startButton(slot("start", 40));
@@ -87,10 +86,6 @@ public final class BedDefenseConfigMenu extends Menu {
 
     private void save() {
         plugin.bedDefenses().saveSelection(id(), selection);
-    }
-
-    private TagResolver state(boolean on) {
-        return plugin.messages().ref("state", on ? "label.state.on" : "label.state.off");
     }
 
     // ----------------------------------------------------------------- team
@@ -186,21 +181,6 @@ public final class BedDefenseConfigMenu extends Menu {
                 .build(), event -> {
             sound(competitive ? "menu.toggle-off" : "menu.toggle-on");
             selection = selection.withCompetitive(!competitive);
-            save();
-            refresh();
-        });
-    }
-
-    private void strictButton(int slot) {
-        boolean strict = selection.strictOrder();
-        set(slot, Button.of(plugin, icon("strict", Material.CHAIN))
-                .name("gui.beddefense.strict.name")
-                .lore("gui.beddefense.strict.lore", state(strict))
-                .glow(strict)
-                .hint("toggle")
-                .build(), event -> {
-            sound(strict ? "menu.toggle-off" : "menu.toggle-on");
-            selection = selection.withStrictOrder(!strict);
             save();
             refresh();
         });
@@ -333,8 +313,6 @@ public final class BedDefenseConfigMenu extends Menu {
                         plugin.messages().ref("mode", competitive
                                 ? "gui.beddefense.mode.option.competitive"
                                 : "gui.beddefense.mode.option.practice"),
-                        plugin.messages().ref("strict", selection.strictOrder()
-                                ? "label.state.on" : "label.state.off"),
                         plugin.messages().ref("shuffle", competitive
                                 ? BedDefenseSelection.Shuffle.OFF.messageKey()
                                 : selection.shuffle().messageKey()),

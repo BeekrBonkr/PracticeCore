@@ -348,8 +348,11 @@ beddefense:
   # Saved defenses one player may own, and how long a name may be.
   max-per-player: 25
   name-max-length: 24
-  # Competitive rounds turn the map's emerald generators on when the defense
-  # needs obsidian — the shop is the only way to get any.
+  # Competitive rounds run an emerald generator when the defense needs
+  # obsidian — the shop is the only way to get any. It runs on the player's
+  # own base gold spawner, not the map's emerald spawners out in the middle,
+  # so obsidian never costs a bridging trip. Needs a map that has emerald
+  # spawners at all; the rate is the emerald-interval-ticks above.
   emerald-for-obsidian: true
   # The bed defense hotbar item (menu, preview, editor). Slot 0-8.
   item:
