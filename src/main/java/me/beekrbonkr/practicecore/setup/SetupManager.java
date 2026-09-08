@@ -146,7 +146,8 @@ public final class SetupManager {
 
     /** Whether the active setup could be saved right now. */
     public boolean activeReady() {
-        return active != null && active.ready(needsTrigger(active));
+        return active != null && active.ready(needsTrigger(active))
+                && (!usesBaseLayout(active) || activeHasBase());
     }
 
     // ----------------------------------------------------------------- open
@@ -820,12 +821,12 @@ public final class SetupManager {
         line(admin, "icon", session.icon != null ? session.icon.name() : "auto");
         line(admin, "permission", session.permission != null ? session.permission : "arena default");
         line(admin, "pb requires blocks", String.valueOf(session.requireBlocksForPb));
-        if (me.beekrbonkr.practicecore.mode.RushMode.ID.equals(session.mode)) {
+        if (usesBaseLayout(session)) {
             var rush = me.beekrbonkr.practicecore.rush.RushMapData.parseSettings(session.settings);
-            line(admin, "rush teams", rush.playableTeams().size() + " playable of "
+            line(admin, "team bases", rush.playableTeams().size() + " playable of "
                     + rush.teams().size() + " set");
-            line(admin, "rush generators", String.valueOf(rush.generators().size()));
-            line(admin, "rush dealers", String.valueOf(rush.dealers().size()));
+            line(admin, "generators", String.valueOf(rush.generators().size()));
+            line(admin, "dealers", String.valueOf(rush.dealers().size()));
         }
         if (me.beekrbonkr.practicecore.mode.PvpBotMode.ID.equals(session.mode)) {
             line(admin, "bot spawn", session.settings.containsKey("pvpbot")
@@ -833,6 +834,57 @@ public final class SetupManager {
         }
         msg().send(admin, session.ready(needsTrigger(session))
                 ? "setup.info-ready" : "setup.info-not-ready");
+    }
+
+    /**
+     * Whether this arena's mode plays from a team base: rush and bed defense
+     * both read the same team/bed/generator/dealer layout (settings.rush).
+     */
+    static boolean usesBaseLayout(String mode) {
+        return me.beekrbonkr.practicecore.mode.RushMode.ID.equals(mode)
+                || me.beekrbonkr.practicecore.mode.BedDefenseMode.ID.equals(mode);
+    }
+
+    private static boolean usesBaseLayout(SetupSession session) {
+        return usesBaseLayout(session.mode);
+    }
+
+    /** Whether the active setup's mode plays from a team base (for the GUI). */
+    public boolean activeUsesBaseLayout() {
+        return active != null && usesBaseLayout(active);
+    }
+
+    /** Whether the active setup has at least one team with a spawn and a bed. */
+    public boolean activeHasBase() {
+        return activeBaseCount() > 0;
+    }
+
+    private me.beekrbonkr.practicecore.rush.RushMapData activeLayout() {
+        return me.beekrbonkr.practicecore.rush.RushMapData
+                .parseSettings(active == null ? Map.of() : active.settings);
+    }
+
+    /** Teams of the active setup with both a spawn and a bed. */
+    public int activeBaseCount() {
+        return activeLayout().playableTeams().size();
+    }
+
+    /** Teams of the active setup with a spawn or a bed set at all. */
+    public int activeTeamCount() {
+        return activeLayout().teams().size();
+    }
+
+    public int activeGeneratorCount() {
+        return activeLayout().generators().size();
+    }
+
+    public int activeDealerCount() {
+        return activeLayout().dealers().size();
+    }
+
+    /** Whether the active PvP bot setup has an explicit bot spawn marker. */
+    public boolean activeHasBotSpawn() {
+        return active != null && active.settings.containsKey("pvpbot");
     }
 
     /** Whether this arena's mode finishes runs on a placed button/plate. */
@@ -867,10 +919,10 @@ public final class SetupManager {
             msg().send(admin, "setup.need-trigger");
             return;
         }
-        if (me.beekrbonkr.practicecore.mode.RushMode.ID.equals(session.mode)
-                && !me.beekrbonkr.practicecore.rush.RushMapData
+        if (usesBaseLayout(session) && !me.beekrbonkr.practicecore.rush.RushMapData
                         .parseSettings(session.settings).playable()) {
-            msg().send(admin, "setup.rush-need-base");
+            msg().send(admin, me.beekrbonkr.practicecore.mode.RushMode.ID.equals(session.mode)
+                    ? "setup.rush-need-base" : "setup.beddefense-need-base");
             return;
         }
         ArenaTemplate template = new ArenaTemplate(session.name, session.dir, session.folderCategory);

@@ -11,9 +11,9 @@ import org.bukkit.inventory.ItemStack;
 import java.util.Locale;
 
 /**
- * Per-player settings: permanent night vision, kit wool color and the arena's
- * (client-side) time of day. Choices persist in playerdata and apply
- * immediately when the player is mid-session.
+ * Per-player settings: permanent night vision, kit wool color, the arena's
+ * (client-side) time of day and the sidebar. Choices persist in playerdata
+ * and apply immediately when the player is mid-session.
  */
 public final class SettingsMenu extends Menu {
 
@@ -57,7 +57,28 @@ public final class SettingsMenu extends Menu {
                 refresh();
             });
         }
+        if (plugin.guis().buttonEnabled("settings.buttons.sidebar")) {
+            set(plugin.guis().slot("settings.buttons.sidebar", 16), sidebarIcon(), event -> {
+                boolean on = !plugin.stats().scoreboardEnabled(viewer.getUniqueId());
+                plugin.stats().setScoreboardEnabled(viewer.getUniqueId(), on);
+                plugin.boards().applyPreference(viewer);
+                sound(on ? "menu.toggle-on" : "menu.toggle-off");
+                refresh();
+            });
+        }
         nav("settings");
+    }
+
+    /** The live timer scoreboard — the same toggle the hub can carry. */
+    private ItemStack sidebarIcon() {
+        boolean on = plugin.stats().scoreboardEnabled(viewer.getUniqueId());
+        return Button.of(plugin, plugin.guis().buttonMaterial("settings.buttons.sidebar", Material.OAK_SIGN))
+                .name("gui.settings.sidebar.name")
+                .lore("gui.settings.sidebar.lore", plugin.messages().ref("state",
+                        on ? "label.state.shown" : "label.state.hidden"))
+                .glow(on)
+                .hint("toggle")
+                .build();
     }
 
     private ItemStack nightVisionIcon() {

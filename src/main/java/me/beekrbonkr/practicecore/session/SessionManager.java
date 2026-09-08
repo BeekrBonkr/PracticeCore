@@ -105,9 +105,9 @@ public final class SessionManager {
     }
 
     /**
-     * Joins an arena under a mode other than the template's own. Bed defense
-     * practice runs on rush maps this way: the arena.yml stays a rush arena,
-     * the session runs the bed defense rules.
+     * Joins an arena under an explicit mode. Every template's own mode comes
+     * through {@link #join(Player, ArenaTemplate)}; this variant stays for a
+     * caller that wants to run one arena under another mode's rules.
      */
     public void join(Player player, ArenaTemplate template,
                      me.beekrbonkr.practicecore.mode.Mode mode) {

@@ -12,7 +12,7 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 9
+config-version: 12
 
 prefix: '<gold>Practice <dark_gray>» '
 
@@ -33,6 +33,7 @@ permission:
   item: '<prefix><red>You may not give out the practice menu item.'
   reload: '<prefix><red>You may not reload PracticeCore.'
   world: '<prefix><red>You may not manage the practice world.'
+  beddefense-moderate: '<prefix><red>You may not moderate bed defenses.'
 
 session:
   ready: '<prefix><green>Arena ready — the timer starts when you move. Good luck!'
@@ -373,7 +374,8 @@ beddefense:
   # The name the category picker and leaderboards show the mode under (when
   # guis.yml categories.entries has no 'beddefense' entry of its own).
   category-name: 'Bed Defense'
-  not-a-rush-map: '<prefix><red>Bed defense practice needs a rush map with a team base and bed.'
+  # Joining an arena of this mode whose layout has no team base with a bed.
+  not-a-map: '<prefix><red>That bed defense map has no team base with a bed — tell an admin.'
   # Action bar. Blocks may never go lower than the bed, in the editor or a round.
   below-bed: '<red>Nothing goes under the bed'
   no-defense: '<prefix><yellow>There is no bed defense to build yet — design one in the editor, or pick one from the gallery.'
@@ -384,6 +386,14 @@ beddefense:
   competitive-needs-shop: '<prefix><yellow>Competitive needs the MBedwars shop to buy blocks from — this round plays as practice.'
   # <name>
   deleted: '<prefix><gray>Deleted the bed defense <white><name><gray>.'
+  # /practice beddefense delete without confirm (style guide R58). <name> <id>
+  delete-confirm:
+    - '<prefix><yellow>This deletes <white><name><yellow> and every time recorded on it.'
+    - '<prefix><gray>Run <white>/practice beddefense delete <id> confirm<gray> to go ahead.'
+  # The author finished their own defense in a competitive round for the
+  # first time — the proof publishing asks for. <name> <id>
+  cleared: '<prefix><green>You completed <white><name><green> in competitive — it can be made public now.'
+  cleared-actions: '<dark_gray>[<click:run_command:''/practice beddefense publish <id>''><hover:show_text:''<yellow>Click to publish<newline><gray>/practice beddefense publish <id>''><green>Publish it</hover></click><dark_gray>]'
   # Action bar at the end of a practice round.
   records-disabled: '<yellow>Practice best saved — play competitive to be ranked'
   # The hint floating over the bed at the start of a round. Blank to disable.
@@ -411,6 +421,105 @@ beddefense:
     # <name>
     public: '<prefix><green><white><name><green> is now public — everyone can play it.'
     private: '<prefix><gray><white><name><gray> is now private — only you can play it.'
+    already-public: '<prefix><gray><white><name><gray> is already public.'
+    already-private: '<prefix><gray><white><name><gray> is already private.'
+    # Publishing refused: the author has not built this exact shape in a
+    # competitive round yet. <name> <id>
+    needs-clear: '<prefix><yellow><white><name><yellow> stays private until you complete it yourself in competitive mode.'
+    needs-clear-actions: '<dark_gray>[<click:run_command:''/practice beddefense play <id> competitive''><hover:show_text:''<yellow>Click to play<newline><gray>/practice beddefense play <id> competitive''><gold>Play it competitively</hover></click><dark_gray>]'
+    # A moderator flipped someone else's defense. <name> <author>
+    moderator-public: '<prefix><green>Made <white><name><green> by <white><author><green> public — they have been told.'
+    moderator-private: '<prefix><yellow>Made <white><name><yellow> by <white><author><yellow> private — they have been told.'
+    # A moderator tried to publish a defense its author has not cleared:
+    # nobody bypasses the gate. <name> <author>
+    moderator-needs-clear: '<prefix><yellow><white><name><yellow> by <white><author><yellow> stays private until they complete it themselves in competitive mode.'
+    # The author tried to publish a defense reports have hidden. <name>
+    auto-hidden: '<prefix><yellow><white><name><yellow> was hidden by player reports and stays private until a moderator has reviewed it.'
+    # A moderator published an auto-hidden defense: that closes its
+    # reports. <name> <count>
+    moderator-restored: '<prefix><green>Its <white><count><green> report(s) are closed and the automatic hide is lifted.'
+  # What the author is told when their defense changes state, at once or on
+  # their next login. <name> <id> <moderator>
+  notice:
+    private-changed: '<prefix><yellow><white><name><yellow> is private again: you changed its blocks, so complete the new version in competitive mode before publishing it.'
+    saved-private: '<prefix><yellow>Saved <white><name><yellow> as private — complete it in competitive mode to publish it.'
+    public-by-moderator: '<prefix><green>A moderator made your bed defense <white><name><green> public.'
+    private-by-moderator: '<prefix><yellow>A moderator made your bed defense <white><name><yellow> private.'
+    deleted-by-moderator: '<prefix><red>A moderator deleted your bed defense <white><name><red>.'
+    # Enough of its builders reported it. <name> <id> <reports> <players>
+    auto-hidden: '<prefix><red>Your bed defense <white><name><red> was hidden: <white><reports><red> of the <white><players><red> players who built it reported it. It stays private until a moderator has reviewed it.'
+    # A moderator dismissed the last report on an auto-hidden defense. <name> <id> <moderator>
+    auto-hide-lifted: '<prefix><green>A moderator closed the reports on <white><name><green>. It is still private, but you may publish it again.'
+    # Saved from the editor while reports had it hidden. <name> <id>
+    saved-auto-hidden: '<prefix><yellow>Saved <white><name><yellow> as private — player reports hid it, and a moderator has to review it before it can be public again.'
+  report:
+    # <name> <max>
+    prompt: '<prefix><yellow>Why are you reporting <white><name><yellow>? Type the reason in chat (up to <max> characters).'
+    # <name>
+    sent: '<prefix><green>Reported <white><name><green>. A moderator will look at it.'
+    updated: '<prefix><green>Your report on <white><name><green> was updated.'
+    own: '<prefix><red>You cannot report your own bed defense.'
+    private: '<prefix><red>Only public bed defenses can be reported.'
+    # <max>
+    reason-invalid: '<prefix><red>Give a reason — 1 to <max> printable characters.'
+    # To every moderator online. <player> <name> <id> <author> <reason> <count>
+    alert: '<prefix><yellow><white><player><yellow> reported <white><name> <dark_gray>by <gray><author> <dark_gray>(<count> report(s))<yellow>: <white><reason>'
+    alert-actions: '<dark_gray>[<click:run_command:''/practice beddefense review <id>''><hover:show_text:''<yellow>Click to open<newline><gray>/practice beddefense review <id>''><yellow>Review</hover></click><dark_gray>] [<click:run_command:''/practice beddefense play <id>''><hover:show_text:''<yellow>Click to play<newline><gray>/practice beddefense play <id>''><green>Play it</hover></click><dark_gray>]'
+    # To every moderator online when enough builders reported a defense to
+    # hide it, whatever notify-moderators says. <name> <id> <author> <reports> <players>
+    auto-hidden-alert: '<prefix><red><white><name> <dark_gray>by <gray><author> <red>hid itself: <white><reports><red> of the <white><players><red> players who built it reported it.'
+    # <name> <count>
+    dismissed: '<prefix><green>Dismissed <white><count><green> report(s) on <white><name><green>.'
+    # Dismissing the last report on an auto-hidden defense lets its author publish again. <name>
+    auto-hide-lifted: '<prefix><green>No reports left on <white><name><green> — its automatic hide is lifted and the author may publish it again.'
+    # The unseen-report reminder: to a moderator a moment after joining and
+    # to every moderator online every reports.remind-minutes. <count> defenses, <reports> reports
+    reminder: '<prefix><yellow><white><count><yellow> bed defense(s) carry <white><reports><yellow> report(s) no moderator has looked at:'
+    # <id> <name> <author> <count> <unseen> <reporter> <reason> <state>
+    reminder-entry: '<dark_gray> • <click:run_command:''/practice beddefense review <id>''><hover:show_text:''<yellow>Click to open<newline><gray>/practice beddefense review <id>''><white><name></hover></click> <dark_gray>by <gray><author> <state> <dark_gray>— <white><unseen> <gray>new of <white><count><gray>, latest from <white><reporter><gray>: <reason>'
+    # The <state> word in a reminder entry.
+    reminder-hidden: '<red>(hidden)'
+    reminder-open: '<dark_gray>(public)'
+    # <count> more defenses than the reminder lists
+    reminder-more: '<dark_gray>   … and <white><count><gray> more.'
+    reminder-actions: '<dark_gray>[<click:run_command:''/practice beddefense moderate''><hover:show_text:''<yellow>Click to open<newline><gray>/practice beddefense moderate''><yellow>Open moderation</hover></click><dark_gray>] [<click:run_command:''/practice beddefense reports''><hover:show_text:''<yellow>Click to list<newline><gray>/practice beddefense reports''><gray>List reports</hover></click><dark_gray>]'
+    # <name>
+    none: '<prefix><gray><white><name><gray> has no reports.'
+    list-empty: '<prefix><gray>No reported bed defenses.'
+    # <count>
+    list-header: '<prefix><gray>Reported bed defenses (<white><count><gray>):'
+    # <id> <name> <author> <count> <reporter> <reason>
+    # The name is clickable: it opens the review menu (style guide R15).
+    list-entry: '<dark_gray> • <click:run_command:''/practice beddefense review <id>''><hover:show_text:''<yellow>Click to open<newline><gray>/practice beddefense review <id>''><white><name></hover></click> <dark_gray>by <gray><author> <dark_gray>— <white><count> <gray>report(s), latest from <white><reporter><gray>: <reason>'
+  # Moderator chat views.
+  moderate:
+    all-empty: '<prefix><gray>No bed defenses exist yet.'
+    # <count>
+    all-header: '<prefix><gray>Every bed defense (<white><count><gray>):'
+    # <id> <name> <author> <reports> <visibility>
+    all-entry: '<dark_gray> • <click:run_command:''/practice beddefense review <id>''><hover:show_text:''<yellow>Click to open<newline><gray>/practice beddefense review <id>''><white><name></hover></click> <dark_gray>by <gray><author> <dark_gray>— <visibility><dark_gray>, <white><reports> <gray>report(s)'
+    # <name> <id>
+    info-header: '<prefix><gray>Bed defense <white><name> <dark_gray>(<id>)<gray>:'
+    # <key> <value>
+    info-line: '<dark_gray>   <key>: <white><value>'
+    info-key:
+      author: 'Author'
+      visibility: 'Visibility'
+      cleared: 'Cleared by author'
+      blocks: 'Blocks'
+      likes: 'Likes'
+      players: 'Players'
+      runs: 'Runs'
+      reports: 'Reports'
+      builder-reports: 'Reports from builders'
+      auto-hidden: 'Hidden by reports'
+    cleared-yes: '<green>yes'
+    cleared-no: '<red>no'
+    auto-hidden-yes: '<red>yes — awaiting review'
+    # <reporter> <reason>
+    info-report: '<dark_gray>     • <white><reporter><gray>: <reason>'
+    # <name> <id>
+    info-actions: '<dark_gray>[<click:run_command:''/practice beddefense play <id>''><hover:show_text:''<yellow>Click to play<newline><gray>/practice beddefense play <id>''><green>Play it</hover></click><dark_gray>] [<click:run_command:''/practice beddefense unpublish <id>''><hover:show_text:''<yellow>Click to hide<newline><gray>/practice beddefense unpublish <id>''><yellow>Hide it</hover></click><dark_gray>] [<click:run_command:''/practice beddefense dismiss <id>''><hover:show_text:''<yellow>Click to dismiss reports<newline><gray>/practice beddefense dismiss <id>''><gray>Dismiss reports</hover></click><dark_gray>] [<click:suggest_command:''/practice beddefense delete <id> confirm''><hover:show_text:''<yellow>Click to delete<newline><gray>/practice beddefense delete <id> confirm''><red>Delete it</hover></click><dark_gray>]'
   preview:
     # <name>
     entered: '<prefix><gray>Previewing <white><name><gray>. Use the hotbar to step through it; drop or use the exit item to leave.'
@@ -555,7 +664,7 @@ help:
     - '<dark_gray> • <white>/practice list <dark_gray>— available arenas'
     - '<dark_gray> • <white>/practice stats [player] <dark_gray>— personal bests'
     - '<dark_gray> • <white>/practice top [arena] <dark_gray>— leaderboards'
-    - '<dark_gray> • <white>/practice beddefense <dark_gray>— bed defense practice: maps, gallery, editor'
+    - '<dark_gray> • <white>/practice beddefense <dark_gray>— bed defense practice: maps, gallery, editor (<white>/practice beddefense help<dark_gray> lists it all)'
     - '<dark_gray> • <white>/practice sidebar <dark_gray>— show or hide the live timer'
     - '<dark_gray> • <white>/practice spectate [player] <dark_gray>— watch someone practice'
     - '<dark_gray> • <white>/spectate <player> <dark_gray>— the same, one word shorter'
@@ -564,6 +673,7 @@ help:
     - '<dark_gray> • <white>/practice edit <arena> <dark_gray>— reopen a saved arena'
     - '<dark_gray> • <white>/practice rush import <map> <dark_gray>— pull a map from MBedwars'
     - '<dark_gray> • <white>/practice rush importall teams:<n> size:<n> <dark_gray>— pull every matching map'
+    - '<dark_gray> • <white>/practice beddefense import <map> <dark_gray>— the same, as a bed defense map'
   setup-detail:
     - '<prefix><gray>Creating an arena:'
     - '<dark_gray> • <white>/practice setup start <name> <dark_gray>— begin (needs a //copy''d build)'
@@ -579,10 +689,11 @@ help:
     - '<dark_gray> • <white>/practice setup display <text> <dark_gray>— the name players see'
     - '<dark_gray> • <white>/practice setup icon [material] <dark_gray>— the menu icon (held item if omitted)'
     - '<dark_gray> • <white>/practice setup permission [node] <dark_gray>— gate it, or reset to the default node'
-    - '<dark_gray> • <white>/practice setup mode <id> <dark_gray>— bridging, bedbreak, mlg, rush, pvpbot, …'
+    - '<dark_gray> • <white>/practice setup mode <id> <dark_gray>— bridging, bedbreak, mlg, rush, beddefense, pvpbot, …'
     - '<dark_gray> • <white>/practice setup category [name] <dark_gray>— the Play category, or reset'
     - '<dark_gray> • <white>/practice setup blocks <true|false> <dark_gray>— whether a PB needs placed blocks'
     - '<dark_gray> • <white>/practice setup rush … <dark_gray>— team spawns, beds, generators, dealers (rush mode)'
+    - '<dark_gray> • <white>/practice setup beddefense … <dark_gray>— the same layout for a bed defense map'
     - '<dark_gray> • <white>/practice setup pvpbot bot <dark_gray>— the bot''s spawn point (pvpbot mode)'
   setup-rush:
     - '<prefix><gray>Building a rush arena by hand (after <white>/practice setup mode rush<gray>):'
@@ -592,6 +703,14 @@ help:
     - '<dark_gray> • <white>/practice setup rush dealer <dark_gray>— shop NPC spot where you stand'
     - '<dark_gray> • <white>/practice setup rush clear <dark_gray>— wipe the rush layout'
     - '<dark_gray> • <gray>Or skip all of this: <white>/practice rush import <mbedwars-arena>'
+  setup-beddefense:
+    - '<prefix><gray>Building a bed defense map by hand (after <white>/practice setup mode beddefense<gray>):'
+    - '<dark_gray> • <white>/practice setup beddefense team <color> <dark_gray>— set that base''s spawn where you stand'
+    - '<dark_gray> • <white>/practice setup beddefense bed <color> <dark_gray>— look at that team''s bed'
+    - '<dark_gray> • <white>/practice setup beddefense gen <iron|gold|diamond|emerald> <dark_gray>— stand on the spawner block'
+    - '<dark_gray> • <white>/practice setup beddefense dealer <dark_gray>— shop NPC spot where you stand'
+    - '<dark_gray> • <white>/practice setup beddefense clear <dark_gray>— wipe the layout'
+    - '<dark_gray> • <gray>One base with a spawn and a bed is enough. Or skip all of this: <white>/practice beddefense import <mbedwars-arena>'
   setup-pvpbot:
     - '<prefix><gray>Building a PvP bot arena (after <white>/practice setup mode pvpbot<gray>):'
     - '<dark_gray> • <white>/practice setup pvpbot bot <dark_gray>— set the bot''s spawn where you stand'
@@ -618,6 +737,8 @@ help:
     - '<dark_gray> • <white>/practice arena display <arena> <text> <dark_gray>— the name players see'
     - '<dark_gray> • <white>/practice arena icon <arena> <material|auto> <dark_gray>— the menu icon'
     - '<dark_gray> • <white>/practice arena blocks <arena> <true|false> <dark_gray>— whether a PB needs placed blocks'
+    - '<dark_gray> • <white>/practice arena category <arena> <name|default> <dark_gray>— the Play category it sits in'
+    - '<dark_gray> • <white>/practice arena mode <arena> <id> <dark_gray>— change a saved arena''s mode'
   # The full /practice world reference.
   world-detail:
     - '<prefix><gray>Practice world:'
@@ -627,12 +748,40 @@ help:
   rush-detail:
     - '<prefix><gray>Rush maps from MBedwars:'
     - '<dark_gray> • <white>/practice rush list <dark_gray>— every MBedwars arena on this server'
-    - '<dark_gray> • <white>/practice rush import <arena> [overwrite] <dark_gray>— pull one map'
+    - '<dark_gray> • <white>/practice rush import <arena> [name] [overwrite] <dark_gray>— pull one map'
     - '<dark_gray> • <white>/practice rush importall [teams:<n>] [size:<n>] [category:<name>] [overwrite] <dark_gray>— pull every matching map'
   # The /practice pb reference.
   pb-detail:
     - '<prefix><gray>Personal bests:'
     - '<dark_gray> • <white>/practice pb reset <player> [arena|all] <dark_gray>— wipe personal bests'
+  # The full /practice beddefense reference, in three parts by permission.
+  beddefense-detail:
+    - '<prefix><gray>Bed defense practice:'
+    - '<dark_gray> • <white>/practice beddefense <dark_gray>— the map picker'
+    - '<dark_gray> • <white>/practice beddefense list <dark_gray>— every defense you can play'
+    - '<dark_gray> • <white>/practice beddefense play <id> [competitive|practice] <dark_gray>— build that defense'
+    - '<dark_gray> • <white>/practice beddefense like|favorite <id>'
+    - '<dark_gray> • <white>/practice beddefense edit [id] <dark_gray>— the editor, fresh or on one of yours'
+    - '<dark_gray> • <white>/practice beddefense publish|unpublish <id> <dark_gray>— public needs your own competitive completion first'
+    - '<dark_gray> • <white>/practice beddefense delete <id> confirm'
+    - '<dark_gray> • <white>/practice beddefense report <id> [reason] <dark_gray>— flag a public defense for a moderator'
+  beddefense-moderate:
+    - '<dark_gray> • <white>/practice beddefense moderate <dark_gray>— review reported and hidden bed defenses'
+  beddefense-moderate-detail:
+    - '<prefix><gray>Moderating bed defenses:'
+    - '<dark_gray> • <white>/practice beddefense moderate <dark_gray>— the moderation menu'
+    - '<dark_gray> • <white>/practice beddefense reports <dark_gray>— every reported defense'
+    - '<dark_gray> • <white>/practice beddefense all <dark_gray>— every defense, private ones included'
+    - '<dark_gray> • <white>/practice beddefense review|info <id> <dark_gray>— one defense: its menu, or its details in chat'
+    - '<dark_gray> • <white>/practice beddefense publish|unpublish <id> <dark_gray>— show or hide anyone''s (the author is told; public still needs their competitive completion)'
+    - '<dark_gray> • <white>/practice beddefense dismiss <id> <dark_gray>— close its reports (lifts an automatic hide)'
+    - '<dark_gray> • <white>/practice beddefense delete <id> confirm <dark_gray>— remove anyone''s'
+  beddefense-admin-detail:
+    - '<prefix><gray>Bed defense maps:'
+    - '<dark_gray> • <white>/practice beddefense maps <dark_gray>— every bed defense map'
+    - '<dark_gray> • <white>/practice beddefense import <arena> [name] [overwrite] <dark_gray>— pull one map from MBedwars'
+    - '<dark_gray> • <white>/practice beddefense importall [teams:<n>] [size:<n>] [category:<name>] [overwrite] <dark_gray>— pull every matching map'
+    - '<dark_gray> • <white>/practice setup beddefense … <dark_gray>— or build one by hand in the wizard'
 
 # ---------------------------------------------------------------- admin text
 
@@ -763,6 +912,7 @@ setup:
   rush-dealer-set: '<prefix><green>Rush shop dealer spot set where you stand.'
   rush-cleared: '<prefix><green>Rush layout cleared — teams, generators and dealers removed.'
   rush-need-base: '<prefix><red>A rush arena needs at least one team with both a spawn and a bed: <white>/practice setup rush team <color><red> and <white>/practice setup rush bed <color><red>.'
+  beddefense-need-base: '<prefix><red>A bed defense map needs at least one team with both a spawn and a bed: <white>/practice setup beddefense team <color><red> and <white>/practice setup beddefense bed <color><red>.'
   pvpbot-spawn-set: '<prefix><green>Bot spawn set where you stand. Without one, the bot spawns a few blocks ahead of the player spawn.'
   pvpbot-cleared: '<prefix><green>PvP bot layout cleared — the bot spawn marker was removed.'
 
@@ -840,6 +990,7 @@ gui:
       rename: '<yellow>Click to rename'
       leave: '<yellow>Click to leave'
       restart: '<yellow>Click to restart'
+      report: '<yellow>Click to report'
     right:
       cycle-back: '<yellow>Right-click to cycle back'
       view: '<yellow>Right-click to view'
@@ -878,6 +1029,15 @@ gui:
     offline: 'went offline'
     own-defense: 'you cannot like your own'
     no-defenses: 'no defenses yet'
+    # Publishing a bed defense needs the author's own competitive completion.
+    needs-clear: 'complete it in competitive first'
+    # Reports hid it; only a moderator can bring it back.
+    auto-hidden: 'hidden by reports — a moderator has to review it'
+    # Saving a rush or bed defense arena without a team base.
+    needs-base: 'needs a team base with a bed'
+    no-reports: 'no reports'
+    # Making an unfinished arena the default.
+    incomplete: 'the arena is not finished'
 
   main:
     title: '<dark_gray><bold>Practice'
@@ -980,6 +1140,13 @@ gui:
         sunset: 'sunset'
         night: 'night'
         midnight: 'midnight'
+    sidebar:
+      name: '<white><bold>Sidebar'
+      # <state>
+      lore:
+        - '<gray>The live timer scoreboard.'
+        - ''
+        - '<gray>Currently: <state>'
 
   categories:
     title: '<dark_gray><bold>Play'
@@ -1637,8 +1804,8 @@ gui:
       empty:
         name: '<gray><bold>No maps yet'
         lore:
-          - '<gray>Bed defense runs on rush maps.'
-          - '<gray>Import or build one first.'
+          - '<gray>No admin has added a bed defense map.'
+          - '<gray>Admins: <white>/practice beddefense import <map>'
       # <arena>
       entry-name: '<white><bold><arena>'
       # <arena> <team> <bases>
@@ -1767,6 +1934,8 @@ gui:
         public: 'Public'
         mine: 'Mine'
         favorites: 'Favorites'
+        # Moderators only: reported first, then every defense.
+        review: 'Review'
       # <tab>
       tab-name: '<white><bold><tab>'
       # <count>
@@ -1792,6 +1961,10 @@ gui:
           lore:
             - '<gray>Right-click a defense and'
             - '<gray>choose Favorite.'
+        review:
+          name: '<gray><bold>No defenses yet'
+          lore:
+            - '<gray>Nobody has saved one.'
       # <name>
       tile-name: '<white><bold><name>'
       tile-name-own: '<aqua><bold><name>'
@@ -1812,6 +1985,8 @@ gui:
       favorite-no: '<dark_gray>Not a favorite'
       # Shown on the chosen defense.
       selected-line: '<gray>Currently: <green>selected'
+      # Moderators see this on a reported defense. <count>
+      reports-line: '<gray>Reports: <white><count>'
       # <count> <material>
       kind-line: '<dark_gray> • <gray><count>× <material>'
     # One defense's actions. <name>
@@ -1853,12 +2028,26 @@ gui:
           - '<gray>Loads it into the editor.'
       visibility:
         name: '<white><bold>Visibility'
-        # <state>
+        # <state> <cleared>
         lore:
           - '<gray>Public defenses appear in the'
-          - '<gray>gallery for everyone.'
+          - '<gray>gallery for everyone. Publishing'
+          - '<gray>needs your own competitive run.'
           - ''
           - '<gray>Currently: <state>'
+          - '<gray>Cleared by you: <cleared>'
+        # A moderator on someone else's defense. <state> <cleared> <author>
+        lore-moderator:
+          - '<gray>Show or hide this defense for'
+          - '<gray>everyone. The author is told.'
+          - ''
+          - '<gray>Author: <white><author>'
+          - '<gray>Currently: <state>'
+          - '<gray>Cleared by author: <cleared>'
+      cleared-yes: '<green>yes'
+      cleared-no: '<red>no'
+      # Under the Visibility button while reports have it hidden.
+      auto-hidden-line: '<red>Hidden by player reports'
       delete:
         name: '<red><bold>Delete'
         lore:
@@ -1869,6 +2058,85 @@ gui:
           - '<red>This cannot be undone.'
         # The second hint line while armed.
         cancel-line: '<yellow>Any other click cancels'
+      report:
+        name: '<white><bold>Report'
+        # <state>
+        lore:
+          - '<gray>Flags this defense for a moderator.'
+          - '<gray>You are asked for a reason in chat.'
+          - ''
+          - '<gray>Your report: <state>'
+      reported-yes: '<gold>sent'
+      reported-no: '<dark_gray>none'
+      # Moderators only. <count>
+      reports:
+        name: '<white><bold>Reports'
+        lore:
+          - '<gray>What players flagged this'
+          - '<gray>defense for.'
+          - ''
+          - '<gray>Reports: <white><count>'
+    # The moderation list: reported defenses first, then everything. <count>
+    moderation:
+      title: '<dark_gray><bold>Defenses — Moderation'
+      title-reported: '<dark_gray><bold>Defenses — Reported'
+      empty:
+        name: '<gray><bold>No defenses yet'
+        lore:
+          - '<gray>Nobody has saved one.'
+      empty-reported:
+        name: '<gray><bold>No reports'
+        lore:
+          - '<gray>Nothing has been flagged.'
+      # <name>
+      entry-name: '<white><bold><name>'
+      # <name> <author> <visibility> <cleared> <reports> <blocks> <likes> <players>
+      entry-lore:
+        - '<gray>Author: <white><author>'
+        - '<gray>Visibility: <visibility>'
+        - '<gray>Cleared by author: <cleared>'
+        - '<gray>Reports: <white><reports>'
+        - '<gray>Blocks: <white><blocks> <dark_gray>— <gray>Likes: <white><likes> <dark_gray>— <gray>Players: <white><players>'
+      # The latest report, under the lines above. <reporter> <reason>
+      latest-line: '<gray>Latest: <white><reporter><gray>: <reason>'
+      # Reports no moderator has looked at yet. <count>
+      unseen-line: '<gold>New reports: <white><count>'
+      auto-hidden-line: '<red>Hidden automatically by reports'
+      # The footer toggle between every defense and reported ones. <state>
+      reported:
+        name: '<white><bold>Reported Only'
+        lore:
+          - '<gray>Lists only defenses with'
+          - '<gray>open reports.'
+          - ''
+          - '<gray>Currently: <state>'
+    # One defense's reports. <name>
+    reports:
+      title: '<dark_gray><bold>Reports — <name>'
+      empty:
+        name: '<gray><bold>No reports'
+        lore:
+          - '<gray>Nothing has been flagged.'
+      # <reporter>
+      entry-name: '<white><bold><reporter>'
+      # <reporter> <reason> <when>
+      entry-lore:
+        - '<gray>Reason: <white><reason>'
+        - '<gray>Filed: <white><when>'
+      entry-name-armed: '<red><bold>Confirm Dismiss'
+      entry-lore-armed:
+        - '<red>This report is dropped.'
+      # <count>
+      dismiss:
+        name: '<red><bold>Dismiss All'
+        lore:
+          - '<gray>Closes every report on this'
+          - '<gray>defense. The defense stays.'
+          - ''
+          - '<gray>Reports: <white><count>'
+        name-armed: '<red><bold>Confirm Dismiss'
+        lore-armed:
+          - '<red>Every report is dropped.'
     # The leaderboards. <name>
     boards:
       title: '<dark_gray><bold>Boards — Bed Defense'
@@ -1992,7 +2260,8 @@ gui:
         # <state>
         lore:
           - '<gray>Public defenses appear in the'
-          - '<gray>gallery for everyone.'
+          - '<gray>gallery for everyone. Changing'
+          - '<gray>the blocks makes it private again.'
           - ''
           - '<gray>Saves as: <state>'
       delete:

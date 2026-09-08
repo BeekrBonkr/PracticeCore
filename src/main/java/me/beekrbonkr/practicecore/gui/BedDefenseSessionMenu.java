@@ -63,7 +63,7 @@ public final class BedDefenseSessionMenu extends Menu {
         } else {
             preview.hint("view");
         }
-        set(slot("preview", 10), preview.build(), event -> {
+        set(slot("preview", 11), preview.build(), event -> {
             if (!canPreview) {
                 deny();
                 return;
@@ -90,7 +90,7 @@ public final class BedDefenseSessionMenu extends Menu {
         } else {
             guide.glow(guided).hint("toggle");
         }
-        set(slot("guided", 11), guide.build(), event -> {
+        set(slot("guided", 12), guide.build(), event -> {
             if (defense == null) {
                 deny();
                 return;
@@ -106,7 +106,7 @@ public final class BedDefenseSessionMenu extends Menu {
             });
         });
 
-        set(slot("defense", 12), Button.of(plugin, defense != null ? defense.icon()
+        set(slot("defense", 13), Button.of(plugin, defense != null ? defense.icon()
                         : icon("defense", Material.RED_BED))
                 .name("gui.beddefense.session.defense.name")
                 .lore("gui.beddefense.session.defense.lore",
@@ -121,7 +121,7 @@ public final class BedDefenseSessionMenu extends Menu {
             }).open());
         });
 
-        set(slot("settings", 13), Button.of(plugin, icon("settings", Material.COMPARATOR))
+        set(slot("settings", 14), Button.of(plugin, icon("settings", Material.COMPARATOR))
                 .name("gui.beddefense.session.settings.name")
                 .lore("gui.beddefense.session.settings.lore")
                 .hint("open")
@@ -130,7 +130,7 @@ public final class BedDefenseSessionMenu extends Menu {
             later(() -> new BedDefenseConfigMenu(plugin, viewer, this, session.template()).open());
         });
 
-        set(slot("restart", 14), Button.of(plugin, icon("restart", Material.CLOCK))
+        set(slot("restart", 15), Button.of(plugin, icon("restart", Material.CLOCK))
                 .name("gui.beddefense.session.restart.name")
                 .lore("gui.beddefense.session.restart.lore")
                 .hint("restart")
@@ -147,7 +147,7 @@ public final class BedDefenseSessionMenu extends Menu {
         });
 
         if (defense != null && defense.isAuthor(viewer.getUniqueId())) {
-            set(slot("edit", 20), Button.of(plugin, icon("edit", Material.WRITABLE_BOOK))
+            set(slot("edit", 21), Button.of(plugin, icon("edit", Material.WRITABLE_BOOK))
                     .name("gui.beddefense.session.edit.name")
                     .lore("gui.beddefense.session.edit.lore", "name", defense.name())
                     .hint("edit")
@@ -159,7 +159,7 @@ public final class BedDefenseSessionMenu extends Menu {
                 });
             });
         }
-        set(slot("new", 21), Button.of(plugin, icon("new", Material.CRAFTING_TABLE))
+        set(slot("new", 22), Button.of(plugin, icon("new", Material.CRAFTING_TABLE))
                 .name("gui.beddefense.session.new.name")
                 .lore("gui.beddefense.session.new.lore",
                         "radius", String.valueOf(plugin.pcConfig().bedDefenseEditRadius()))
@@ -171,7 +171,7 @@ public final class BedDefenseSessionMenu extends Menu {
                 service.edit(viewer, null);
             });
         });
-        set(slot("maps", 22), Button.of(plugin, icon("maps", Material.FILLED_MAP))
+        set(slot("maps", 23), Button.of(plugin, icon("maps", Material.FILLED_MAP))
                 .name("gui.beddefense.session.maps.name")
                 .lore("gui.beddefense.session.maps.lore")
                 .hint("open")

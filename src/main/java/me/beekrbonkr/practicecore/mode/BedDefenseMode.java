@@ -27,11 +27,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Bed defense practice: a rush map's team base, the player's own bed, and a
- * saved bed defense to build against the clock. The mode has no arenas of
- * its own — it runs on rush maps, joined with this mode in place of rush —
- * and the defenses are player-designed, stored server-wide and shared
- * through a gallery.
+ * Bed defense practice: a team base on a bed defense map, the player's own
+ * bed, and a saved bed defense to build against the clock. The maps are
+ * admin-made templates of this mode — built in the setup wizard or pulled
+ * out of MBedwars — carrying the same team/bed/generator/dealer layout a
+ * rush map does; the defenses are player-designed, stored server-wide and
+ * shared through a gallery.
  *
  * <p>A round is complete when every block of the defense stands with the
  * right kind of material at the right spot, in any order (guided building is a
@@ -132,9 +133,15 @@ public final class BedDefenseMode implements Mode {
     @Override
     public String validateJoin(PracticeCorePlugin plugin, Player player, ArenaTemplate template) {
         if (!plugin.bedDefenses().supports(template)) {
-            return "beddefense.not-a-rush-map";
+            return "beddefense.not-a-map";
         }
         return null;
+    }
+
+    /** Boards are per defense, never per map — a map tile has no time board of its own. */
+    @Override
+    public boolean hasLeaderboards() {
+        return false;
     }
 
     @Override

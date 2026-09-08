@@ -12,9 +12,9 @@ import org.bukkit.inventory.ItemStack;
 import java.util.List;
 
 /**
- * The map picker for bed defense practice: every rush map the viewer can
- * see, since any of them has a base with a bed. Picking one opens the bed
- * defense setup menu, never the rush one.
+ * The map picker for bed defense practice: every bed defense map the viewer
+ * can see, whatever folder an admin filed it in. Picking one opens the bed
+ * defense setup menu.
  */
 public final class BedDefenseArenaMenu extends PagedMenu<ArenaTemplate> {
 

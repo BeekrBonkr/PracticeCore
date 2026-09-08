@@ -47,6 +47,9 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public final class BedDefenseService {
 
+    /** The node that lets a player moderate everyone's defenses: visibility, reports, deletion. */
+    public static final String MODERATE_PERMISSION = "practicecore.beddefense.moderate";
+
     /** Hotbar item roles, stored as the PDC value of {@link #itemKey}. */
     public static final String ITEM_MENU = "menu";
     public static final String ITEM_PREVIOUS = "previous";
@@ -70,6 +73,7 @@ public final class BedDefenseService {
     /** The last bed defense map each player played, for /practice beddefense play. */
     private final Map<UUID, String> lastMap = new HashMap<>();
     private BukkitTask task;
+    private BukkitTask reminderTask;
 
     public BedDefenseService(PracticeCorePlugin plugin) {
         this.plugin = plugin;
@@ -146,7 +150,8 @@ public final class BedDefenseService {
         var stats = plugin.stats();
         BedDefenseSelection defaults = BedDefenseSelection.defaults();
         String defense = stats.pref(player, "beddefense.defense", null);
-        if (defense != null && store.get(defense) == null) {
+        if (defense != null && !visibleTo(player, store.get(defense))) {
+            // Deleted, or made private since it was chosen.
             defense = null;
         }
         return new BedDefenseSelection(
@@ -210,7 +215,7 @@ public final class BedDefenseService {
         List<BedDefense> favorites = new ArrayList<>();
         for (String id : favoriteIds(player)) {
             BedDefense defense = store.get(id);
-            if (defense != null && (defense.published() || defense.isAuthor(player))) {
+            if (visibleTo(player, defense)) {
                 favorites.add(defense);
             }
         }
@@ -261,15 +266,55 @@ public final class BedDefenseService {
 
     // ------------------------------------------------------------- joining
 
-    /** True when this arena can host bed defense practice: a rush map with a base. */
+    /**
+     * True when this arena is a bed defense map: an admin-made template of
+     * this mode whose layout has a team base with a bed. Rush maps are not
+     * bed defense maps any more — the two modes keep their own arenas.
+     */
     public boolean supports(ArenaTemplate template) {
-        return template.mode().equals(me.beekrbonkr.practicecore.mode.RushMode.ID)
+        return template.mode().equals(BedDefenseMode.ID)
                 && RushMapData.parse(template).playable();
     }
 
     /** Every visible arena bed defense practice can run on. */
     public List<ArenaTemplate> maps(Player player) {
         return plugin.templates().visibleTo(player).stream().filter(this::supports).toList();
+    }
+
+    // ----------------------------------------------------------- visibility
+
+    /** Whether this player may moderate everyone's defenses. */
+    public boolean isModerator(org.bukkit.command.CommandSender who) {
+        return who.hasPermission(MODERATE_PERMISSION);
+    }
+
+    /**
+     * Whether a defense exists for this player: public ones, their own, and
+     * — for a moderator who is online — everything. Null-safe, so a deleted
+     * id answers false.
+     */
+    public boolean visibleTo(UUID player, BedDefense defense) {
+        if (defense == null) {
+            return false;
+        }
+        if (defense.published() || defense.isAuthor(player)) {
+            return true;
+        }
+        Player online = Bukkit.getPlayer(player);
+        return online != null && isModerator(online);
+    }
+
+    public boolean canSee(Player player, BedDefense defense) {
+        return defense != null
+                && (defense.published() || defense.isAuthor(player.getUniqueId()) || isModerator(player));
+    }
+
+    /** The defenses this player may pick or act on: what they can see. */
+    public List<BedDefense> visibleTo(Player player) {
+        if (isModerator(player)) {
+            return store.forModeration();
+        }
+        return store.playableBy(player.getUniqueId());
     }
 
     /** Flags the next round as an editing round (fresh, or from one of the player's own). */
@@ -305,7 +350,7 @@ public final class BedDefenseService {
      */
     public void join(Player player, ArenaTemplate template) {
         if (!supports(template)) {
-            msg().send(player, "beddefense.not-a-rush-map");
+            msg().send(player, "beddefense.not-a-map");
             return;
         }
         UUID id = player.getUniqueId();
@@ -321,7 +366,7 @@ public final class BedDefenseService {
             }
         }
         lastMap.put(id, template.name());
-        plugin.sessions().join(player, template, plugin.modes().get(BedDefenseMode.ID).orElseThrow());
+        plugin.sessions().join(player, template);
     }
 
     /**
@@ -428,6 +473,9 @@ public final class BedDefenseService {
         }
         if (picked == null) {
             picked = store.get(selection.defense());
+            if (!visibleTo(player, picked)) {
+                picked = null;
+            }
         }
         if (picked == null) {
             // Nothing chosen (or it was deleted) — the first playable one.
@@ -455,6 +503,10 @@ public final class BedDefenseService {
      */
     public void rebuild(Player player, PracticeSession session, BedDefenseState state) {
         UUID id = player.getUniqueId();
+        // Every road into a bed defense session ends here — the join command,
+        // the Play menu, the default arena — so this is where the last map is
+        // remembered for the chat and gallery shortcuts.
+        lastMap.put(id, session.template().name());
         state.setData(RushMapData.parse(session.template()));
         RushMapData data = state.data();
         String teamName = plugin.stats().pref(id, "rush.team." + session.template().name(), null);
@@ -469,8 +521,8 @@ public final class BedDefenseService {
         removeEntities(state);
         state.previewReplaced().clear();
         if (base == null) {
-            plugin.getLogger().warning("Rush arena '" + session.template().name()
-                    + "' has no playable team — bed defense rounds cannot start.");
+            plugin.getLogger().warning("Bed defense map '" + session.template().name()
+                    + "' has no playable team — rounds cannot start.");
             return;
         }
         Location origin = session.origin();
@@ -515,6 +567,11 @@ public final class BedDefenseService {
 
         BedDefense defense = roundDefense(id);
         state.setDefense(defense);
+        if (defense != null && defense.markPlayed(id)) {
+            // Starting a round is playing it: the base an auto-hide share is
+            // measured against counts everyone who tried, not only finishers.
+            store.save(defense);
+        }
         if (defense == null) {
             // No defense left to build (deleted mid-session) — into the editor.
             requestEdit(id, null);
@@ -1210,13 +1267,29 @@ public final class BedDefenseService {
         }
         state.setFinishing(true);
         session.freezeTimer();
-        BedDefense defense = state.defense();
-        if (store.get(defense.id()) != null) {
-            defense.countCompletion(player.getUniqueId());
+        // The live instance, not the one this round was dealt: a reload in
+        // between swaps them, and a stale save would undo likes since.
+        BedDefense defense = store.get(state.defense().id());
+        boolean cleared = false;
+        if (defense != null) {
+            UUID id = player.getUniqueId();
+            defense.countCompletion(id);
+            if (state.selection().competitive() && defense.isAuthor(id) && !defense.authorCleared()) {
+                // The author has now built this exact shape for real — the
+                // proof publishing asks for.
+                defense.setClearedFingerprint(defense.fingerprint());
+                cleared = true;
+            }
             store.save(defense);
         }
         if (!state.selection().competitive()) {
             msg().actionBar(player, "beddefense.records-disabled");
+        }
+        if (cleared && !defense.published() && !defense.autoHidden()
+                && plugin.pcConfig().bedDefenseRequireAuthorClear()) {
+            msg().send(player, "beddefense.cleared", "name", defense.name(), "id", defense.id());
+            msg().send(player, "beddefense.cleared-actions", "name", defense.name(), "id", defense.id());
+            plugin.sounds().play(player, "beddefense.cleared");
         }
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (player.isOnline() && plugin.sessions().get(session.playerId()) == session) {
@@ -1420,15 +1493,49 @@ public final class BedDefenseService {
             return;
         }
         BedDefense saved;
+        boolean wantPublic = state.editPublished();
+        String withdrawn = null;
+        if (existing != null && existing.isAuthor(id) && existing.autoHidden() && wantPublic) {
+            // Reports hid it; a reshape does not lift that, a moderator does.
+            wantPublic = false;
+            withdrawn = "beddefense.notice.saved-auto-hidden";
+        }
         if (existing != null && existing.isAuthor(id)) {
+            boolean wasPublic = existing.published();
+            boolean reshaped = !BedDefense.fingerprintOf(blocks).equals(existing.fingerprint());
             existing.setName(state.editName());
-            existing.setPublished(state.editPublished());
             saved = store.reshape(existing, blocks);
+            // A reshaped public defense is a new shape nobody has proven
+            // buildable: it goes private until the author clears it again.
+            // A rename alone changes nothing about the shape, so a defense a
+            // moderator published stays public through it.
+            if (wantPublic && reshaped && !canPublish(saved)) {
+                saved.setPublished(false);
+                withdrawn = wasPublic ? "beddefense.notice.private-changed"
+                        : "beddefense.notice.saved-private";
+            } else if (wantPublic && !reshaped) {
+                saved.setPublished(wasPublic || canPublish(saved));
+                if (!saved.published()) {
+                    withdrawn = "beddefense.notice.saved-private";
+                }
+            } else {
+                saved.setPublished(wantPublic);
+            }
+            store.save(saved);
         } else {
-            saved = store.create(state.editName(), id, player.getName(), state.editPublished(), blocks);
+            saved = store.create(state.editName(), id, player.getName(), false, blocks);
+            if (wantPublic && !canPublish(saved)) {
+                withdrawn = "beddefense.notice.saved-private";
+            } else if (wantPublic) {
+                saved.setPublished(true);
+                store.save(saved);
+            }
         }
         msg().send(player, saved.published() ? "beddefense.edit.saved-public" : "beddefense.edit.saved",
                 "name", saved.name(), "blocks", String.valueOf(blocks.size()));
+        if (withdrawn != null) {
+            msg().send(player, withdrawn, "name", saved.name(), "id", saved.id());
+        }
         plugin.sounds().play(player, "beddefense.saved");
         // Straight into playing what was just designed.
         selectDefense(id, saved.id());
@@ -1483,16 +1590,105 @@ public final class BedDefenseService {
         return name;
     }
 
-    /** Flips the visibility of a saved defense (editor button and gallery action). */
-    public void setPublished(Player player, BedDefense defense, boolean published) {
-        defense.setPublished(published);
-        store.save(defense);
-        msg().send(player, published ? "beddefense.visibility.public" : "beddefense.visibility.private",
-                "name", defense.name());
-        plugin.sounds().play(player, published ? "menu.toggle-on" : "menu.toggle-off");
+    // ----------------------------------------------------------- publishing
+
+    /**
+     * Whether a defense may go public right now: its author has finished
+     * this exact shape in a competitive round — or the server switched that
+     * gate off. It binds everyone: a moderator cannot publish an unproven
+     * defense either.
+     */
+    public boolean canPublish(BedDefense defense) {
+        return !plugin.pcConfig().bedDefenseRequireAuthorClear() || defense.authorCleared();
     }
 
-    /** Deletes a defense and every time recorded on it. */
+    /**
+     * Whether this player may publish this defense right now. On top of
+     * {@link #canPublish}, an author is held back while reports have hidden
+     * it — only a moderator lifts that.
+     */
+    public boolean canPublish(Player actor, BedDefense defense) {
+        if (!canPublish(defense)) {
+            return false;
+        }
+        return !defense.autoHidden() || (isModerator(actor) && !defense.isAuthor(actor.getUniqueId()));
+    }
+
+    /**
+     * Flips the visibility of a saved defense (editor button, gallery action
+     * and the chat command). Publishing needs the author's clear whoever
+     * asks; an auto-hidden defense needs a moderator, whose publish also
+     * closes its reports. A moderator may flip anyone's, and the author is
+     * told, now or on their next login. Anyone else is refused. Refusals
+     * say why in chat.
+     *
+     * @return true when the visibility actually changed
+     */
+    public boolean setPublished(Player actor, BedDefense defense, boolean published) {
+        UUID id = actor.getUniqueId();
+        boolean own = defense.isAuthor(id);
+        if (!own && !isModerator(actor)) {
+            msg().send(actor, "beddefense.not-owner");
+            plugin.sounds().play(actor, "menu.deny");
+            return false;
+        }
+        if (defense.published() == published) {
+            msg().send(actor, published ? "beddefense.visibility.already-public"
+                    : "beddefense.visibility.already-private", "name", defense.name());
+            plugin.sounds().play(actor, "menu.deny");
+            return false;
+        }
+        if (published && !canPublish(defense)) {
+            if (own) {
+                msg().send(actor, "beddefense.visibility.needs-clear", "name", defense.name(), "id", defense.id());
+                msg().send(actor, "beddefense.visibility.needs-clear-actions",
+                        "name", defense.name(), "id", defense.id());
+            } else {
+                msg().send(actor, "beddefense.visibility.moderator-needs-clear",
+                        "name", defense.name(), "author", defense.authorName());
+            }
+            plugin.sounds().play(actor, "menu.deny");
+            return false;
+        }
+        if (published && own && defense.autoHidden()) {
+            msg().send(actor, "beddefense.visibility.auto-hidden", "name", defense.name());
+            plugin.sounds().play(actor, "menu.deny");
+            return false;
+        }
+        int closed = 0;
+        if (published && defense.autoHidden()) {
+            // A moderator putting it back is the review the hide waited for.
+            closed = defense.reportCount();
+            defense.clearReports();
+            defense.markReportsSeen();
+            defense.setAutoHidden(false);
+        }
+        defense.setPublished(published);
+        store.save(defense);
+        if (own) {
+            msg().send(actor, published ? "beddefense.visibility.public" : "beddefense.visibility.private",
+                    "name", defense.name());
+        } else {
+            msg().send(actor, published ? "beddefense.visibility.moderator-public"
+                    : "beddefense.visibility.moderator-private",
+                    "name", defense.name(), "author", defense.authorName());
+            if (closed > 0) {
+                msg().send(actor, "beddefense.visibility.moderator-restored",
+                        "name", defense.name(), "count", String.valueOf(closed));
+            }
+            plugin.notices().notify(defense.author(), published
+                            ? "beddefense.notice.public-by-moderator"
+                            : "beddefense.notice.private-by-moderator",
+                    "name", defense.name(), "id", defense.id(), "moderator", actor.getName());
+        }
+        plugin.sounds().play(actor, published ? "menu.toggle-on" : "menu.toggle-off");
+        return true;
+    }
+
+    /**
+     * Deletes a defense and every time recorded on it. A moderator deleting
+     * someone else's tells the author, now or on their next login.
+     */
     public void delete(Player actor, BedDefense defense) {
         store.delete(defense);
         for (String key : List.of(statsKey(defense.id()), practiceStatsKey(defense.id()),
@@ -1502,6 +1698,245 @@ public final class BedDefenseService {
         }
         msg().send(actor, "beddefense.deleted", "name", defense.name());
         plugin.sounds().play(actor, "menu.click");
+        if (!defense.isAuthor(actor.getUniqueId())) {
+            plugin.notices().notify(defense.author(), "beddefense.notice.deleted-by-moderator",
+                    "name", defense.name(), "moderator", actor.getName());
+        }
+    }
+
+    // -------------------------------------------------------------- reports
+
+    /**
+     * Files (or updates) a report on a public defense and tells every
+     * moderator online. Your own defense cannot be reported, and a private
+     * one has nobody to report it.
+     *
+     * @return true when the report was recorded
+     */
+    public boolean report(Player reporter, BedDefense defense, String reason) {
+        UUID id = reporter.getUniqueId();
+        if (defense.isAuthor(id)) {
+            msg().send(reporter, "beddefense.report.own");
+            plugin.sounds().play(reporter, "menu.deny");
+            return false;
+        }
+        if (!defense.published()) {
+            msg().send(reporter, "beddefense.report.private");
+            plugin.sounds().play(reporter, "menu.deny");
+            return false;
+        }
+        String cleaned = cleanReason(reason);
+        if (cleaned == null) {
+            msg().send(reporter, "beddefense.report.reason-invalid",
+                    "max", String.valueOf(plugin.pcConfig().bedDefenseReportReasonMaxLength()));
+            plugin.sounds().play(reporter, "menu.deny");
+            return false;
+        }
+        boolean fresh = defense.addReport(new BedDefense.Report(id, reporter.getName(), cleaned,
+                System.currentTimeMillis()));
+        boolean hidden = shouldAutoHide(defense);
+        if (hidden) {
+            defense.setPublished(false);
+            defense.setAutoHidden(true);
+        }
+        store.save(defense);
+        msg().send(reporter, fresh ? "beddefense.report.sent" : "beddefense.report.updated",
+                "name", defense.name());
+        plugin.sounds().play(reporter, "beddefense.report");
+        String builders = String.valueOf(defense.buildersBesidesAuthor());
+        String builderReports = String.valueOf(defense.reportsFromBuilders());
+        if (hidden) {
+            plugin.notices().notify(defense.author(), "beddefense.notice.auto-hidden",
+                    "name", defense.name(), "id", defense.id(),
+                    "reports", builderReports, "players", builders);
+        }
+        boolean announce = plugin.pcConfig().bedDefenseReportsNotifyModerators();
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (!isModerator(online) || online.equals(reporter)) {
+                continue;
+            }
+            if (announce) {
+                msg().send(online, "beddefense.report.alert",
+                        "player", reporter.getName(),
+                        "name", defense.name(),
+                        "id", defense.id(),
+                        "author", defense.authorName(),
+                        "reason", cleaned,
+                        "count", String.valueOf(defense.reportCount()));
+            }
+            if (hidden) {
+                // A defense going dark on its own is news whether or not
+                // single reports are announced.
+                msg().send(online, "beddefense.report.auto-hidden-alert",
+                        "name", defense.name(), "id", defense.id(), "author", defense.authorName(),
+                        "reports", builderReports, "players", builders);
+            }
+            if (announce || hidden) {
+                msg().send(online, "beddefense.report.alert-actions",
+                        "name", defense.name(), "id", defense.id());
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Whether the builders' reports on a public defense have reached the
+     * configured share: at least {@code min-reports} of them, and at least
+     * {@code percent} of everyone but the author who has started a round on
+     * it. Reports from players who never built it do not count.
+     */
+    private boolean shouldAutoHide(BedDefense defense) {
+        int percent = plugin.pcConfig().bedDefenseAutoHidePercent();
+        if (percent <= 0 || !defense.published()) {
+            return false;
+        }
+        int reports = defense.reportsFromBuilders();
+        int builders = defense.buildersBesidesAuthor();
+        return reports >= plugin.pcConfig().bedDefenseAutoHideMinReports()
+                && builders > 0
+                && reports * 100L >= (long) percent * builders;
+    }
+
+    /**
+     * A moderator has looked at this defense's reports (its review or
+     * reports menu, or {@code info}): they stop counting as unseen.
+     */
+    public void markReportsSeen(BedDefense defense) {
+        if (defense.markReportsSeen()) {
+            store.save(defense);
+        }
+    }
+
+    /** Lifts an automatic hide once no report is left, and tells the author. */
+    private void liftAutoHideIfClear(Player moderator, BedDefense defense) {
+        if (!defense.autoHidden() || defense.reportCount() > 0) {
+            return;
+        }
+        defense.setAutoHidden(false);
+        msg().send(moderator, "beddefense.report.auto-hide-lifted", "name", defense.name());
+        plugin.notices().notify(defense.author(), "beddefense.notice.auto-hide-lifted",
+                "name", defense.name(), "id", defense.id(), "moderator", moderator.getName());
+    }
+
+    // ------------------------------------------------------------ reminders
+
+    /** Every moderator online hears about reports nobody has looked at (the interval task). */
+    public void remindModerators() {
+        List<BedDefense> unseen = store.unseenReported();
+        if (unseen.isEmpty()) {
+            return;
+        }
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (isModerator(online)) {
+                remind(online, unseen);
+            }
+        }
+    }
+
+    /** A moderator who just joined is reminded a moment later, after the join chatter. */
+    public void remindOnJoin(Player player) {
+        if (!plugin.pcConfig().bedDefenseReportsRemindOnJoin() || !isModerator(player)) {
+            return;
+        }
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (player.isOnline()) {
+                List<BedDefense> unseen = store.unseenReported();
+                if (!unseen.isEmpty()) {
+                    remind(player, unseen);
+                }
+            }
+        }, 40L);
+    }
+
+    private static final int REMINDER_ENTRIES = 5;
+
+    private void remind(Player moderator, List<BedDefense> unseen) {
+        int total = 0;
+        for (BedDefense defense : unseen) {
+            total += defense.unseenReports();
+        }
+        msg().send(moderator, "beddefense.report.reminder",
+                "count", String.valueOf(unseen.size()), "reports", String.valueOf(total));
+        int shown = 0;
+        for (BedDefense defense : unseen) {
+            if (shown++ >= REMINDER_ENTRIES) {
+                msg().send(moderator, "beddefense.report.reminder-more",
+                        "count", String.valueOf(unseen.size() - REMINDER_ENTRIES));
+                break;
+            }
+            BedDefense.Report latest = defense.reports().get(defense.reports().size() - 1);
+            msg().send(moderator, "beddefense.report.reminder-entry",
+                    msg().ref("state", defense.autoHidden()
+                            ? "beddefense.report.reminder-hidden" : "beddefense.report.reminder-open"),
+                    "id", defense.id(),
+                    "name", defense.name(),
+                    "author", defense.authorName(),
+                    "count", String.valueOf(defense.reportCount()),
+                    "unseen", String.valueOf(defense.unseenReports()),
+                    "reporter", latest.reporterName(),
+                    "reason", latest.reason());
+        }
+        msg().send(moderator, "beddefense.report.reminder-actions");
+        plugin.sounds().play(moderator, "beddefense.report");
+    }
+
+    /** Asks for a reason in chat, then files the report. */
+    public void promptReport(Player reporter, BedDefense defense) {
+        reporter.closeInventory();
+        plugin.prompts().prompt(reporter, msg().component("beddefense.report.prompt",
+                "name", defense.name(),
+                "max", String.valueOf(plugin.pcConfig().bedDefenseReportReasonMaxLength())), answer -> {
+            // The live instance: a reshape or reload while they typed swaps it.
+            BedDefense live = store.get(defense.id());
+            if (live == null) {
+                msg().send(reporter, "beddefense.unknown", "id", defense.id());
+                return;
+            }
+            report(reporter, live, answer);
+        });
+    }
+
+    /** A moderator closes every report on a defense. @return how many were dismissed */
+    public int dismissReports(Player moderator, BedDefense defense) {
+        int count = defense.reportCount();
+        if (count == 0) {
+            msg().send(moderator, "beddefense.report.none", "name", defense.name());
+            plugin.sounds().play(moderator, "menu.deny");
+            return 0;
+        }
+        defense.clearReports();
+        defense.markReportsSeen();
+        msg().send(moderator, "beddefense.report.dismissed",
+                "name", defense.name(), "count", String.valueOf(count));
+        liftAutoHideIfClear(moderator, defense);
+        store.save(defense);
+        plugin.sounds().play(moderator, "menu.click");
+        return count;
+    }
+
+    /** A moderator drops one player's report. */
+    public boolean dismissReport(Player moderator, BedDefense defense, UUID reporter) {
+        if (!defense.removeReport(reporter)) {
+            return false;
+        }
+        defense.markReportsSeen();
+        liftAutoHideIfClear(moderator, defense);
+        store.save(defense);
+        plugin.sounds().play(moderator, "menu.click");
+        return true;
+    }
+
+    /** Printable, trimmed, length-capped; null when nothing usable is left. */
+    private String cleanReason(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String reason = raw.replaceAll("[\\p{Cntrl}§]", "").trim();
+        int max = plugin.pcConfig().bedDefenseReportReasonMaxLength();
+        if (reason.isEmpty()) {
+            return null;
+        }
+        return reason.length() > max ? reason.substring(0, max) : reason;
     }
 
     // ------------------------------------------------------------------ stats
@@ -1571,6 +2006,11 @@ public final class BedDefenseService {
 
     public void startTask() {
         task = Bukkit.getScheduler().runTaskTimer(plugin, this::tickAll, TICK_PERIOD, TICK_PERIOD);
+        int minutes = plugin.pcConfig().bedDefenseReportsRemindMinutes();
+        if (minutes > 0) {
+            long period = minutes * 60L * 20L;
+            reminderTask = Bukkit.getScheduler().runTaskTimer(plugin, this::remindModerators, period, period);
+        }
     }
 
     public void restartTask() {
@@ -1583,6 +2023,10 @@ public final class BedDefenseService {
         if (task != null) {
             task.cancel();
             task = null;
+        }
+        if (reminderTask != null) {
+            reminderTask.cancel();
+            reminderTask = null;
         }
     }
 

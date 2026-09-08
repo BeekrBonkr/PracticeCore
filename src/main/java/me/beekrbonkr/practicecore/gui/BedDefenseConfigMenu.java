@@ -76,7 +76,7 @@ public final class BedDefenseConfigMenu extends Menu {
         teamButton(slot("team", 13));
         defenseButton(slot("defense", 20));
         modeButton(slot("mode", 22));
-        shuffleButton(slot("shuffle", 23));
+        shuffleButton(slot("shuffle", 40));
         timerButton(slot("timer", 24));
         newButton(slot("new", 30));
         editButton(slot("edit", 32));

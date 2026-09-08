@@ -102,6 +102,18 @@ public final class GuiConfig {
             relocate(cfg, "beddefense.buttons.shuffle.slot", 24, 23);
             relocate(cfg, "beddefense.buttons.timer.slot", 25, 24);
         }
+        if (from < 8) {
+            // v8 re-lays the hub, rush, PvP bot, bed defense setup and session
+            // menus and moves the sidebar toggle into Settings. Values still
+            // at their v7 defaults are reset so the new layout applies; an
+            // admin's own arrangement stands. The rush objective-* keys have
+            // had no button since v0.4.0 and are dropped wherever they linger.
+            YamlMigrator.resetUntouched(cfg,
+                    Backups.jarDefaults(plugin, "migrations/guis-v7.yml"));
+            cfg.set("rush.buttons.objective-bed", null);
+            cfg.set("rush.buttons.objective-emerald", null);
+            cfg.set("rush.buttons.objective-diamond", null);
+        }
     }
 
     /** Moves a slot only while it still sits where the previous version put it. */
