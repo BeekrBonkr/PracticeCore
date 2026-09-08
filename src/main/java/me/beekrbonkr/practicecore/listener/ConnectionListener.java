@@ -32,6 +32,12 @@ public final class ConnectionListener implements Listener {
         // Bot disguise profiles must reach this client before it tracks any
         // bot entity, or running fights' bots stay invisible to them.
         plugin.pvpBot().handleJoin(player);
+        // Anything that happened to their bed defenses while they were away
+        // (a moderator hid one, say) is delivered a moment from now — before
+        // the snapshot restore below can return early.
+        plugin.notices().deliverOnJoin(player);
+        // A moderator hears about reports nobody has looked at yet.
+        plugin.bedDefenses().remindOnJoin(player);
         // Orphaned snapshot = the server crashed (or cleanup was missed) while
         // this player was practicing. Restoring it covers every such path.
         if (plugin.snapshots().has(id)) {

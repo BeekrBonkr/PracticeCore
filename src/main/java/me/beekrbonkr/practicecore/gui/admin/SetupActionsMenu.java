@@ -3,6 +3,8 @@ package me.beekrbonkr.practicecore.gui.admin;
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.gui.Button;
 import me.beekrbonkr.practicecore.gui.Menu;
+import me.beekrbonkr.practicecore.mode.Mode;
+import me.beekrbonkr.practicecore.mode.PvpBotMode;
 import me.beekrbonkr.practicecore.setup.SetupManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -11,14 +13,27 @@ import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.function.Consumer;
 
 /**
  * Control panel for the open setup wizard: every wizard command as a button.
- * Text answers (display name, category, permission) go through a one-shot
- * chat prompt and the panel reopens afterwards. Text is fixed — see
- * {@link SetupGui}.
+ * Text answers (display name, category, permission, team color) go through
+ * a one-shot chat prompt and the panel reopens afterwards. The third row is
+ * mode-aware: rush and bed defense arenas get the team-base layout buttons,
+ * PvP bot arenas the bot spawn marker. Text is fixed — see {@link SetupGui}.
  */
 final class SetupActionsMenu extends Menu {
+
+    /** The team colors a base layout knows, as /practice setup rush team accepts them. */
+    private static final List<String> TEAM_COLORS = List.of(
+            "red", "blue", "green", "yellow", "aqua", "white", "pink", "gray");
+    private static final String TEAM_COLOR_LIST = "red, blue, green, yellow, aqua, white, pink or gray";
+
+    private static final Component CANNOT_UNDO =
+            Component.text("This cannot be undone.", NamedTextColor.RED);
+    private static final Component ANY_OTHER_CLICK =
+            Component.text("Any other click cancels", NamedTextColor.YELLOW);
 
     SetupActionsMenu(PracticeCorePlugin plugin, Player viewer) {
         super(plugin, viewer, null);
@@ -82,18 +97,26 @@ final class SetupActionsMenu extends Menu {
             refresh();
         });
 
-        // STYLE-GUIDE: needs logic change (R59) — clearing every trigger is
-        // destructive and runs on a single click with no confirmation.
-        set(12, SetupGui.control(plugin, Material.STONE_BUTTON, "Finish Triggers",
+        // Clearing every trigger is destructive, so it takes two clicks (R56, R59).
+        int triggersSlot = 12;
+        Button triggers = isArmed(triggersSlot)
+                ? armed(Material.STONE_BUTTON, "Confirm Clear",
+                        "Every finish trigger in this arena",
+                        "is removed.")
+                : SetupGui.control(plugin, Material.STONE_BUTTON, "Finish Triggers",
                         NamedTextColor.WHITE,
                         "Buttons and pressure plates you",
                         "place in the arena finish a run.",
                         "Clicking removes them all at once.",
                         "")
                 .line(SetupGui.state("Placed", String.valueOf(wizard().activeTriggerCount())))
-                .hint("run")
-                .build(), event -> {
-            click();
+                .hint("run");
+        set(triggersSlot, triggers.build(), event -> {
+            if (!isArmed(triggersSlot)) {
+                arm(triggersSlot);
+                return;
+            }
+            disarm();
             wizard().clearTriggers(viewer);
             refresh();
         });
@@ -109,15 +132,25 @@ final class SetupActionsMenu extends Menu {
             refresh();
         });
 
-        // STYLE-GUIDE: needs logic change (R59) — replaces the schematic on a
-        // single click with no confirmation.
-        set(14, SetupGui.control(plugin, Material.CARTOGRAPHY_TABLE, "Replace Schematic",
+        // Replacing the schematic throws the current build away, so it takes
+        // two clicks as well (R56, R59).
+        int schematicSlot = 14;
+        Button schematic = isArmed(schematicSlot)
+                ? armed(Material.CARTOGRAPHY_TABLE, "Confirm Replace",
+                        "The current build is replaced by",
+                        "your clipboard and its triggers",
+                        "are cleared.")
+                : SetupGui.control(plugin, Material.CARTOGRAPHY_TABLE, "Replace Schematic",
                         NamedTextColor.WHITE,
                         "Swaps the arena for whatever is on",
                         "your WorldEdit clipboard, at once.")
-                .hint("run")
-                .build(), event -> {
-            click();
+                .hint("run");
+        set(schematicSlot, schematic.build(), event -> {
+            if (!isArmed(schematicSlot)) {
+                arm(schematicSlot);
+                return;
+            }
+            disarm();
             wizard().replaceSchematic(viewer);
             refresh();
         });
@@ -226,6 +259,8 @@ final class SetupActionsMenu extends Menu {
             });
         });
 
+        renderLayoutRow();
+
         boolean ready = wizard().activeReady();
         Button save = SetupGui.control(plugin, Material.EMERALD, "Save Arena", NamedTextColor.GREEN,
                 "Writes everything to disk and",
@@ -233,7 +268,7 @@ final class SetupActionsMenu extends Menu {
         if (ready) {
             save.hint("save");
         } else {
-            save.disabled(hasSpawn ? "gui.reason.needs-trigger" : "gui.reason.needs-spawn");
+            save.disabled(saveReason(hasSpawn));
         }
         set(39, save.build(), event -> {
             if (!ready) {
@@ -274,6 +309,165 @@ final class SetupActionsMenu extends Menu {
         });
     }
 
+    // ------------------------------------------------------- mode-aware row
+
+    /** Row 3 (slots 28-34): the layout steps only this arena's mode needs. */
+    private void renderLayoutRow() {
+        if (wizard().activeUsesBaseLayout()) {
+            renderBaseLayout();
+        } else if (PvpBotMode.ID.equals(wizard().activeMode())) {
+            renderBotLayout();
+        }
+    }
+
+    /** Rush and bed defense share one layout: team spawns, beds, generators, dealers. */
+    private void renderBaseLayout() {
+        int bases = wizard().activeBaseCount();
+        int teams = wizard().activeTeamCount();
+        Component base = Component.text(bases + " playable of " + teams + " set",
+                bases > 0 ? NamedTextColor.GREEN : NamedTextColor.RED);
+
+        set(28, SetupGui.control(plugin, Material.RESPAWN_ANCHOR, "Team Spawn Here",
+                        NamedTextColor.WHITE,
+                        "Marks a team's spawn where you",
+                        "stand. You are asked for the team",
+                        "color in chat.",
+                        "")
+                .line(SetupGui.state("Bases", base))
+                .hint("run")
+                .build(), event -> {
+            click();
+            promptTeam("Which team spawns here? (" + TEAM_COLOR_LIST + ")",
+                    color -> wizard().rushTeamSpawn(viewer, color));
+        });
+
+        set(29, SetupGui.control(plugin, Material.RED_BED, "Bed Here", NamedTextColor.WHITE,
+                        "Marks the bed you are looking at",
+                        "as a team's target bed. Keep",
+                        "looking at it while you answer.",
+                        "")
+                .line(SetupGui.state("Bases", base))
+                .hint("run")
+                .build(), event -> {
+            click();
+            promptTeam("Which team's bed is this? (" + TEAM_COLOR_LIST + ")",
+                    color -> wizard().rushBed(viewer, color));
+        });
+
+        set(30, SetupGui.control(plugin, Material.IRON_INGOT, "Generator Here",
+                        NamedTextColor.WHITE,
+                        "Marks a resource generator on the",
+                        "block you stand on. You are asked",
+                        "for the type in chat.",
+                        "")
+                .line(SetupGui.state("Generators",
+                        Component.text(wizard().activeGeneratorCount(), NamedTextColor.WHITE)))
+                .hint("run")
+                .build(), event -> {
+            click();
+            promptThenReopen("Which generator is this? (iron, gold, diamond or emerald)",
+                    answer -> wizard().rushGenerator(viewer, answer));
+        });
+
+        set(31, SetupGui.control(plugin, Material.VILLAGER_SPAWN_EGG, "Dealer Here",
+                        NamedTextColor.WHITE,
+                        "Marks a shop dealer spot where you",
+                        "stand, facing your way.",
+                        "")
+                .line(SetupGui.state("Dealers",
+                        Component.text(wizard().activeDealerCount(), NamedTextColor.WHITE)))
+                .hint("run")
+                .build(), event -> {
+            click();
+            wizard().rushDealer(viewer);
+            refresh();
+        });
+
+        int clearSlot = 32;
+        Button clear = isArmed(clearSlot)
+                ? armed(Material.RED_DYE, "Confirm Clear",
+                        "Every team spawn, bed, generator",
+                        "and dealer spot is removed.")
+                : SetupGui.control(plugin, Material.RED_DYE, "Clear Layout", NamedTextColor.RED,
+                        "Removes every team spawn, bed,",
+                        "generator and dealer spot so you",
+                        "can lay the map out again.")
+                .hint("run");
+        set(clearSlot, clear.build(), event -> {
+            if (!isArmed(clearSlot)) {
+                arm(clearSlot);
+                return;
+            }
+            disarm();
+            wizard().rushClear(viewer);
+            refresh();
+        });
+    }
+
+    /** The PvP bot layout: one optional marker for where the bot appears. */
+    private void renderBotLayout() {
+        set(28, SetupGui.control(plugin, Material.ZOMBIE_HEAD, "Bot Spawn Here",
+                        NamedTextColor.WHITE,
+                        "Marks where the PvP bot spawns,",
+                        "at your feet facing your way.",
+                        "Without one it spawns a few blocks",
+                        "ahead of the player spawn.",
+                        "")
+                .line(SetupGui.state("Bot spawn", Component.text(
+                        wizard().activeHasBotSpawn() ? "set" : "auto",
+                        wizard().activeHasBotSpawn() ? NamedTextColor.GREEN : NamedTextColor.GRAY)))
+                .hint("run")
+                .build(), event -> {
+            click();
+            wizard().pvpBotSpawn(viewer);
+            refresh();
+        });
+
+        set(29, SetupGui.control(plugin, Material.RED_DYE, "Clear Bot Spawn", NamedTextColor.RED,
+                        "Removes the bot spawn marker so",
+                        "the bot spawns ahead of the player",
+                        "spawn again.")
+                .hint("run")
+                .build(), event -> {
+            click();
+            wizard().pvpBotClear(viewer);
+            refresh();
+        });
+    }
+
+    // -------------------------------------------------------------- helpers
+
+    /**
+     * The armed look of a two-click control (R56): same slot, glow, a red
+     * "Confirm …" name, the consequence, and the confirm hint.
+     */
+    private Button armed(Material material, String name, String... consequence) {
+        return SetupGui.control(plugin, material, name, NamedTextColor.RED, consequence)
+                .line(CANNOT_UNDO)
+                .line(ANY_OTHER_CLICK)
+                .glow(true)
+                .hint("confirm");
+    }
+
+    /**
+     * Why Save is unavailable, in the order the wizard itself checks: spawn,
+     * then the finish trigger (for modes that use one), then the team base.
+     */
+    private String saveReason(boolean hasSpawn) {
+        if (!hasSpawn) {
+            return "gui.reason.needs-spawn";
+        }
+        boolean needsTrigger = plugin.modes().get(wizard().activeMode())
+                .map(Mode::requiresTrigger).orElse(true);
+        if (needsTrigger && wizard().activeTriggerCount() == 0) {
+            return "gui.reason.needs-trigger";
+        }
+        if (wizard().activeUsesBaseLayout() && !wizard().activeHasBase()) {
+            return "gui.reason.needs-base";
+        }
+        return "gui.reason.needs-trigger";
+    }
+
     private Material iconMaterial() {
         Material icon = wizard().activeIcon();
         return icon != null ? icon : Material.ITEM_FRAME;
@@ -285,7 +479,20 @@ final class SetupActionsMenu extends Menu {
         return ids.get((index + 1) % ids.size());
     }
 
-    private void promptThenReopen(String question, java.util.function.Consumer<String> action) {
+    /** Asks for a team color and only hands a known one on to the wizard. */
+    private void promptTeam(String question, Consumer<String> action) {
+        promptThenReopen(question, answer -> {
+            String color = answer.trim().toLowerCase(Locale.ROOT);
+            if (!TEAM_COLORS.contains(color)) {
+                plugin.messages().problem(viewer, answer + " is not a team color. Use "
+                        + TEAM_COLOR_LIST + ".");
+                return;
+            }
+            action.accept(color);
+        });
+    }
+
+    private void promptThenReopen(String question, Consumer<String> action) {
         later(() -> {
             viewer.closeInventory();
             plugin.prompts().prompt(viewer, question, answer -> {

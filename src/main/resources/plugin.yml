@@ -66,6 +66,9 @@ permissions:
   practicecore.bypass:
     description: Enter the practice world without a session (no confinement)
     default: op
+  practicecore.beddefense.moderate:
+    description: Moderate player-made bed defenses (see every one, show or hide any, review and dismiss reports, delete any)
+    default: op
   practicecore.admin:
     description: Full arena administration
     default: op
@@ -78,3 +81,4 @@ permissions:
       practicecore.world: true
       practicecore.stats.other: true
       practicecore.bypass: true
+      practicecore.beddefense.moderate: true

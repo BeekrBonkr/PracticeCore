@@ -90,7 +90,7 @@ public final class MainMenu extends Menu {
             set(slot("restart", 14), restartIcon(session), event -> restart());
         }
         if (shown("bot") && me.beekrbonkr.practicecore.pvpbot.PvpBotService.fightOf(session) != null) {
-            set(slot("bot", 20), botIcon(), event -> {
+            set(slot("bot", 31), botIcon(), event -> {
                 click();
                 later(() -> new PvpBotSettingsMenu(plugin, viewer, this, session).open());
             });
@@ -98,7 +98,7 @@ public final class MainMenu extends Menu {
         // STYLE-GUIDE: needs logic change (R53) — same permission reveal as above.
         if (shown("spectate") && plugin.pcConfig().spectateEnabled()
                 && viewer.hasPermission("practicecore.spectate")) {
-            set(slot("spectate", 19), spectateIcon(), event -> {
+            set(slot("spectate", 20), spectateIcon(), event -> {
                 click();
                 later(() -> new SpectateMenu(plugin, viewer, this).open());
             });
@@ -116,13 +116,13 @@ public final class MainMenu extends Menu {
             });
         }
         if (shown("settings")) {
-            set(slot("settings", 21), settingsIcon(), event -> {
+            set(slot("settings", 22), settingsIcon(), event -> {
                 click();
                 later(() -> new SettingsMenu(plugin, viewer, this).open());
             });
         }
         if (shown("leave") && session != null) {
-            set(slot("leave", 23), leaveIcon(), event -> {
+            set(slot("leave", 24), leaveIcon(), event -> {
                 click();
                 later(() -> {
                     viewer.closeInventory();

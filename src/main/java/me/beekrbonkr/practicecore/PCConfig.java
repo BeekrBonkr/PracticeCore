@@ -127,6 +127,13 @@ public final class PCConfig {
     private final int bedDefenseGuideBlinkTicks;
     private final int bedDefenseHologramTicks;
     private final double bedDefenseHologramHideDistance;
+    private final boolean bedDefenseRequireAuthorClear;
+    private final boolean bedDefenseReportsNotifyModerators;
+    private final int bedDefenseReportReasonMaxLength;
+    private final boolean bedDefenseReportsRemindOnJoin;
+    private final int bedDefenseReportsRemindMinutes;
+    private final int bedDefenseAutoHidePercent;
+    private final int bedDefenseAutoHideMinReports;
 
     private final int mlgPlatformRadius;
     private final Material mlgPlatformMaterial;
@@ -381,6 +388,18 @@ public final class PCConfig {
                 Math.clamp(cfg.getDouble("beddefense.hologram.seconds", 8.0), 0.0, 600.0) * 20);
         this.bedDefenseHologramHideDistance =
                 Math.max(0, cfg.getDouble("beddefense.hologram.hide-distance", 4.0));
+        this.bedDefenseRequireAuthorClear = cfg.getBoolean("beddefense.require-author-clear", true);
+        this.bedDefenseReportsNotifyModerators =
+                cfg.getBoolean("beddefense.reports.notify-moderators", true);
+        this.bedDefenseReportReasonMaxLength =
+                Math.clamp(cfg.getInt("beddefense.reports.reason-max-length", 80), 1, 256);
+        this.bedDefenseReportsRemindOnJoin = cfg.getBoolean("beddefense.reports.remind-on-join", true);
+        this.bedDefenseReportsRemindMinutes =
+                Math.clamp(cfg.getInt("beddefense.reports.remind-minutes", 30), 0, 1440);
+        this.bedDefenseAutoHidePercent =
+                Math.clamp(cfg.getInt("beddefense.reports.auto-hide.percent", 25), 0, 100);
+        this.bedDefenseAutoHideMinReports =
+                Math.clamp(cfg.getInt("beddefense.reports.auto-hide.min-reports", 3), 1, 1000);
 
         this.mlgPlatformRadius = Math.max(0, cfg.getInt("mlg.platform-radius", 1));
         this.mlgPlatformMaterial = material(cfg.getString("mlg.platform-material"), Material.GLASS);
@@ -963,6 +982,40 @@ public final class PCConfig {
 
     public double bedDefenseHologramHideDistance() {
         return bedDefenseHologramHideDistance;
+    }
+
+    /** Whether publishing needs the author's own competitive completion first. */
+    public boolean bedDefenseRequireAuthorClear() {
+        return bedDefenseRequireAuthorClear;
+    }
+
+    /** Whether a new report is announced to every moderator online. */
+    public boolean bedDefenseReportsNotifyModerators() {
+        return bedDefenseReportsNotifyModerators;
+    }
+
+    public int bedDefenseReportReasonMaxLength() {
+        return bedDefenseReportReasonMaxLength;
+    }
+
+    /** Whether a moderator is reminded of unseen reports a moment after joining. */
+    public boolean bedDefenseReportsRemindOnJoin() {
+        return bedDefenseReportsRemindOnJoin;
+    }
+
+    /** Minutes between reminders of unseen reports to every moderator online; 0 = never. */
+    public int bedDefenseReportsRemindMinutes() {
+        return bedDefenseReportsRemindMinutes;
+    }
+
+    /** Share (percent) of a defense's builders whose reports hide it; 0 = never. */
+    public int bedDefenseAutoHidePercent() {
+        return bedDefenseAutoHidePercent;
+    }
+
+    /** Reports from builders needed before the share is even considered. */
+    public int bedDefenseAutoHideMinReports() {
+        return bedDefenseAutoHideMinReports;
     }
 
     // ------------------------------------------------------------------- mlg

@@ -21,10 +21,11 @@ import java.util.function.Consumer;
 /**
  * The bed defense gallery, three tabs across the footer: <b>Public</b>
  * (everything published, most liked then most played first), <b>Mine</b>
- * (the viewer's own, newest first) and <b>Favorites</b>. Left-click picks a
- * defense for whatever the menu was opened for (playing it, or editing
- * it); right-click opens its actions (like, favorite, board, publish,
- * delete).
+ * (the viewer's own, newest first) and <b>Favorites</b> — plus
+ * <b>Review</b> for moderators (reported first, then everything, private
+ * ones included). Left-click picks a defense for whatever the menu was
+ * opened for (playing it, or editing it); right-click opens its actions
+ * (like, favorite, board, report, publish, delete).
  */
 public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
 
@@ -37,7 +38,7 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
     }
 
     public enum Tab {
-        PUBLIC, MINE, FAVORITES;
+        PUBLIC, MINE, FAVORITES, REVIEW;
 
         String key() {
             return name().toLowerCase(java.util.Locale.ROOT);
@@ -59,7 +60,9 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
     private Tab rememberedTab() {
         String stored = plugin.stats().pref(viewer.getUniqueId(), "beddefense.gallery-tab", "PUBLIC");
         try {
-            return Tab.valueOf(stored.toUpperCase(java.util.Locale.ROOT));
+            Tab tab = Tab.valueOf(stored.toUpperCase(java.util.Locale.ROOT));
+            // A moderator's remembered tab means nothing once the node is gone.
+            return tab == Tab.REVIEW && !plugin.bedDefenses().isModerator(viewer) ? Tab.PUBLIC : tab;
         } catch (IllegalArgumentException e) {
             return Tab.PUBLIC;
         }
@@ -77,6 +80,7 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
             case PUBLIC -> service.store().published();
             case MINE -> service.store().ownedBy(viewer.getUniqueId());
             case FAVORITES -> service.favorites(viewer.getUniqueId());
+            case REVIEW -> service.isModerator(viewer) ? service.store().forModeration() : List.of();
         };
     }
 
@@ -120,6 +124,10 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
             lines.add(plugin.messages().name("gui.beddefense.gallery.kind-line",
                     "count", String.valueOf(entry.getValue()),
                     "material", BlockKinds.pretty(entry.getKey())));
+        }
+        if (defense.reportCount() > 0 && service.isModerator(viewer)) {
+            lines.add(name("gui.beddefense.gallery.reports-line",
+                    "count", String.valueOf(defense.reportCount())));
         }
         boolean chosen = selected && purpose == Purpose.SELECT;
         if (chosen) {
@@ -173,8 +181,12 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
                 plugin.guis().buttonMaterial("beddefense-gallery.tabs.public", Material.BOOKSHELF));
         tabButton(Tab.MINE, plugin.guis().slot("beddefense-gallery.tabs.mine", footerSlot(1)),
                 Material.PLAYER_HEAD);
-        tabButton(Tab.FAVORITES, plugin.guis().slot("beddefense-gallery.tabs.favorites", footerSlot(2)),
+        tabButton(Tab.FAVORITES, plugin.guis().slot("beddefense-gallery.tabs.favorites", footerSlot(3)),
                 plugin.guis().buttonMaterial("beddefense-gallery.tabs.favorites", Material.AMETHYST_SHARD));
+        if (plugin.bedDefenses().isModerator(viewer)) {
+            tabButton(Tab.REVIEW, plugin.guis().slot("beddefense-gallery.tabs.review", footerSlot(2)),
+                    plugin.guis().buttonMaterial("beddefense-gallery.tabs.review", Material.LECTERN));
+        }
     }
 
     private void tabButton(Tab which, int slot, Material material) {
@@ -183,6 +195,7 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
             case PUBLIC -> plugin.bedDefenses().store().published().size();
             case MINE -> plugin.bedDefenses().store().ownedBy(viewer.getUniqueId()).size();
             case FAVORITES -> plugin.bedDefenses().favorites(viewer.getUniqueId()).size();
+            case REVIEW -> plugin.bedDefenses().store().all().size();
         };
         Button button = Button.of(plugin, material)
                 .name("gui.beddefense.gallery.tab-name",

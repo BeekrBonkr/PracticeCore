@@ -126,3 +126,8 @@ beddefense:
   # Liking and favoriting a defense.
   like: 'ENTITY_EXPERIENCE_ORB_PICKUP 0.6 1.6'
   favorite: 'BLOCK_NOTE_BLOCK_BELL 0.5 1.4'
+  # The author finishing their own defense competitively for the first time
+  # — it can be published now.
+  cleared: 'ENTITY_PLAYER_LEVELUP 0.8 1.6'
+  # A report filed.
+  report: 'BLOCK_NOTE_BLOCK_BASS 0.7 0.8'

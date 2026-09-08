@@ -16,7 +16,7 @@
 #   guis.yml     — menu layout: slots, icons, rows
 #   sounds.yml   — every sound cue
 #   pvpbot.yml   — the PvP bot's difficulty tuning and its kits
-config-version: 7
+config-version: 8
 
 world:
   # Name of the ephemeral practice world. Its folder is DELETED and recreated
@@ -326,10 +326,12 @@ rush:
       armor: IRON
       sword: IRON
 
-# Bed defense practice. Runs on rush maps: you spawn at your team base and
-# build a saved bed defense against the clock. Defenses are designed by
-# players in the editor and stored under defenses/ (shared by everyone);
-# the plugin ships none on purpose.
+# Bed defense practice. Runs on bed defense maps — arenas of mode beddefense
+# an admin imports from MBedwars (/practice beddefense import) or builds in
+# the wizard — where you spawn at your team base and build a saved bed
+# defense against the clock. Defenses are designed by players in the editor
+# and stored under defenses/ (shared by everyone); the plugin ships none on
+# purpose.
 beddefense:
   # The blocks a bed defense may be made of — what the editor hands out and
   # what a practice kit is measured in. With blocks-from-shop on and MBedwars
@@ -348,6 +350,34 @@ beddefense:
   # Saved defenses one player may own, and how long a name may be.
   max-per-player: 25
   name-max-length: 24
+  # A defense may only go public once its author has finished that exact
+  # shape in a competitive round themselves — proof it can be built for
+  # real. Reshaping it withdraws that proof until they clear it again.
+  # Nobody bypasses this, moderators included: an unproven defense is not
+  # published by anyone. false lets authors publish straight away.
+  require-author-clear: true
+  reports:
+    # Whether a new report is announced in chat to every moderator online.
+    # Reports are always kept for /practice beddefense moderate either way.
+    notify-moderators: true
+    # How long a report reason may be.
+    reason-max-length: 80
+    # Reports no moderator has looked at yet (opened the defense's review
+    # menu, its reports, or `info <id>`) are brought up again: to a
+    # moderator a moment after they join, and to every moderator online
+    # every remind-minutes (0 turns the interval off).
+    remind-on-join: true
+    remind-minutes: 30
+    # A public defense hides itself when enough of the players who have
+    # built it report it: at least min-reports of them, making up at least
+    # this percent of everyone (bar the author) who has started a round on
+    # it. Reports from players who never built it still reach moderators
+    # but do not count here. The author is told and cannot publish it again
+    # until a moderator dismisses the reports or publishes it themselves.
+    # percent: 0 switches auto-hiding off.
+    auto-hide:
+      percent: 25
+      min-reports: 3
   # Competitive rounds run an emerald generator when the defense needs
   # obsidian — the shop is the only way to get any. It runs on the player's
   # own base gold spawner, not the map's emerald spawners out in the middle,

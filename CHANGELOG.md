@@ -3,6 +3,131 @@
 Notable changes to PracticeCore. Versions follow the plugin's own numbering;
 config file format versions (`config-version`) migrate automatically on start.
 
+## 0.11.0
+
+### Bed defense maps
+
+- **Bed defense maps are admin-created, separate from rush.** A bed defense
+  map is an arena template with `mode: beddefense` carrying the same team,
+  bed, generator and dealer layout a rush map does (the `settings.rush`
+  section of its `arena.yml`, the key name is historical). Rush maps are no
+  longer bed defense maps. Import one with `/practice beddefense import
+  <mbedwars-arena> [name] [overwrite]` or `/practice beddefense importall
+  [teams:<n>] [size:<n>] [category:<name>] [overwrite]`, the rush importer
+  under another mode id (a re-import through this branch stamps
+  `beddefense` even over a rush arena), or build one in the wizard:
+  `/practice setup mode beddefense`, then `/practice setup beddefense team
+  <color> | bed <color> | gen <iron|gold|diamond|emerald> | dealer | clear`,
+  the rush layout steps under another name. One team with both a spawn and
+  a bed is enough, and save refuses without one. `/practice beddefense maps`
+  lists them.
+- **One Bed Defense tile.** In the Play menu, bed defense maps always sit
+  under the Bed Defense category tile whatever folder they are in, never in
+  another category's list or the flat arena list (which keeps its Bed
+  Defense footer button). `/practice join <map>` opens the setup menu
+  directly, `/practice menu beddefense` opens the map picker, and
+  `/practice top <map>` on a bed defense map points at the per-defense
+  boards. The `beddefense.not-a-rush-map` message key is replaced by
+  `beddefense.not-a-map`.
+
+### Publishing gate and notices
+
+- **A defense goes public only once its author has built it for real.**
+  With `beddefense.require-author-clear` on (the default) a defense can be
+  published only after its author has finished that exact shape in a
+  competitive round themselves; nobody bypasses the gate, a moderator
+  publishing someone else's uncleared defense is refused too. The defense file
+  records the cleared shape as `cleared-fingerprint`, reshaping a defense
+  withdraws it, and saving a changed public defense makes it private again
+  with an explanation. Publishing an uncleared defense refuses with a
+  clickable "Play it competitively" action (`/practice beddefense play <id>
+  competitive`, the play command now takes an optional `competitive` or
+  `practice` word), the author's first competitive completion says it can be
+  made public now with a clickable "Publish it", and the editor's Visibility
+  button stays disabled ("complete it in competitive first") until then.
+- **Authors are always told when their defense's visibility changes.** By
+  themselves, by a moderator (public or private), because they changed the
+  blocks, or when a moderator deletes it. A new notice system
+  (`notice/NoticeService`) delivers the line at once to a player who is
+  online and queues it in playerdata (`notices:`, capped at 50) for one who
+  is not, delivered a second after their next login. `/practice pb reset`
+  notices use the same path.
+
+### Reports and moderation
+
+- **Players can report a public defense.** `/practice beddefense report <id>
+  [reason]`, or the Report button on a defense's actions menu, which asks
+  for the reason in chat. Only public defenses, never your own, one report
+  per player with a second replacing the first, and the reason is capped by
+  `beddefense.reports.reason-max-length` (default 80).
+- **A defense enough of its builders report hides itself.** When at least
+  `beddefense.reports.auto-hide.min-reports` (default 3) of the players who
+  have started a round on it have reported it, and they make up at least
+  `beddefense.reports.auto-hide.percent` (default 25) of everyone but the
+  author who has, the defense goes private on its own. The author is told
+  (online or on next login) and cannot publish it again, from the gallery,
+  the editor or by reshaping it, until a moderator dismisses its reports or
+  publishes it themselves, which closes the reports. Every moderator online
+  is told when it happens, whatever `notify-moderators` says. Reports from
+  players who never built it still reach moderators but do not count.
+  Starting a round now records the player among the defense's builders, so
+  the gallery's player count includes people who tried it, not only those
+  who finished. `percent: 0` switches auto-hiding off. The defense file
+  gains `auto-hidden`.
+- **Unseen reports are brought up again.** A report counts as seen once a
+  moderator opens the defense's review menu or its reports, or runs `info
+  <id>` (the defense file records `reports-seen`). Reports nobody has
+  looked at are listed to a moderator two seconds after they join
+  (`beddefense.reports.remind-on-join`) and to every moderator online every
+  `beddefense.reports.remind-minutes` (default 30, 0 for never), with the
+  defenses' names clickable and Open moderation / List reports actions.
+  The moderation menu marks such defenses with a "New reports" line and
+  auto-hidden ones with "Hidden automatically by reports"; `info <id>`
+  shows the builder-report ratio and the hidden state.
+- **Moderators.** A new permission, `practicecore.beddefense.moderate`
+  (default op, a child of `practicecore.admin`). Every moderator online is
+  told of a new report (`beddefense.reports.notify-moderators`) with
+  clickable Review and Play it actions. From chat: `/practice beddefense
+  moderate` (the menu), `reports`, `all`, `review <id>`, `info <id>`,
+  `publish|unpublish <id>` on anyone's, `dismiss <id>`, and `delete <id>
+  confirm` on anyone's. In the menus: a Review tab in the gallery (reported
+  first, then everything, private ones included), a moderation menu with a
+  Reported Only toggle, a per-defense reports menu (dismiss one or all, two
+  clicks), and visibility, delete and Reports controls on the actions menu.
+  Deleting from chat now always needs `confirm`, and deleting someone else's
+  defense is gated on the moderate node rather than `practicecore.arena`.
+
+### Menus and admin tools
+
+- **The hub and settings menus were re-laid.** Random Arena and Sidebar are
+  hidden on the hub by default, Spectate, Settings and Leave sit at 20, 22
+  and 24, and the PvP bot button moved to the bottom row (31). The Settings
+  menu gained a Sidebar toggle (slot 16). On the rush menu the bot count
+  moved up to row 2 (19); on the PvP bot menu combos, reach, aggression,
+  block and build shifted one cell right; on the bed defense setup menu
+  Shuffle now shares Start's slot (40) and so stays out of sight until an
+  admin gives it a slot of its own; and the session menu shifted one cell
+  right. The dead `rush.buttons.objective-*` keys are
+  dropped on migration.
+- **The admin setup GUI does more.** `/practice setup gui` now opens an
+  arena's options on click (default, display, icon, permission, PB blocks,
+  category, mode, delete, info), the wizard panel's third row carries the
+  layout steps for rush, bed defense and PvP bot arenas, and the footer has
+  an Import Maps menu (left-click imports a rush map, right-click a bed
+  defense map), a Bed Defenses moderation button and a two-click Reload.
+  From chat, `/practice arena category <arena> <name|default>` and
+  `/practice arena mode <arena> <id>` work on saved arenas, and `/practice
+  pb reset <player> all` asks for `confirm`.
+
+File format bumps, all migrated automatically with backups: config.yml v8
+(`beddefense.require-author-clear` and `beddefense.reports`, including
+`reports.remind-on-join`, `reports.remind-minutes` and
+`reports.auto-hide`), messages.yml
+v12, guis.yml v8 (untouched layout values are reset to the new defaults,
+as v6 did), playerdata data-version 2 (the `notices` list) and
+`defenses/<id>.yml` data-version 2 (`cleared-fingerprint`, `reports`,
+`reports-seen` and `auto-hidden`).
+
 ## 0.10.0
 
 - **Bed defense practice.** A new mode with a category of its own in the Play

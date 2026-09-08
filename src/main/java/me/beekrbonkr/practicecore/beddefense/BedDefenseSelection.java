@@ -5,9 +5,8 @@ import java.util.Locale;
 /**
  * Everything a player chose in the bed defense setup menu. Immutable; the
  * "with" methods hand back an adjusted copy. Persisted as
- * {@code prefs.beddefense.*}; the team base is shared with rush
- * ({@code prefs.rush.team.<map>}) since it is the same map and the same
- * base.
+ * {@code prefs.beddefense.*}; the team base is kept under the historical
+ * {@code prefs.rush.team.<map>} key, which both base-layout modes read.
  *
  * <p><b>Competitive</b> is a real match opening: sword, armor, generators
  * and shop, blocks bought with what the generators give. Competitive pins

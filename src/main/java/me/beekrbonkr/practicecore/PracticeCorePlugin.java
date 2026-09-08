@@ -82,6 +82,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
     private SpeedometerService speedometer;
     private InventoryValidator inventoryValidator;
     private ChatPrompts prompts;
+    private me.beekrbonkr.practicecore.notice.NoticeService notices;
     private RushService rush;
     private BedDefenseService bedDefenses;
     private PvpBotService pvpBot;
@@ -145,6 +146,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         speedometer = new SpeedometerService(this);
         inventoryValidator = new InventoryValidator(this);
         prompts = new ChatPrompts(this);
+        notices = new me.beekrbonkr.practicecore.notice.NoticeService(this);
         rush = new RushService(this);
         bedDefenses = new BedDefenseService(this);
         bedDefenses.store().load().forEach(note -> getLogger().warning(note));
@@ -585,6 +587,10 @@ public final class PracticeCorePlugin extends JavaPlugin {
 
     public ChatPrompts prompts() {
         return prompts;
+    }
+
+    public me.beekrbonkr.practicecore.notice.NoticeService notices() {
+        return notices;
     }
 
     public SettingsService settings() {

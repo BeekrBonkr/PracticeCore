@@ -119,6 +119,21 @@ public final class DefenseStore {
             }
         }
         defense.setCompletions(yml.getInt("completions", 0));
+        defense.setClearedFingerprint(yml.getString("cleared-fingerprint", null));
+        defense.setReportsSeen(yml.getLong("reports-seen", 0L));
+        defense.setAutoHidden(yml.getBoolean("auto-hidden", false));
+        for (Map<?, ?> raw : yml.getMapList("reports")) {
+            try {
+                UUID reporter = UUID.fromString(String.valueOf(raw.get("reporter")));
+                Object reporterName = raw.get("reporter-name");
+                Object reason = raw.get("reason");
+                defense.addReport(new BedDefense.Report(reporter,
+                        reporterName == null ? "?" : String.valueOf(reporterName),
+                        reason == null ? "" : String.valueOf(reason),
+                        raw.get("when") instanceof Number when ? when.longValue() : 0L));
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
         return defense;
     }
 
@@ -129,8 +144,11 @@ public final class DefenseStore {
     // -------------------------------------------------------------- saving
 
     public void save(BedDefense defense) {
-        if (!defenses.containsKey(defense.id())) {
-            return; // deleted meanwhile — a late like must not bring it back
+        if (defenses.get(defense.id()) != defense) {
+            // Deleted meanwhile (a late like must not bring it back), or
+            // replaced by a reshape or reload — a stale instance must never
+            // write its old blocks over the current file.
+            return;
         }
         YamlConfiguration yml = new YamlConfiguration();
         yml.set(Versions.DATA_KEY, Versions.DEFENSE);
@@ -155,6 +173,19 @@ public final class DefenseStore {
         yml.set("likes", defense.likes().stream().map(UUID::toString).toList());
         yml.set("played", defense.played().stream().map(UUID::toString).toList());
         yml.set("completions", defense.completions());
+        yml.set("cleared-fingerprint", defense.clearedFingerprint());
+        List<Map<String, Object>> reports = new ArrayList<>();
+        for (BedDefense.Report report : defense.reports()) {
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("reporter", report.reporter().toString());
+            entry.put("reporter-name", report.reporterName());
+            entry.put("reason", report.reason());
+            entry.put("when", report.when());
+            reports.add(entry);
+        }
+        yml.set("reports", reports);
+        yml.set("reports-seen", defense.reportsSeen());
+        yml.set("auto-hidden", defense.autoHidden());
         String rendered = yml.saveToString();
         File file = fileOf(defense.id());
         if (!plugin.isEnabled()) {
@@ -201,8 +232,11 @@ public final class DefenseStore {
 
     /**
      * Replaces the blocks of an existing defense with a reshaped copy under
-     * the same id, keeping its likes, plays and visibility. The shape is
-     * immutable on the object, so a new instance takes the old one's place.
+     * the same id, keeping its likes, plays, reports and visibility. The
+     * shape is immutable on the object, so a new instance takes the old
+     * one's place. The cleared fingerprint comes along unchanged: it names
+     * the shape the author actually built, so a real reshape stops counting
+     * as cleared on its own (see {@link BedDefense#authorCleared()}).
      */
     public BedDefense reshape(BedDefense old, List<DefenseBlock> blocks) {
         BedDefense fresh = new BedDefense(old.id(), old.name(), old.author(), old.authorName(),
@@ -210,6 +244,12 @@ public final class DefenseStore {
         fresh.likes().addAll(old.likes());
         fresh.played().addAll(old.played());
         fresh.setCompletions(old.completions());
+        fresh.setClearedFingerprint(old.clearedFingerprint());
+        for (BedDefense.Report report : old.reports()) {
+            fresh.addReport(report);
+        }
+        fresh.setReportsSeen(old.reportsSeen());
+        fresh.setAutoHidden(old.autoHidden());
         defenses.put(fresh.id(), fresh);
         save(fresh);
         return fresh;
@@ -302,6 +342,46 @@ public final class DefenseStore {
             }
         }
         return null;
+    }
+
+    /** Every defense with at least one open report, most reported first, then newest report first. */
+    public List<BedDefense> reported() {
+        return defenses.values().stream()
+                .filter(defense -> defense.reportCount() > 0)
+                .sorted(Comparator.comparingInt(BedDefense::reportCount).reversed()
+                        .thenComparing(Comparator.comparingLong(BedDefense::latestReport).reversed()))
+                .toList();
+    }
+
+    /**
+     * The moderation view: every defense, published or not, reported ones
+     * first (most reports first), the rest newest first.
+     */
+    public List<BedDefense> forModeration() {
+        return defenses.values().stream()
+                .sorted(Comparator.comparingInt(BedDefense::reportCount).reversed()
+                        .thenComparing(Comparator.comparingLong(BedDefense::latestReport).reversed())
+                        .thenComparing(Comparator.comparingLong(BedDefense::created).reversed()))
+                .toList();
+    }
+
+    /** Every defense with reports no moderator has looked at, most unseen first, newest first. */
+    public List<BedDefense> unseenReported() {
+        return defenses.values().stream()
+                .filter(defense -> defense.unseenReports() > 0)
+                .sorted(Comparator.comparingInt(BedDefense::unseenReports).reversed()
+                        .thenComparing(Comparator.comparingLong(BedDefense::latestReport).reversed()))
+                .toList();
+    }
+
+    public int reportedCount() {
+        int count = 0;
+        for (BedDefense defense : defenses.values()) {
+            if (defense.reportCount() > 0) {
+                count++;
+            }
+        }
+        return count;
     }
 
     public boolean isEmpty() {
