@@ -85,13 +85,16 @@ public final class BedDefenseSessionMenu extends Menu {
                 .name("gui.beddefense.session.guided.name")
                 .lore("gui.beddefense.session.guided.lore", plugin.messages().ref("state",
                         guided ? "label.state.on" : "label.state.off"));
+        boolean noGuide = defense == null || state.obsidian();
         if (defense == null) {
             guide.disabled("gui.reason.no-defense");
+        } else if (state.obsidian()) {
+            guide.disabled("gui.reason.not-in-obsidian");
         } else {
             guide.glow(guided).hint("toggle");
         }
         set(slot("guided", 12), guide.build(), event -> {
-            if (defense == null) {
+            if (noGuide) {
                 deny();
                 return;
             }

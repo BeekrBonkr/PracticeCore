@@ -62,11 +62,20 @@ public final class BedDefenseState {
     /** The defense this round builds (or previews / guides); null while editing fresh. */
     private BedDefense defense;
     private final List<Target> targets = new ArrayList<>();
+    /**
+     * Obsidian practice only: the eight blocks sealing the bed, to be
+     * covered in obsidian. Kept apart from {@link #targets}, which then
+     * holds the rest of the defense standing pre-built, so the sidebar can
+     * count the two separately.
+     */
+    private final List<Target> obsidianTargets = new ArrayList<>();
     private final List<Generator> generators = new ArrayList<>();
-    /** Blocks the player placed this attempt — an attempt is "in progress" once this is > 0. */
+    /** Blocks the player placed (or, in obsidian practice, broke) this attempt — an attempt is "in progress" once this is > 0. */
     private int placedThisAttempt;
     /** Set once the finishing block landed, so a second event never re-finishes. */
     private boolean finishing;
+    /** Obsidian practice has been explained once this session; resets need not repeat it. */
+    private boolean obsidianIntroduced;
 
     // ---- preview
     private ItemStack[] stashedInventory;
@@ -146,6 +155,24 @@ public final class BedDefenseState {
         return targets;
     }
 
+    public List<Target> obsidianTargets() {
+        return obsidianTargets;
+    }
+
+    /** True while the round is obsidian practice: the eight cover spots are the goal. */
+    public boolean obsidian() {
+        return selection.obsidian();
+    }
+
+    /**
+     * What a preview steps through: the defense going up block by block,
+     * or — with the defense already standing in obsidian practice — the
+     * eight obsidian going onto the bed.
+     */
+    public List<Target> previewTargets() {
+        return obsidian() ? obsidianTargets : targets;
+    }
+
     public List<Generator> generators() {
         return generators;
     }
@@ -165,6 +192,15 @@ public final class BedDefenseState {
 
     public boolean finishing() {
         return finishing;
+    }
+
+    /** True the first time only: whether obsidian practice still needs introducing. */
+    public boolean introduceObsidian() {
+        if (obsidianIntroduced) {
+            return false;
+        }
+        obsidianIntroduced = true;
+        return true;
     }
 
     public void setFinishing(boolean finishing) {
@@ -323,6 +359,22 @@ public final class BedDefenseState {
 
     public boolean isSatisfied(Target target) {
         return BlockKinds.kindOf(target.loc().getBlock()) == target.block().kind();
+    }
+
+    /** How many of the eight obsidian stand on the bed right now. */
+    public int obsidianSatisfied() {
+        int count = 0;
+        for (Target target : obsidianTargets) {
+            if (isSatisfied(target)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /** The round's goal met: every defense block standing, and every obsidian spot sealed. */
+    public boolean complete() {
+        return nextTarget() == null && obsidianSatisfied() == obsidianTargets.size();
     }
 
     /** The first target in placement order that is not yet built, or null when done. */

@@ -319,6 +319,21 @@ public final class BedDefense {
         return counts;
     }
 
+    /**
+     * Whether obsidian practice can run on this defense: the round is
+     * putting the eight obsidian on the bed yourself, so a defense that
+     * already has obsidian on any of those spots has nothing to practice.
+     */
+    public boolean obsidianEligible() {
+        for (DefenseBlock block : blocks) {
+            if (block.kind() == Material.OBSIDIAN
+                    && DefenseFrame.isCover(new org.bukkit.util.Vector(block.x(), block.y(), block.z()))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public boolean containsKind(Material kind) {
         for (DefenseBlock block : blocks) {
             if (block.kind() == kind) {

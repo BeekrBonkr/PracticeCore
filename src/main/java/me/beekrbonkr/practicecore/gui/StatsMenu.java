@@ -160,11 +160,12 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
                 return;
             }
             sound("menu.select");
+            boolean obsidian = BedDefenseService.isObsidianStatsKey(entry.getKey());
             later(() -> new ArenaLeaderboardMenu(plugin, viewer, this, entry.getKey(),
-                    plugin.bedDefenses().displayFor(defense),
-                    defense.icon(), () -> {
+                    plugin.bedDefenses().displayForKey(entry.getKey(), defense),
+                    obsidian ? Material.OBSIDIAN : defense.icon(), () -> {
                 viewer.closeInventory();
-                plugin.bedDefenses().play(viewer, defense);
+                plugin.bedDefenses().play(viewer, defense, obsidian);
             }).open());
             return;
         }

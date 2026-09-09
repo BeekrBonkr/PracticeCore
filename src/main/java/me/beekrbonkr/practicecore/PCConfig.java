@@ -119,6 +119,7 @@ public final class PCConfig {
     private final int bedDefenseMaxPerPlayer;
     private final int bedDefenseNameMaxLength;
     private final boolean bedDefenseEmeraldForObsidian;
+    private final List<Material> bedDefenseObsidianTools;
     private final Material bedDefenseItemMaterial;
     private final int bedDefenseItemSlot;
     private final int bedDefensePreviewStepTicks;
@@ -370,6 +371,19 @@ public final class PCConfig {
         this.bedDefenseMaxPerPlayer = Math.clamp(cfg.getInt("beddefense.max-per-player", 25), 1, 1000);
         this.bedDefenseNameMaxLength = Math.clamp(cfg.getInt("beddefense.name-max-length", 24), 1, 64);
         this.bedDefenseEmeraldForObsidian = cfg.getBoolean("beddefense.emerald-for-obsidian", true);
+        List<Material> obsidianTools = new ArrayList<>();
+        for (String name : cfg.getStringList("beddefense.obsidian.tools")) {
+            Material parsed = Material.matchMaterial(name);
+            if (parsed != null && parsed.isItem()) {
+                obsidianTools.add(parsed);
+            } else if (plugin != null) {
+                plugin.getLogger().warning("config.yml: '" + name
+                        + "' under beddefense.obsidian.tools is not an item this server knows — skipped.");
+            }
+        }
+        this.bedDefenseObsidianTools = obsidianTools.isEmpty()
+                ? List.of(Material.WOODEN_PICKAXE, Material.WOODEN_AXE, Material.SHEARS)
+                : List.copyOf(obsidianTools);
         this.bedDefenseItemMaterial = material(cfg.getString("beddefense.item.material"), Material.RED_BED);
         this.bedDefenseItemSlot = Math.clamp(cfg.getInt("beddefense.item.slot", 7), 0, 8);
         this.bedDefensePreviewStepTicks = Math.clamp(cfg.getInt("beddefense.preview.step-ticks", 8), 1, 200);
@@ -949,6 +963,11 @@ public final class PCConfig {
 
     public boolean bedDefenseEmeraldForObsidian() {
         return bedDefenseEmeraldForObsidian;
+    }
+
+    /** The tools an obsidian practice kit deals beside the eight obsidian. */
+    public List<Material> bedDefenseObsidianTools() {
+        return bedDefenseObsidianTools;
     }
 
     public Material bedDefenseItemMaterial() {

@@ -97,6 +97,36 @@ config file format versions (`config-version`) migrate automatically on start.
   Deleting from chat now always needs `confirm`, and deleting someone else's
   defense is gated on the moderate node rather than `practicecore.arena`.
 
+### Obsidian practice
+
+- **An obsidian drill on any defense.** The bed defense setup menu gains an
+  **Obsidian** toggle (slot 23; the rules row spreads to 19/21/23/25 to
+  make room). With it on, the chosen defense stands already built when the
+  round starts, and the goal is to break into it, put the eight obsidian in
+  the kit on the bed — the six blocks touching its sides at bed height and
+  the two on top — and build the defense back; whatever the designer had on
+  those eight spots gives way to obsidian, everything else must stand again.
+  The kit is fixed (`beddefense.obsidian.tools`, default a wooden pickaxe, a
+  wooden axe and shears, plus the eight obsidian, sword and armor) with no
+  generators or shop, so the times compare: every obsidian round is ranked
+  on a board of its own, `beddefense#<id>#obsidian`, with records and
+  personal bests broadcast like competitive ones. The toggle sets
+  Practice/Competitive aside while on (the choice underneath is kept) and
+  pins the timer to the first move; breaking a block starts the clock too,
+  and shuffle still works. Defenses that already have obsidian on any of
+  the eight spots are not eligible: the gallery tile says so, picking one
+  is refused, the toggle counts how many qualify, and if none is left the
+  toggle switches itself off for the round with a notice. The preview
+  shows the eight obsidian going onto the bed; guided building is off.
+  The sidebar counts obsidian and defense blocks on separate lines.
+- **Two boards per defense.** The bed defense leaderboards list shows a
+  competitive tile and an obsidian tile per defense (the obsidian one wears
+  `beddefense-boards.obsidian-material` in `guis.yml`), the stats menu opens
+  an obsidian best's board, and playing from a board plays in that board's
+  mode. `/practice beddefense play <id> obsidian` switches the toggle on
+  and plays; `competitive` and `practice` switch it off. Deleting a defense
+  purges its obsidian board too.
+
 ### Menus and admin tools
 
 - **The hub and settings menus were re-laid.** Random Arena and Sidebar are
@@ -119,14 +149,16 @@ config file format versions (`config-version`) migrate automatically on start.
   `/practice arena mode <arena> <id>` work on saved arenas, and `/practice
   pb reset <player> all` asks for `confirm`.
 
-File format bumps, all migrated automatically with backups: config.yml v8
-(`beddefense.require-author-clear` and `beddefense.reports`, including
-`reports.remind-on-join`, `reports.remind-minutes` and
-`reports.auto-hide`), messages.yml
-v12, guis.yml v8 (untouched layout values are reset to the new defaults,
-as v6 did), playerdata data-version 2 (the `notices` list) and
-`defenses/<id>.yml` data-version 2 (`cleared-fingerprint`, `reports`,
-`reports-seen` and `auto-hidden`).
+File format bumps, all migrated automatically with backups: config.yml v9
+(`beddefense.obsidian.tools`; v8 added `beddefense.require-author-clear`
+and `beddefense.reports`, including `reports.remind-on-join`,
+`reports.remind-minutes` and `reports.auto-hide`), messages.yml v13
+(obsidian practice text; v12 the maps, gate and moderation text), guis.yml
+v9 (the Obsidian toggle, with the setup menu's rules row moving from
+20/22/24 to 19/21/23/25 where still untouched; v8 reset untouched layout
+values to the new defaults, as v6 did), playerdata data-version 2 (the
+`notices` list) and `defenses/<id>.yml` data-version 2
+(`cleared-fingerprint`, `reports`, `reports-seen` and `auto-hidden`).
 
 ## 0.10.0
 

@@ -308,7 +308,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
             key = args[1].toLowerCase(Locale.ROOT);
             display = rushBoard != null
                     ? plugin.rush().displayFor(rushBoard.getKey(), rushBoard.getValue())
-                    : plugin.bedDefenses().displayFor(defenseBoard);
+                    : plugin.bedDefenses().displayForKey(key, defenseBoard);
         }
         List<LeaderboardService.Entry> top = plugin.leaderboards()
                 .top(key, plugin.pcConfig().leaderboardSize());
