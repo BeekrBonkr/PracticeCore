@@ -206,6 +206,77 @@ public final class Messages {
                 cfg.set("board.beddefense.casual-line", null);
             }
         }
+        if (from < 12) {
+            // v12: bed defense has maps of its own, so the "needs a rush map"
+            // refusal is replaced by not-a-map (added by top-up) and the map
+            // picker's empty state points at the new admin commands. Lists
+            // still at their old default are dropped for top-up to rewrite;
+            // an admin's own wording stands. The editor's visibility lore is
+            // a list too, and now mentions the publishing gate.
+            cfg.set("beddefense.not-a-rush-map", null);
+            if (cfg.getStringList("gui.beddefense.arenas.empty.lore").equals(List.of(
+                    "<gray>Bed defense runs on rush maps.", "<gray>Import or build one first."))) {
+                cfg.set("gui.beddefense.arenas.empty.lore", null);
+            }
+            if (cfg.getStringList("gui.beddefense.actions.visibility.lore").equals(List.of(
+                    "<gray>Public defenses appear in the", "<gray>gallery for everyone.", "",
+                    "<gray>Currently: <state>"))) {
+                cfg.set("gui.beddefense.actions.visibility.lore", null);
+            }
+            if (cfg.getStringList("gui.beddefense.editor.visibility.lore").equals(List.of(
+                    "<gray>Public defenses appear in the", "<gray>gallery for everyone.", "",
+                    "<gray>Saves as: <state>"))) {
+                cfg.set("gui.beddefense.editor.visibility.lore", null);
+            }
+            // The setup reference is a list: the mode line gains beddefense
+            // and a layout line for it is spliced in after the rush one —
+            // the same splicing the v5/v6 sidebar steps did.
+            List<String> setup = cfg.getStringList("help.setup-detail");
+            if (!setup.isEmpty()) {
+                List<String> updated = new ArrayList<>();
+                boolean hasLayout = setup.stream().anyMatch(l -> l.contains("/practice setup beddefense"));
+                for (String line : setup) {
+                    updated.add(line.replace("bridging, bedbreak, mlg, rush, pvpbot, …",
+                            "bridging, bedbreak, mlg, rush, beddefense, pvpbot, …"));
+                    if (!hasLayout && line.contains("/practice setup rush …")) {
+                        updated.add("<dark_gray> • <white>/practice setup beddefense … <dark_gray>— "
+                                + "the same layout for a bed defense map");
+                    }
+                }
+                cfg.set("help.setup-detail", updated);
+            }
+        }
+        if (from < 13) {
+            // v13: bed defense obsidian practice. The mode lore's ranked line,
+            // the boards' empty state and the flat button now mention it;
+            // lists still at their old default are dropped for top-up to
+            // rewrite, an admin's own wording stands. The command reference
+            // gains the obsidian word on its play line in place.
+            if (cfg.getStringList("gui.beddefense.mode.lore").equals(List.of(
+                    "<gray>Competitive is a real match start:",
+                    "<gray>sword, armor, generators and shop.",
+                    "<gray>Practice hands you the exact blocks.", "",
+                    "<gray>Mode: <mode>", "<gold>Only competitive is ranked."))) {
+                cfg.set("gui.beddefense.mode.lore", null);
+            }
+            if (cfg.getStringList("gui.beddefense.boards.empty.lore").equals(List.of(
+                    "<gray>Competitive rounds put times here."))) {
+                cfg.set("gui.beddefense.boards.empty.lore", null);
+            }
+            if (cfg.getStringList("gui.beddefense.boards.flat-button.lore").equals(List.of(
+                    "<gray>One board per defense."))) {
+                cfg.set("gui.beddefense.boards.flat-button.lore", null);
+            }
+            List<String> detail = cfg.getStringList("help.beddefense-detail");
+            if (!detail.isEmpty()) {
+                List<String> updated = new ArrayList<>();
+                for (String line : detail) {
+                    updated.add(line.replace("play <id> [competitive|practice] ",
+                            "play <id> [competitive|practice|obsidian] "));
+                }
+                cfg.set("help.beddefense-detail", updated);
+            }
+        }
     }
 
     private void index(FileConfiguration cfg) {

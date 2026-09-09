@@ -2,8 +2,6 @@ package me.beekrbonkr.practicecore.gui;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.beddefense.BedDefenseService;
-import me.beekrbonkr.practicecore.mode.RushMode;
-import me.beekrbonkr.practicecore.rush.RushObjective;
 import me.beekrbonkr.practicecore.stats.LeaderboardService;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
 import me.beekrbonkr.practicecore.util.TimeFormat;
@@ -66,17 +64,11 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
         return found;
     }
 
-    /** Every key that can hold times — plain arena names and rush boards. */
+    /** Every key that can hold times — each mode names its own per arena, plus the defense boards. */
     private List<String> allStatsKeys() {
         List<String> keys = new ArrayList<>();
         for (ArenaTemplate template : plugin.templates().all()) {
-            if (template.mode().equals(RushMode.ID)) {
-                for (RushObjective objective : RushObjective.values()) {
-                    keys.add(objective.statsKey(template.name()));
-                }
-            } else {
-                keys.add(template.name());
-            }
+            keys.addAll(plugin.modes().of(template).statsKeys(template));
         }
         for (var defense : plugin.bedDefenses().store().all()) {
             keys.addAll(plugin.bedDefenses().statsKeys(defense));
@@ -168,11 +160,12 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
                 return;
             }
             sound("menu.select");
+            boolean obsidian = BedDefenseService.isObsidianStatsKey(entry.getKey());
             later(() -> new ArenaLeaderboardMenu(plugin, viewer, this, entry.getKey(),
-                    plugin.bedDefenses().displayFor(defense),
-                    defense.icon(), () -> {
+                    plugin.bedDefenses().displayForKey(entry.getKey(), defense),
+                    obsidian ? Material.OBSIDIAN : defense.icon(), () -> {
                 viewer.closeInventory();
-                plugin.bedDefenses().play(viewer, defense);
+                plugin.bedDefenses().play(viewer, defense, obsidian);
             }).open());
             return;
         }

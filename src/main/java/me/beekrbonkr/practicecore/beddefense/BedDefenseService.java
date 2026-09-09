@@ -47,6 +47,9 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public final class BedDefenseService {
 
+    /** The node that lets a player moderate everyone's defenses: visibility, reports, deletion. */
+    public static final String MODERATE_PERMISSION = "practicecore.beddefense.moderate";
+
     /** Hotbar item roles, stored as the PDC value of {@link #itemKey}. */
     public static final String ITEM_MENU = "menu";
     public static final String ITEM_PREVIOUS = "previous";
@@ -70,6 +73,7 @@ public final class BedDefenseService {
     /** The last bed defense map each player played, for /practice beddefense play. */
     private final Map<UUID, String> lastMap = new HashMap<>();
     private BukkitTask task;
+    private BukkitTask reminderTask;
 
     public BedDefenseService(PracticeCorePlugin plugin) {
         this.plugin = plugin;
@@ -146,11 +150,13 @@ public final class BedDefenseService {
         var stats = plugin.stats();
         BedDefenseSelection defaults = BedDefenseSelection.defaults();
         String defense = stats.pref(player, "beddefense.defense", null);
-        if (defense != null && store.get(defense) == null) {
+        if (defense != null && !visibleTo(player, store.get(defense))) {
+            // Deleted, or made private since it was chosen.
             defense = null;
         }
         return new BedDefenseSelection(
                 stats.prefBool(player, "beddefense.competitive", false),
+                stats.prefBool(player, "beddefense.obsidian", false),
                 defense,
                 BedDefenseSelection.enumOr(BedDefenseSelection.Shuffle.class,
                         stats.pref(player, "beddefense.shuffle", null), defaults.shuffle()),
@@ -183,6 +189,7 @@ public final class BedDefenseService {
     public void saveSelection(UUID player, BedDefenseSelection selection) {
         Map<String, Object> values = new LinkedHashMap<>();
         values.put("beddefense.competitive", selection.competitive());
+        values.put("beddefense.obsidian", selection.obsidian());
         values.put("beddefense.defense", selection.defense());
         values.put("beddefense.shuffle", selection.shuffle().name());
         values.put("beddefense.timer-start", selection.timerStart().name());
@@ -191,6 +198,50 @@ public final class BedDefenseService {
 
     public void selectDefense(UUID player, String id) {
         saveSelection(player, rawSelection(player).withDefense(id));
+    }
+
+    // ------------------------------------------------------------- obsidian
+
+    /**
+     * Whether a defense can be played under the given choices: any defense
+     * outside obsidian practice, and there only one with no obsidian on the
+     * bed already (see {@link BedDefense#obsidianEligible()}).
+     */
+    public static boolean playable(BedDefenseSelection selection, BedDefense defense) {
+        return defense != null && (!selection.obsidian() || defense.obsidianEligible());
+    }
+
+    /** The defenses this player can pick for obsidian practice. */
+    public List<BedDefense> obsidianPlayableBy(UUID player) {
+        List<BedDefense> out = new ArrayList<>();
+        for (BedDefense defense : store.playableBy(player)) {
+            if (defense.obsidianEligible()) {
+                out.add(defense);
+            }
+        }
+        return out;
+    }
+
+    /** The kit tools of an obsidian round, from config, with anything unknown dropped. */
+    public List<Material> obsidianTools() {
+        return plugin.pcConfig().bedDefenseObsidianTools();
+    }
+
+    /**
+     * Obsidian practice with nothing it can run on — every defense the
+     * player can play has obsidian on the bed already — is switched off,
+     * and the player told, so the round falls back to an ordinary one
+     * rather than into the editor. @return true when it was switched off
+     */
+    private boolean dropObsidianIfNothingEligible(Player player) {
+        UUID id = player.getUniqueId();
+        BedDefenseSelection raw = rawSelection(id);
+        if (!raw.obsidian() || !obsidianPlayableBy(id).isEmpty() || store.playableBy(id).isEmpty()) {
+            return false;
+        }
+        saveSelection(id, raw.withObsidian(false));
+        msg().send(player, "beddefense.obsidian.none-eligible");
+        return true;
     }
 
     // ------------------------------------------------------------ favorites
@@ -210,7 +261,7 @@ public final class BedDefenseService {
         List<BedDefense> favorites = new ArrayList<>();
         for (String id : favoriteIds(player)) {
             BedDefense defense = store.get(id);
-            if (defense != null && (defense.published() || defense.isAuthor(player))) {
+            if (visibleTo(player, defense)) {
                 favorites.add(defense);
             }
         }
@@ -261,15 +312,55 @@ public final class BedDefenseService {
 
     // ------------------------------------------------------------- joining
 
-    /** True when this arena can host bed defense practice: a rush map with a base. */
+    /**
+     * True when this arena is a bed defense map: an admin-made template of
+     * this mode whose layout has a team base with a bed. Rush maps are not
+     * bed defense maps any more — the two modes keep their own arenas.
+     */
     public boolean supports(ArenaTemplate template) {
-        return template.mode().equals(me.beekrbonkr.practicecore.mode.RushMode.ID)
+        return template.mode().equals(BedDefenseMode.ID)
                 && RushMapData.parse(template).playable();
     }
 
     /** Every visible arena bed defense practice can run on. */
     public List<ArenaTemplate> maps(Player player) {
         return plugin.templates().visibleTo(player).stream().filter(this::supports).toList();
+    }
+
+    // ----------------------------------------------------------- visibility
+
+    /** Whether this player may moderate everyone's defenses. */
+    public boolean isModerator(org.bukkit.command.CommandSender who) {
+        return who.hasPermission(MODERATE_PERMISSION);
+    }
+
+    /**
+     * Whether a defense exists for this player: public ones, their own, and
+     * — for a moderator who is online — everything. Null-safe, so a deleted
+     * id answers false.
+     */
+    public boolean visibleTo(UUID player, BedDefense defense) {
+        if (defense == null) {
+            return false;
+        }
+        if (defense.published() || defense.isAuthor(player)) {
+            return true;
+        }
+        Player online = Bukkit.getPlayer(player);
+        return online != null && isModerator(online);
+    }
+
+    public boolean canSee(Player player, BedDefense defense) {
+        return defense != null
+                && (defense.published() || defense.isAuthor(player.getUniqueId()) || isModerator(player));
+    }
+
+    /** The defenses this player may pick or act on: what they can see. */
+    public List<BedDefense> visibleTo(Player player) {
+        if (isModerator(player)) {
+            return store.forModeration();
+        }
+        return store.playableBy(player.getUniqueId());
     }
 
     /** Flags the next round as an editing round (fresh, or from one of the player's own). */
@@ -305,10 +396,13 @@ public final class BedDefenseService {
      */
     public void join(Player player, ArenaTemplate template) {
         if (!supports(template)) {
-            msg().send(player, "beddefense.not-a-rush-map");
+            msg().send(player, "beddefense.not-a-map");
             return;
         }
         UUID id = player.getUniqueId();
+        if (upcomingPhase(id, null) == Phase.PLAY) {
+            dropObsidianIfNothingEligible(player);
+        }
         if (upcomingPhase(id, null) == Phase.PLAY && !pendingPlay.containsKey(id)) {
             PracticeSession current = plugin.sessions().get(id);
             BedDefenseState state = current != null ? BedDefenseMode.state(current) : null;
@@ -321,7 +415,7 @@ public final class BedDefenseService {
             }
         }
         lastMap.put(id, template.name());
-        plugin.sessions().join(player, template, plugin.modes().get(BedDefenseMode.ID).orElseThrow());
+        plugin.sessions().join(player, template);
     }
 
     /**
@@ -331,6 +425,11 @@ public final class BedDefenseService {
      */
     public void play(Player player, BedDefense defense) {
         UUID id = player.getUniqueId();
+        if (!playable(rawSelection(id), defense)) {
+            msg().send(player, "beddefense.obsidian.ineligible", "name", defense.name());
+            plugin.sounds().play(player, "menu.deny");
+            return;
+        }
         selectDefense(id, defense.id());
         clearRound(id);
         PracticeSession session = plugin.sessions().get(id);
@@ -349,6 +448,25 @@ public final class BedDefenseService {
             return;
         }
         new me.beekrbonkr.practicecore.gui.BedDefenseArenaMenu(plugin, player, null).open();
+    }
+
+    /**
+     * {@link #play(Player, BedDefense)} with obsidian practice switched on or
+     * off first. A defense obsidian practice cannot run on is refused before
+     * anything changes.
+     */
+    public void play(Player player, BedDefense defense, boolean obsidian) {
+        UUID id = player.getUniqueId();
+        BedDefenseSelection selection = rawSelection(id);
+        if (obsidian && !defense.obsidianEligible()) {
+            msg().send(player, "beddefense.obsidian.ineligible", "name", defense.name());
+            plugin.sounds().play(player, "menu.deny");
+            return;
+        }
+        if (selection.obsidian() != obsidian) {
+            saveSelection(id, selection.withObsidian(obsidian));
+        }
+        play(player, defense);
     }
 
     /**
@@ -420,18 +538,26 @@ public final class BedDefenseService {
         BedDefense picked = null;
         if (!pool.isEmpty()) {
             List<BedDefense> candidates = new ArrayList<>(pool);
+            // Obsidian practice draws only from what it can run on.
+            candidates.removeIf(d -> !playable(selection, d));
             String previous = lastRound.get(player);
             if (candidates.size() > 1 && previous != null) {
                 candidates.removeIf(d -> d.id().equals(previous));
             }
-            picked = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
+            picked = candidates.isEmpty() ? null
+                    : candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
         }
         if (picked == null) {
             picked = store.get(selection.defense());
+            if (!visibleTo(player, picked) || !playable(selection, picked)) {
+                picked = null;
+            }
         }
         if (picked == null) {
-            // Nothing chosen (or it was deleted) — the first playable one.
-            List<BedDefense> playable = store.playableBy(player);
+            // Nothing chosen (or it was deleted, or has obsidian on the bed
+            // in obsidian practice) — the first playable one.
+            List<BedDefense> playable = selection.obsidian()
+                    ? obsidianPlayableBy(player) : store.playableBy(player);
             picked = playable.isEmpty() ? null : playable.get(0);
         }
         if (picked != null) {
@@ -455,6 +581,10 @@ public final class BedDefenseService {
      */
     public void rebuild(Player player, PracticeSession session, BedDefenseState state) {
         UUID id = player.getUniqueId();
+        // Every road into a bed defense session ends here — the join command,
+        // the Play menu, the default arena — so this is where the last map is
+        // remembered for the chat and gallery shortcuts.
+        lastMap.put(id, session.template().name());
         state.setData(RushMapData.parse(session.template()));
         RushMapData data = state.data();
         String teamName = plugin.stats().pref(id, "rush.team." + session.template().name(), null);
@@ -469,8 +599,8 @@ public final class BedDefenseService {
         removeEntities(state);
         state.previewReplaced().clear();
         if (base == null) {
-            plugin.getLogger().warning("Rush arena '" + session.template().name()
-                    + "' has no playable team — bed defense rounds cannot start.");
+            plugin.getLogger().warning("Bed defense map '" + session.template().name()
+                    + "' has no playable team — rounds cannot start.");
             return;
         }
         Location origin = session.origin();
@@ -501,9 +631,23 @@ public final class BedDefenseService {
             state.setPhase(Phase.PLAY);
         }
         state.setSelection(selection(id));
-        if (rawSelection(id).competitive() && !state.selection().competitive()
+        BedDefenseSelection raw = rawSelection(id);
+        if (raw.competitive() && !raw.obsidian() && !state.selection().competitive()
                 && state.phase() != Phase.EDIT) {
             msg().send(player, "beddefense.competitive-needs-shop");
+        }
+        if (state.phase() != Phase.EDIT && dropObsidianIfNothingEligible(player)) {
+            // Every defense left has obsidian on the bed already (the one
+            // without was deleted or hidden mid-session). The kit already
+            // dealt was the obsidian one, so the round restarts as an
+            // ordinary one rather than falling into the editor.
+            state.setSelection(selection(id));
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (plugin.sessions().get(id) == session) {
+                    plugin.sessions().restart(player);
+                }
+            });
+            return;
         }
 
         if (state.phase() == Phase.EDIT) {
@@ -515,6 +659,11 @@ public final class BedDefenseService {
 
         BedDefense defense = roundDefense(id);
         state.setDefense(defense);
+        if (defense != null && defense.markPlayed(id)) {
+            // Starting a round is playing it: the base an auto-hide share is
+            // measured against counts everyone who tried, not only finishers.
+            store.save(defense);
+        }
         if (defense == null) {
             // No defense left to build (deleted mid-session) — into the editor.
             requestEdit(id, null);
@@ -526,22 +675,48 @@ public final class BedDefenseService {
             });
             return;
         }
+        boolean obsidian = state.selection().obsidian();
+        state.obsidianTargets().clear();
         for (DefenseBlock block : defense.blocks()) {
             Location loc = state.frame().toWorld(block);
-            if (session.containsBlock(loc) && !state.frame().isBed(loc)) {
+            if (!session.containsBlock(loc) || state.frame().isBed(loc)) {
                 // A spot past the map's edge could never be built — it is
                 // simply not part of the round on this map.
-                state.targets().add(new Target(block, loc));
+                continue;
+            }
+            if (obsidian && state.frame().isCoverSpot(loc)) {
+                // Whatever the designer put on the bed gives way to obsidian.
+                continue;
+            }
+            state.targets().add(new Target(block, loc));
+        }
+        if (obsidian) {
+            for (Location loc : state.frame().coverSpots()) {
+                if (session.containsBlock(loc)) {
+                    Vector local = state.frame().toLocal(loc);
+                    state.obsidianTargets().add(new Target(new DefenseBlock(local.getBlockX(),
+                            local.getBlockY(), local.getBlockZ(), Material.OBSIDIAN,
+                            Material.OBSIDIAN.createBlockData().getAsString()), loc));
+                }
             }
         }
         carve(session, state);
-        armGenerators(session, state, defense);
-        for (RushMapData.Dealer dealer : data.dealers()) {
-            plugin.rush().spawnDealer(new Location(origin.getWorld(),
-                    origin.getX() + dealer.offset().getX(),
-                    origin.getY() + dealer.offset().getY(),
-                    origin.getZ() + dealer.offset().getZ(),
-                    dealer.yaw(), 0));
+        if (obsidian) {
+            prebuild(player, session, state, defense);
+            if (state.introduceObsidian()) {
+                msg().send(player, "beddefense.obsidian.entered", "name", defense.name(),
+                        "count", String.valueOf(state.obsidianTargets().size()));
+            }
+        } else {
+            // Nothing is bought in obsidian practice: no generators, no dealer.
+            armGenerators(session, state, defense);
+            for (RushMapData.Dealer dealer : data.dealers()) {
+                plugin.rush().spawnDealer(new Location(origin.getWorld(),
+                        origin.getX() + dealer.offset().getX(),
+                        origin.getY() + dealer.offset().getY(),
+                        origin.getZ() + dealer.offset().getZ(),
+                        dealer.yaw(), 0));
+            }
         }
         showHologram(player, state);
         if (state.phase() == Phase.GUIDED) {
@@ -573,7 +748,9 @@ public final class BedDefenseService {
      * wall — the wall simply gains a hole the shape of the defense.
      */
     private void carve(PracticeSession session, BedDefenseState state) {
-        for (Target target : state.targets()) {
+        List<Target> spots = new ArrayList<>(state.targets());
+        spots.addAll(state.obsidianTargets());
+        for (Target target : spots) {
             Block block = target.loc().getBlock();
             if (!session.containsBlock(target.loc()) || state.frame().isBed(target.loc())) {
                 continue;
@@ -582,6 +759,27 @@ public final class BedDefenseService {
                 session.tracker().recordPlace(block, block.getBlockData());
                 block.setType(Material.AIR, false);
             }
+        }
+    }
+
+    /**
+     * Obsidian practice starts with the whole defense standing, the blocks
+     * on the bed included: the round is breaking into it. Every block is
+     * tracked like one the player placed, so it can be broken and the reset
+     * takes it away again. Wool follows the player's color, as their kit
+     * would.
+     */
+    private void prebuild(Player player, PracticeSession session, BedDefenseState state,
+                          BedDefense defense) {
+        Material wool = kitWool(player);
+        for (DefenseBlock block : defense.blocks()) {
+            Location loc = state.frame().toWorld(block);
+            if (!session.containsBlock(loc) || state.frame().isBed(loc)) {
+                continue;
+            }
+            Block at = loc.getBlock();
+            session.tracker().recordPlace(at, at.getBlockData());
+            at.setBlockData(state.frame().toWorld(block, wool), false);
         }
     }
 
@@ -695,7 +893,8 @@ public final class BedDefenseService {
      * The kit for the player's upcoming round. Competitive is a match
      * opening: sword, team-dyed leather, the bed defense item and the menu
      * item. Practice adds the defense's exact blocks, one water bucket per
-     * water block. The editor carries full stacks of every allowed block.
+     * water block. Obsidian practice is tools and eight obsidian. The editor
+     * carries full stacks of every allowed block.
      */
     public Map<Integer, ItemStack> kit(Player player, ArenaTemplate template, BedDefenseState state) {
         UUID id = player.getUniqueId();
@@ -703,7 +902,7 @@ public final class BedDefenseService {
             // The kit re-check after a spawn must not push blocks into the
             // preview hotbar: while previewing, the controls ARE the kit.
             Map<Integer, ItemStack> controls = new LinkedHashMap<>();
-            for (String role : List.of(ITEM_PREVIOUS, ITEM_PLAY, ITEM_NEXT, ITEM_GUIDED, ITEM_EXIT)) {
+            for (String role : previewRoles(state)) {
                 controls.put(plugin.pcConfig().bedDefensePreviewItemSlot(role), createItem(role));
             }
             return controls;
@@ -722,6 +921,13 @@ public final class BedDefenseService {
                 items.add(new ItemStack(Material.WATER_BUCKET));
                 items.add(new ItemStack(Material.WATER_BUCKET));
             }
+        } else if (selection(id).obsidian()) {
+            // Break in, seal the bed, build back: tools and the eight
+            // obsidian, nothing to buy.
+            for (Material tool : obsidianTools()) {
+                items.add(new ItemStack(tool));
+            }
+            items.add(new ItemStack(Material.OBSIDIAN, DefenseFrame.COVER.size()));
         } else if (!selection(id).competitive()) {
             BedDefense defense = roundDefense(id);
             if (defense != null) {
@@ -885,6 +1091,13 @@ public final class BedDefenseService {
         }
     }
 
+    /** The preview hotbar: guided building has no place in obsidian practice. */
+    private List<String> previewRoles(BedDefenseState state) {
+        return state != null && state.obsidian()
+                ? List.of(ITEM_PREVIOUS, ITEM_PLAY, ITEM_NEXT, ITEM_EXIT)
+                : List.of(ITEM_PREVIOUS, ITEM_PLAY, ITEM_NEXT, ITEM_GUIDED, ITEM_EXIT);
+    }
+
     public void enterPreview(Player player, PracticeSession session, BedDefenseState state) {
         if (state.phase() != Phase.PLAY || state.defense() == null) {
             return;
@@ -898,7 +1111,7 @@ public final class BedDefenseService {
         state.stash(player.getInventory().getContents().clone(), null);
         player.getInventory().clear();
         var config = plugin.pcConfig();
-        for (String role : List.of(ITEM_PREVIOUS, ITEM_PLAY, ITEM_NEXT, ITEM_GUIDED, ITEM_EXIT)) {
+        for (String role : previewRoles(state)) {
             player.getInventory().setItem(config.bedDefensePreviewItemSlot(role), createItem(role));
         }
         player.getInventory().setHeldItemSlot(config.bedDefensePreviewItemSlot(ITEM_PLAY));
@@ -948,7 +1161,7 @@ public final class BedDefenseService {
 
     /** One step forward or back through the animation. */
     public void previewStep(Player player, BedDefenseState state, int delta) {
-        List<Target> targets = state.targets();
+        List<Target> targets = state.previewTargets();
         int index = state.previewIndex();
         if (delta > 0) {
             if (index >= targets.size()) {
@@ -985,7 +1198,7 @@ public final class BedDefenseService {
     }
 
     public void previewToggle(Player player, BedDefenseState state) {
-        if (state.previewIndex() >= state.targets().size()) {
+        if (state.previewIndex() >= state.previewTargets().size()) {
             // Play at the end starts over.
             undoPreview(state);
             state.setPreviewPlaying(true);
@@ -1026,6 +1239,11 @@ public final class BedDefenseService {
     public void enterGuided(Player player, PracticeSession session, BedDefenseState state,
                             boolean fromAttempt) {
         if (state.defense() == null) {
+            return;
+        }
+        if (state.obsidian()) {
+            // The defense already stands; there is no order to be led through.
+            msg().actionBar(player, "beddefense.guided.not-in-obsidian");
             return;
         }
         if (state.phase() == Phase.PREVIEW) {
@@ -1175,7 +1393,7 @@ public final class BedDefenseService {
                     session.setState(SessionState.ACTIVE);
                     session.startTimer();
                 }
-                if (state.nextTarget() == null) {
+                if (state.complete()) {
                     finishRound(player, session, state);
                 }
             }
@@ -1192,10 +1410,22 @@ public final class BedDefenseService {
         }
     }
 
-    /** A block was broken in a play phase: the guide may need to move back. */
-    public void afterBreak(Player player, BedDefenseState state) {
+    /**
+     * A block was broken in a play phase: the guide may need to move back,
+     * and in obsidian practice breaking in is the attempt's first act — it
+     * starts the clock the way a first block does elsewhere.
+     */
+    public void afterBreak(Player player, PracticeSession session, BedDefenseState state) {
         if (state.phase() == Phase.GUIDED) {
             Bukkit.getScheduler().runTask(plugin, () -> updateGuide(player, state));
+            return;
+        }
+        if (state.phase() == Phase.PLAY && state.obsidian()) {
+            state.countPlaced();
+            if (session.state() == SessionState.READY) {
+                session.setState(SessionState.ACTIVE);
+                session.startTimer();
+            }
         }
     }
 
@@ -1210,13 +1440,29 @@ public final class BedDefenseService {
         }
         state.setFinishing(true);
         session.freezeTimer();
-        BedDefense defense = state.defense();
-        if (store.get(defense.id()) != null) {
-            defense.countCompletion(player.getUniqueId());
+        // The live instance, not the one this round was dealt: a reload in
+        // between swaps them, and a stale save would undo likes since.
+        BedDefense defense = store.get(state.defense().id());
+        boolean cleared = false;
+        if (defense != null) {
+            UUID id = player.getUniqueId();
+            defense.countCompletion(id);
+            if (state.selection().competitive() && defense.isAuthor(id) && !defense.authorCleared()) {
+                // The author has now built this exact shape for real — the
+                // proof publishing asks for.
+                defense.setClearedFingerprint(defense.fingerprint());
+                cleared = true;
+            }
             store.save(defense);
         }
-        if (!state.selection().competitive()) {
+        if (!state.selection().ranked()) {
             msg().actionBar(player, "beddefense.records-disabled");
+        }
+        if (cleared && !defense.published() && !defense.autoHidden()
+                && plugin.pcConfig().bedDefenseRequireAuthorClear()) {
+            msg().send(player, "beddefense.cleared", "name", defense.name(), "id", defense.id());
+            msg().send(player, "beddefense.cleared-actions", "name", defense.name(), "id", defense.id());
+            plugin.sounds().play(player, "beddefense.cleared");
         }
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (player.isOnline() && plugin.sessions().get(session.playerId()) == session) {
@@ -1420,15 +1666,49 @@ public final class BedDefenseService {
             return;
         }
         BedDefense saved;
+        boolean wantPublic = state.editPublished();
+        String withdrawn = null;
+        if (existing != null && existing.isAuthor(id) && existing.autoHidden() && wantPublic) {
+            // Reports hid it; a reshape does not lift that, a moderator does.
+            wantPublic = false;
+            withdrawn = "beddefense.notice.saved-auto-hidden";
+        }
         if (existing != null && existing.isAuthor(id)) {
+            boolean wasPublic = existing.published();
+            boolean reshaped = !BedDefense.fingerprintOf(blocks).equals(existing.fingerprint());
             existing.setName(state.editName());
-            existing.setPublished(state.editPublished());
             saved = store.reshape(existing, blocks);
+            // A reshaped public defense is a new shape nobody has proven
+            // buildable: it goes private until the author clears it again.
+            // A rename alone changes nothing about the shape, so a defense a
+            // moderator published stays public through it.
+            if (wantPublic && reshaped && !canPublish(saved)) {
+                saved.setPublished(false);
+                withdrawn = wasPublic ? "beddefense.notice.private-changed"
+                        : "beddefense.notice.saved-private";
+            } else if (wantPublic && !reshaped) {
+                saved.setPublished(wasPublic || canPublish(saved));
+                if (!saved.published()) {
+                    withdrawn = "beddefense.notice.saved-private";
+                }
+            } else {
+                saved.setPublished(wantPublic);
+            }
+            store.save(saved);
         } else {
-            saved = store.create(state.editName(), id, player.getName(), state.editPublished(), blocks);
+            saved = store.create(state.editName(), id, player.getName(), false, blocks);
+            if (wantPublic && !canPublish(saved)) {
+                withdrawn = "beddefense.notice.saved-private";
+            } else if (wantPublic) {
+                saved.setPublished(true);
+                store.save(saved);
+            }
         }
         msg().send(player, saved.published() ? "beddefense.edit.saved-public" : "beddefense.edit.saved",
                 "name", saved.name(), "blocks", String.valueOf(blocks.size()));
+        if (withdrawn != null) {
+            msg().send(player, withdrawn, "name", saved.name(), "id", saved.id());
+        }
         plugin.sounds().play(player, "beddefense.saved");
         // Straight into playing what was just designed.
         selectDefense(id, saved.id());
@@ -1483,25 +1763,353 @@ public final class BedDefenseService {
         return name;
     }
 
-    /** Flips the visibility of a saved defense (editor button and gallery action). */
-    public void setPublished(Player player, BedDefense defense, boolean published) {
-        defense.setPublished(published);
-        store.save(defense);
-        msg().send(player, published ? "beddefense.visibility.public" : "beddefense.visibility.private",
-                "name", defense.name());
-        plugin.sounds().play(player, published ? "menu.toggle-on" : "menu.toggle-off");
+    // ----------------------------------------------------------- publishing
+
+    /**
+     * Whether a defense may go public right now: its author has finished
+     * this exact shape in a competitive round — or the server switched that
+     * gate off. It binds everyone: a moderator cannot publish an unproven
+     * defense either.
+     */
+    public boolean canPublish(BedDefense defense) {
+        return !plugin.pcConfig().bedDefenseRequireAuthorClear() || defense.authorCleared();
     }
 
-    /** Deletes a defense and every time recorded on it. */
+    /**
+     * Whether this player may publish this defense right now. On top of
+     * {@link #canPublish}, an author is held back while reports have hidden
+     * it — only a moderator lifts that.
+     */
+    public boolean canPublish(Player actor, BedDefense defense) {
+        if (!canPublish(defense)) {
+            return false;
+        }
+        return !defense.autoHidden() || (isModerator(actor) && !defense.isAuthor(actor.getUniqueId()));
+    }
+
+    /**
+     * Flips the visibility of a saved defense (editor button, gallery action
+     * and the chat command). Publishing needs the author's clear whoever
+     * asks; an auto-hidden defense needs a moderator, whose publish also
+     * closes its reports. A moderator may flip anyone's, and the author is
+     * told, now or on their next login. Anyone else is refused. Refusals
+     * say why in chat.
+     *
+     * @return true when the visibility actually changed
+     */
+    public boolean setPublished(Player actor, BedDefense defense, boolean published) {
+        UUID id = actor.getUniqueId();
+        boolean own = defense.isAuthor(id);
+        if (!own && !isModerator(actor)) {
+            msg().send(actor, "beddefense.not-owner");
+            plugin.sounds().play(actor, "menu.deny");
+            return false;
+        }
+        if (defense.published() == published) {
+            msg().send(actor, published ? "beddefense.visibility.already-public"
+                    : "beddefense.visibility.already-private", "name", defense.name());
+            plugin.sounds().play(actor, "menu.deny");
+            return false;
+        }
+        if (published && !canPublish(defense)) {
+            if (own) {
+                msg().send(actor, "beddefense.visibility.needs-clear", "name", defense.name(), "id", defense.id());
+                msg().send(actor, "beddefense.visibility.needs-clear-actions",
+                        "name", defense.name(), "id", defense.id());
+            } else {
+                msg().send(actor, "beddefense.visibility.moderator-needs-clear",
+                        "name", defense.name(), "author", defense.authorName());
+            }
+            plugin.sounds().play(actor, "menu.deny");
+            return false;
+        }
+        if (published && own && defense.autoHidden()) {
+            msg().send(actor, "beddefense.visibility.auto-hidden", "name", defense.name());
+            plugin.sounds().play(actor, "menu.deny");
+            return false;
+        }
+        int closed = 0;
+        if (published && defense.autoHidden()) {
+            // A moderator putting it back is the review the hide waited for.
+            closed = defense.reportCount();
+            defense.clearReports();
+            defense.markReportsSeen();
+            defense.setAutoHidden(false);
+        }
+        defense.setPublished(published);
+        store.save(defense);
+        if (own) {
+            msg().send(actor, published ? "beddefense.visibility.public" : "beddefense.visibility.private",
+                    "name", defense.name());
+        } else {
+            msg().send(actor, published ? "beddefense.visibility.moderator-public"
+                    : "beddefense.visibility.moderator-private",
+                    "name", defense.name(), "author", defense.authorName());
+            if (closed > 0) {
+                msg().send(actor, "beddefense.visibility.moderator-restored",
+                        "name", defense.name(), "count", String.valueOf(closed));
+            }
+            plugin.notices().notify(defense.author(), published
+                            ? "beddefense.notice.public-by-moderator"
+                            : "beddefense.notice.private-by-moderator",
+                    "name", defense.name(), "id", defense.id(), "moderator", actor.getName());
+        }
+        plugin.sounds().play(actor, published ? "menu.toggle-on" : "menu.toggle-off");
+        return true;
+    }
+
+    /**
+     * Deletes a defense and every time recorded on it. A moderator deleting
+     * someone else's tells the author, now or on their next login.
+     */
     public void delete(Player actor, BedDefense defense) {
         store.delete(defense);
         for (String key : List.of(statsKey(defense.id()), practiceStatsKey(defense.id()),
-                legacyStrictStatsKey(defense.id()))) {
+                obsidianStatsKey(defense.id()), legacyStrictStatsKey(defense.id()))) {
             plugin.leaderboards().forget(key);
             plugin.stats().purgeTemplate(key, wiped -> { });
         }
         msg().send(actor, "beddefense.deleted", "name", defense.name());
         plugin.sounds().play(actor, "menu.click");
+        if (!defense.isAuthor(actor.getUniqueId())) {
+            plugin.notices().notify(defense.author(), "beddefense.notice.deleted-by-moderator",
+                    "name", defense.name(), "moderator", actor.getName());
+        }
+    }
+
+    // -------------------------------------------------------------- reports
+
+    /**
+     * Files (or updates) a report on a public defense and tells every
+     * moderator online. Your own defense cannot be reported, and a private
+     * one has nobody to report it.
+     *
+     * @return true when the report was recorded
+     */
+    public boolean report(Player reporter, BedDefense defense, String reason) {
+        UUID id = reporter.getUniqueId();
+        if (defense.isAuthor(id)) {
+            msg().send(reporter, "beddefense.report.own");
+            plugin.sounds().play(reporter, "menu.deny");
+            return false;
+        }
+        if (!defense.published()) {
+            msg().send(reporter, "beddefense.report.private");
+            plugin.sounds().play(reporter, "menu.deny");
+            return false;
+        }
+        String cleaned = cleanReason(reason);
+        if (cleaned == null) {
+            msg().send(reporter, "beddefense.report.reason-invalid",
+                    "max", String.valueOf(plugin.pcConfig().bedDefenseReportReasonMaxLength()));
+            plugin.sounds().play(reporter, "menu.deny");
+            return false;
+        }
+        boolean fresh = defense.addReport(new BedDefense.Report(id, reporter.getName(), cleaned,
+                System.currentTimeMillis()));
+        boolean hidden = shouldAutoHide(defense);
+        if (hidden) {
+            defense.setPublished(false);
+            defense.setAutoHidden(true);
+        }
+        store.save(defense);
+        msg().send(reporter, fresh ? "beddefense.report.sent" : "beddefense.report.updated",
+                "name", defense.name());
+        plugin.sounds().play(reporter, "beddefense.report");
+        String builders = String.valueOf(defense.buildersBesidesAuthor());
+        String builderReports = String.valueOf(defense.reportsFromBuilders());
+        if (hidden) {
+            plugin.notices().notify(defense.author(), "beddefense.notice.auto-hidden",
+                    "name", defense.name(), "id", defense.id(),
+                    "reports", builderReports, "players", builders);
+        }
+        boolean announce = plugin.pcConfig().bedDefenseReportsNotifyModerators();
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (!isModerator(online) || online.equals(reporter)) {
+                continue;
+            }
+            if (announce) {
+                msg().send(online, "beddefense.report.alert",
+                        "player", reporter.getName(),
+                        "name", defense.name(),
+                        "id", defense.id(),
+                        "author", defense.authorName(),
+                        "reason", cleaned,
+                        "count", String.valueOf(defense.reportCount()));
+            }
+            if (hidden) {
+                // A defense going dark on its own is news whether or not
+                // single reports are announced.
+                msg().send(online, "beddefense.report.auto-hidden-alert",
+                        "name", defense.name(), "id", defense.id(), "author", defense.authorName(),
+                        "reports", builderReports, "players", builders);
+            }
+            if (announce || hidden) {
+                msg().send(online, "beddefense.report.alert-actions",
+                        "name", defense.name(), "id", defense.id());
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Whether the builders' reports on a public defense have reached the
+     * configured share: at least {@code min-reports} of them, and at least
+     * {@code percent} of everyone but the author who has started a round on
+     * it. Reports from players who never built it do not count.
+     */
+    private boolean shouldAutoHide(BedDefense defense) {
+        int percent = plugin.pcConfig().bedDefenseAutoHidePercent();
+        if (percent <= 0 || !defense.published()) {
+            return false;
+        }
+        int reports = defense.reportsFromBuilders();
+        int builders = defense.buildersBesidesAuthor();
+        return reports >= plugin.pcConfig().bedDefenseAutoHideMinReports()
+                && builders > 0
+                && reports * 100L >= (long) percent * builders;
+    }
+
+    /**
+     * A moderator has looked at this defense's reports (its review or
+     * reports menu, or {@code info}): they stop counting as unseen.
+     */
+    public void markReportsSeen(BedDefense defense) {
+        if (defense.markReportsSeen()) {
+            store.save(defense);
+        }
+    }
+
+    /** Lifts an automatic hide once no report is left, and tells the author. */
+    private void liftAutoHideIfClear(Player moderator, BedDefense defense) {
+        if (!defense.autoHidden() || defense.reportCount() > 0) {
+            return;
+        }
+        defense.setAutoHidden(false);
+        msg().send(moderator, "beddefense.report.auto-hide-lifted", "name", defense.name());
+        plugin.notices().notify(defense.author(), "beddefense.notice.auto-hide-lifted",
+                "name", defense.name(), "id", defense.id(), "moderator", moderator.getName());
+    }
+
+    // ------------------------------------------------------------ reminders
+
+    /** Every moderator online hears about reports nobody has looked at (the interval task). */
+    public void remindModerators() {
+        List<BedDefense> unseen = store.unseenReported();
+        if (unseen.isEmpty()) {
+            return;
+        }
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (isModerator(online)) {
+                remind(online, unseen);
+            }
+        }
+    }
+
+    /** A moderator who just joined is reminded a moment later, after the join chatter. */
+    public void remindOnJoin(Player player) {
+        if (!plugin.pcConfig().bedDefenseReportsRemindOnJoin() || !isModerator(player)) {
+            return;
+        }
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (player.isOnline()) {
+                List<BedDefense> unseen = store.unseenReported();
+                if (!unseen.isEmpty()) {
+                    remind(player, unseen);
+                }
+            }
+        }, 40L);
+    }
+
+    private static final int REMINDER_ENTRIES = 5;
+
+    private void remind(Player moderator, List<BedDefense> unseen) {
+        int total = 0;
+        for (BedDefense defense : unseen) {
+            total += defense.unseenReports();
+        }
+        msg().send(moderator, "beddefense.report.reminder",
+                "count", String.valueOf(unseen.size()), "reports", String.valueOf(total));
+        int shown = 0;
+        for (BedDefense defense : unseen) {
+            if (shown++ >= REMINDER_ENTRIES) {
+                msg().send(moderator, "beddefense.report.reminder-more",
+                        "count", String.valueOf(unseen.size() - REMINDER_ENTRIES));
+                break;
+            }
+            BedDefense.Report latest = defense.reports().get(defense.reports().size() - 1);
+            msg().send(moderator, "beddefense.report.reminder-entry",
+                    msg().ref("state", defense.autoHidden()
+                            ? "beddefense.report.reminder-hidden" : "beddefense.report.reminder-open"),
+                    "id", defense.id(),
+                    "name", defense.name(),
+                    "author", defense.authorName(),
+                    "count", String.valueOf(defense.reportCount()),
+                    "unseen", String.valueOf(defense.unseenReports()),
+                    "reporter", latest.reporterName(),
+                    "reason", latest.reason());
+        }
+        msg().send(moderator, "beddefense.report.reminder-actions");
+        plugin.sounds().play(moderator, "beddefense.report");
+    }
+
+    /** Asks for a reason in chat, then files the report. */
+    public void promptReport(Player reporter, BedDefense defense) {
+        reporter.closeInventory();
+        plugin.prompts().prompt(reporter, msg().component("beddefense.report.prompt",
+                "name", defense.name(),
+                "max", String.valueOf(plugin.pcConfig().bedDefenseReportReasonMaxLength())), answer -> {
+            // The live instance: a reshape or reload while they typed swaps it.
+            BedDefense live = store.get(defense.id());
+            if (live == null) {
+                msg().send(reporter, "beddefense.unknown", "id", defense.id());
+                return;
+            }
+            report(reporter, live, answer);
+        });
+    }
+
+    /** A moderator closes every report on a defense. @return how many were dismissed */
+    public int dismissReports(Player moderator, BedDefense defense) {
+        int count = defense.reportCount();
+        if (count == 0) {
+            msg().send(moderator, "beddefense.report.none", "name", defense.name());
+            plugin.sounds().play(moderator, "menu.deny");
+            return 0;
+        }
+        defense.clearReports();
+        defense.markReportsSeen();
+        msg().send(moderator, "beddefense.report.dismissed",
+                "name", defense.name(), "count", String.valueOf(count));
+        liftAutoHideIfClear(moderator, defense);
+        store.save(defense);
+        plugin.sounds().play(moderator, "menu.click");
+        return count;
+    }
+
+    /** A moderator drops one player's report. */
+    public boolean dismissReport(Player moderator, BedDefense defense, UUID reporter) {
+        if (!defense.removeReport(reporter)) {
+            return false;
+        }
+        defense.markReportsSeen();
+        liftAutoHideIfClear(moderator, defense);
+        store.save(defense);
+        plugin.sounds().play(moderator, "menu.click");
+        return true;
+    }
+
+    /** Printable, trimmed, length-capped; null when nothing usable is left. */
+    private String cleanReason(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String reason = raw.replaceAll("[\\p{Cntrl}§]", "").trim();
+        int max = plugin.pcConfig().bedDefenseReportReasonMaxLength();
+        if (reason.isEmpty()) {
+            return null;
+        }
+        return reason.length() > max ? reason.substring(0, max) : reason;
     }
 
     // ------------------------------------------------------------------ stats
@@ -1526,6 +2134,20 @@ public final class BedDefenseService {
     }
 
     /**
+     * Where an obsidian round's time goes: break in, seal the bed, build
+     * back, with a fixed kit. Ranked, on a public board of its own per
+     * defense, since the kit never varies and the times compare.
+     */
+    public static String obsidianStatsKey(String defenseId) {
+        return "beddefense#" + defenseId + "#obsidian";
+    }
+
+    /** True for a key holding obsidian practice times. */
+    public static boolean isObsidianStatsKey(String key) {
+        return key != null && key.startsWith("beddefense#") && key.endsWith("#obsidian");
+    }
+
+    /**
      * The board key strict-order rounds used to write to. Strict order was
      * removed, so nothing writes this any more; it is still recognized so
      * times set before the removal keep resolving to their defense instead
@@ -1541,7 +2163,7 @@ public final class BedDefenseService {
             return null;
         }
         String rest = key.substring("beddefense#".length());
-        for (String suffix : List.of("#practice", "#strict")) {
+        for (String suffix : List.of("#practice", "#obsidian", "#strict")) {
             if (rest.endsWith(suffix)) {
                 rest = rest.substring(0, rest.length() - suffix.length());
                 break;
@@ -1555,22 +2177,34 @@ public final class BedDefenseService {
         return msg().raw("beddefense.board-name").replace("<name>", defense.name());
     }
 
-    /** The same, named for the key's variant: practice times say so. */
+    /** The same, named for the key's variant: practice and obsidian times say so. */
     public String displayForKey(String key, BedDefense defense) {
-        return msg().raw(isPracticeStatsKey(key)
-                        ? "beddefense.board-name-practice" : "beddefense.board-name")
-                .replace("<name>", defense.name());
+        String name = isPracticeStatsKey(key) ? "beddefense.board-name-practice"
+                : isObsidianStatsKey(key) ? "beddefense.board-name-obsidian"
+                : "beddefense.board-name";
+        return msg().raw(name).replace("<name>", defense.name());
     }
 
     /** Every key a defense can hold times under, ranked or not. */
     public List<String> statsKeys(BedDefense defense) {
-        return List.of(statsKey(defense.id()), practiceStatsKey(defense.id()));
+        return List.of(statsKey(defense.id()), practiceStatsKey(defense.id()),
+                obsidianStatsKey(defense.id()));
+    }
+
+    /** The public boards a defense keeps: competitive and obsidian. */
+    public List<String> rankedStatsKeys(BedDefense defense) {
+        return List.of(statsKey(defense.id()), obsidianStatsKey(defense.id()));
     }
 
     // ----------------------------------------------------------------- ticking
 
     public void startTask() {
         task = Bukkit.getScheduler().runTaskTimer(plugin, this::tickAll, TICK_PERIOD, TICK_PERIOD);
+        int minutes = plugin.pcConfig().bedDefenseReportsRemindMinutes();
+        if (minutes > 0) {
+            long period = minutes * 60L * 20L;
+            reminderTask = Bukkit.getScheduler().runTaskTimer(plugin, this::remindModerators, period, period);
+        }
     }
 
     public void restartTask() {
@@ -1583,6 +2217,10 @@ public final class BedDefenseService {
         if (task != null) {
             task.cancel();
             task = null;
+        }
+        if (reminderTask != null) {
+            reminderTask.cancel();
+            reminderTask = null;
         }
     }
 
@@ -1635,7 +2273,7 @@ public final class BedDefenseService {
         }
         state.setPreviewCooldown(plugin.pcConfig().bedDefensePreviewStepTicks());
         previewStep(player, state, 1);
-        if (state.previewIndex() >= state.targets().size()) {
+        if (state.previewIndex() >= state.previewTargets().size()) {
             state.setPreviewPlaying(false);
             refreshPreviewItems(player, state);
             msg().actionBar(player, "beddefense.preview.done");

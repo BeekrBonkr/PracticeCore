@@ -20,8 +20,22 @@ import java.util.UUID;
  * numbers the gallery sorts by. Blocks are immutable once saved; the stats
  * and visibility change in place and are written back by
  * {@link DefenseStore}.
+ *
+ * <p>Two moderation facts ride along. The <b>cleared fingerprint</b> is the
+ * shape the author has finished in a competitive round — publishing needs
+ * it, and because it names the exact shape, reshaping the defense silently
+ * withdraws it. <b>Reports</b> are what other players flagged it for, one
+ * per reporter, kept until a moderator dismisses them; {@code reportsSeen}
+ * marks the last time a moderator looked at them, so anything newer is
+ * "unseen" and worth a reminder. A defense enough of its builders have
+ * reported is <b>auto-hidden</b>: private, and off limits to the author's
+ * own publish button until a moderator has dealt with the reports.
  */
 public final class BedDefense {
+
+    /** One player's report on a defense. A second report from the same player replaces it. */
+    public record Report(UUID reporter, String reporterName, String reason, long when) {
+    }
 
     private final String id;
     private String name;
@@ -33,9 +47,16 @@ public final class BedDefense {
     private final String fingerprint;
     /** Players who liked it — one like each, toggled. */
     private final Set<UUID> likes = new LinkedHashSet<>();
-    /** Players who finished building it at least once. */
+    /** Players who have built it (started a round on it) at least once. */
     private final Set<UUID> played = new LinkedHashSet<>();
     private int completions;
+    /** The shape the author completed competitively, or null until they have. */
+    private String clearedFingerprint;
+    private final List<Report> reports = new ArrayList<>();
+    /** When a moderator last looked at its reports (0 = never). */
+    private long reportsSeen;
+    /** Hidden by its own builders' reports, awaiting a moderator. */
+    private boolean autoHidden;
 
     public BedDefense(String id, String name, UUID author, String authorName, long created,
                       boolean published, List<DefenseBlock> blocks) {
@@ -150,8 +171,126 @@ public final class BedDefense {
         completions++;
     }
 
+    /** Records that a player has started building it. @return true the first time */
+    public boolean markPlayed(UUID player) {
+        return played.add(player);
+    }
+
+    /** How many players other than the author have built it — the base a report share is measured against. */
+    public int buildersBesidesAuthor() {
+        return played.contains(author) ? played.size() - 1 : played.size();
+    }
+
     public boolean isAuthor(UUID player) {
         return author.equals(player);
+    }
+
+    // ---------------------------------------------------------- moderation
+
+    public String clearedFingerprint() {
+        return clearedFingerprint;
+    }
+
+    public void setClearedFingerprint(String clearedFingerprint) {
+        this.clearedFingerprint = clearedFingerprint;
+    }
+
+    /**
+     * Whether the author has finished this exact shape in a competitive
+     * round. A reshaped defense keeps the old fingerprint on record, so this
+     * turns false the moment the blocks change and true again once the new
+     * version has been built for real.
+     */
+    public boolean authorCleared() {
+        return clearedFingerprint != null && clearedFingerprint.equals(fingerprint);
+    }
+
+    /** Every open report, oldest first. */
+    public List<Report> reports() {
+        return Collections.unmodifiableList(reports);
+    }
+
+    public int reportCount() {
+        return reports.size();
+    }
+
+    public Report reportBy(UUID player) {
+        for (Report report : reports) {
+            if (report.reporter().equals(player)) {
+                return report;
+            }
+        }
+        return null;
+    }
+
+    /** Files a report, replacing an earlier one from the same player. @return true when it is new */
+    public boolean addReport(Report report) {
+        boolean replaced = reports.removeIf(r -> r.reporter().equals(report.reporter()));
+        reports.add(report);
+        return !replaced;
+    }
+
+    public boolean removeReport(UUID reporter) {
+        return reports.removeIf(r -> r.reporter().equals(reporter));
+    }
+
+    public void clearReports() {
+        reports.clear();
+    }
+
+    /** Reports from players who have actually built this defense. */
+    public int reportsFromBuilders() {
+        int count = 0;
+        for (Report report : reports) {
+            if (played.contains(report.reporter())) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /** When a moderator last looked at the reports, or 0. */
+    public long reportsSeen() {
+        return reportsSeen;
+    }
+
+    public void setReportsSeen(long reportsSeen) {
+        this.reportsSeen = Math.max(0, reportsSeen);
+    }
+
+    /** Reports filed since a moderator last looked. */
+    public int unseenReports() {
+        int count = 0;
+        for (Report report : reports) {
+            if (report.when() > reportsSeen) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /** A moderator has looked at every report there is right now. @return true when any was unseen */
+    public boolean markReportsSeen() {
+        boolean changed = unseenReports() > 0;
+        reportsSeen = Math.max(System.currentTimeMillis(), latestReport());
+        return changed;
+    }
+
+    public boolean autoHidden() {
+        return autoHidden;
+    }
+
+    public void setAutoHidden(boolean autoHidden) {
+        this.autoHidden = autoHidden;
+    }
+
+    /** When the newest report came in, or 0 with none. */
+    public long latestReport() {
+        long latest = 0;
+        for (Report report : reports) {
+            latest = Math.max(latest, report.when());
+        }
+        return latest;
     }
 
     /** The shape's most exposed material — what a rusher meets — as an icon. */
@@ -178,6 +317,21 @@ public final class BedDefense {
             counts.merge(block.kind(), 1, Integer::sum);
         }
         return counts;
+    }
+
+    /**
+     * Whether obsidian practice can run on this defense: the round is
+     * putting the eight obsidian on the bed yourself, so a defense that
+     * already has obsidian on any of those spots has nothing to practice.
+     */
+    public boolean obsidianEligible() {
+        for (DefenseBlock block : blocks) {
+            if (block.kind() == Material.OBSIDIAN
+                    && DefenseFrame.isCover(new org.bukkit.util.Vector(block.x(), block.y(), block.z()))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public boolean containsKind(Material kind) {

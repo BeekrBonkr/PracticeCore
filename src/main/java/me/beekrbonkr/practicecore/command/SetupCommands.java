@@ -14,7 +14,7 @@ final class SetupCommands {
 
     private static final List<String> ACTIONS = List.of(
             "start", "edit", "gui", "spawn", "kit", "trigger", "capture", "schematic", "icon",
-            "display", "permission", "blocks", "mode", "category", "rush", "pvpbot",
+            "display", "permission", "blocks", "mode", "category", "rush", "beddefense", "pvpbot",
             "info", "save", "cancel");
 
     /** Every item material name, computed once — the registry is large. */
@@ -108,7 +108,9 @@ final class SetupCommands {
                     plugin.messages().note(admin, "Placing a button or pressure plate adds a trigger.");
                 }
             }
-            case "rush" -> rush(admin, args);
+            // Rush and bed defense maps share one layout: team spawns, beds,
+            // generators and dealer spots. Either word marks it.
+            case "rush", "beddefense" -> rush(admin, args);
             case "pvpbot" -> pvpbot(admin, args);
             case "gui" -> me.beekrbonkr.practicecore.gui.admin.SetupGui.open(plugin, admin);
             case "info" -> wizard.info(admin);
@@ -118,14 +120,15 @@ final class SetupCommands {
         }
     }
 
-    /** The rush layout steps: team spawns, beds, generators, dealer spots. */
+    /** The base layout steps (rush and bed defense): team spawns, beds, generators, dealer spots. */
     private void rush(Player admin, String[] args) {
         String action = args.length > 2 ? args[2].toLowerCase(Locale.ROOT) : "help";
+        String word = args[1].toLowerCase(Locale.ROOT);
         SetupManager wizard = plugin.setup();
         switch (action) {
             case "team" -> {
                 if (args.length < 4) {
-                    plugin.messages().usage(admin, "/practice setup rush team <color>");
+                    plugin.messages().usage(admin, "/practice setup " + word + " team <color>");
                     plugin.messages().note(admin, "Stand at that base's spawn first.");
                     return;
                 }
@@ -133,7 +136,7 @@ final class SetupCommands {
             }
             case "bed" -> {
                 if (args.length < 4) {
-                    plugin.messages().usage(admin, "/practice setup rush bed <color>");
+                    plugin.messages().usage(admin, "/practice setup " + word + " bed <color>");
                     plugin.messages().note(admin, "Look at that team's bed first.");
                     return;
                 }
@@ -141,7 +144,7 @@ final class SetupCommands {
             }
             case "gen" -> {
                 if (args.length < 4) {
-                    plugin.messages().usage(admin, "/practice setup rush gen <iron|gold|diamond|emerald>");
+                    plugin.messages().usage(admin, "/practice setup " + word + " gen <iron|gold|diamond|emerald>");
                     plugin.messages().note(admin, "Stand on the spawner block first.");
                     return;
                 }
@@ -149,7 +152,8 @@ final class SetupCommands {
             }
             case "dealer" -> wizard.rushDealer(admin);
             case "clear" -> wizard.rushClear(admin);
-            default -> plugin.messages().send(admin, "help.setup-rush");
+            default -> plugin.messages().send(admin,
+                    word.equals("beddefense") ? "help.setup-beddefense" : "help.setup-rush");
         }
     }
 
@@ -214,7 +218,7 @@ final class SetupCommands {
             return PracticeCommand.filter(ACTIONS, args[1]);
         }
         String action = args[1].toLowerCase(Locale.ROOT);
-        if (action.equals("rush")) {
+        if (action.equals("rush") || action.equals("beddefense")) {
             if (args.length == 3) {
                 return PracticeCommand.filter(RUSH_ACTIONS, args[2]);
             }

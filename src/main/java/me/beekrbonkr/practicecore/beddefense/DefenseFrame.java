@@ -10,6 +10,8 @@ import org.bukkit.block.data.MultipleFacing;
 import org.bukkit.block.data.Orientable;
 import org.bukkit.util.Vector;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -25,6 +27,19 @@ public final class DefenseFrame {
 
     private static final BlockFace[] CLOCKWISE = {
             BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST};
+
+    /**
+     * The eight blocks that seal a bed, in the defense frame: the six that
+     * touch its sides at bed height (two along each long side, one past the
+     * head, one past the foot) and the two on top. A bed can only be broken
+     * through a face, so these are exactly the obsidian a real defense puts
+     * on it; corners never matter.
+     */
+    public static final List<Vector> COVER = List.of(
+            new Vector(-1, 0, 0), new Vector(1, 0, 0),
+            new Vector(-1, 0, 1), new Vector(1, 0, 1),
+            new Vector(0, 0, -1), new Vector(0, 0, 2),
+            new Vector(0, 1, 0), new Vector(0, 1, 1));
 
     private final Location head;
     /** Quarter turns from north to the bed's facing. */
@@ -62,6 +77,31 @@ public final class DefenseFrame {
                 loc.getBlockY() - head.getBlockY(),
                 loc.getBlockZ() - head.getBlockZ());
         return rotate(offset, -turns);
+    }
+
+    /** The eight world blocks that seal this bed — see {@link #COVER}. */
+    public List<Location> coverSpots() {
+        List<Location> spots = new ArrayList<>(COVER.size());
+        for (Vector offset : COVER) {
+            spots.add(toWorld(offset.getBlockX(), offset.getBlockY(), offset.getBlockZ()));
+        }
+        return spots;
+    }
+
+    /** True when a world block is one of the eight that seal this bed. */
+    public boolean isCoverSpot(Location loc) {
+        return isCover(toLocal(loc));
+    }
+
+    /** True for a defense-frame offset that is one of the eight cover blocks. */
+    public static boolean isCover(Vector local) {
+        for (Vector offset : COVER) {
+            if (offset.getBlockX() == local.getBlockX() && offset.getBlockY() == local.getBlockY()
+                    && offset.getBlockZ() == local.getBlockZ()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** True for the head or foot block of this bed. */

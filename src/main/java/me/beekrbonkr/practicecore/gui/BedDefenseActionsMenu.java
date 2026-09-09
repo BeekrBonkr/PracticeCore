@@ -5,6 +5,7 @@ import me.beekrbonkr.practicecore.beddefense.BedDefense;
 import me.beekrbonkr.practicecore.beddefense.BedDefenseService;
 import me.beekrbonkr.practicecore.util.TimeFormat;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
@@ -12,13 +13,16 @@ import java.util.function.Consumer;
 
 /**
  * Everything you can do with one bed defense besides building it: like,
- * favorite, see its boards, and — for your own — edit, publish or delete.
+ * favorite, see its boards, report it — and, for your own, edit, publish
+ * or delete. A moderator ({@code practicecore.beddefense.moderate}) gets
+ * the visibility and delete controls on anyone's, plus its reports.
  * Deleting arms on the first click and executes on the second (style
  * guide R56), so a slip never costs a design.
  */
 public final class BedDefenseActionsMenu extends Menu {
 
-    private final BedDefense defense;
+    /** Re-resolved from the store on every render: a reshape or reload swaps instances. */
+    private BedDefense defense;
     private final Consumer<BedDefense> onPick;
 
     public BedDefenseActionsMenu(PracticeCorePlugin plugin, Player viewer, Menu parent,
@@ -50,9 +54,13 @@ public final class BedDefenseActionsMenu extends Menu {
     protected void render() {
         border();
         BedDefenseService service = plugin.bedDefenses();
+        BedDefense live = service.store().get(defense.id());
+        if (live != null) {
+            defense = live;
+        }
         boolean own = defense.isAuthor(viewer.getUniqueId());
-        boolean admin = viewer.hasPermission("practicecore.arena");
-        if (plugin.bedDefenses().store().get(defense.id()) == null) {
+        boolean moderator = service.isModerator(viewer);
+        if (live == null) {
             // Deleted while this menu was open.
             later(() -> {
                 if (parent() != null) {
@@ -62,6 +70,10 @@ public final class BedDefenseActionsMenu extends Menu {
                 }
             });
             return;
+        }
+        if (moderator && defense.reportCount() > 0) {
+            // Opening a reported defense's menu is looking at its reports.
+            service.markReportsSeen(defense);
         }
 
         set(slot("play", 11), Button.of(plugin, defense.icon())
@@ -157,6 +169,20 @@ public final class BedDefenseActionsMenu extends Menu {
             later(() -> new BedDefenseBoardsMenu(plugin, viewer, this, defense).open());
         });
 
+        if (!own && defense.published()) {
+            boolean reported = defense.reportBy(viewer.getUniqueId()) != null;
+            set(slot("report", 15), Button.of(plugin, icon("report", Material.BELL))
+                    .name("gui.beddefense.actions.report.name")
+                    .lore("gui.beddefense.actions.report.lore", plugin.messages().ref("state",
+                            reported ? "gui.beddefense.actions.reported-yes"
+                                    : "gui.beddefense.actions.reported-no"))
+                    .hint("report")
+                    .build(), event -> {
+                click();
+                later(() -> service.promptReport(viewer, defense));
+            });
+        }
+
         if (own) {
             set(slot("edit", 20), Button.of(plugin, icon("edit", Material.WRITABLE_BOOK))
                     .name("gui.beddefense.actions.edit.name")
@@ -169,23 +195,48 @@ public final class BedDefenseActionsMenu extends Menu {
                     service.edit(viewer, defense);
                 });
             });
+        }
+        if (own || moderator) {
             boolean published = defense.published();
-            set(slot("visibility", 21), Button.of(plugin, published
+            TagResolver state = TagResolver.resolver(
+                    plugin.messages().ref("state", published ? "label.state.public" : "label.state.private"),
+                    plugin.messages().ref("cleared", defense.authorCleared()
+                            ? "gui.beddefense.actions.cleared-yes" : "gui.beddefense.actions.cleared-no"));
+            Button visibility = Button.of(plugin, published
                             ? icon("visibility", Material.LANTERN)
                             : plugin.guis().material("beddefense-actions.buttons.visibility.material-private",
                                     Material.SOUL_LANTERN))
                     .name("gui.beddefense.actions.visibility.name")
-                    .lore("gui.beddefense.actions.visibility.lore", plugin.messages().ref("state",
-                            published ? "label.state.public" : "label.state.private"))
-                    .glow(published)
-                    .hint("toggle")
-                    .build(), event -> {
-                sound(published ? "menu.toggle-off" : "menu.toggle-on");
+                    .glow(published);
+            if (own) {
+                visibility.lore("gui.beddefense.actions.visibility.lore", state);
+            } else {
+                visibility.lore("gui.beddefense.actions.visibility.lore-moderator", state,
+                        "author", defense.authorName());
+            }
+            // Hiding is always allowed. Publishing needs the author's own
+            // competitive run whoever asks, and an auto-hidden defense
+            // needs a moderator — the author waits for the review.
+            boolean gated = !published && !service.canPublish(viewer, defense);
+            if (defense.autoHidden() && !published) {
+                visibility.line(name("gui.beddefense.actions.auto-hidden-line"));
+            }
+            if (gated) {
+                visibility.disabled(defense.autoHidden() && service.canPublish(defense)
+                        ? "gui.reason.auto-hidden" : "gui.reason.needs-clear");
+            } else {
+                visibility.hint("toggle");
+            }
+            set(slot("visibility", 21), visibility.build(), event -> {
+                if (gated) {
+                    // The refusal explains itself (and plays the deny cue).
+                    service.setPublished(viewer, defense, true);
+                    return;
+                }
                 service.setPublished(viewer, defense, !published);
                 refresh();
             });
-        }
-        if (own || admin) {
+
             int slot = slot("delete", 22);
             boolean armed = isArmed(slot);
             Button delete = Button.of(plugin, icon("delete", Material.LAVA_BUCKET));
@@ -215,6 +266,25 @@ public final class BedDefenseActionsMenu extends Menu {
                         viewer.closeInventory();
                     }
                 });
+            });
+        }
+        if (moderator) {
+            int count = defense.reportCount();
+            Button reports = Button.of(plugin, icon("reports", Material.WRITTEN_BOOK))
+                    .name("gui.beddefense.actions.reports.name")
+                    .lore("gui.beddefense.actions.reports.lore", "count", String.valueOf(count));
+            if (count == 0) {
+                reports.disabled("gui.reason.no-reports");
+            } else {
+                reports.hint("view");
+            }
+            set(slot("reports", 23), reports.build(), event -> {
+                if (count == 0) {
+                    deny();
+                    return;
+                }
+                click();
+                later(() -> new BedDefenseReportsMenu(plugin, viewer, this, defense).open());
             });
         }
         nav("beddefense-actions");

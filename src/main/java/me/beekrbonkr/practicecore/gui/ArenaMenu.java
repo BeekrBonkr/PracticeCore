@@ -39,9 +39,16 @@ public final class ArenaMenu extends PagedMenu<ArenaTemplate> {
 
     @Override
     protected List<ArenaTemplate> entries() {
-        return category == null
+        List<ArenaTemplate> visible = category == null
                 ? plugin.templates().visibleTo(viewer)
                 : plugin.templates().visibleTo(viewer, category);
+        // Bed defense maps are listed by their own picker (the category tile
+        // or the footer button below), which asks for a base and a defense
+        // before joining — never as a plain join tile here.
+        return visible.stream()
+                .filter(template -> !template.mode()
+                        .equals(me.beekrbonkr.practicecore.mode.BedDefenseMode.ID))
+                .toList();
     }
 
     @Override
@@ -123,6 +130,10 @@ public final class ArenaMenu extends PagedMenu<ArenaTemplate> {
         if (template.mode().equals(me.beekrbonkr.practicecore.mode.RushMode.ID)) {
             // Rush needs its objective/team/modifier choices before joining.
             later(() -> new RushConfigMenu(plugin, viewer, this, template).open());
+            return;
+        }
+        if (template.mode().equals(me.beekrbonkr.practicecore.mode.BedDefenseMode.ID)) {
+            later(() -> new BedDefenseConfigMenu(plugin, viewer, this, template).open());
             return;
         }
         later(() -> {

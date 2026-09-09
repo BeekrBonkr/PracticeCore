@@ -15,11 +15,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Bed defense leaderboards. Opened from the leaderboards category picker it
- * lists every defense with times on it; opened from a defense's actions it
- * shows just that defense's board. Each tile opens the full ranking.
+ * Bed defense leaderboards. Every defense keeps two public boards — its
+ * competitive times and its obsidian practice times — and each is a tile
+ * of its own. Opened from the leaderboards category picker it lists every
+ * board with times on it; opened from a defense's actions it shows just
+ * that defense's two. Each tile opens the full ranking.
  */
-public final class BedDefenseBoardsMenu extends PagedMenu<BedDefense> {
+public final class BedDefenseBoardsMenu extends PagedMenu<BedDefenseBoardsMenu.Board> {
+
+    /** One board: a defense and the key it is ranked under. */
+    public record Board(BedDefense defense, String key) {
+
+        public boolean obsidian() {
+            return BedDefenseService.isObsidianStatsKey(key);
+        }
+    }
 
     private final BedDefense only;
 
@@ -39,14 +49,15 @@ public final class BedDefenseBoardsMenu extends PagedMenu<BedDefense> {
     }
 
     @Override
-    protected List<BedDefense> entries() {
-        List<BedDefense> boards = new ArrayList<>();
+    protected List<Board> entries() {
+        List<Board> boards = new ArrayList<>();
         List<BedDefense> defenses = only != null ? List.of(only)
                 : plugin.bedDefenses().store().playableBy(viewer.getUniqueId());
         for (BedDefense defense : defenses) {
-            if (only != null
-                    || plugin.leaderboards().size(BedDefenseService.statsKey(defense.id())) > 0) {
-                boards.add(defense);
+            for (String key : plugin.bedDefenses().rankedStatsKeys(defense)) {
+                if (only != null || plugin.leaderboards().size(key) > 0) {
+                    boards.add(new Board(defense, key));
+                }
             }
         }
         return boards;
@@ -57,17 +68,24 @@ public final class BedDefenseBoardsMenu extends PagedMenu<BedDefense> {
         return emptyIcon("gui.beddefense.boards.empty");
     }
 
+    private Material material(Board board) {
+        return board.obsidian()
+                ? plugin.guis().material("beddefense-boards.obsidian-material", Material.OBSIDIAN)
+                : board.defense().icon();
+    }
+
     @Override
-    protected ItemStack icon(BedDefense board) {
-        String key = BedDefenseService.statsKey(board.id());
+    protected ItemStack icon(Board board) {
+        String key = board.key();
+        BedDefense defense = board.defense();
         LeaderboardService.Entry record = plugin.leaderboards().record(key);
         int rank = plugin.leaderboards().rank(key, viewer.getUniqueId());
-        return Button.of(plugin, board.icon())
+        return Button.of(plugin, material(board))
                 .name("gui.beddefense.boards.entry-name",
-                        "board", plugin.bedDefenses().displayFor(board))
+                        "board", plugin.bedDefenses().displayForKey(key, defense))
                 .lore("gui.beddefense.boards.entry-lore",
-                        "name", board.name(),
-                        "author", board.authorName(),
+                        "name", defense.name(),
+                        "author", defense.authorName(),
                         "players", String.valueOf(plugin.leaderboards().size(key)),
                         "record", record != null ? TimeFormat.precise(record.millis()) : raw("gui.none"),
                         "record-holder", record != null ? record.displayName() : raw("gui.none"),
@@ -77,13 +95,14 @@ public final class BedDefenseBoardsMenu extends PagedMenu<BedDefense> {
     }
 
     @Override
-    protected void onEntryClick(BedDefense board, InventoryClickEvent event) {
+    protected void onEntryClick(Board board, InventoryClickEvent event) {
         click();
-        later(() -> new ArenaLeaderboardMenu(plugin, viewer, this,
-                BedDefenseService.statsKey(board.id()),
-                plugin.bedDefenses().displayFor(board), board.icon(), () -> {
+        boolean obsidian = board.obsidian();
+        later(() -> new ArenaLeaderboardMenu(plugin, viewer, this, board.key(),
+                plugin.bedDefenses().displayForKey(board.key(), board.defense()), material(board), () -> {
             viewer.closeInventory();
-            plugin.bedDefenses().play(viewer, board);
+            // Playing from a board means playing in that board's mode.
+            plugin.bedDefenses().play(viewer, board.defense(), obsidian);
         }).open());
     }
 }

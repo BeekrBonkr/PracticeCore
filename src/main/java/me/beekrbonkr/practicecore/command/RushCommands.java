@@ -31,10 +31,14 @@ import java.util.function.Consumer;
  * The /practice rush branch: pulling maps out of MBedwars.
  *
  * {@code import} captures one MBedwars arena's region as a schematic and
- * writes a complete rush template — team spawns, beds, generators and dealer
+ * writes a complete template — team spawns, beds, generators and dealer
  * spots resolved to paste-origin offsets — so the map is playable immediately.
  * {@code importall} does the same for every arena matching a shape filter
  * (team count and/or players per team) and files them under one category.
+ *
+ * <p>The same importer serves bed defense: {@code /practice beddefense
+ * import} runs it with that mode instead, since a bed defense map is the
+ * same layout under a different mode id.
  */
 final class RushCommands {
 
@@ -56,10 +60,36 @@ final class RushCommands {
         String action = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "help";
         switch (action) {
             case "list" -> list(sender);
-            case "import" -> importArena(sender, args);
-            case "importall" -> importAll(sender, args);
+            case "import" -> importArena(sender, args, RushMode.ID);
+            case "importall" -> importAll(sender, args, RushMode.ID);
             default -> msg().send(sender, "help.rush-detail");
         }
+    }
+
+    /**
+     * The import entry for another mode's command branch (bed defense).
+     * {@code args} has the same shape as the rush command's:
+     * {@code [<branch>, import|importall, ...]}. The permission check is the
+     * caller's.
+     */
+    void importFor(CommandSender sender, String[] args, String mode) {
+        String action = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "";
+        switch (action) {
+            case "import" -> importArena(sender, args, mode);
+            case "importall" -> importAll(sender, args, mode);
+            default -> list(sender);
+        }
+    }
+
+    /** The mode's user-facing name for import feedback. */
+    private String modeName(String mode) {
+        return plugin.modes().get(mode)
+                .map(me.beekrbonkr.practicecore.mode.Mode::displayName).orElse(mode);
+    }
+
+    /** The command branch a mode's maps are imported through. */
+    private static String branch(String mode) {
+        return mode.equals(RushMode.ID) ? "rush" : mode;
     }
 
     private void list(CommandSender sender) {
@@ -81,13 +111,13 @@ final class RushCommands {
 
     // --------------------------------------------------------- single import
 
-    private void importArena(CommandSender sender, String[] args) {
+    private void importArena(CommandSender sender, String[] args, String mode) {
         if (!MBedwarsHook.available()) {
             msg().send(sender, "rush.mbedwars-missing");
             return;
         }
         if (args.length < 3) {
-            msg().usage(sender, "/practice rush import <arena> [name] [overwrite]");
+            msg().usage(sender, "/practice " + branch(mode) + " import <arena> [name] [overwrite]");
             return;
         }
         boolean overwrite = args[args.length - 1].equalsIgnoreCase("overwrite");
@@ -111,12 +141,13 @@ final class RushCommands {
         }
         if (plugin.templates().get(name) != null && !overwrite) {
             msg().problem(sender, "Arena " + name + " already exists. Append overwrite to replace "
-                    + "its schematic and rush layout (times and kit are kept).");
+                    + "its schematic and base layout (times and kit are kept).");
             return;
         }
-        importOne(sender, imported, name, null, ok -> {
+        importOne(sender, imported, name, null, mode, ok -> {
             if (ok) {
-                msg().note(sender, "Players find it under the Rush category: /practice join " + name + ".");
+                msg().note(sender, "Players find it under the " + modeName(mode)
+                        + " category: /practice join " + name + ".");
             }
         });
     }
@@ -130,7 +161,7 @@ final class RushCommands {
      * the menu. The category defaults to the filter ("4x2", "8-teams",
      * "solo") and can be overridden with {@code category:<name>}.
      */
-    private void importAll(CommandSender sender, String[] args) {
+    private void importAll(CommandSender sender, String[] args, String mode) {
         if (!MBedwarsHook.available()) {
             msg().send(sender, "rush.mbedwars-missing");
             return;
@@ -160,7 +191,8 @@ final class RushCommands {
             }
         }
         if (teams == null && size == null) {
-            msg().usage(sender, "/practice rush importall [teams:<n>] [size:<n>] [category:<name>] [overwrite]");
+            msg().usage(sender, "/practice " + branch(mode)
+                    + " importall [teams:<n>] [size:<n>] [category:<name>] [overwrite]");
             msg().note(sender, "Give at least one of teams: or size:.");
             return;
         }
@@ -187,7 +219,7 @@ final class RushCommands {
             msg().note(sender, "Without FastAsyncWorldEdit each capture runs on the main "
                     + "thread — expect stalls. Installing FAWE makes this lag-free.");
         }
-        runBatch(sender, new ArrayDeque<>(matches), category, overwrite, new int[3]);
+        runBatch(sender, new ArrayDeque<>(matches), category, overwrite, mode, new int[3]);
     }
 
     /**
@@ -197,15 +229,18 @@ final class RushCommands {
      * always entered on the main thread.
      */
     private void runBatch(CommandSender sender, ArrayDeque<MBedwarsHook.ArenaSummary> queue,
-                          String category, boolean overwrite, int[] counters) {
+                          String category, boolean overwrite, String mode, int[] counters) {
         MBedwarsHook.ArenaSummary summary = queue.poll();
         if (summary == null) {
             msg().done(sender, "Mass import finished: " + counters[0] + " imported, "
                     + counters[1] + " skipped, " + counters[2] + " failed — category "
                     + category + ".");
-            if (counters[0] > 0) {
+            if (counters[0] > 0 && mode.equals(RushMode.ID)) {
                 msg().note(sender, "Players find them under the " + category + " category. "
                         + "Give it an icon and display name in guis.yml (categories.entries).");
+            } else if (counters[0] > 0) {
+                msg().note(sender, "Players find them in the " + modeName(mode)
+                        + " map picker; the folder only groups them on disk.");
             }
             return;
         }
@@ -213,14 +248,14 @@ final class RushCommands {
         if (name.isEmpty()) {
             msg().problem(sender, " • " + summary.name() + " — unusable name, skipped.");
             counters[2]++;
-            runBatch(sender, queue, category, overwrite, counters);
+            runBatch(sender, queue, category, overwrite, mode, counters);
             return;
         }
         if (plugin.templates().get(name) != null && !overwrite) {
             msg().note(sender, " • " + summary.name() + " — " + name
                     + " already exists, skipped (append overwrite to replace).");
             counters[1]++;
-            runBatch(sender, queue, category, overwrite, counters);
+            runBatch(sender, queue, category, overwrite, mode, counters);
             return;
         }
         MBedwarsHook.ImportedArena read;
@@ -229,19 +264,19 @@ final class RushCommands {
         } catch (IllegalStateException e) {
             msg().problem(sender, " • " + summary.name() + " — " + e.getMessage());
             counters[2]++;
-            runBatch(sender, queue, category, overwrite, counters);
+            runBatch(sender, queue, category, overwrite, mode, counters);
             return;
         } catch (LinkageError e) {
             msg().problem(sender, " • " + summary.name()
                     + " — the installed MBedwars version is incompatible with this hook.");
             plugin.getLogger().severe("MBedwars import hook failed: " + e);
             counters[2]++;
-            runBatch(sender, queue, category, overwrite, counters);
+            runBatch(sender, queue, category, overwrite, mode, counters);
             return;
         }
-        importOne(sender, read, name, category, ok -> {
+        importOne(sender, read, name, category, mode, ok -> {
             counters[ok ? 0 : 2]++;
-            runBatch(sender, queue, category, overwrite, counters);
+            runBatch(sender, queue, category, overwrite, mode, counters);
         });
     }
 
@@ -272,14 +307,15 @@ final class RushCommands {
     // ------------------------------------------------------------- the work
 
     /**
-     * Captures one already-read MBedwars arena as a rush template. The region
+     * Captures one already-read MBedwars arena as a template of the given
+     * mode (rush or bed defense — the same base layout). The region
      * copy and schematic write — the parts the attached thread dumps showed
      * stalling the server for tens of seconds — run off the main thread when
      * FAWE is present; template building resumes on the main thread and
      * {@code whenDone} is always called there with the outcome.
      */
-    private void importOne(CommandSender sender, MBedwarsHook.ImportedArena imported,
-                           String name, String category, Consumer<Boolean> whenDone) {
+    void importOne(CommandSender sender, MBedwarsHook.ImportedArena imported,
+                   String name, String category, String mode, Consumer<Boolean> whenDone) {
         int width = (int) imported.region().getWidthX();
         int length = (int) imported.region().getWidthZ();
         int max = plugin.pcConfig().maxSchematicSize();
@@ -324,7 +360,7 @@ final class RushCommands {
         if (plugin.schematics().supportsAsyncEdits()) {
             java.util.concurrent.CompletableFuture.runAsync(capture)
                     .whenComplete((v, error) -> Bukkit.getScheduler().runTask(plugin, () ->
-                            writeTemplate(sender, imported, name, category, dir, origin,
+                            writeTemplate(sender, imported, name, category, mode, dir, origin,
                                     width, length, error, whenDone)));
         } else {
             Throwable error = null;
@@ -333,14 +369,14 @@ final class RushCommands {
             } catch (RuntimeException e) {
                 error = e;
             }
-            writeTemplate(sender, imported, name, category, dir, origin, width, length,
+            writeTemplate(sender, imported, name, category, mode, dir, origin, width, length,
                     error, whenDone);
         }
     }
 
     /** Main-thread tail of {@link #importOne}: arena.yml, registry, feedback. */
     private void writeTemplate(CommandSender sender, MBedwarsHook.ImportedArena imported,
-                               String name, String category, File dir, Location origin,
+                               String name, String category, String mode, File dir, Location origin,
                                int width, int length, Throwable error, Consumer<Boolean> whenDone) {
         if (error != null) {
             Throwable cause = error.getCause() != null ? error.getCause() : error;
@@ -415,7 +451,9 @@ final class RushCommands {
         }
 
         ArenaTemplate template = existing != null ? existing : new ArenaTemplate(name, dir, category);
-        template.setMode(RushMode.ID);
+        // The command decides the mode, also on a re-import: an admin pulling
+        // a map through the bed defense branch means it as a bed defense map.
+        template.setMode(mode);
         if (existing == null) {
             template.setDisplayName(stripLegacy(imported.displayName()));
             // The map keeps the face players know from the MBedwars selector;
@@ -447,7 +485,7 @@ final class RushCommands {
         }
         plugin.templates().register(template);
         msg().done(sender, (existing != null ? "Re-imported" : "Imported") + " " + imported.name()
-                + " as rush arena " + name + ": " + width + "×" + length + " blocks, "
+                + " as " + modeName(mode) + " arena " + name + ": " + width + "×" + length + " blocks, "
                 + imported.teams().size() + " team(s) (" + beds + " with beds), "
                 + imported.spawners().size() + " generator(s), "
                 + imported.dealers().size() + " dealer(s).");
@@ -470,10 +508,7 @@ final class RushCommands {
     }
 
     private static String sanitize(String name) {
-        String cleaned = stripLegacy(name).toLowerCase(Locale.ROOT)
-                .replaceAll("[^a-z0-9_-]", "-").replaceAll("-{2,}", "-")
-                .replaceAll("^-+|-+$", "");
-        return cleaned.length() > 32 ? cleaned.substring(0, 32) : cleaned;
+        return me.beekrbonkr.practicecore.template.TemplateRegistry.sanitizeName(name);
     }
 
     private static String stripLegacy(String text) {
@@ -487,7 +522,12 @@ final class RushCommands {
         if (args.length == 2) {
             return PracticeCommand.filter(List.of("import", "importall", "list"), args[1]);
         }
-        if (!MBedwarsHook.available()) {
+        return completeImport(sender, args);
+    }
+
+    /** The import argument completions, shared with the bed defense branch. */
+    List<String> completeImport(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("practicecore.setup") || !MBedwarsHook.available()) {
             return List.of();
         }
         if (args.length == 3 && args[1].equalsIgnoreCase("import")) {

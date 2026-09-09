@@ -1,8 +1,12 @@
 package me.beekrbonkr.practicecore.gui.admin;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
+import me.beekrbonkr.practicecore.beddefense.BedDefenseService;
+import me.beekrbonkr.practicecore.config.ReloadResult;
+import me.beekrbonkr.practicecore.gui.BedDefenseModerationMenu;
 import me.beekrbonkr.practicecore.gui.Button;
 import me.beekrbonkr.practicecore.gui.Menu;
+import me.beekrbonkr.practicecore.rush.MBedwarsHook;
 import me.beekrbonkr.practicecore.setup.SetupManager;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
 import net.kyori.adventure.text.Component;
@@ -18,9 +22,11 @@ import java.util.List;
 
 /**
  * Every arena, complete or not, for the admin to manage: click opens the
- * editor on it, right-click deletes it (behind a confirmation), and the
+ * arena's options, right-click deletes it (behind a confirmation), and the
  * crafting table starts a brand-new arena from the admin's WorldEdit
- * clipboard. Text is fixed — see {@link SetupGui}.
+ * clipboard. The footer reaches the rest of the admin's day: bed defense
+ * moderation, MBedwars imports and a reload. Text is fixed — see
+ * {@link SetupGui}.
  */
 final class ArenaListMenu extends Menu {
 
@@ -67,12 +73,18 @@ final class ArenaListMenu extends Menu {
                     later(() -> new ConfirmDeleteMenu(plugin, viewer, this, arena.name()).open());
                 } else {
                     click();
-                    later(() -> edit(arena.name()));
+                    later(() -> new ArenaOptionsMenu(plugin, viewer, this, arena.name()).open());
                 }
             });
         }
 
-        // The primary action sits at the right end of the nav row (R43).
+        // Footer extras sit on the cells paging never touches (R43):
+        // secondary from the left, the primary action at the right end.
+        bedDefensesButton(bottomRow() + 1);
+        if (MBedwarsHook.available()) {
+            importButton(bottomRow() + 2);
+        }
+        reloadButton(bottomRow() + 6);
         set(bottomRow() + 7, SetupGui.control(plugin, Material.CRAFTING_TABLE,
                         "Create New Arena", NamedTextColor.GREEN,
                         "Starts a new arena from your",
@@ -111,7 +123,7 @@ final class ArenaListMenu extends Menu {
 
     private ItemStack arenaIcon(ArenaTemplate arena) {
         boolean complete = arena.isComplete();
-        return Button.of(plugin, arena.effectiveIcon())
+        Button tile = Button.of(plugin, arena.effectiveIcon())
                 .name(Component.text(arena.name(), NamedTextColor.WHITE, TextDecoration.BOLD))
                 .line(SetupGui.state("Display", arena.displayName()))
                 .line(SetupGui.state("Mode", arena.mode()))
@@ -119,26 +131,114 @@ final class ArenaListMenu extends Menu {
                 .line(SetupGui.state("Triggers", String.valueOf(arena.triggers().size())))
                 .line(SetupGui.state("Status", Component.text(
                         complete ? "complete" : "incomplete",
-                        complete ? NamedTextColor.GREEN : NamedTextColor.YELLOW)))
-                .hint("edit")
+                        complete ? NamedTextColor.GREEN : NamedTextColor.YELLOW)));
+        if (arena.name().equals(plugin.pcConfig().defaultArenaName())) {
+            tile.line(SetupGui.state("Default", Component.text("yes", NamedTextColor.GREEN)));
+        }
+        return tile.hint("open")
                 .rightHint("delete")
                 .hideAttributes()
                 .build();
     }
 
-    /** Opens the wizard on an arena, then its control panel once it is up. */
-    private void edit(String name) {
-        viewer.closeInventory();
-        plugin.setup().edit(viewer, name);
-        openActionsWhenReady();
+    // --------------------------------------------------------------- footer
+
+    /** The bed defense moderation list — locked, not hidden, without the node (R52, R53). */
+    private void bedDefensesButton(int slot) {
+        boolean moderator = viewer.hasPermission(BedDefenseService.MODERATE_PERMISSION);
+        Button button = SetupGui.control(plugin, Material.LECTERN, "Bed Defenses",
+                NamedTextColor.WHITE,
+                "Every published bed defense and",
+                "its reports, for moderation.");
+        if (moderator) {
+            button.hint("open");
+        } else {
+            button.locked("gui.reason.needs-node", "node", BedDefenseService.MODERATE_PERMISSION);
+        }
+        set(slot, button.build(), event -> {
+            if (!moderator) {
+                deny();
+                return;
+            }
+            click();
+            later(() -> new BedDefenseModerationMenu(plugin, viewer, this).open());
+        });
     }
+
+    /** Only drawn while MBedwars is present — there is nothing to import otherwise. */
+    private void importButton(int slot) {
+        set(slot, SetupGui.control(plugin, Material.HOPPER, "Import Maps", NamedTextColor.WHITE,
+                        "Pulls maps out of MBedwars as rush",
+                        "arenas or bed defense maps.")
+                .hint("open")
+                .build(), event -> {
+            click();
+            later(() -> new ImportMenu(plugin, viewer, this).open());
+        });
+    }
+
+    /**
+     * The GUI twin of /practice reload. It takes two clicks (R59): a reload
+     * that finds arena changes ends every running session. It never forces —
+     * a reload that needs confirming is pointed at the command instead.
+     */
+    private void reloadButton(int slot) {
+        boolean allowed = viewer.hasPermission("practicecore.reload");
+        Button button;
+        if (isArmed(slot)) {
+            button = SetupGui.control(plugin, Material.COMMAND_BLOCK, "Confirm Reload",
+                            NamedTextColor.RED,
+                            "Config, messages and every arena",
+                            "are re-read from disk.")
+                    .line(Component.text("Running sessions may be ended.", NamedTextColor.RED))
+                    .line(Component.text("Any other click cancels", NamedTextColor.YELLOW))
+                    .glow(true)
+                    .hint("confirm");
+        } else {
+            button = SetupGui.control(plugin, Material.COMMAND_BLOCK, "Reload",
+                    NamedTextColor.YELLOW,
+                    "Re-reads config.yml, messages.yml,",
+                    "guis.yml and every arena from disk.");
+            if (allowed) {
+                button.hint("run");
+            } else {
+                button.locked("gui.reason.needs-node", "node", "practicecore.reload");
+            }
+        }
+        set(slot, button.build(), event -> {
+            if (!allowed) {
+                deny();
+                return;
+            }
+            if (!isArmed(slot)) {
+                arm(slot);
+                return;
+            }
+            disarm();
+            ReloadResult result = plugin.reload(false);
+            result.notes().forEach(note -> plugin.messages().note(viewer, note));
+            if (result.ok()) {
+                plugin.messages().done(viewer, "PracticeCore reloaded.");
+            } else if (result.needsConfirm()) {
+                plugin.messages().confirmPrompt(viewer,
+                        "Nothing was changed yet — this reload needs confirming.",
+                        "/practice reload confirm");
+            } else {
+                plugin.messages().problem(viewer,
+                        "Reload failed. The previous settings are still running.");
+            }
+            later(this::refresh);
+        });
+    }
+
+    // -------------------------------------------------------------- wizard
 
     private void promptCreate() {
         viewer.closeInventory();
         plugin.prompts().prompt(viewer, "What should the new arena be called? (a-z, 0-9, - and _)",
                 name -> {
                     plugin.setup().start(viewer, SetupManager.normalize(name));
-                    openActionsWhenReady();
+                    openActionsWhenReady(plugin, viewer);
                 });
     }
 
@@ -146,9 +246,9 @@ final class ArenaListMenu extends Menu {
      * start/edit report their own failures in chat and only hold a session on
      * success — so the panel opens exactly when the wizard actually opened.
      * The delay outlasts the wizard's async teleport, which would close any
-     * inventory opened before it lands.
+     * inventory opened before it lands. Shared with the arena options menu.
      */
-    private void openActionsWhenReady() {
+    static void openActionsWhenReady(PracticeCorePlugin plugin, Player viewer) {
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (viewer.isOnline() && plugin.setup().isAdmin(viewer.getUniqueId())) {
                 new SetupActionsMenu(plugin, viewer).open();
