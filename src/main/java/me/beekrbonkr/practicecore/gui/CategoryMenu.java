@@ -38,22 +38,28 @@ public final class CategoryMenu extends PagedMenu<String> {
         // re-scanning every template per tile.
         Map<String, List<ArenaTemplate>> grouped = new LinkedHashMap<>();
         for (ArenaTemplate template : plugin.templates().visibleTo(viewer)) {
+            if (template.mode().equals(me.beekrbonkr.practicecore.mode.BedDefenseMode.ID)) {
+                // Bed defense maps have a picker of their own (team base and
+                // round settings first), reached through one tile whatever
+                // folder an admin filed them in.
+                continue;
+            }
             grouped.computeIfAbsent(template.effectiveCategory(), k -> new ArrayList<>())
                     .add(template);
         }
         byCategory = grouped;
         List<String> categories = new ArrayList<>(grouped.keySet());
-        // Bed defense practice has no arenas of its own — it borrows every
-        // rush map — so it appears as a category of its own here.
-        if (!plugin.bedDefenses().maps(viewer).isEmpty()) {
-            categories.add(me.beekrbonkr.practicecore.mode.BedDefenseMode.ID);
+        String bedDefense = me.beekrbonkr.practicecore.mode.BedDefenseMode.ID;
+        // One tile, even if an admin filed other arenas in a folder literally
+        // named after the mode (those would be listed nowhere — do not do that).
+        if (!plugin.bedDefenses().maps(viewer).isEmpty() && !categories.contains(bedDefense)) {
+            categories.add(bedDefense);
         }
         return List.copyOf(categories);
     }
 
     private boolean bedDefense(String category) {
-        return category.equals(me.beekrbonkr.practicecore.mode.BedDefenseMode.ID)
-                && !byCategory.containsKey(category);
+        return category.equals(me.beekrbonkr.practicecore.mode.BedDefenseMode.ID);
     }
 
     @Override

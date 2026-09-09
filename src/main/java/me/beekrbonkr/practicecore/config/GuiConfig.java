@@ -102,6 +102,27 @@ public final class GuiConfig {
             relocate(cfg, "beddefense.buttons.shuffle.slot", 24, 23);
             relocate(cfg, "beddefense.buttons.timer.slot", 25, 24);
         }
+        if (from < 8) {
+            // v8 re-lays the hub, rush, PvP bot, bed defense setup and session
+            // menus and moves the sidebar toggle into Settings. Values still
+            // at their v7 defaults are reset so the new layout applies; an
+            // admin's own arrangement stands. The rush objective-* keys have
+            // had no button since v0.4.0 and are dropped wherever they linger.
+            YamlMigrator.resetUntouched(cfg,
+                    Backups.jarDefaults(plugin, "migrations/guis-v7.yml"));
+            cfg.set("rush.buttons.objective-bed", null);
+            cfg.set("rush.buttons.objective-emerald", null);
+            cfg.set("rush.buttons.objective-diamond", null);
+        }
+        if (from < 9) {
+            // v9 puts the Obsidian toggle on the bed defense setup menu's
+            // rules row, which spreads from 20/22/24 to 19/21/23/25 to make
+            // room (the toggle itself arrives by top-up). Buttons still at
+            // their v8 slots move; an admin's own row stands as-is.
+            relocate(cfg, "beddefense.buttons.defense.slot", 20, 19);
+            relocate(cfg, "beddefense.buttons.mode.slot", 22, 21);
+            relocate(cfg, "beddefense.buttons.timer.slot", 24, 25);
+        }
     }
 
     /** Moves a slot only while it still sits where the previous version put it. */

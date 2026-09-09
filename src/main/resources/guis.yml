@@ -1,3 +1,131 @@
+pvpbot-kits:
+  rows: 5
+pvpbot-preview:
+  back:
+    slot: 0
+  close:
+    slot: 8
+pvpbot:
+  buttons:
+    accuracy:
+      material: TARGET
+      slot: 21
+    aggression:
+      material: BLAZE_POWDER
+      slot: 25
+    block:
+      material: SHIELD
+      slot: 32
+    bow:
+      material: BOW
+      slot: 30
+    build:
+      material: WHITE_WOOL
+      slot: 33
+    combos:
+      material: RABBIT_FOOT
+      slot: 23
+    cps:
+      material: SUGAR
+      slot: 20
+    evasiveness:
+      material: FEATHER
+      slot: 19
+    gear:
+      slot: 15
+    kit:
+      material: CHEST
+      slot: 11
+    preset:
+      material: EXPERIENCE_BOTTLE
+      slot: 13
+    reach:
+      material: STICK
+      slot: 24
+    rod:
+      material: FISHING_ROD
+      slot: 29
+  rows: 5
+rush:
+  buttons:
+    # The team button's icon always shows the selected team's wool.
+    team:
+      slot: 13
+    start:
+      slot: 39
+      material: LIME_DYE
+    # Row 2 — the six match modifiers.
+    blocks:
+      material: WHITE_WOOL
+      slot: 20
+    bot-armor:
+      slot: 31
+    bot-difficulty:
+      material: EXPERIENCE_BOTTLE
+      slot: 30
+    bot-sword:
+      slot: 32
+    # Row 3 — defender bots at enemy bases. The three lineup buttons only
+    # appear while the count is above zero; the armor and sword icons follow
+    # the selected tier.
+    bots:
+      material: ZOMBIE_HEAD
+      slot: 19
+    # Instant ranked start: generators on, no starting items, defenses on.
+    competitive:
+      material: NETHER_STAR
+      slot: 41
+    currency:
+      material: IRON_INGOT
+      slot: 21
+    # Opens the bed-defense gallery below; its icon follows the chosen preset.
+    defense:
+      slot: 23
+    generators:
+      material: FURNACE
+      slot: 24
+    pickaxe:
+      material: IRON_PICKAXE
+      slot: 22
+    preset-bed-break:
+      material: TNT
+      slot: 49
+    preset-bridge:
+      material: SCAFFOLDING
+      slot: 48
+    preset-competitive-wipe:
+      material: DIAMOND_SWORD
+      slot: 47
+    # The preset strip: each tile writes a known-good set of modifiers over
+    # the player's dials and starts the run immediately. The two competitive
+    # presets pin the ranked loadout; the rest are casual. A preset the
+    # config has switched off (per-team 0, bots capped at none) never shows.
+    preset-competitive:
+      material: DIAMOND
+      slot: 46
+    preset-sandbox:
+      material: CHEST
+      slot: 52
+    preset-skirmish:
+      material: IRON_SWORD
+      slot: 51
+    preset-warmup:
+      material: FEATHER
+      slot: 50
+    # Starter TNT — auto-ignites on place, like every rush TNT.
+    tnt:
+      material: TNT
+      slot: 25
+  rows: 6
+rushshop:
+  # An unfilled Quick Buy slot.
+  quickbuy-empty: RED_STAINED_GLASS_PANE
+  # The Quick Buy tab's icon.
+  quickbuy:
+    material: GOLD_BLOCK
+  # The separator row: the plain pane, and the pane under the open tab.
+  separator: GRAY_STAINED_GLASS_PANE
+  separator-selected: LIME_STAINED_GLASS_PANE
 # PracticeCore GUI layout
 #
 # This file controls menu STRUCTURE: which slot each button occupies, its icon
@@ -10,95 +138,102 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 6
+config-version: 9
 
-# The glass pane border drawn around every menu.
-filler:
-  material: GRAY_STAINED_GLASS_PANE
-
-# Navigation, identical in every menu: Back bottom-left, Close bottom-right,
-# paging in the bottom-middle, whatever the row count. Slots here and under a
-# menu's own back:/close: are OVERRIDES — leave them out and the plugin puts
-# each control in its style-guide position for that menu's height.
+# Navigation row shared by every paged menu (six-row menus).
 nav:
-  back: {material: ARROW}
-  previous: {material: SPECTRAL_ARROW}
-  page: {material: MAP}
-  next: {material: SPECTRAL_ARROW}
-  close: {material: BARRIER}
+  back:
+    material: ARROW
+  close:
+    material: BARRIER
   # Icon shown in the middle of an empty list.
   empty-material: COBWEB
+  next:
+    material: SPECTRAL_ARROW
+  page:
+    material: MAP
+  previous:
+    material: SPECTRAL_ARROW
 
 # The hub menu (/practice menu).
 main:
-  rows: 4
   buttons:
-    play: {enabled: true, slot: 10, material: COMPASS}
-    random: {enabled: true, slot: 11, material: ENDER_EYE}
-    leaderboards: {enabled: true, slot: 12, material: GOLD_INGOT}
-    stats: {enabled: true, slot: 13, material: BOOK}
-    restart: {enabled: true, slot: 14, material: CLOCK}
-    sidebar: {enabled: true, slot: 15, material: OAK_SIGN}
-    help: {enabled: true, slot: 16, material: PAPER}
     # Only rendered during a PvP bot session.
-    bot: {enabled: true, slot: 20, material: ZOMBIE_HEAD}
+    bot:
+      enabled: true
+      material: ZOMBIE_HEAD
+      slot: 31
+    help:
+      enabled: true
+      material: PAPER
+      slot: 16
+    leaderboards:
+      enabled: true
+      material: GOLD_INGOT
+      slot: 12
+    leave:
+      enabled: true
+      material: OAK_DOOR
+      slot: 24
+    play:
+      enabled: true
+      material: COMPASS
+      slot: 10
+    random:
+      enabled: false
+      material: ENDER_EYE
+      slot: 11
+    restart:
+      enabled: true
+      material: CLOCK
+      slot: 14
+    settings:
+      enabled: true
+      material: COMPARATOR
+      slot: 22
+    sidebar:
+      enabled: false
+      material: OAK_SIGN
+      slot: 15
     # Opens the spectate target picker; needs practicecore.spectate.
-    spectate: {enabled: true, slot: 19, material: SPYGLASS}
-    settings: {enabled: true, slot: 21, material: COMPARATOR}
-    leave: {enabled: true, slot: 23, material: OAK_DOOR}
+    spectate:
+      enabled: true
+      material: SPYGLASS
+      slot: 20
+    stats:
+      enabled: true
+      material: BOOK
+      slot: 13
+  rows: 4
 
 # The per-player settings menu.
 settings:
-  rows: 3
   buttons:
-    night-vision: {enabled: true, slot: 11, material: GOLDEN_CARROT}
+    night-vision:
+      enabled: true
+      material: GOLDEN_CARROT
+      slot: 11
+    time:
+      enabled: true
+      material: DAYLIGHT_DETECTOR
+      slot: 15
     # The wool button's icon always shows the currently selected color.
-    wool-color: {enabled: true, slot: 13}
-    time: {enabled: true, slot: 15, material: DAYLIGHT_DETECTOR}
+    wool-color:
+      enabled: true
+      slot: 13
+      
+    sidebar:
+      enabled: true
+      material: OAK_SIGN
+      slot: 16
+  rows: 3
 
-# The rush pre-join menu: team base, match modifiers, defender bots, start.
-# With no bots every objective is armed on every run; with bots the run
-# becomes a combat run whose goal is the team wipe.
-#
-# Four rows that read top to bottom as the order the choices are made: where
-# you start, what you start with, who is waiting for you, then go — and a
-# preset strip along the bottom border for one-click starts.
-rush:
-  rows: 6
-  buttons:
-    # Row 1 — where the run starts. The icon is always the team's own wool.
-    team: {slot: 13}
-    # Row 2 — the six match modifiers.
-    blocks: {slot: 20, material: WHITE_WOOL}
-    currency: {slot: 21, material: IRON_INGOT}
-    pickaxe: {slot: 22, material: IRON_PICKAXE}
-    # Opens the bed-defense gallery below; its icon follows the chosen preset.
-    defense: {slot: 23}
-    generators: {slot: 24, material: FURNACE}
-    # Starter TNT — auto-ignites on place, like every rush TNT.
-    tnt: {slot: 25, material: TNT}
-    # Row 3 — defender bots at enemy bases. The three lineup buttons only
-    # appear while the count is above zero; the armor and sword icons follow
-    # the selected tier.
-    bots: {slot: 29, material: ZOMBIE_HEAD}
-    bot-difficulty: {slot: 30, material: EXPERIENCE_BOTTLE}
-    bot-armor: {slot: 31}
-    bot-sword: {slot: 32}
-    # Row 4 — go. Start carries a summary of everything set above it.
-    start: {slot: 39, material: LIME_DYE}
-    # Instant ranked start: generators on, no starting items, defenses on.
-    competitive: {slot: 41, material: NETHER_STAR}
-    # The preset strip: each tile writes a known-good set of modifiers over
-    # the player's dials and starts the run immediately. The two competitive
-    # presets pin the ranked loadout; the rest are casual. A preset the
-    # config has switched off (per-team 0, bots capped at none) never shows.
-    preset-competitive: {slot: 46, material: DIAMOND}
-    preset-competitive-wipe: {slot: 47, material: DIAMOND_SWORD}
-    preset-bridge: {slot: 48, material: SCAFFOLDING}
-    preset-bed-break: {slot: 49, material: TNT}
-    preset-warmup: {slot: 50, material: FEATHER}
-    preset-skirmish: {slot: 51, material: IRON_SWORD}
-    preset-sandbox: {slot: 52, material: CHEST}
+# Arena categories. Every arena belongs to a category (arena.yml `category:`,
+# defaulting to the arena's mode id); the Play button opens a category picker
+# and each category gets its own arena menu.
+categories:
+  # false = skip the picker and list every arena in one menu, as before.
+  enabled: true
 
 # The bed-defense gallery, opened by the rush menu's defense button. One tile
 # per preset in config.yml's rush.defense-presets; each tile's icon is that
@@ -106,139 +241,201 @@ rush:
 rush-defenses:
   rows: 5
 
-# The per-objective board picker a rush arena opens from the leaderboards.
-# One tile per objective; each icon defaults to the objective's own item.
-rushboards:
-  rows: 3
+# One defense's actions (right-click on a gallery tile).
+beddefense-actions:
   buttons:
-    bed: {slot: 10}
-    emerald: {slot: 12}
-    diamond: {slot: 14}
-    team_wipe: {slot: 16}
+    board:
+      material: GOLD_INGOT
+      slot: 14
+    delete:
+      material: LAVA_BUCKET
+      slot: 22
+    # Only on your own defenses (delete: also admins).
+    edit:
+      material: WRITABLE_BOOK
+      slot: 20
+    favorite:
+      material: AMETHYST_SHARD
+      slot: 13
+    like:
+      material: GOLD_NUGGET
+      slot: 12
+    # The play tile's icon is the defense's own.
+    play:
+      slot: 11
+    # On everyone else's public defenses: flag it for a moderator.
+    report:
+      material: BELL
+      slot: 15
+    # Moderators only: the open reports on this defense.
+    reports:
+      material: WRITTEN_BOOK
+      slot: 23
+    # material while public; material-private while private.
+    visibility:
+      material: LANTERN
+      material-private: SOUL_LANTERN
+      slot: 21
+  rows: 4
 
-# The PvP bot settings menu, opened by the in-arena settings item.
-# The kit and gear buttons' icons follow the current selection.
-pvpbot:
-  rows: 5
+# The editor's menu behind the same item while designing.
+beddefense-editor:
   buttons:
-    kit: {slot: 11, material: CHEST}
-    preset: {slot: 13, material: EXPERIENCE_BOTTLE}
-    gear: {slot: 15}
-    evasiveness: {slot: 19, material: FEATHER}
-    cps: {slot: 20, material: SUGAR}
-    accuracy: {slot: 21, material: TARGET}
-    combos: {slot: 22, material: RABBIT_FOOT}
-    reach: {slot: 23, material: STICK}
-    aggression: {slot: 24, material: BLAZE_POWDER}
-    rod: {slot: 29, material: FISHING_ROD}
-    bow: {slot: 30, material: BOW}
-    block: {slot: 31, material: SHIELD}
-    build: {slot: 32, material: WHITE_WOOL}
+    delete:
+      material: LAVA_BUCKET
+      slot: 15
+    exit:
+      material: OAK_DOOR
+      slot: 16
+    load:
+      material: BOOKSHELF
+      slot: 12
+    name:
+      material: NAME_TAG
+      slot: 10
+    reset:
+      material: RED_DYE
+      slot: 13
+    save:
+      material: EMERALD
+      slot: 11
+    visibility:
+      material: LANTERN
+      material-private: SOUL_LANTERN
+      slot: 14
+  rows: 4
 
-# The PvP kit gallery (left-click selects, right-click previews).
-pvpbot-kits:
-  rows: 5
+# The defense gallery: public / mine / favorites tabs along the footer, plus
+# a review tab that only moderators (practicecore.beddefense.moderate) see.
+beddefense-gallery:
+  tabs:
+    favorites:
+      material: AMETHYST_SHARD
+      slot: 51
+    mine:
+      slot: 47
+    public:
+      material: BOOKSHELF
+      slot: 46
+    review:
+      material: LECTERN
+      slot: 52
 
-# The full-inventory kit preview window. The one menu whose Back and Close
-# sit on the top row: the grid below mirrors a real inventory.
-pvpbot-preview:
-  back: {slot: 0}
-  close: {slot: 8}
+# The moderation list (/practice beddefense moderate): every defense,
+# reported ones first.
+beddefense-moderation:
+  buttons:
+    # Footer toggle: only defenses with open reports.
+    reported:
+      material: BELL
+      slot: 46
 
-# The mirrored MBedwars item shop opened at a rush dealer NPC, laid out like
-# the MBedwars HypixelV2 shop: Quick Buy first, page tabs beside it, a
-# separator row marking the open tab, and the items in the grid below.
-rushshop:
-  # The Quick Buy tab's icon.
-  quickbuy: {material: GOLD_BLOCK}
-  # The separator row: the plain pane, and the pane under the open tab.
-  separator: GRAY_STAINED_GLASS_PANE
-  separator-selected: LIME_STAINED_GLASS_PANE
-  # An unfilled Quick Buy slot.
-  quickbuy-empty: RED_STAINED_GLASS_PANE
+# One defense's reports, opened from its actions.
+beddefense-reports:
+  buttons:
+    # Footer: drop every report on it (two clicks).
+    dismiss:
+      material: LAVA_BUCKET
+      slot: 52
+
+# The in-arena menu behind the bed defense hotbar item while playing.
+# The bed defense leaderboards list: two tiles per defense. The competitive
+# tile wears the defense's own icon; the obsidian tile this one.
+beddefense-boards:
+  obsidian-material: OBSIDIAN
+
+beddefense-session:
+  buttons:
+    defense:
+      slot: 13
+    edit:
+      material: WRITABLE_BOOK
+      slot: 21
+    guided:
+      material: LEAD
+      slot: 12
+    maps:
+      material: FILLED_MAP
+      slot: 23
+    new:
+      material: CRAFTING_TABLE
+      slot: 22
+    preview:
+      material: PAINTING
+      slot: 11
+    restart:
+      material: CLOCK
+      slot: 15
+    settings:
+      material: COMPARATOR
+      slot: 14
+  rows: 4
 
 # Bed defense practice. The category picker lists it as its own category
-# (every rush map qualifies) and every one of its menus is laid out here.
+# (admin-made bed defense maps only) and every one of its menus is laid out here.
 #
 # The setup menu, opened by picking a map: where you start, what you build
 # and under which rules, the editor, then go.
 beddefense:
-  rows: 6
   buttons:
-    # Row 1 — the team base. The icon is always the team's own wool.
-    team: {slot: 13}
     # Row 2 — the defense (icon follows the chosen one) and the round rules.
-    defense: {slot: 20, material: RED_BED}
+    defense:
+      material: RED_BED
+      slot: 19
+    edit:
+      material: WRITABLE_BOOK
+      slot: 32
     # material while practicing; material-competitive while competitive.
-    mode: {slot: 22, material: LEVER, material-competitive: NETHER_STAR}
-    shuffle: {slot: 23, material: ENDER_EYE}
-    timer: {slot: 24, material: REPEATER}
+    mode:
+      material: LEVER
+      material-competitive: NETHER_STAR
+      slot: 21
     # Row 3 — design your own: fresh, or one of yours.
-    new: {slot: 30, material: CRAFTING_TABLE}
-    edit: {slot: 32, material: WRITABLE_BOOK}
-    # Row 4 — go. material for practice; material-competitive while competitive.
-    start: {slot: 40, material: LIME_DYE, material-competitive: NETHER_STAR}
+    new:
+      material: CRAFTING_TABLE
+      slot: 30
+    # Obsidian practice: the defense stands, break in and seal the bed.
+    obsidian:
+      material: OBSIDIAN
+      slot: 23
+    shuffle:
+      material: ENDER_EYE
+      slot: 40
+    # Row 4 — go. material for practice; material-competitive while
+    # competitive; material-obsidian while obsidian practice is on.
+    start:
+      material: LIME_DYE
+      material-competitive: NETHER_STAR
+      material-obsidian: OBSIDIAN
+      slot: 40
+    # Row 1 — the team base. The icon is always the team's own wool.
+    team:
+      slot: 13
+    timer:
+      material: REPEATER
+      slot: 25
   # With categories off, the flat arena and leaderboard lists carry this
   # button instead of a category tile.
-  flat-button: {enabled: true, slot: 51, material: RED_BED}
+  flat-button:
+    enabled: true
+    material: RED_BED
+    slot: 51
+  rows: 6
 
-# The defense gallery: public / mine / favorites tabs along the footer.
-# The Mine tab's icon is always the viewer's own head.
-beddefense-gallery:
-  tabs:
-    public: {slot: 46, material: BOOKSHELF}
-    mine: {slot: 47}
-    favorites: {slot: 51, material: AMETHYST_SHARD}
+# The glass pane border drawn around every menu.
+filler:
+  material: GRAY_STAINED_GLASS_PANE
 
-# One defense's actions (right-click on a gallery tile).
-beddefense-actions:
-  rows: 4
+# The per-objective board picker a rush arena opens from the leaderboards.
+# One tile per objective; each icon defaults to the objective's own item.
+rushboards:
   buttons:
-    # The play tile's icon is the defense's own.
-    play: {slot: 11}
-    like: {slot: 12, material: GOLD_NUGGET}
-    favorite: {slot: 13, material: AMETHYST_SHARD}
-    board: {slot: 14, material: GOLD_INGOT}
-    # Only on your own defenses (delete: also admins).
-    edit: {slot: 20, material: WRITABLE_BOOK}
-    # material while public; material-private while private.
-    visibility: {slot: 21, material: LANTERN, material-private: SOUL_LANTERN}
-    delete: {slot: 22, material: LAVA_BUCKET}
-
-# The in-arena menu behind the bed defense hotbar item while playing.
-beddefense-session:
-  rows: 4
-  buttons:
-    preview: {slot: 10, material: PAINTING}
-    guided: {slot: 11, material: LEAD}
-    defense: {slot: 12}
-    settings: {slot: 13, material: COMPARATOR}
-    restart: {slot: 14, material: CLOCK}
-    edit: {slot: 20, material: WRITABLE_BOOK}
-    new: {slot: 21, material: CRAFTING_TABLE}
-    maps: {slot: 22, material: FILLED_MAP}
-
-# The editor's menu behind the same item while designing.
-beddefense-editor:
-  rows: 4
-  buttons:
-    name: {slot: 10, material: NAME_TAG}
-    save: {slot: 11, material: EMERALD}
-    load: {slot: 12, material: BOOKSHELF}
-    reset: {slot: 13, material: RED_DYE}
-    visibility: {slot: 14, material: LANTERN, material-private: SOUL_LANTERN}
-    delete: {slot: 15, material: LAVA_BUCKET}
-    exit: {slot: 16, material: OAK_DOOR}
-
-# Arena categories. An arena's category is the folder its own folder sits in:
-# templates/<category>/<arena>/ is listed under <category>, and an arena
-# straight in templates/ is listed under its mode id. The Play button opens a
-# category picker and each category gets its own arena menu.
-categories:
-  # false = skip the picker and list every arena in one menu, as before.
-  enabled: true
-  # Optional per-category display overrides. The key is the category name:
-  #   entries:
-  #     bridging: {name: 'Bridging', icon: LIGHT_BLUE_WOOL}
-  #     bedbreak: {name: 'Bed Break', icon: RED_BED}
-  entries: {}
+    bed:
+      slot: 10
+    diamond:
+      slot: 14
+    emerald:
+      slot: 12
+    team_wipe:
+      slot: 16
+  rows: 3

@@ -30,8 +30,11 @@ At a glance, the five modes:
   MBedwars) with every objective armed: enemy bed, emerald, diamond, first one
   wins, each with its own leaderboard.
 - **beddefense**: build a saved bed defense at your base against the clock,
-  from a gallery of player-designed defenses with likes, favorites, a
-  block-by-block preview, guided building and an in-world editor.
+  on admin-made bed defense maps, from a gallery of player-designed defenses
+  with likes, favorites, reports, a block-by-block preview, guided building
+  and an in-world editor; a defense goes public only once its author has
+  built it for real. Obsidian practice starts with the defense standing:
+  break in, seal the bed with eight obsidian, build it back.
 - **mlg**: water-bucket clutches from a random drop height; the score is your
   streak.
 - **pvpbot**: an endless spar against an AI opponent that strafes, combos,
@@ -41,7 +44,7 @@ At a glance, the five modes:
 
 - [How it works](#how-it-works)
 - [The modes](#the-modes): [bridging](#bridging) · [bedbreak](#bedbreak) ·
-  [rush](#rush) · [beddefense](#beddefense) · [mlg](#mlg) · [pvpbot](#pvpbot) ([Tuning the bot](#tuning-the-bot))
+  [rush](#rush) · [beddefense](#beddefense) ([Bed defense maps](#bed-defense-maps)) · [mlg](#mlg) · [pvpbot](#pvpbot) ([Tuning the bot](#tuning-the-bot))
 - [Spectator mode](#spectator-mode)
 - [Configuration](#configuration)
 - [Messages](#messages)
@@ -96,6 +99,12 @@ At a glance, the five modes:
   session and restores everything except your location, letting the destination
   win. That check runs at `MONITOR` on the teleport, so a teleport some other
   plugin cancels can never end a run that never moved.
+- Anything the plugin has to tell a player who is not there, a moderator
+  hiding their bed defense, an admin wiping their bests, is **queued in their
+  playerdata** as a message key plus placeholders (never rendered text, so
+  the wording in `messages.yml` at delivery time wins) and delivered a second
+  after their next login (`notice/NoticeService`). A player who is online
+  gets the line at once.
 
 ## The modes
 
@@ -202,6 +211,11 @@ Maps come from two places:
   spawner block), `rush dealer` (shop NPC spot), `rush clear` to start over.
   At least one team needs both a spawn and a bed to save.
 
+The same importer and the same wizard steps also make **bed defense maps**,
+through `/practice beddefense import` and `/practice setup beddefense …`,
+see [Bed defense maps](#bed-defense-maps). A rush map is not a bed defense
+map, nor the other way round: the arena's mode decides which menu it opens.
+
 Clicking a rush arena in the GUI opens the **rush setup menu** instead of
 joining straight away. It reads top to bottom as the order the choices are
 made: the **team base** on the first row, the five **match modifiers** on the
@@ -262,12 +276,14 @@ shop is unavailable). Generator pacing is configurable under `rush:` in
 
 ### beddefense
 
-Bed defense practice: you spawn at a team base of a rush map, your own bed
-standing, and build a saved **bed defense** around it as fast as you can. The
-mode has no arenas of its own, every rush map is a bed defense map, and the
-Play menu lists it as its own **Bed Defense** category (with categories off,
-a button on the flat arena list). Picking a map opens the bed defense setup
-menu, not the rush one.
+Bed defense practice: you spawn at a team base of a **bed defense map**, your
+own bed standing, and build a saved **bed defense** around it as fast as you
+can. Bed defense maps are arenas of their own, made by an admin (see
+[Bed defense maps](#bed-defense-maps) below), and the Play menu always lists
+them under one **Bed Defense** category tile, whatever folder they sit in
+(with categories off, a button on the flat arena list). Picking a map opens
+the bed defense setup menu, not the rush one; `/practice join <map>` goes
+there directly, and `/practice menu beddefense` opens the map picker.
 
 The defenses are designed by players, not shipped: the plugin comes with none
 on purpose, and the first player in is put straight into the **editor** to
@@ -284,7 +300,7 @@ your wool-color setting and shop purchases all count. Only water **source**
 blocks count (flowing water never does), and a waterlogged ladder is a
 ladder.
 
-Two ways to play, chosen in the setup menu:
+Two ways to play, chosen in the setup menu, and an obsidian drill on top:
 
 - **Competitive**: a real match opening: sword, team-dyed leather, the
   base's iron and gold generators and the mirrored MBedwars shop; blocks are
@@ -301,12 +317,32 @@ Two ways to play, chosen in the setup menu:
   with competitive ones. Extras: **shuffle** (a different defense every
   round from your favorites or the public gallery) and **timer start** (first
   movement or first block).
+- **Obsidian** (the Obsidian toggle; it sets the mode aside while on): the
+  defense stands already built when the round starts, and the goal is to
+  break into it, put the eight obsidian in your kit on the bed — the six
+  blocks touching its sides at bed height and the two on top — and build
+  the defense back. Whatever the designer had on those eight spots gives way
+  to obsidian; everything else must stand again as designed. The kit is
+  fixed: a wooden pickaxe, a wooden axe and shears (`beddefense.obsidian.tools`
+  in `config.yml`), the eight obsidian, sword and armor, with no generators
+  or shop, so times compare and every obsidian round is **ranked**, on a
+  board of its own. The timer runs from the first move (breaking a block
+  starts it too); shuffle still works. Broken blocks come straight back to
+  your inventory, as in practice. A defense that already has obsidian on any
+  of those eight spots cannot be used for it — the gallery says so on its
+  tile, and the toggle counts how many defenses qualify. The preview shows
+  the eight obsidian going onto the bed instead of the defense going up, and
+  there is no guided building.
 
 Boards are kept **per defense**, not per map: `beddefense#<id>` is the ranked
-competitive board and appears under its own category in the leaderboards
-menu, while `beddefense#<id>#practice` holds your private practice bests.
-Competitive records and personal bests broadcast exactly like every other
-mode; practice ones stay with you.
+competitive board and `beddefense#<id>#obsidian` the ranked obsidian board,
+both under the Bed Defense category in the leaderboards menu (two tiles per
+defense, the obsidian one wearing an obsidian icon), while
+`beddefense#<id>#practice` holds your private practice bests. Competitive and
+obsidian records and personal bests broadcast exactly like every other mode;
+practice ones stay with you. Playing from a board plays in that board's mode.
+`/practice top <map>` on a bed defense map points you at those boards rather
+than pretending the map has one.
 
 **Preview**: drop any item (or use the bed defense item's menu) before an
 attempt starts and the defense assembles itself block by block in front of
@@ -318,7 +354,7 @@ up. Nothing can be placed or broken during a preview.
 **Guided building**: the next block in the designer's order floats over its
 spot, glowing and blinking, until you place it. Untimed. Dropping an item
 *mid-attempt* switches to guided building instead of a preview, the timer
-is cancelled but the blocks you already placed stay, and the preview hotbar
+is canceled but the blocks you already placed stay, and the preview hotbar
 has a guided item too. Coming from a competitive round you are handed the
 blocks. Finishing a guided build resets for a timed attempt.
 
@@ -331,27 +367,129 @@ out bricks; without it, the `beddefense.blocks` list in `config.yml`. Water
 comes as buckets either way. You may place only
 within the radius, and break only your own blocks, instantly. The bed
 defense item opens the editor menu: **name** (asked in chat), **save** (and
-go play it), **load** one of yours, **clear**, **visibility** and **leave**.
-Saving refuses a defense that already exists, any published one or one of
-your own with the exact same blocks (order ignored), with a title, a chat
-line, and clickable **Play it / Like it / Favorite it** actions for the
-original. Your own saved defenses can be reshaped under the same id, keeping
-their likes and boards.
+go play it), **load** one of yours, **clear** (two clicks), **visibility**
+(disabled, "complete it in competitive first", until the defense is cleared,
+see below) and **leave**. Saving refuses a defense that already exists, any
+published one or one of your own with the exact same blocks (order
+ignored), with a title, a chat line, and clickable **Play it / Like it /
+Favorite it** actions for the original. Your own saved defenses can be
+reshaped under the same id, keeping their likes and boards, but a reshaped
+public defense goes private again until you clear the new shape, and says
+so.
+
+**Publishing** is gated: a defense can only be made public once its author
+has finished that exact shape in a competitive round themselves, proof it
+can be built for real (`beddefense.require-author-clear` in `config.yml`,
+on by default; nobody bypasses it, moderators included). The defense file records the
+cleared shape as `cleared-fingerprint`, and reshaping the defense withdraws
+the clearance until it is cleared again. Trying to publish before then
+refuses with a clickable **Play it competitively** action (`/practice
+beddefense play <id> competitive`, the play command takes an optional
+`competitive` or `practice` word that sets the round mode first), and the
+author's first competitive completion says it can be made public now, with
+a clickable **Publish it**.
+
+You are always told when one of your defenses changes visibility, and why:
+you changed it yourself, a moderator made it public or private, you changed
+its blocks, or a moderator deleted it. Online, the line arrives at once;
+away, it is queued in your playerdata (`notices:`, at most 50) and delivered
+a second after your next login. `/practice pb reset` tells the player the
+same way.
 
 **The gallery** (the setup menu's defense button, or the in-arena menu) has
 three tabs: **Public**, sorted by likes, then by how many different players
-have built it; **Mine**; and **Favorites**. Left-click chooses a defense,
-right-click opens its actions: like (public, one per player), favorite (your
-private bookmark, also a shuffle pool), its boards, and, on your own, edit,
-publish/unpublish and delete (two clicks). Admins may delete anyone's.
-`/practice beddefense` opens the map picker; `play|like|favorite|publish|
-unpublish|edit|delete <id>` and `list` do the same from chat.
+have built it; **Mine**; and **Favorites** (moderators see a fourth,
+**Review**, below). Left-click chooses a defense, right-click opens its
+actions: like (public, one per player), favorite (your private bookmark,
+also a shuffle pool), its boards, **report** (someone else's public
+defense), and, on your own, edit, publish/unpublish and delete (two
+clicks). `/practice beddefense` opens the map picker; `play <id>
+[competitive|practice|obsidian]`, `like|favorite|publish|unpublish|edit <id>`,
+`report <id> [reason]`, `delete <id> confirm` and `list` do the same from
+chat, and `/practice beddefense help` lists them.
 
-Defenses live in `defenses/<id>.yml`, one file each, shared by everyone;
-`/practice reload` re-reads them. Tuning is under `beddefense:` in
-`config.yml`: the block list, the editor radius, defenses per player, name
-length, preview speed, the marker's blink, the hologram, and the hotbar
-items.
+**Reports**: `/practice beddefense report <id> [reason]`, or the Report
+button on a defense's actions menu, which asks for the reason in chat. Only
+public defenses can be reported, never your own; one report per player, a
+second replaces the first; the reason may run to
+`beddefense.reports.reason-max-length` characters (default 80).
+
+A public defense **hides itself** when enough of the players who have built
+it report it: at least `reports.auto-hide.min-reports` of them (default 3)
+making up at least `reports.auto-hide.percent` (default 25) of everyone but
+the author who has started a round on it. Reports from players who never
+built it still reach moderators but do not count toward that. The author is
+told, and cannot publish it again (from the gallery, the editor, or by
+reshaping it) until a moderator dismisses its reports or publishes it
+themselves, which also closes the reports. `percent: 0` switches this off.
+
+For moderators: the permission is `practicecore.beddefense.moderate`
+(default op, part of `practicecore.admin`). Every moderator online is told
+of a new report (`beddefense.reports.notify-moderators`) with clickable
+**Review** / **Play it** actions, and of a defense that hid itself whatever
+that setting says. Reports no moderator has looked at yet (opened the
+defense's review menu or its reports, or ran `info <id>`) come up again: to
+a moderator a couple of seconds after they join
+(`reports.remind-on-join`) and to every moderator online every
+`reports.remind-minutes` (default 30, 0 for never), as a list of the
+defenses with new reports and clickable **Open moderation** / **List
+reports** actions. `/practice beddefense moderate` opens the
+moderation menu, every defense on the server, reported ones first and
+private ones included, with a **Reported Only** toggle; the gallery's
+**Review** tab holds the same list; and a defense's actions menu shows a
+moderator its visibility override, delete and a **Reports** menu (dismiss
+one report or all of them, two clicks). From chat: `reports` (every
+reported defense), `all` (every defense), `review <id>` (its actions
+menu), `info <id>` (its details in chat), `publish|unpublish <id>` on
+anyone's (the author is told; publishing still needs their competitive
+completion), `dismiss <id>` (which lifts an automatic hide once no report
+is left) and `delete <id> confirm` on anyone's. Deleting from chat always
+asks for `confirm`. The text lives in
+`messages.yml` under `beddefense.report.*`, `beddefense.moderate.*`,
+`beddefense.notice.*`, `gui.beddefense.moderation.*` and
+`gui.beddefense.reports.*`; the menus' layout under `beddefense-moderation`
+and `beddefense-reports` in `guis.yml`.
+
+Defenses live in `defenses/<id>.yml`, one file each, shared by everyone,
+carrying the blocks, likes, favorites, completions, `cleared-fingerprint`,
+`reports`, `reports-seen` and `auto-hidden`; `/practice reload` re-reads
+them. Tuning is under `beddefense:` in `config.yml`: the block list, the
+editor radius, defenses per player, name length, the obsidian practice
+tools (`obsidian.tools`), the publishing gate
+(`require-author-clear`), reports (`reports.notify-moderators`,
+`reports.reason-max-length`, `reports.remind-on-join`,
+`reports.remind-minutes`, `reports.auto-hide.percent`,
+`reports.auto-hide.min-reports`), preview speed, the marker's blink, the
+hologram, and the hotbar items.
+
+#### Bed defense maps
+
+A bed defense map is an arena template with `mode: beddefense` carrying the
+same team, bed, generator and dealer layout a rush map does (the
+`settings.rush` section of its `arena.yml`, the key name is historical). A
+rush map is not a bed defense map, nor the other way round: the mode
+decides which menu a map opens. Two ways to make one, both needing
+`practicecore.setup`:
+
+- **MBedwars import**: `/practice beddefense import <mbedwars-arena> [name]
+  [overwrite]` and `/practice beddefense importall [teams:<n>] [size:<n>]
+  [category:<name>] [overwrite]` are the rush importer under another mode
+  id (MBedwars installed; the filters are described under [rush](#rush)). A
+  re-import through this branch stamps the arena `beddefense`, even one
+  imported as rush before, which is how a rush map becomes a bed defense
+  map. The **Import Maps** menu in `/practice setup gui` does the same:
+  left-click imports as rush, right-click as bed defense.
+- **By hand**: `/practice setup start <name>`, `/practice setup mode
+  beddefense`, then `/practice setup beddefense team <color>` (stand at
+  that base's spawn), `bed <color>` (look at that team's bed), `gen
+  <iron|gold|diamond|emerald>`, `dealer` and `clear`, exactly the rush
+  layout steps under another name; the wizard panel shows them on its
+  layout row. One team with both a spawn and a bed is enough, and save
+  refuses without one.
+
+`/practice beddefense maps` lists them, flagging any with no playable base.
+Whatever folder a bed defense map sits in, players find it under the Bed
+Defense tile, never in another category's list or the flat arena list.
 
 ### mlg
 
@@ -676,6 +814,16 @@ about:
 - `rush` covers the generators, the emulated MBedwars combat items (TNT fuse,
   fireball power, explosion knockback, the bridge egg, the rescue platform) and
   the dealer's villager profession.
+- `beddefense` holds the block list (or `blocks-from-shop` to read it off
+  MBedwars), the editor radius, defenses per player, name length, the
+  publishing gate (`require-author-clear`, on by default: a defense goes
+  public only once its author has finished it competitively, whoever
+  publishes it), `reports` (`notify-moderators` tells every moderator
+  online about a new report, `reason-max-length` caps the reason, default
+  80, `remind-on-join` and `remind-minutes` bring unseen reports up again,
+  and `auto-hide.percent` / `auto-hide.min-reports` let a defense hide
+  itself once enough of its builders report it), the obsidian emerald
+  generator, and the preview, guided-building and hologram tuning.
 - `spectate` can be switched off entirely, and carries the leash margin and the
   three hotbar tools' materials and slots.
 
@@ -766,28 +914,36 @@ genuinely fills all 36 slots wins, and the menu stays reachable via
   join command uses, showing your best, your rank and the arena record per
   entry. An arena's category is **the folder its folder sits in**:
   `templates/<category>/<arena>/` is listed under `<category>`, and an arena
-  straight in `templates/` is listed under its mode id. Re-categorising is a
-  drag-and-drop plus `/practice reload`, or `/practice setup category
-  <name|default>` during the wizard, which moves the folder for you. Give a
+  straight in `templates/` is listed under its mode id. Re-categorizing is a
+  drag-and-drop plus `/practice reload`, `/practice setup category
+  <name|default>` during the wizard, or `/practice arena category <arena>
+  <name|default>` on a saved arena, both of which move the folder for you. Give a
   category an icon and display name under `categories.entries` in `guis.yml`;
-  turn `categories.enabled` off there to go back to one flat list.
-- **Random Arena**: straight into one of the arenas you can play
+  turn `categories.enabled` off there to go back to one flat list. Bed
+  defense maps are the one exception: they always sit under the **Bed
+  Defense** tile whatever folder they are in (or behind a footer button on
+  the flat list).
+- **Random Arena**: straight into one of the arenas you can play. Off by
+  default (`main.buttons.random` in `guis.yml`).
 - **Leaderboards**: per-arena top times, your standing, and the gap to the
   player one place ahead
 - **My Stats**: every arena you've finished, ranked
 - **Restart Run**: reverts your blocks and puts you back on the spawn
 - **Spectate**: the spectator target picker: one head per player currently
   practicing (needs `practicecore.spectate`; see [Spectator mode](#spectator-mode))
-- **Sidebar**: show/hide the live timer scoreboard (remembered per player)
 - **Settings**: per-player, persisted in playerdata: permanent night vision
   while practicing, the color of the wool in your kit (and so of your
-  bridges), and a client-side time of day for your arena. Changes apply
-  immediately mid-session and are undone when you leave.
+  bridges), a client-side time of day for your arena, and the **Sidebar**
+  toggle (show/hide the live timer scoreboard, remembered per player; the
+  hub's own copy of that button is off by default, `main.buttons.sidebar`).
+  Changes apply immediately mid-session and are undone when you leave.
 - **Help** and **Leave**
+- **Bot Settings**, on the bottom row, only while sparring the PvP bot
 
 Every one of these menus can also be opened directly from chat:
-`/practice menu <main|arenas|categories|leaderboards|stats|settings>` (a bare
-`/practice menu` opens the hub).
+`/practice menu <main|arenas|categories|leaderboards|stats|settings|beddefense>`
+(a bare `/practice menu` opens the hub; `beddefense` is the bed defense map
+picker).
 
 The leave button restores everything and returns you to the world you came
 from, or hands you to the proxy server named in `leave.server`, if set.
@@ -815,7 +971,7 @@ and `session.validate-inventory-ticks` in `config.yml`.
 | Java | 21+ | ✅ |
 | [WorldEdit](https://enginehub.org/worldedit) | 7.3+, [FastAsyncWorldEdit](https://github.com/IntellectualSites/FastAsyncWorldEdit) strongly recommended instead, see below | ✅ |
 | [FastBoard](https://github.com/MrMicky-FR/FastBoard) | 2.2.1, fetched automatically at runtime via `plugin.yml` `libraries:`, nothing to install | ✅ |
-| [MBedwars](https://mbedwars.com/) | 5.5+, enables `/practice rush import` and the mirrored item shop for the rush mode | Optional |
+| [MBedwars](https://mbedwars.com/) | 5.5+, enables `/practice rush import`, `/practice beddefense import` and the mirrored item shop for the rush and bed defense modes | Optional |
 | [ProtocolLib](https://github.com/dmulloy2/ProtocolLib) | 5.3+, renders the PvP bot as a real player model wearing your skin; without it the bot is a husk scaled to player height | Optional |
 
 **FastAsyncWorldEdit is strongly recommended** over plain WorldEdit: with FAWE
@@ -843,19 +999,30 @@ re-read the file.
 | `/practice setup …` | `practicecore.setup` | Arena configuration wizard |
 | `/practice edit <arena>` | `practicecore.setup` | Reopen a saved arena |
 | `/practice rush import\|importall\|list` | `practicecore.setup` | Pull rush maps from MBedwars (one, or all matching a shape) |
-| `/practice beddefense [play\|like\|favorite\|publish\|unpublish\|edit\|delete <id>\|list]` | `practicecore.use` | Bed defense practice: maps, gallery actions, editor |
-| `/practice arena …` | `practicecore.arena` | Administer saved arenas |
+| `/practice beddefense` | `practicecore.use` | The bed defense map picker (`help` lists every subcommand you may use) |
+| `/practice beddefense play <id> [competitive\|practice]` | `practicecore.use` | Build a defense, optionally setting the round mode first |
+| `/practice beddefense like\|favorite\|publish\|unpublish\|edit <id>` | `practicecore.use` | Gallery actions and the editor from chat (`edit` alone opens a fresh editor) |
+| `/practice beddefense report <id> [reason]` | `practicecore.use` | Flag someone else's public defense for a moderator (no reason: asked in chat) |
+| `/practice beddefense delete <id> confirm` | `practicecore.use` | Delete one of your own defenses and every time on it |
+| `/practice beddefense list` | `practicecore.use` | Every defense you can play |
+| `/practice beddefense moderate\|reports\|all` | `practicecore.beddefense.moderate` | The moderation menu, every reported defense, every defense (private ones included) |
+| `/practice beddefense review\|info\|dismiss <id>` | `practicecore.beddefense.moderate` | One defense's actions menu, its details in chat, or close its reports |
+| `/practice beddefense publish\|unpublish <id>`, `delete <id> confirm` | `practicecore.beddefense.moderate` | Show, hide or delete anyone's defense; the author is told |
+| `/practice beddefense import\|importall\|maps` | `practicecore.setup` | Pull bed defense maps from MBedwars (same filters as rush), or list them |
+| `/practice arena …` | `practicecore.arena` | Administer saved arenas (`list`, `info`, `default`, `delete`, `permission`, `display`, `icon`, `blocks`, `category`, `mode`) |
 | `/practice item [player]` | `practicecore.item` | Get the hotbar menu item |
-| `/practice pb reset <player> [arena\|all]` | `practicecore.pb.reset` | Wipe personal bests |
+| `/practice pb reset <player> [arena\|all confirm]` | `practicecore.pb.reset` | Wipe personal bests (wiping everything asks for `confirm`) |
 | `/practice world info\|regen` | `practicecore.world` | Practice world management |
 | `/practice reload` | `practicecore.reload` | Reload config and arenas |
 | none | `practicecore.bypass` | Enter the practice world without a session |
 
-`practicecore.admin` is a parent of every admin node above.
+`practicecore.admin` is a parent of every admin node above,
+`practicecore.beddefense.moderate` included.
 
 `/practice pb reset` tab-completes **every player the plugin has records for**,
 online or not, the name index is built from `playerdata/` on startup and kept
-current as players join.
+current as players join. The player is told their bests were wiped, at once
+or on their next login.
 
 ## Permissions
 
@@ -867,13 +1034,14 @@ current as players join.
 | `practicecore.leaderboard` | `false` (via `user`) | View leaderboards |
 | `practicecore.spectate` | `false` (via `user`) | Spectate other players' practice sessions |
 | `practicecore.stats.other` | `op` | View another player's practice stats |
-| `practicecore.setup` | `op` | Create and edit arena templates in-world; import rush maps |
-| `practicecore.arena` | `op` | Administer saved arenas (delete, permission, icon, …) |
+| `practicecore.setup` | `op` | Create and edit arena templates in-world; import rush and bed defense maps |
+| `practicecore.arena` | `op` | Administer saved arenas (delete, permission, icon, category, mode, …) |
 | `practicecore.pb.reset` | `op` | Wipe personal bests |
 | `practicecore.item` | `op` | Give yourself the hotbar menu item |
 | `practicecore.reload` | `op` | Reload config and templates |
 | `practicecore.world` | `op` | Inspect and regenerate the practice world |
 | `practicecore.bypass` | `op` | Enter the practice world without a session (no confinement) |
+| `practicecore.beddefense.moderate` | `op` | Moderate player-made bed defenses (see every one, show or hide any, review and dismiss reports, delete any) |
 | `practicecore.admin` | `op` | Parent of every admin node above |
 | `practicecore.arena.<arena>` | none | Per-arena gate, see [Per-arena permissions](#per-arena-permissions) |
 
@@ -885,7 +1053,9 @@ It is a parent of `practicecore.use`, `practicecore.menu`,
 to false on its own), so
 revoking `practicecore.user` from a group switches the plugin off for them in
 one move, while the children stay available for finer control.
-`practicecore.admin` is the equivalent kit for every admin node.
+`practicecore.admin` is the equivalent kit for every admin node, including
+`practicecore.beddefense.moderate`, which can also be handed out on its own
+to moderators who should not touch arenas.
 
 ### Per-arena permissions
 
@@ -928,12 +1098,19 @@ path falls back to that player's first available arena rather than failing.
 ## Creating an arena template
 
 Everything below can also be done from a menu: `/practice setup gui` lists
-every arena (left-click edits, right-click deletes, the anvil creates a new
-one) and, while the wizard is open, shows a control panel with a button for
-each step, text answers like the display name are asked for in chat. That
-GUI is intentionally **not** configurable: it reads neither `messages.yml`
-nor `guis.yml`, so a half-edited config can never break the tool you would
-use to fix it.
+every arena (left-click opens its options, default, display name, icon,
+permission, PB blocks, category, mode, delete and info, plus the editor;
+right-click deletes; the crafting table creates a new one) and, while the
+wizard is open, shows a control panel with a button for each step, text
+answers like the display name are asked for in chat, and its third row
+carries the layout markers of the arena's mode (team spawn, bed, generator
+and dealer for rush and bed defense maps, the bot spawn for PvP bot
+arenas). The list's footer also reaches an **Import Maps** menu (shown
+with MBedwars installed: left-click pulls an arena in as a rush map,
+right-click as a bed defense map), the **Bed Defenses** moderation list and
+a two-click **Reload**. That GUI is intentionally **not** configurable: it
+reads neither `messages.yml` nor `guis.yml`, so a half-edited config can
+never break the tool you would use to fix it.
 
 1. Build your arena anywhere (even another world). Include the start island,
    the gap, and the finish island. **Don't** place the finish button yet.
@@ -950,6 +1127,12 @@ use to fix it.
    (e.g. 2×64 wool) and run `/practice setup kit`
 7. `/practice setup save`: the template goes live immediately.
 
+For a rush map, a bed defense map or a PvP bot arena the mode's own markers
+replace the finish triggers: `/practice setup rush …`, `/practice setup
+beddefense …` (see [Bed defense maps](#bed-defense-maps)) and `/practice
+setup pvpbot bot`. A rush or bed defense map refuses to save until one team
+has both a spawn and a bed.
+
 Templates live in `plugins/PracticeCore/templates/<name>/` as `arena.schem` +
 `arena.yml`; they can be copied between servers as folders. Put an arena
 folder inside another folder, `templates/<category>/<name>/`, and that
@@ -963,8 +1146,8 @@ Optional polish, either mid-wizard or on a saved arena:
 | `/practice setup icon [material]` | `/practice arena icon <arena> <material\|auto>` | Menu icon (defaults to the kit's main block) |
 | `/practice setup permission <node\|none>` | `/practice arena permission <arena> <node\|none>` | Gate the arena |
 | `/practice setup blocks <true\|false>` | `/practice arena blocks <arena> <true\|false>` | Require a placed block for a PB |
-| `/practice setup mode <id>` | none | Which `Mode` the arena belongs to |
-| `/practice setup category <name\|default>` | move the folder | Which menu group it is listed under |
+| `/practice setup mode <id>` | `/practice arena mode <arena> <id>` | Which `Mode` the arena belongs to |
+| `/practice setup category <name\|default>` | `/practice arena category <arena> <name\|default>` | Which menu group it is listed under (the folder is moved for you) |
 
 ## Editing a saved arena
 
@@ -991,8 +1174,12 @@ exists.
   commits, `/practice setup cancel` leaves the saved arena untouched.
 
 Other arena administration is available without entering the wizard:
-`/practice arena list`, `info <arena>`, `default [arena|none]`, and
-`delete <arena> confirm`. Deleting
+`/practice arena list`, `info <arena>`, `default [arena|none]`,
+`category <arena> <name|default>`, `mode <arena> <id>`, and
+`delete <arena> confirm`; the arena's options menu in `/practice setup gui`
+offers the same set. Changing a saved arena's mode is how a hand-built rush
+map becomes a bed defense map without a re-import (the layout is shared).
+Deleting
 evicts anyone currently in the arena and removes it completely: the folder, its
 schematic, its leaderboard, and every recorded time on it across all
 playerdata. (The on-disk sweep matters, leaving the times behind would have
@@ -1091,6 +1278,7 @@ plugin owns carries a `data-version` (see `config/Versions.java`):
 | `templates/[<category>/]<name>/arena.yml` | `config-version` | `ArenaTemplate.migrate` |
 | `playerdata/<uuid>.yml` | `data-version` | `StatsStore.migrate` |
 | `snapshots/<uuid>.yml` | `data-version` | version-checked on restore |
+| `defenses/<id>.yml` | `data-version` (`Versions.DEFENSE`) | `DefenseStore`, read with defaults and stamped on save |
 
 The admin-editable YAML files share one engine, `config/YamlMigrator`, wrapped
 by `config/ConfigFile`, which also lays the jar's copy underneath yours as
@@ -1126,6 +1314,12 @@ boolean with `arenas.access-mode`, mapping `true` to `ALLOW` and `false` to
 `DENY` so existing servers keep the behavior they had. `arena.yml` v1 → v2 is
 another: the single `trigger:` section became the `triggers:` list when arenas
 gained multiple finish triggers, old files migrate to a one-entry list.
+Purely additive bumps need no step at all: playerdata v2 added the `notices`
+list (messages queued for an offline player) and `defenses/<id>.yml` v2 the
+`cleared-fingerprint` and `reports` keys, both read with defaults and
+stamped on the next write. `guis.yml` v6 and v8 are the other kind: a layout
+re-design, where every value still at its old default is reset to the new
+one and anything an admin moved stands.
 
 ## Building from Source
 
@@ -1147,17 +1341,21 @@ version bump alone re-processes the resources.
 - **Big pastes stall on vanilla WorldEdit.** Only FAWE lets pastes, erases and
   rush imports run off the main thread, with plain WorldEdit an 8-team map
   paste blocks the tick loop for its duration. See [Requirements](#requirements).
-- **Storage is YAML only.** Times, preferences and snapshots live in
-  `playerdata/` and `snapshots/` as one file per player. There is no database
-  backend, no run history beyond personal bests, and leaderboards are
-  per-server, nothing is shared across a network.
+- **Storage is YAML only.** Times, preferences, queued notices and snapshots
+  live in `playerdata/` and `snapshots/` as one file per player, and
+  player-made bed defenses in `defenses/` as one file each. There is no
+  database backend, no run history beyond personal bests, and leaderboards,
+  defenses and reports are per-server, nothing is shared across a network.
 - **`plugin.yml` cannot be reloaded.** Bukkit registers commands and permission
   nodes at load time, so those (and only those) still need a restart,
   everything the plugin owns is picked up by `/practice reload`.
-- **Rush needs MBedwars for its map import and shop.** Hand-built rush arenas
-  play fine without it, but the dealer just explains the shop is unavailable,
-  and special items that genuinely need a real multiplayer game around them
-  (traps, magic milk, magnet shoes, …) are sold but do nothing in solo practice.
+- **Rush and bed defense need MBedwars for their map import and shop.**
+  Hand-built rush arenas play fine without it, but the dealer just explains
+  the shop is unavailable, and special items that genuinely need a real
+  multiplayer game around them (traps, magic milk, magnet shoes, …) are sold
+  but do nothing in solo practice. Bed defense maps can be built by hand too,
+  but without a shop a competitive round plays as practice, so nothing is
+  ranked and no author can clear a defense for publishing.
 - **The PvP bot's player model needs ProtocolLib.** Without it the bot is a
   named husk scaled to player height. Either way its body is still a server-side
   husk, combat *mechanics* (1.8 cooldowns, knockback shaping, the player's own

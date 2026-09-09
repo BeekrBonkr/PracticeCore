@@ -30,8 +30,6 @@ import java.util.UUID;
 public final class PracticeCommand implements CommandExecutor, TabCompleter {
 
     /** Every menu a player can open directly with /practice menu <menu>. */
-    // STYLE-GUIDE: needs logic change (R22) — tab completion should drop
-    // "leaderboards" for senders without practicecore.leaderboard.
     private static final List<String> MENUS = List.of(
             "main", "arenas", "categories", "leaderboards", "stats", "settings", "beddefense");
 
@@ -46,7 +44,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
         this.setup = new SetupCommands(plugin);
         this.admin = new AdminCommands(plugin);
         this.rush = new RushCommands(plugin);
-        this.bedDefense = new BedDefenseCommands(plugin);
+        this.bedDefense = new BedDefenseCommands(plugin, rush);
     }
 
     private Messages msg() {
@@ -279,6 +277,11 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
                 msg().send(sender, "leaderboard.rush-pick-board", "arena", template.name());
                 return;
             }
+            if (template.mode().equals(me.beekrbonkr.practicecore.mode.BedDefenseMode.ID)) {
+                // Bed defense boards hang off the defenses, not the map.
+                msg().send(sender, "leaderboard.beddefense-pick-board");
+                return;
+            }
             if (!plugin.modes().of(template).hasLeaderboards()) {
                 // MLG scores streaks, the PvP bot keeps session stats —
                 // pointing at their empty time board would just confuse.
@@ -305,7 +308,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
             key = args[1].toLowerCase(Locale.ROOT);
             display = rushBoard != null
                     ? plugin.rush().displayFor(rushBoard.getKey(), rushBoard.getValue())
-                    : plugin.bedDefenses().displayFor(defenseBoard);
+                    : plugin.bedDefenses().displayForKey(key, defenseBoard);
         }
         List<LeaderboardService.Entry> top = plugin.leaderboards()
                 .top(key, plugin.pcConfig().leaderboardSize());
@@ -405,6 +408,9 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
         if (sender.hasPermission("practicecore.reload")) {
             msg.send(sender, "help.reload");
         }
+        if (sender.hasPermission(me.beekrbonkr.practicecore.beddefense.BedDefenseService.MODERATE_PERMISSION)) {
+            msg.send(sender, "help.beddefense-moderate");
+        }
     }
 
     private Player asPlayer(CommandSender sender) {
@@ -421,7 +427,8 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
             List<String> subs = new ArrayList<>(List.of(
-                    "join", "leave", "spectate", "list", "menu", "top", "stats", "sidebar", "help"));
+                    "join", "leave", "spectate", "list", "menu", "top", "stats", "sidebar",
+                    "beddefense", "help"));
             if (sender.hasPermission("practicecore.setup")) {
                 subs.add("setup");
                 subs.add("edit");
@@ -453,7 +460,7 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
                     : List.of();
             case "spectate", "spec", "watch" -> args.length == 2
                     ? filter(spectatableNames(sender), args[1]) : List.of();
-            case "menu", "gui" -> args.length == 2 ? filter(MENUS, args[1]) : List.of();
+            case "menu", "gui" -> args.length == 2 ? filter(menusFor(sender), args[1]) : List.of();
             case "top", "leaderboard" -> args.length == 2
                     ? filter(completeNames(), args[1]) : List.of();
             case "stats" -> args.length == 2 && sender.hasPermission("practicecore.stats.other")
@@ -474,18 +481,20 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
         };
     }
 
+    /** The menus this sender may actually open — the leaderboards need their own node (R22). */
+    private static List<String> menusFor(CommandSender sender) {
+        if (sender.hasPermission("practicecore.leaderboard")) {
+            return MENUS;
+        }
+        return MENUS.stream().filter(menu -> !menu.equals("leaderboards")).toList();
+    }
+
     private List<String> completeNames() {
         List<String> names = new ArrayList<>();
         for (ArenaTemplate template : plugin.templates().completeTemplates()) {
-            if (template.mode().equals(me.beekrbonkr.practicecore.mode.RushMode.ID)) {
-                // /practice top rejects the bare name — offer the boards.
-                for (me.beekrbonkr.practicecore.rush.RushObjective objective
-                        : me.beekrbonkr.practicecore.rush.RushObjective.values()) {
-                    names.add(objective.statsKey(template.name()));
-                }
-            } else {
-                names.add(template.name());
-            }
+            // Each mode names its own boards (rush: one per objective; bed
+            // defense: none per map) — /practice top rejects anything else.
+            names.addAll(plugin.modes().of(template).statsKeys(template));
         }
         return names;
     }

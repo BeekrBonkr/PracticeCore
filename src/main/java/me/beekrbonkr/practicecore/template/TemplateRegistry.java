@@ -252,6 +252,20 @@ public final class TemplateRegistry {
         return digest.toString();
     }
 
+    /**
+     * A usable arena name from free text — an MBedwars arena name, say: color
+     * codes stripped, lower-cased, anything outside {@code [a-z0-9_-]} turned
+     * into a dash, dashes collapsed and trimmed, capped at 32. Empty when
+     * nothing usable is left.
+     */
+    public static String sanitizeName(String raw) {
+        String cleaned = (raw == null ? "" : raw.replaceAll("[§&][0-9a-fk-orx]", ""))
+                .toLowerCase(java.util.Locale.ROOT)
+                .replaceAll("[^a-z0-9_-]", "-").replaceAll("-{2,}", "-")
+                .replaceAll("^-+|-+$", "");
+        return cleaned.length() > 32 ? cleaned.substring(0, 32) : cleaned;
+    }
+
     public ArenaTemplate get(String name) {
         return name == null ? null : templates.get(name.toLowerCase(Locale.ROOT));
     }

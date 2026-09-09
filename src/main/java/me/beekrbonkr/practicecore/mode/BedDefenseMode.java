@@ -27,18 +27,20 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Bed defense practice: a rush map's team base, the player's own bed, and a
- * saved bed defense to build against the clock. The mode has no arenas of
- * its own — it runs on rush maps, joined with this mode in place of rush —
- * and the defenses are player-designed, stored server-wide and shared
- * through a gallery.
+ * Bed defense practice: a team base on a bed defense map, the player's own
+ * bed, and a saved bed defense to build against the clock. The maps are
+ * admin-made templates of this mode — built in the setup wizard or pulled
+ * out of MBedwars — carrying the same team/bed/generator/dealer layout a
+ * rush map does; the defenses are player-designed, stored server-wide and
+ * shared through a gallery.
  *
  * <p>A round is complete when every block of the defense stands with the
  * right kind of material at the right spot, in any order (guided building is a
  * separate variant with its own boards). Times are keyed per defense, not
  * per map. Every finished round keeps a personal best, but only competitive
- * ones — the match-opening loadout with blocks bought from the shop — are
- * ranked against other players.
+ * ones — the match-opening loadout with blocks bought from the shop — and
+ * obsidian ones — the defense standing, tools and eight obsidian to break
+ * in, seal the bed and build back — are ranked against other players.
  *
  * <p>Beyond building there are three side phases, all in
  * {@link BedDefenseService}: a block-by-block <b>preview</b>, <b>guided</b>
@@ -117,14 +119,14 @@ public final class BedDefenseMode implements Mode {
     }
 
     /**
-     * Only competitive rounds are ranked. Practice still keeps a personal
-     * best, on its own key, for the player to measure themselves against;
-     * it is never submitted to a leaderboard or broadcast.
+     * Competitive and obsidian rounds are ranked. Practice still keeps a
+     * personal best, on its own key, for the player to measure themselves
+     * against; it is never submitted to a leaderboard or broadcast.
      */
     @Override
     public boolean ranked(PracticeCorePlugin plugin, PracticeSession session) {
         BedDefenseState state = state(session);
-        return state != null && state.selection().competitive();
+        return state != null && state.selection().ranked();
     }
 
     // -------------------------------------------------------------- join-time
@@ -132,9 +134,15 @@ public final class BedDefenseMode implements Mode {
     @Override
     public String validateJoin(PracticeCorePlugin plugin, Player player, ArenaTemplate template) {
         if (!plugin.bedDefenses().supports(template)) {
-            return "beddefense.not-a-rush-map";
+            return "beddefense.not-a-map";
         }
         return null;
+    }
+
+    /** Boards are per defense, never per map — a map tile has no time board of its own. */
+    @Override
+    public boolean hasLeaderboards() {
+        return false;
     }
 
     @Override
@@ -159,9 +167,10 @@ public final class BedDefenseMode implements Mode {
 
     /**
      * Boards are kept per defense, not per map: {@code beddefense#<id>} for
-     * competitive, {@code beddefense#<id>#practice} for the practice bests
-     * only the player sees. Before a round has a defense (join preloads) the
-     * chosen one stands in.
+     * competitive, {@code beddefense#<id>#obsidian} for obsidian practice,
+     * {@code beddefense#<id>#practice} for the practice bests only the
+     * player sees. Before a round has a defense (join preloads) the chosen
+     * one stands in.
      */
     @Override
     public String statsKey(PracticeCorePlugin plugin, PracticeSession session) {
@@ -169,9 +178,12 @@ public final class BedDefenseMode implements Mode {
         BedDefense defense = state != null && state.defense() != null
                 ? state.defense() : plugin.bedDefenses().roundDefense(session.playerId());
         String id = defense == null ? "none" : defense.id();
-        boolean competitive = state != null ? state.selection().competitive()
-                : plugin.bedDefenses().selection(session.playerId()).competitive();
-        return competitive ? BedDefenseService.statsKey(id)
+        BedDefenseSelection selection = state != null ? state.selection()
+                : plugin.bedDefenses().selection(session.playerId());
+        if (selection.obsidian()) {
+            return BedDefenseService.obsidianStatsKey(id);
+        }
+        return selection.competitive() ? BedDefenseService.statsKey(id)
                 : BedDefenseService.practiceStatsKey(id);
     }
 
@@ -282,7 +294,7 @@ public final class BedDefenseMode implements Mode {
         if (type.isItem() && !type.isAir()) {
             player.getInventory().addItem(new ItemStack(type));
         }
-        plugin.bedDefenses().afterBreak(player, state);
+        plugin.bedDefenses().afterBreak(player, session, state);
     }
 
     // ------------------------------------------------------------------- kit
@@ -309,7 +321,8 @@ public final class BedDefenseMode implements Mode {
                 ? msg.component("board.timer-running", "time", TimeFormat.tenths(session.elapsedMs()))
                 : msg.component("board.timer-ready");
         String modeKey = switch (state.phase()) {
-            case PLAY -> state.selection().competitive()
+            case PLAY -> state.obsidian() ? "board.beddefense.mode-obsidian"
+                    : state.selection().competitive()
                     ? "board.beddefense.mode-competitive" : "board.beddefense.mode-practice";
             case PREVIEW -> "board.beddefense.mode-preview";
             case GUIDED -> "board.beddefense.mode-guided";
@@ -326,6 +339,11 @@ public final class BedDefenseMode implements Mode {
         switch (state.phase()) {
             case PLAY, GUIDED -> {
                 int total = state.targets().size();
+                if (state.obsidian()) {
+                    lines.add(msg.component("board.beddefense.obsidian-line",
+                            "placed", String.valueOf(state.obsidianSatisfied()),
+                            "total", String.valueOf(state.obsidianTargets().size())));
+                }
                 lines.add(msg.component("board.beddefense.progress-line",
                         "placed", String.valueOf(state.satisfied()),
                         "total", String.valueOf(total)));
@@ -340,14 +358,14 @@ public final class BedDefenseMode implements Mode {
                             statsKey(plugin, session));
                     lines.add(msg.component("board.beddefense.best-line",
                             "best", best >= 0 ? TimeFormat.tenths(best) : none));
-                    if (!state.selection().competitive()) {
+                    if (!state.selection().ranked()) {
                         lines.add(msg.component("board.beddefense.casual-line"));
                     }
                 }
             }
             case PREVIEW -> lines.add(msg.component("board.beddefense.preview-line",
                     "step", String.valueOf(state.previewIndex()),
-                    "total", String.valueOf(state.targets().size())));
+                    "total", String.valueOf(state.previewTargets().size())));
             case EDIT -> lines.add(msg.component("board.beddefense.edit-line",
                     "blocks", String.valueOf(state.editSequence().size()),
                     "radius", String.valueOf(plugin.pcConfig().bedDefenseEditRadius())));

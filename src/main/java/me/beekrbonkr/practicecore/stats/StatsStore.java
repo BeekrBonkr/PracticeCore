@@ -310,6 +310,37 @@ public final class StatsStore {
         saveAsync(player, yml);
     }
 
+    // ------------------------------------------------------------- notices
+
+    /**
+     * Queues a message for a player who is not here to receive it (see
+     * {@code NoticeService}). The oldest entries make room once the cap is
+     * reached — a player away for a month still gets the recent news.
+     */
+    public void addNotice(UUID player, Map<String, Object> notice, int cap) {
+        YamlConfiguration yml = data(player);
+        List<Map<?, ?>> queued = new ArrayList<>(yml.getMapList("notices"));
+        queued.add(notice);
+        while (queued.size() > cap) {
+            queued.remove(0);
+        }
+        yml.set("notices", queued);
+        saveAsync(player, yml);
+    }
+
+    /** Takes every queued notice off the file; empty when there were none. */
+    public List<Map<?, ?>> drainNotices(UUID player) {
+        YamlConfiguration yml = data(player);
+        List<Map<?, ?>> queued = yml.getMapList("notices");
+        if (queued.isEmpty()) {
+            return List.of();
+        }
+        List<Map<?, ?>> taken = new ArrayList<>(queued);
+        yml.set("notices", null);
+        saveAsync(player, yml);
+        return taken;
+    }
+
     /**
      * The player's remembered kit arrangement for one arena: slot → material
      * name. Modes that let players rearrange their tools persist it here.
@@ -550,8 +581,9 @@ public final class StatsStore {
         if (from >= Versions.PLAYERDATA) {
             return;
         }
-        // v0 → v1 is the first versioned layout; nothing moved. Later steps:
-        //   if (from < 2) { … }
+        // v0 → v1 is the first versioned layout; nothing moved. v2 added the
+        // notices list, which is purely additive. Later steps:
+        //   if (from < 3) { … }
         yml.set(Versions.DATA_KEY, Versions.PLAYERDATA);
     }
 

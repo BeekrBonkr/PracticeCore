@@ -17,6 +17,11 @@ public abstract class PagedMenu<T> extends Menu {
 
     private int page;
 
+    /** The page currently shown, zero-based — for subclasses that arm per tile. */
+    protected int page() {
+        return page;
+    }
+
     protected PagedMenu(PracticeCorePlugin plugin, Player viewer, Menu parent) {
         super(plugin, viewer, parent);
     }

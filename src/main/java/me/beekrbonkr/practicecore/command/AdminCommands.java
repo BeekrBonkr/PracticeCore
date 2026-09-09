@@ -3,6 +3,9 @@ package me.beekrbonkr.practicecore.command;
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.config.ReloadResult;
 import me.beekrbonkr.practicecore.message.Messages;
+import me.beekrbonkr.practicecore.mode.BedDefenseMode;
+import me.beekrbonkr.practicecore.mode.RushMode;
+import me.beekrbonkr.practicecore.rush.RushMapData;
 import me.beekrbonkr.practicecore.session.PracticeSession;
 import me.beekrbonkr.practicecore.setup.SetupManager;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
@@ -20,11 +23,21 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Arena administration, personal-best wiping, the menu item and reload. */
-final class AdminCommands {
+/**
+ * Arena administration, personal-best wiping, the menu item and reload.
+ * Public only for the static helpers the admin GUI shares with the arena
+ * subcommands, so a saved arena's info, category and mode are handled by
+ * one piece of code whichever way the admin reaches them.
+ */
+public final class AdminCommands {
 
     private static final List<String> ARENA_ACTIONS = List.of(
-            "list", "info", "default", "delete", "permission", "display", "icon", "blocks");
+            "list", "info", "default", "delete", "permission", "display", "icon", "blocks",
+            "category", "mode");
+
+    /** Category ids share the arena-name shape: lowercase, [a-z0-9_-], up to 32. */
+    private static final java.util.regex.Pattern SLUG =
+            java.util.regex.Pattern.compile("[a-z0-9_-]{1,32}");
 
     /** Every item material name, computed once — the registry is large. */
     private static final List<String> ITEM_MATERIALS = Arrays.stream(Material.values())
@@ -77,7 +90,7 @@ final class AdminCommands {
             return;
         }
         switch (action) {
-            case "info" -> arenaInfo(sender, template);
+            case "info" -> arenaInfo(plugin, sender, template);
             case "delete" -> deleteArena(sender, template, args);
             case "permission" -> {
                 if (args.length < 4) {
@@ -129,6 +142,20 @@ final class AdminCommands {
                 persist(sender, template, require
                         ? "Personal bests on '" + template.name() + "' now require a placed block."
                         : "Personal bests on '" + template.name() + "' no longer require placed blocks.");
+            }
+            case "category" -> {
+                if (args.length < 4) {
+                    msg().usage(sender, "/practice arena category <arena> <name|default>");
+                    return;
+                }
+                setCategory(plugin, sender, template, args[3]);
+            }
+            case "mode" -> {
+                if (args.length < 4) {
+                    msg().usage(sender, "/practice arena mode <arena> <id>");
+                    return;
+                }
+                setMode(plugin, sender, template, args[3]);
             }
             default -> arenaHelp(sender);
         }
@@ -187,24 +214,114 @@ final class AdminCommands {
         }
     }
 
-    private void arenaInfo(CommandSender sender, ArenaTemplate template) {
-        msg().note(sender, "Arena " + template.name() + ":");
-        msg().note(sender, "  display-name: " + template.displayName());
-        msg().note(sender, "  mode: " + template.mode());
-        msg().note(sender, "  complete: " + template.isComplete());
-        msg().note(sender, "  permission: " + plugin.templates().permissionFor(template)
+    // ------------------------------------------ shared with the admin GUI
+
+    /** Prints one saved arena's settings — the body of /practice arena info. */
+    public static void arenaInfo(PracticeCorePlugin plugin, CommandSender sender,
+                                 ArenaTemplate template) {
+        Messages msg = plugin.messages();
+        msg.note(sender, "Arena " + template.name() + ":");
+        msg.note(sender, "  display-name: " + template.displayName());
+        msg.note(sender, "  mode: " + template.mode());
+        msg.note(sender, "  category: " + (template.category() != null
+                ? template.category() : template.mode() + " (mode default)"));
+        msg.note(sender, "  complete: " + template.isComplete());
+        msg.note(sender, "  permission: " + plugin.templates().permissionFor(template)
                 + (template.permission() == null ? " (default node)" : " (explicit)")
                 + ", access-mode " + plugin.pcConfig().arenaAccessMode());
-        msg().note(sender, "  default arena: "
+        msg.note(sender, "  default arena: "
                 + template.name().equals(plugin.pcConfig().defaultArenaName()));
-        msg().note(sender, "  icon: " + (template.icon() != null
+        msg.note(sender, "  icon: " + (template.icon() != null
                 ? template.icon().name() : "auto → " + template.effectiveIcon()));
-        msg().note(sender, "  kit: " + template.kit().size() + " stack(s)");
-        msg().note(sender, "  pb requires blocks: " + template.requireBlocksForPb());
-        msg().note(sender, "  triggers: " + (template.hasTriggers()
+        msg.note(sender, "  kit: " + template.kit().size() + " stack(s)");
+        msg.note(sender, "  pb requires blocks: " + template.requireBlocksForPb());
+        msg.note(sender, "  triggers: " + (template.hasTriggers()
                 ? template.triggers().size() + " placed" : "not set"));
-        msg().note(sender, "  ranked players: " + plugin.leaderboards().size(template.name()));
-        msg().note(sender, "  folder: " + template.dir().getPath());
+        if (usesBaseLayout(template.mode())) {
+            RushMapData layout = RushMapData.parse(template);
+            msg.note(sender, "  team bases: " + layout.playableTeams().size()
+                    + " playable of " + layout.teams().size() + " set");
+            msg.note(sender, "  generators: " + layout.generators().size());
+            msg.note(sender, "  dealers: " + layout.dealers().size());
+        }
+        msg.note(sender, "  ranked players: " + plugin.leaderboards().size(template.name()));
+        msg.note(sender, "  folder: " + template.dir().getPath());
+    }
+
+    /**
+     * Whether an arena of this mode plays from a team base: rush and bed
+     * defense read the same team/bed/generator/dealer layout.
+     */
+    public static boolean usesBaseLayout(String mode) {
+        return RushMode.ID.equals(mode) || BedDefenseMode.ID.equals(mode);
+    }
+
+    /**
+     * Files a saved arena under a category — its folder moves to
+     * {@code templates/<category>/} at once; {@code default} (or null) moves
+     * it back out so it groups under its mode. Nothing in arena.yml changes,
+     * so there is nothing to write. Feedback goes to {@code sender}.
+     *
+     * @return true when the arena now sits where it was asked to
+     */
+    public static boolean setCategory(PracticeCorePlugin plugin, CommandSender sender,
+                                      ArenaTemplate template, String category) {
+        Messages msg = plugin.messages();
+        String slug = category == null || category.isBlank()
+                || category.trim().equalsIgnoreCase("default")
+                ? null : category.trim().toLowerCase(Locale.ROOT);
+        if (slug != null && !SLUG.matcher(slug).matches()) {
+            msg.problem(sender, "Category names must match [a-z0-9_-], max 32 characters.");
+            return false;
+        }
+        try {
+            plugin.templates().moveToCategory(template, slug);
+        } catch (IOException e) {
+            msg.problem(sender, "Could not move " + template.name() + " to templates/"
+                    + (slug != null ? slug + "/" : "") + " (" + e.getMessage()
+                    + ") — it keeps its old category.");
+            return false;
+        }
+        msg.done(sender, slug != null
+                ? "Arena " + template.name() + " is now listed under " + slug + "."
+                : "Arena " + template.name() + " now groups under its mode, "
+                        + template.mode() + ".");
+        return true;
+    }
+
+    /**
+     * Switches a saved arena to another mode and writes arena.yml. A rush or
+     * bed defense arena also needs a team base; without one the admin is
+     * warned and pointed at the wizard rather than refused, since the wizard
+     * is the only place the base can be added.
+     *
+     * @return true when the mode was changed and written
+     */
+    public static boolean setMode(PracticeCorePlugin plugin, CommandSender sender,
+                                  ArenaTemplate template, String mode) {
+        Messages msg = plugin.messages();
+        String id = mode.trim().toLowerCase(Locale.ROOT);
+        if (plugin.modes().get(id).isEmpty()) {
+            msg.problem(sender, id + " is not a mode. Modes: "
+                    + String.join(", ", plugin.modes().ids()) + ".");
+            return false;
+        }
+        template.setMode(id);
+        try {
+            template.save();
+        } catch (IOException e) {
+            msg.problem(sender, "Could not write arena.yml: " + e.getMessage());
+            return false;
+        }
+        msg.done(sender, "Arena " + template.name() + " now runs as " + id + ".");
+        if (usesBaseLayout(id) && !RushMapData.parse(template).playable()) {
+            msg.warn(sender, "Arena " + template.name()
+                    + " has no team base yet, so nobody can join it as " + id + ".");
+            msg.note(sender, "Add one in the wizard: /practice edit " + template.name()
+                    + ", then /practice setup " + (id.equals(RushMode.ID) ? "rush" : "beddefense")
+                    + " team <color> and bed <color>, then save.");
+        }
+        return true;
     }
 
     private void deleteArena(CommandSender sender, ArenaTemplate template, String[] args) {
@@ -268,6 +385,14 @@ final class AdminCommands {
         String scope = args.length > 3 ? SetupManager.normalize(args[3]) : "all";
 
         if (scope.equals("all")) {
+            // Wiping everything a player has is destructive (R59): it needs
+            // the same confirm word the other destructive commands take.
+            boolean confirmed = args.length > 4 && args[4].equalsIgnoreCase("confirm");
+            if (!confirmed) {
+                msg().confirmPrompt(sender, "This wipes every recorded time " + name
+                        + " has, on every arena.", "/practice pb reset " + name + " all confirm");
+                return;
+            }
             int wiped = plugin.stats().resetAll(target);
             msg().done(sender, wiped == 0
                     ? name + " had no recorded times."
@@ -286,9 +411,9 @@ final class AdminCommands {
                     : name + " had no times on " + scope + ".");
         }
         refreshBoards(target);
-        Player online = Bukkit.getPlayer(target);
-        if (online != null && !online.equals(sender)) {
-            msg().send(online, "stats.reset-notice");
+        // Told now, or on their next login when they are away.
+        if (!(sender instanceof Player self && self.getUniqueId().equals(target))) {
+            plugin.notices().notify(target, "stats.reset-notice");
         }
     }
 
@@ -445,6 +570,12 @@ final class AdminCommands {
                 case "permission" -> PracticeCommand.filter(
                         List.of("default", plugin.pcConfig().arenaPermissionPrefix() + args[2]), args[3]);
                 case "icon" -> PracticeCommand.filter(ITEM_MATERIALS, args[3]);
+                case "category" -> {
+                    List<String> categories = new ArrayList<>(plugin.templates().categoryFolders());
+                    categories.add("default");
+                    yield PracticeCommand.filter(categories, args[3]);
+                }
+                case "mode" -> PracticeCommand.filter(List.copyOf(plugin.modes().ids()), args[3]);
                 default -> List.of();
             };
         }
@@ -479,6 +610,9 @@ final class AdminCommands {
             List<String> scopes = new ArrayList<>(plugin.templates().names());
             scopes.add("all");
             return PracticeCommand.filter(scopes, args[3]);
+        }
+        if (args.length == 5 && args[3].equalsIgnoreCase("all")) {
+            return PracticeCommand.filter(List.of("confirm"), args[4]);
         }
         return List.of();
     }

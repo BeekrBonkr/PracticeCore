@@ -136,19 +136,37 @@ public final class BedDefenseEditMenu extends Menu {
             });
         });
 
-        set(slot("visibility", 14), Button.of(plugin, published
+        // Publishing needs the author's own competitive run on the saved
+        // shape, so a fresh build (or an uncleared one) cannot be saved as
+        // public here — it is saved private and published from the gallery
+        // once cleared. One that reports have hidden waits for a moderator.
+        // Hiding an already public one is always allowed.
+        boolean ownSource = source != null && source.isAuthor(viewer.getUniqueId());
+        boolean autoHidden = ownSource && source.autoHidden();
+        boolean canPublish = !autoHidden && (!plugin.pcConfig().bedDefenseRequireAuthorClear()
+                || (ownSource && source.authorCleared()));
+        Button visibilityButton = Button.of(plugin, published
                         ? icon("visibility", Material.LANTERN)
                         : plugin.guis().material("beddefense-editor.buttons.visibility.material-private",
                                 Material.SOUL_LANTERN))
                 .name("gui.beddefense.editor.visibility.name")
                 .lore("gui.beddefense.editor.visibility.lore", plugin.messages().ref("state",
                         published ? "label.state.public" : "label.state.private"))
-                .glow(published)
-                .hint("toggle")
-                .build(), event -> {
+                .glow(published);
+        boolean gated = !published && !canPublish;
+        if (gated) {
+            visibilityButton.disabled(autoHidden ? "gui.reason.auto-hidden" : "gui.reason.needs-clear");
+        } else {
+            visibilityButton.hint("toggle");
+        }
+        set(slot("visibility", 14), visibilityButton.build(), event -> {
+            if (gated) {
+                deny();
+                return;
+            }
             sound(published ? "menu.toggle-off" : "menu.toggle-on");
             state.setEditPublished(!published);
-            if (source != null && source.isAuthor(viewer.getUniqueId())) {
+            if (ownSource) {
                 service.setPublished(viewer, source, !published);
             }
             refresh();
