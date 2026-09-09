@@ -16,7 +16,7 @@
 #   guis.yml     — menu layout: slots, icons, rows
 #   sounds.yml   — every sound cue
 #   pvpbot.yml   — the PvP bot's difficulty tuning and its kits
-config-version: 8
+config-version: 9
 
 world:
   # Name of the ephemeral practice world. Its folder is DELETED and recreated
@@ -384,6 +384,16 @@ beddefense:
   # so obsidian never costs a bridging trip. Needs a map that has emerald
   # spawners at all; the rate is the emerald-interval-ticks above.
   emerald-for-obsidian: true
+  # Obsidian practice (the Obsidian toggle in the setup menu): the chosen
+  # defense stands already built, and the round is breaking into it,
+  # sealing the bed — its six sides at bed height and the two blocks on
+  # top — with the eight obsidian in the kit, and building the defense
+  # back. Nothing is bought, so the kit is fixed: these tools, the obsidian,
+  # the sword and armor. Always ranked, on a board of its own per defense
+  # (beddefense#<id>#obsidian). Defenses that already put obsidian on any
+  # of those eight spots cannot be used for it.
+  obsidian:
+    tools: [WOODEN_PICKAXE, WOODEN_AXE, SHEARS]
   # The bed defense hotbar item (menu, preview, editor). Slot 0-8.
   item:
     material: RED_BED

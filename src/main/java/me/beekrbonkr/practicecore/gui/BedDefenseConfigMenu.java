@@ -3,6 +3,7 @@ package me.beekrbonkr.practicecore.gui;
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.beddefense.BedDefense;
 import me.beekrbonkr.practicecore.beddefense.BedDefenseSelection;
+import me.beekrbonkr.practicecore.beddefense.BedDefenseService;
 import me.beekrbonkr.practicecore.mode.RushMode;
 import me.beekrbonkr.practicecore.rush.RushMapData;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
@@ -20,8 +21,8 @@ import java.util.UUID;
  * Pre-join setup for bed defense practice on one map, and the same menu
  * mid-session (where Start becomes Apply). Reads top to bottom as the order
  * the choices are made: <em>where</em> (the team base), <em>what</em> (the
- * defense and the round rules), <em>or design your own</em> (the editor),
- * then go. Every change is persisted immediately.
+ * defense and the round rules, obsidian practice among them), <em>or design
+ * your own</em> (the editor), then go. Every change is persisted immediately.
  */
 public final class BedDefenseConfigMenu extends Menu {
 
@@ -74,10 +75,11 @@ public final class BedDefenseConfigMenu extends Menu {
     protected void render() {
         border();
         teamButton(slot("team", 13));
-        defenseButton(slot("defense", 20));
-        modeButton(slot("mode", 22));
+        defenseButton(slot("defense", 19));
+        modeButton(slot("mode", 21));
+        obsidianButton(slot("obsidian", 23));
         shuffleButton(slot("shuffle", 40));
-        timerButton(slot("timer", 24));
+        timerButton(slot("timer", 25));
         newButton(slot("new", 30));
         editButton(slot("edit", 32));
         startButton(slot("start", 40));
@@ -132,9 +134,21 @@ public final class BedDefenseConfigMenu extends Menu {
 
     // -------------------------------------------------------------- defense
 
-    private void defenseButton(int slot) {
+    /** The defenses the current choices can run on: all of them, or the obsidian-eligible ones. */
+    private List<BedDefense> playable() {
+        return selection.obsidian() ? plugin.bedDefenses().obsidianPlayableBy(id())
+                : plugin.bedDefenses().store().playableBy(id());
+    }
+
+    /** The chosen defense, unless the current choices cannot run on it. */
+    private BedDefense chosen() {
         BedDefense defense = plugin.bedDefenses().store().get(selection.defense());
-        List<BedDefense> playable = plugin.bedDefenses().store().playableBy(id());
+        return BedDefenseService.playable(selection, defense) ? defense : null;
+    }
+
+    private void defenseButton(int slot) {
+        BedDefense defense = chosen();
+        List<BedDefense> playable = playable();
         Button button = Button.of(plugin, defense != null ? defense.icon() : icon("defense", Material.RED_BED))
                 .name("gui.beddefense.defense.name");
         if (defense != null) {
@@ -169,18 +183,59 @@ public final class BedDefenseConfigMenu extends Menu {
 
     private void modeButton(int slot) {
         boolean competitive = selection.competitive();
-        set(slot, Button.of(plugin, competitive
+        boolean pinned = selection.obsidian();
+        Button button = Button.of(plugin, competitive
                         ? competitiveIcon("mode", Material.NETHER_STAR)
                         : icon("mode", Material.LEVER))
                 .name("gui.beddefense.mode.name")
-                .lore("gui.beddefense.mode.lore", plugin.messages().ref("mode", competitive
+                .lore(pinned ? "gui.beddefense.mode.lore-obsidian" : "gui.beddefense.mode.lore",
+                        plugin.messages().ref("mode", competitive
                         ? "gui.beddefense.mode.option.competitive"
-                        : "gui.beddefense.mode.option.practice"))
-                .glow(competitive)
-                .hint("toggle")
-                .build(), event -> {
+                        : "gui.beddefense.mode.option.practice"));
+        if (pinned) {
+            button.disabled("gui.reason.pinned-obsidian");
+        } else {
+            button.glow(competitive).hint("toggle");
+        }
+        set(slot, button.build(), event -> {
+            if (pinned) {
+                deny();
+                return;
+            }
             sound(competitive ? "menu.toggle-off" : "menu.toggle-on");
             selection = selection.withCompetitive(!competitive);
+            save();
+            refresh();
+        });
+    }
+
+    /**
+     * Obsidian practice: the defense stands, and the round is breaking in,
+     * sealing the bed with eight obsidian and building back. It sets the
+     * mode aside and pins the timer to the first move; always ranked.
+     */
+    private void obsidianButton(int slot) {
+        boolean obsidian = selection.obsidian();
+        int eligible = plugin.bedDefenses().obsidianPlayableBy(id()).size();
+        int all = plugin.bedDefenses().store().playableBy(id()).size();
+        Button button = Button.of(plugin, icon("obsidian", Material.OBSIDIAN))
+                .name("gui.beddefense.obsidian.name")
+                .lore("gui.beddefense.obsidian.lore",
+                        plugin.messages().ref("state", obsidian ? "label.state.on" : "label.state.off"),
+                        "eligible", String.valueOf(eligible),
+                        "available", String.valueOf(all));
+        if (eligible == 0 && !obsidian) {
+            button.disabled("gui.reason.no-obsidian-defenses");
+        } else {
+            button.glow(obsidian).hint("toggle");
+        }
+        set(slot, button.build(), event -> {
+            if (eligible == 0 && !obsidian) {
+                deny();
+                return;
+            }
+            sound(obsidian ? "menu.toggle-off" : "menu.toggle-on");
+            selection = selection.withObsidian(!obsidian);
             save();
             refresh();
         });
@@ -212,14 +267,17 @@ public final class BedDefenseConfigMenu extends Menu {
 
     private void timerButton(int slot) {
         BedDefenseSelection.TimerStart start = selection.timerStart();
-        boolean pinned = selection.competitive();
+        boolean pinned = selection.competitive() || selection.obsidian();
         Button button = Button.of(plugin, icon("timer", Material.REPEATER))
                 .name("gui.beddefense.timer.name")
-                .lore(pinned ? "gui.beddefense.timer.lore-competitive" : "gui.beddefense.timer.lore",
+                .lore(selection.obsidian() ? "gui.beddefense.timer.lore-obsidian"
+                                : pinned ? "gui.beddefense.timer.lore-competitive"
+                                : "gui.beddefense.timer.lore",
                         plugin.messages().ref("start", (pinned
                                 ? BedDefenseSelection.TimerStart.MOVE : start).messageKey()));
         if (pinned) {
-            button.disabled("gui.reason.pinned-competitive");
+            button.disabled(selection.obsidian()
+                    ? "gui.reason.pinned-obsidian" : "gui.reason.pinned-competitive");
         } else {
             button.hint("cycle");
         }
@@ -282,8 +340,19 @@ public final class BedDefenseConfigMenu extends Menu {
     // ---------------------------------------------------------------- start
 
     private void startButton(int slot) {
-        List<BedDefense> playable = plugin.bedDefenses().store().playableBy(id());
-        BedDefense chosen = plugin.bedDefenses().store().get(selection.defense());
+        List<BedDefense> playable = playable();
+        BedDefense chosen = chosen();
+        if (playable.isEmpty() && selection.obsidian()) {
+            // Obsidian is on with nothing it can run on: the toggle stays
+            // enabled so it can be switched off, and Start says why it waits.
+            set(slot, Button.of(plugin, plugin.guis().material(
+                            "beddefense.buttons.start.material-obsidian", Material.OBSIDIAN))
+                    .name("gui.beddefense.start.name-obsidian")
+                    .lore("gui.beddefense.start.lore-obsidian-none")
+                    .disabled("gui.reason.no-obsidian-defenses")
+                    .build(), event -> deny());
+            return;
+        }
         if (playable.isEmpty()) {
             set(slot, Button.of(plugin, icon("new", Material.CRAFTING_TABLE))
                     .name("gui.beddefense.start.name-design")
@@ -299,27 +368,30 @@ public final class BedDefenseConfigMenu extends Menu {
             });
             return;
         }
-        boolean competitive = selection.competitive();
+        BedDefenseSelection effective = selection.effective();
+        boolean competitive = effective.competitive();
+        boolean obsidian = effective.obsidian();
         String defenseLabel = chosen != null ? chosen.name()
-                : selection.shuffle() != BedDefenseSelection.Shuffle.OFF && !competitive
-                        ? raw(selection.shuffle().messageKey()) : playable.get(0).name();
-        set(slot, Button.of(plugin, competitive
+                : effective.shuffle() != BedDefenseSelection.Shuffle.OFF
+                        ? raw(effective.shuffle().messageKey()) : playable.get(0).name();
+        set(slot, Button.of(plugin, obsidian
+                        ? plugin.guis().material("beddefense.buttons.start.material-obsidian", Material.OBSIDIAN)
+                        : competitive
                         ? competitiveIcon("start", Material.NETHER_STAR)
                         : icon("start", Material.LIME_DYE))
                 .name(inSession() ? "gui.beddefense.start.name-apply"
+                        : obsidian ? "gui.beddefense.start.name-obsidian"
                         : competitive ? "gui.beddefense.start.name-competitive"
                         : "gui.beddefense.start.name")
                 .lore("gui.beddefense.start.lore", TagResolver.resolver(
-                        plugin.messages().ref("mode", competitive
+                        plugin.messages().ref("mode", obsidian
+                                ? "gui.beddefense.mode.option.obsidian"
+                                : competitive
                                 ? "gui.beddefense.mode.option.competitive"
                                 : "gui.beddefense.mode.option.practice"),
-                        plugin.messages().ref("shuffle", competitive
-                                ? BedDefenseSelection.Shuffle.OFF.messageKey()
-                                : selection.shuffle().messageKey()),
-                        plugin.messages().ref("timer", (competitive
-                                ? BedDefenseSelection.TimerStart.MOVE
-                                : selection.timerStart()).messageKey()),
-                        plugin.messages().ref("ranked", competitive
+                        plugin.messages().ref("shuffle", effective.shuffle().messageKey()),
+                        plugin.messages().ref("timer", effective.timerStart().messageKey()),
+                        plugin.messages().ref("ranked", effective.ranked()
                                 ? "gui.beddefense.start.ranked" : "gui.beddefense.start.unranked")),
                         "arena", template.displayName(),
                         "defense", defenseLabel)

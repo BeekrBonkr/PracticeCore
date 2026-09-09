@@ -12,7 +12,7 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 12
+config-version: 13
 
 prefix: '<gold>Practice <dark_gray>» '
 
@@ -352,12 +352,15 @@ board:
       - ''
     mode-competitive: '<gold>Competitive'
     mode-practice: '<white>Practice'
+    mode-obsidian: '<light_purple>Obsidian'
     mode-preview: '<aqua>Preview'
     mode-guided: '<green>Guided'
     mode-edit: '<yellow>Editor'
     unnamed: 'unnamed'
     # <placed> <total>
     progress-line: '<gray>Blocks: <white><placed><dark_gray>/<white><total>'
+    # Obsidian practice: how many of the eight are on the bed. <placed> <total>
+    obsidian-line: '<gray>Obsidian: <white><placed><dark_gray>/<white><total>'
     # Competitive: your best on this defense. <best>
     best-line: '<gray>Best: <white><best>'
     casual-line: '<dark_gray>Not ranked — play competitive'
@@ -384,6 +387,15 @@ beddefense:
   unknown: '<prefix><red>No bed defense with id <white><id><red>.'
   not-owner: '<prefix><red>That is not one of your bed defenses.'
   competitive-needs-shop: '<prefix><yellow>Competitive needs the MBedwars shop to buy blocks from — this round plays as practice.'
+  # Obsidian practice: the defense stands built; break in, put the eight
+  # obsidian on the bed, build it back.
+  obsidian:
+    # The round starting. <name> <count>
+    entered: '<prefix><gray>Obsidian practice: break into <white><name><gray>, seal the bed with <white><count><gray> obsidian, and build it back.'
+    # A defense that already has obsidian on the bed cannot be used. <name>
+    ineligible: '<prefix><red><white><name><red> already has obsidian on the bed — it cannot be used for obsidian practice.'
+    # Every defense left has obsidian on the bed: the toggle is switched off for this round.
+    none-eligible: '<prefix><yellow>No defense you can play is without obsidian on the bed — obsidian practice is off.'
   # <name>
   deleted: '<prefix><gray>Deleted the bed defense <white><name><gray>.'
   # /practice beddefense delete without confirm (style guide R58). <name> <id>
@@ -402,6 +414,8 @@ beddefense:
   board-name: '<name> (Bed Defense)'
   # Practice times are kept per defense too, but only the player sees them.
   board-name-practice: '<name> (Bed Defense, practice)'
+  # Obsidian practice has a ranked board of its own per defense.
+  board-name-obsidian: '<name> (Bed Defense, obsidian)'
   list-empty: '<prefix><gray>No bed defenses to play yet. Design one with <white>/practice beddefense edit<gray>.'
   # <count>
   list-header: '<prefix><gray>Bed defenses you can play (<white><count><gray>):'
@@ -536,6 +550,8 @@ beddefense:
     entered: '<prefix><gray>Guided building: the glowing block is the next one to place. Untimed.'
     from-attempt: '<prefix><yellow>Timer canceled. <gray>Guided building: the glowing block is the next one to place.'
     exited: '<prefix><gray>Guidance off — the next attempt is timed again.'
+    # Action bar: the defense already stands in obsidian practice.
+    not-in-obsidian: '<red>No guided building in obsidian practice'
     # <material> <step> <total>
     next: '<gray>Next: <white><material> <dark_gray>(<step>/<total>)'
     # <name>
@@ -759,7 +775,7 @@ help:
     - '<prefix><gray>Bed defense practice:'
     - '<dark_gray> • <white>/practice beddefense <dark_gray>— the map picker'
     - '<dark_gray> • <white>/practice beddefense list <dark_gray>— every defense you can play'
-    - '<dark_gray> • <white>/practice beddefense play <id> [competitive|practice] <dark_gray>— build that defense'
+    - '<dark_gray> • <white>/practice beddefense play <id> [competitive|practice|obsidian] <dark_gray>— build that defense'
     - '<dark_gray> • <white>/practice beddefense like|favorite <id>'
     - '<dark_gray> • <white>/practice beddefense edit [id] <dark_gray>— the editor, fresh or on one of yours'
     - '<dark_gray> • <white>/practice beddefense publish|unpublish <id> <dark_gray>— public needs your own competitive completion first'
@@ -1010,6 +1026,9 @@ gui:
   reason:
     only-one-team: 'only one team base'
     pinned-competitive: 'pinned by competitive mode'
+    pinned-obsidian: 'pinned by obsidian practice'
+    not-in-obsidian: 'not in obsidian practice'
+    no-obsidian-defenses: 'no defense without obsidian on the bed'
     no-defense: 'no defense chosen'
     nothing-to-load: 'nothing to load'
     nothing-saved: 'nothing saved yet'
@@ -1849,10 +1868,30 @@ gui:
         - '<gray>Practice hands you the exact blocks.'
         - ''
         - '<gray>Mode: <mode>'
-        - '<gold>Only competitive is ranked.'
+        - '<gold>Competitive and obsidian are ranked.'
+      # While obsidian practice is on the mode is set aside. <mode>
+      lore-obsidian:
+        - '<gray>Competitive is a real match start:'
+        - '<gray>sword, armor, generators and shop.'
+        - '<gray>Practice hands you the exact blocks.'
+        - ''
+        - '<gray>Mode: <mode> <dark_gray>(set aside)'
+        - '<light_purple>Obsidian practice is on.'
       option:
         competitive: '<gold>Competitive'
         practice: '<white>Practice'
+        obsidian: '<light_purple>Obsidian'
+    obsidian:
+      name: '<white><bold>Obsidian'
+      # <state> <eligible> <available>
+      lore:
+        - '<gray>The defense stands built. Break in,'
+        - '<gray>seal the bed with 8 obsidian, build'
+        - '<gray>it back. Tools and obsidian, no shop.'
+        - ''
+        - '<gray>Obsidian practice: <state>'
+        - '<gray>Defenses without obsidian: <white><eligible><dark_gray>/<white><available>'
+        - '<gold>Always ranked, on its own board.'
     shuffle:
       name: '<white><bold>Shuffle'
       # <pool>
@@ -1882,6 +1921,12 @@ gui:
         - '<gray>always times from the first move.'
         - ''
         - '<gray>Starts on: <white><start>'
+      lore-obsidian:
+        - '<gray>When the clock starts. Obsidian'
+        - '<gray>practice always times from the'
+        - '<gray>first move.'
+        - ''
+        - '<gray>Starts on: <white><start>'
       option:
         move: 'first movement'
         first_block: 'first block placed'
@@ -1908,6 +1953,7 @@ gui:
     start:
       name: '<green><bold>Start Practice'
       name-competitive: '<gold><bold>Start Competitive'
+      name-obsidian: '<light_purple><bold>Start Obsidian'
       name-apply: '<green><bold>Apply and Restart'
       # <arena> <defense> <mode> <shuffle> <timer> <ranked>
       lore:
@@ -1921,6 +1967,11 @@ gui:
         - '<ranked>'
       ranked: '<gold>Times are recorded and ranked.'
       unranked: '<gray>Practice rounds are not ranked.'
+      # Obsidian practice is on but every defense has obsidian on the bed.
+      lore-obsidian-none:
+        - '<gray>Every defense you can play already'
+        - '<gray>has obsidian on the bed. Switch'
+        - '<gray>obsidian practice off, or design one.'
       # With no defense anywhere to build, Start becomes this.
       name-design: '<white><bold>New Defense'
       lore-design:
@@ -1983,6 +2034,10 @@ gui:
       liked-no: '<dark_gray>Not liked'
       favorite-yes: '<gold>Favorite'
       favorite-no: '<dark_gray>Not a favorite'
+      # Obsidian practice on this defense. <best> <record> <record-holder>
+      obsidian-line: '<gray>Obsidian best: <white><best> <dark_gray>— <gray>Record: <white><record>'
+      # Obsidian already on the bed: not for obsidian practice.
+      obsidian-ineligible-line: '<dark_gray>Has obsidian on the bed — no obsidian practice'
       # Shown on the chosen defense.
       selected-line: '<gray>Currently: <green>selected'
       # Moderators see this on a reported defense. <count>
@@ -2145,11 +2200,13 @@ gui:
       flat-button:
         name: '<white><bold>Bed Defense'
         lore:
-          - '<gray>One board per defense.'
+          - '<gray>Competitive and obsidian boards,'
+          - '<gray>per defense.'
       empty:
         name: '<gray><bold>No times yet'
         lore:
-          - '<gray>Competitive rounds put times here.'
+          - '<gray>Competitive and obsidian rounds'
+          - '<gray>put times here.'
       # <board>
       entry-name: '<gold><bold><board>'
       # <name> <author> <players> <record> <record-holder> <rank>

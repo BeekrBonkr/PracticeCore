@@ -33,7 +33,8 @@ At a glance, the five modes:
   on admin-made bed defense maps, from a gallery of player-designed defenses
   with likes, favorites, reports, a block-by-block preview, guided building
   and an in-world editor; a defense goes public only once its author has
-  built it for real.
+  built it for real. Obsidian practice starts with the defense standing:
+  break in, seal the bed with eight obsidian, build it back.
 - **mlg**: water-bucket clutches from a random drop height; the score is your
   streak.
 - **pvpbot**: an endless spar against an AI opponent that strafes, combos,
@@ -299,7 +300,7 @@ your wool-color setting and shop purchases all count. Only water **source**
 blocks count (flowing water never does), and a waterlogged ladder is a
 ladder.
 
-Two ways to play, chosen in the setup menu:
+Two ways to play, chosen in the setup menu, and an obsidian drill on top:
 
 - **Competitive**: a real match opening: sword, team-dyed leather, the
   base's iron and gold generators and the mirrored MBedwars shop; blocks are
@@ -316,13 +317,32 @@ Two ways to play, chosen in the setup menu:
   with competitive ones. Extras: **shuffle** (a different defense every
   round from your favorites or the public gallery) and **timer start** (first
   movement or first block).
+- **Obsidian** (the Obsidian toggle; it sets the mode aside while on): the
+  defense stands already built when the round starts, and the goal is to
+  break into it, put the eight obsidian in your kit on the bed — the six
+  blocks touching its sides at bed height and the two on top — and build
+  the defense back. Whatever the designer had on those eight spots gives way
+  to obsidian; everything else must stand again as designed. The kit is
+  fixed: a wooden pickaxe, a wooden axe and shears (`beddefense.obsidian.tools`
+  in `config.yml`), the eight obsidian, sword and armor, with no generators
+  or shop, so times compare and every obsidian round is **ranked**, on a
+  board of its own. The timer runs from the first move (breaking a block
+  starts it too); shuffle still works. Broken blocks come straight back to
+  your inventory, as in practice. A defense that already has obsidian on any
+  of those eight spots cannot be used for it — the gallery says so on its
+  tile, and the toggle counts how many defenses qualify. The preview shows
+  the eight obsidian going onto the bed instead of the defense going up, and
+  there is no guided building.
 
 Boards are kept **per defense**, not per map: `beddefense#<id>` is the ranked
-competitive board and appears under its own category in the leaderboards
-menu, while `beddefense#<id>#practice` holds your private practice bests.
-Competitive records and personal bests broadcast exactly like every other
-mode; practice ones stay with you. `/practice top <map>` on a bed defense
-map points you at those boards rather than pretending the map has one.
+competitive board and `beddefense#<id>#obsidian` the ranked obsidian board,
+both under the Bed Defense category in the leaderboards menu (two tiles per
+defense, the obsidian one wearing an obsidian icon), while
+`beddefense#<id>#practice` holds your private practice bests. Competitive and
+obsidian records and personal bests broadcast exactly like every other mode;
+practice ones stay with you. Playing from a board plays in that board's mode.
+`/practice top <map>` on a bed defense map points you at those boards rather
+than pretending the map has one.
 
 **Preview**: drop any item (or use the bed defense item's menu) before an
 attempt starts and the defense assembles itself block by block in front of
@@ -384,7 +404,7 @@ actions: like (public, one per player), favorite (your private bookmark,
 also a shuffle pool), its boards, **report** (someone else's public
 defense), and, on your own, edit, publish/unpublish and delete (two
 clicks). `/practice beddefense` opens the map picker; `play <id>
-[competitive|practice]`, `like|favorite|publish|unpublish|edit <id>`,
+[competitive|practice|obsidian]`, `like|favorite|publish|unpublish|edit <id>`,
 `report <id> [reason]`, `delete <id> confirm` and `list` do the same from
 chat, and `/practice beddefense help` lists them.
 
@@ -434,7 +454,8 @@ Defenses live in `defenses/<id>.yml`, one file each, shared by everyone,
 carrying the blocks, likes, favorites, completions, `cleared-fingerprint`,
 `reports`, `reports-seen` and `auto-hidden`; `/practice reload` re-reads
 them. Tuning is under `beddefense:` in `config.yml`: the block list, the
-editor radius, defenses per player, name length, the publishing gate
+editor radius, defenses per player, name length, the obsidian practice
+tools (`obsidian.tools`), the publishing gate
 (`require-author-clear`), reports (`reports.notify-moderators`,
 `reports.reason-max-length`, `reports.remind-on-join`,
 `reports.remind-minutes`, `reports.auto-hide.percent`,

@@ -138,7 +138,7 @@ rushshop:
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 8
+config-version: 9
 
 # Navigation row shared by every paged menu (six-row menus).
 nav:
@@ -339,6 +339,11 @@ beddefense-reports:
       slot: 52
 
 # The in-arena menu behind the bed defense hotbar item while playing.
+# The bed defense leaderboards list: two tiles per defense. The competitive
+# tile wears the defense's own icon; the obsidian tile this one.
+beddefense-boards:
+  obsidian-material: OBSIDIAN
+
 beddefense-session:
   buttons:
     defense:
@@ -376,7 +381,7 @@ beddefense:
     # Row 2 — the defense (icon follows the chosen one) and the round rules.
     defense:
       material: RED_BED
-      slot: 20
+      slot: 19
     edit:
       material: WRITABLE_BOOK
       slot: 32
@@ -384,25 +389,31 @@ beddefense:
     mode:
       material: LEVER
       material-competitive: NETHER_STAR
-      slot: 22
+      slot: 21
     # Row 3 — design your own: fresh, or one of yours.
     new:
       material: CRAFTING_TABLE
       slot: 30
+    # Obsidian practice: the defense stands, break in and seal the bed.
+    obsidian:
+      material: OBSIDIAN
+      slot: 23
     shuffle:
       material: ENDER_EYE
       slot: 40
-    # Row 4 — go. material for practice; material-competitive while competitive.
+    # Row 4 — go. material for practice; material-competitive while
+    # competitive; material-obsidian while obsidian practice is on.
     start:
       material: LIME_DYE
       material-competitive: NETHER_STAR
+      material-obsidian: OBSIDIAN
       slot: 40
     # Row 1 — the team base. The icon is always the team's own wool.
     team:
       slot: 13
     timer:
       material: REPEATER
-      slot: 24
+      slot: 25
   # With categories off, the flat arena and leaderboard lists carry this
   # button instead of a category tile.
   flat-button:

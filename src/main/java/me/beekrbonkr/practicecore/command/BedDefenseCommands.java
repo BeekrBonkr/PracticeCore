@@ -110,7 +110,11 @@ public final class BedDefenseCommands {
 
     // ------------------------------------------------------------- players
 
-    /** {@code play <id> [competitive|practice]} — the mode word sets the round mode first. */
+    /**
+     * {@code play <id> [competitive|practice|obsidian]} — the mode word sets
+     * the round mode first: competitive and practice switch obsidian
+     * practice off, obsidian switches it on over whichever of the two is set.
+     */
     private void play(Player player, String[] args, BedDefense defense) {
         if (args.length > 3) {
             String mode = args[3].toLowerCase(Locale.ROOT);
@@ -118,6 +122,12 @@ public final class BedDefenseCommands {
                 var selection = service().rawSelection(player.getUniqueId());
                 service().saveSelection(player.getUniqueId(),
                         selection.withCompetitive(mode.equals("competitive")));
+                service().play(player, defense, false);
+                return;
+            }
+            if (mode.equals("obsidian")) {
+                service().play(player, defense, true);
+                return;
             }
         }
         service().play(player, defense);
@@ -337,7 +347,7 @@ public final class BedDefenseCommands {
         }
         if (args.length == 4) {
             return switch (sub) {
-                case "play" -> PracticeCommand.filter(List.of("competitive", "practice"), args[3]);
+                case "play" -> PracticeCommand.filter(List.of("competitive", "practice", "obsidian"), args[3]);
                 case "delete" -> PracticeCommand.filter(List.of("confirm"), args[3]);
                 default -> List.of();
             };

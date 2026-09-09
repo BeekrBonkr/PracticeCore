@@ -125,6 +125,19 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
                     "count", String.valueOf(entry.getValue()),
                     "material", BlockKinds.pretty(entry.getKey())));
         }
+        if (defense.obsidianEligible()) {
+            String obsidianKey = BedDefenseService.obsidianStatsKey(defense.id());
+            long obsidianBest = plugin.stats().bestMs(viewer.getUniqueId(), obsidianKey);
+            var obsidianRecord = plugin.leaderboards().record(obsidianKey);
+            lines.add(name("gui.beddefense.gallery.obsidian-line",
+                    "best", obsidianBest >= 0 ? TimeFormat.precise(obsidianBest) : raw("gui.none"),
+                    "record", obsidianRecord != null
+                            ? TimeFormat.precise(obsidianRecord.millis()) : raw("gui.none"),
+                    "record-holder", obsidianRecord != null
+                            ? obsidianRecord.displayName() : raw("gui.none")));
+        } else {
+            lines.add(name("gui.beddefense.gallery.obsidian-ineligible-line"));
+        }
         if (defense.reportCount() > 0 && service.isModerator(viewer)) {
             lines.add(name("gui.beddefense.gallery.reports-line",
                     "count", String.valueOf(defense.reportCount())));
@@ -156,6 +169,13 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
         }
         if (purpose == Purpose.EDIT && !defense.isAuthor(viewer.getUniqueId())) {
             deny();
+            return;
+        }
+        if (purpose == Purpose.SELECT && !BedDefenseService.playable(
+                plugin.bedDefenses().rawSelection(viewer.getUniqueId()), defense)) {
+            // Obsidian practice is on and this one has obsidian on the bed already.
+            deny();
+            plugin.messages().send(viewer, "beddefense.obsidian.ineligible", "name", defense.name());
             return;
         }
         sound("menu.select");
