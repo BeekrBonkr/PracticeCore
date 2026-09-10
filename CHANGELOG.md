@@ -3,6 +3,18 @@
 Notable changes to PracticeCore. Versions follow the plugin's own numbering;
 config file format versions (`config-version`) migrate automatically on start.
 
+## 0.11.1
+
+### Fixed
+
+- **Chat prompt answers no longer reach other players.** A line typed in
+  answer to a chat prompt (naming an arena or a defense, a report reason)
+  was cancelled but could still be shown by chat plugins that ignore the
+  cancel, un-cancel later, or act on the legacy chat event. The answer is
+  now taken first and the line stripped at every level it could leak from
+  — cancelled, no viewers, empty text — on both the modern and legacy
+  events, and again after every other plugin's handler has run.
+
 ## 0.11.0
 
 ### Bed defense maps
