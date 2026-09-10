@@ -215,6 +215,15 @@ public interface Mode {
         return session.tracker().isTracked(block.getLocation());
     }
 
+    /**
+     * May an explosion (TNT, a fireball) take this block out? Default: no —
+     * the practice world is inert. Modes with explosives (rush, bed repair)
+     * open up what the player placed or the mode generated, never the map.
+     */
+    default boolean explosionCanBreak(PracticeSession session, org.bukkit.Location loc) {
+        return false;
+    }
+
     /** A permitted block break is about to happen. */
     default void onBlockBreak(PracticeCorePlugin plugin, Player player, PracticeSession session,
                               BlockBreakEvent event) {

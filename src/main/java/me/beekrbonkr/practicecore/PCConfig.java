@@ -120,6 +120,22 @@ public final class PCConfig {
     private final int bedDefenseNameMaxLength;
     private final boolean bedDefenseEmeraldForObsidian;
     private final List<Material> bedDefenseObsidianTools;
+    private final int bedDefenseRepairFirstDelayTicks;
+    private final int bedDefenseRepairDelayMinTicks;
+    private final int bedDefenseRepairDelayMaxTicks;
+    private final int bedDefenseRepairTntMin;
+    private final int bedDefenseRepairTntMax;
+    private final int bedDefenseRepairTntDropHeight;
+    private final int bedDefenseRepairTntFuseTicks;
+    private final double bedDefenseRepairFireballChance;
+    private final double bedDefenseRepairFireballDistance;
+    private final double bedDefenseRepairFireballHeight;
+    private final double bedDefenseRepairFireballSpeed;
+    private final double bedDefenseRepairFireballPower;
+    private final int bedDefenseRepairExposedStartTicks;
+    private final int bedDefenseRepairExposedMinTicks;
+    private final int bedDefenseRepairExposedShrinkEveryRounds;
+    private final int bedDefenseRepairVolleyTimeoutTicks;
     private final Material bedDefenseItemMaterial;
     private final int bedDefenseItemSlot;
     private final int bedDefensePreviewStepTicks;
@@ -384,6 +400,29 @@ public final class PCConfig {
         this.bedDefenseObsidianTools = obsidianTools.isEmpty()
                 ? List.of(Material.WOODEN_PICKAXE, Material.WOODEN_AXE, Material.SHEARS)
                 : List.copyOf(obsidianTools);
+        this.bedDefenseRepairFirstDelayTicks = 20 * Math.clamp(cfg.getInt("beddefense.repair.first-delay-seconds", 5), 1, 120);
+        int delayMin = Math.clamp(cfg.getInt("beddefense.repair.delay-seconds.min", 3), 0, 120);
+        int delayMax = Math.clamp(cfg.getInt("beddefense.repair.delay-seconds.max", 6), 0, 120);
+        this.bedDefenseRepairDelayMinTicks = 20 * Math.min(delayMin, delayMax);
+        this.bedDefenseRepairDelayMaxTicks = 20 * Math.max(delayMin, delayMax);
+        int tntMin = Math.clamp(cfg.getInt("beddefense.repair.tnt.min", 1), 0, 16);
+        int tntMax = Math.clamp(cfg.getInt("beddefense.repair.tnt.max", 2), 0, 16);
+        this.bedDefenseRepairTntMin = Math.min(tntMin, tntMax);
+        this.bedDefenseRepairTntMax = Math.max(tntMin, tntMax);
+        this.bedDefenseRepairTntDropHeight = Math.clamp(cfg.getInt("beddefense.repair.tnt.drop-height", 12), 1, 64);
+        this.bedDefenseRepairTntFuseTicks = Math.clamp(cfg.getInt("beddefense.repair.tnt.fuse-ticks", 70), 10, 400);
+        this.bedDefenseRepairFireballChance = Math.clamp(cfg.getDouble("beddefense.repair.fireball.chance", 0.35), 0.0, 1.0);
+        this.bedDefenseRepairFireballDistance = Math.clamp(cfg.getDouble("beddefense.repair.fireball.distance", 10.0), 2.0, 64.0);
+        this.bedDefenseRepairFireballHeight = Math.clamp(cfg.getDouble("beddefense.repair.fireball.height", 4.0), 0.0, 64.0);
+        this.bedDefenseRepairFireballSpeed = Math.clamp(cfg.getDouble("beddefense.repair.fireball.speed", 1.0), 0.1, 10.0);
+        this.bedDefenseRepairFireballPower = Math.clamp(cfg.getDouble("beddefense.repair.fireball.power", 3.0), 0.0, 10.0);
+        int exposedStart = Math.clamp(cfg.getInt("beddefense.repair.exposed-seconds.start", 10), 1, 120);
+        int exposedMin = Math.clamp(cfg.getInt("beddefense.repair.exposed-seconds.min", 3), 1, 120);
+        this.bedDefenseRepairExposedStartTicks = 20 * Math.max(exposedStart, exposedMin);
+        this.bedDefenseRepairExposedMinTicks = 20 * Math.min(exposedStart, exposedMin);
+        this.bedDefenseRepairExposedShrinkEveryRounds = Math.clamp(
+                cfg.getInt("beddefense.repair.exposed-seconds.shrink-every-rounds", 1), 1, 1000);
+        this.bedDefenseRepairVolleyTimeoutTicks = Math.clamp(cfg.getInt("beddefense.repair.volley-timeout-ticks", 200), 20, 2400);
         this.bedDefenseItemMaterial = material(cfg.getString("beddefense.item.material"), Material.RED_BED);
         this.bedDefenseItemSlot = Math.clamp(cfg.getInt("beddefense.item.slot", 7), 0, 8);
         this.bedDefensePreviewStepTicks = Math.clamp(cfg.getInt("beddefense.preview.step-ticks", 8), 1, 200);
@@ -968,6 +1007,82 @@ public final class PCConfig {
     /** The tools an obsidian practice kit deals beside the eight obsidian. */
     public List<Material> bedDefenseObsidianTools() {
         return bedDefenseObsidianTools;
+    }
+
+    // ---- bed repair
+
+    /** Ticks from the round starting to the first volley. */
+    public int bedDefenseRepairFirstDelayTicks() {
+        return bedDefenseRepairFirstDelayTicks;
+    }
+
+    /** The pause before every later volley is drawn from [min, max] ticks. */
+    public int bedDefenseRepairDelayMinTicks() {
+        return bedDefenseRepairDelayMinTicks;
+    }
+
+    public int bedDefenseRepairDelayMaxTicks() {
+        return bedDefenseRepairDelayMaxTicks;
+    }
+
+    /** TNT per volley, drawn from [min, max]. */
+    public int bedDefenseRepairTntMin() {
+        return bedDefenseRepairTntMin;
+    }
+
+    public int bedDefenseRepairTntMax() {
+        return bedDefenseRepairTntMax;
+    }
+
+    /** How far above the defense's top the TNT appears. */
+    public int bedDefenseRepairTntDropHeight() {
+        return bedDefenseRepairTntDropHeight;
+    }
+
+    public int bedDefenseRepairTntFuseTicks() {
+        return bedDefenseRepairTntFuseTicks;
+    }
+
+    /** The chance a volley is a single fireball rather than TNT, 0–1. */
+    public double bedDefenseRepairFireballChance() {
+        return bedDefenseRepairFireballChance;
+    }
+
+    /** Where fireballs come from: this far out from the bed, this far up. */
+    public double bedDefenseRepairFireballDistance() {
+        return bedDefenseRepairFireballDistance;
+    }
+
+    public double bedDefenseRepairFireballHeight() {
+        return bedDefenseRepairFireballHeight;
+    }
+
+    public double bedDefenseRepairFireballSpeed() {
+        return bedDefenseRepairFireballSpeed;
+    }
+
+    public double bedDefenseRepairFireballPower() {
+        return bedDefenseRepairFireballPower;
+    }
+
+    /** Ticks the bed may stay exposed at the start of a run, before the limit shrinks. */
+    public int bedDefenseRepairExposedStartTicks() {
+        return bedDefenseRepairExposedStartTicks;
+    }
+
+    /** The shortest the exposure limit ever gets, in ticks. */
+    public int bedDefenseRepairExposedMinTicks() {
+        return bedDefenseRepairExposedMinTicks;
+    }
+
+    /** The limit loses a second every this many rounds survived. */
+    public int bedDefenseRepairExposedShrinkEveryRounds() {
+        return bedDefenseRepairExposedShrinkEveryRounds;
+    }
+
+    /** Ticks after which whatever is left of a volley is removed as stuck. */
+    public int bedDefenseRepairVolleyTimeoutTicks() {
+        return bedDefenseRepairVolleyTimeoutTicks;
     }
 
     public Material bedDefenseItemMaterial() {

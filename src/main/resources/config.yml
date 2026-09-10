@@ -16,7 +16,7 @@
 #   guis.yml     — menu layout: slots, icons, rows
 #   sounds.yml   — every sound cue
 #   pvpbot.yml   — the PvP bot's difficulty tuning and its kits
-config-version: 9
+config-version: 10
 
 world:
   # Name of the ephemeral practice world. Its folder is DELETED and recreated
@@ -394,6 +394,58 @@ beddefense:
   # of those eight spots cannot be used for it.
   obsidian:
     tools: [WOODEN_PICKAXE, WOODEN_AXE, SHEARS]
+  # Bed repair (the Bed Repair toggle in the setup menu): the chosen defense
+  # stands already built, and as long as it stands complete the sky attacks
+  # it — a volley is either lit TNT falling from above or a single fireball
+  # from the side, never both. Once a volley is spent the kit holds exactly
+  # the blocks the damage took and nothing more, and the round is rebuilding
+  # before the bed is left exposed too long: a cover spot (the six blocks
+  # touching the bed's sides at bed height and the two on top) that is not
+  # a solid block starts that clock. The limit starts generous and shrinks
+  # as rounds are survived. Once it runs out the run is over and the arena
+  # resets — into the next run, which starts fresh. Scored in rounds
+  # survived (volleys the defense was rebuilt after), on a ranked board of
+  # its own per defense (beddefense#<id>#repair). Only defenses that seal
+  # the bed with solid, non-obsidian blocks on all eight cover spots, and
+  # have no glass or water anywhere, can be used: obsidian never breaks
+  # (a bed that cannot be exposed would survive forever), and glass and
+  # water do not behave under a blast the way a repair round expects.
+  repair:
+    # Seconds from the round starting to the first volley, and the range the
+    # pause before every later volley is drawn from. The pause only counts
+    # down while the defense stands complete.
+    first-delay-seconds: 5
+    delay-seconds:
+      min: 3
+      max: 6
+    tnt:
+      # TNT per volley, drawn from [min, max].
+      min: 1
+      max: 2
+      # How many blocks above the defense's top the TNT appears, and how
+      # long its fuse is once it does (20 ticks = 1 second; it needs a
+      # moment to land first).
+      drop-height: 12
+      fuse-ticks: 70
+    fireball:
+      # The chance (0–1) a volley is one fireball instead of TNT.
+      chance: 0.35
+      # Where it comes from — this far out from the bed, this far above
+      # it, aimed at the bed — how fast, and its explosion power (TNT is 4).
+      distance: 10.0
+      height: 4.0
+      speed: 1.0
+      power: 3.0
+    # How long the bed may stay exposed before the run is lost: start
+    # seconds on a fresh run, one second less every shrink-every-rounds
+    # rounds survived, never below min.
+    exposed-seconds:
+      start: 10
+      min: 3
+      shrink-every-rounds: 1
+    # A volley that has not gone off by then (a fireball flying out into
+    # the void) is removed so the next one can come.
+    volley-timeout-ticks: 200
   # The bed defense hotbar item (menu, preview, editor). Slot 0-8.
   item:
     material: RED_BED

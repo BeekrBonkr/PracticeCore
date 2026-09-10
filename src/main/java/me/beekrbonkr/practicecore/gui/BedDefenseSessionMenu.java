@@ -52,12 +52,14 @@ public final class BedDefenseSessionMenu extends Menu {
         BedDefense defense = state.defense();
         boolean guided = state.phase() == Phase.GUIDED;
 
-        boolean canPreview = defense != null && state.phase() == Phase.PLAY;
+        boolean canPreview = defense != null && state.phase() == Phase.PLAY && !state.repair();
         Button preview = Button.of(plugin, icon("preview", Material.PAINTING))
                 .name("gui.beddefense.session.preview.name")
                 .lore("gui.beddefense.session.preview.lore");
         if (defense == null) {
             preview.disabled("gui.reason.no-defense");
+        } else if (state.repair()) {
+            preview.disabled("gui.reason.not-in-repair");
         } else if (!canPreview) {
             preview.disabled("gui.reason.wrong-phase");
         } else {
@@ -85,9 +87,11 @@ public final class BedDefenseSessionMenu extends Menu {
                 .name("gui.beddefense.session.guided.name")
                 .lore("gui.beddefense.session.guided.lore", plugin.messages().ref("state",
                         guided ? "label.state.on" : "label.state.off"));
-        boolean noGuide = defense == null || state.obsidian();
+        boolean noGuide = defense == null || state.obsidian() || state.repair();
         if (defense == null) {
             guide.disabled("gui.reason.no-defense");
+        } else if (state.repair()) {
+            guide.disabled("gui.reason.not-in-repair");
         } else if (state.obsidian()) {
             guide.disabled("gui.reason.not-in-obsidian");
         } else {

@@ -334,6 +334,35 @@ public final class BedDefense {
         return true;
     }
 
+    /**
+     * Whether bed repair can run on this defense. The run ends when the bed
+     * is left exposed, so the defense must seal it to begin with — a solid
+     * block of its own on every one of the eight cover spots — and none of
+     * those may be obsidian, which no TNT or fireball ever dents: a bed that
+     * cannot be exposed would survive forever. Glass of any kind and water
+     * anywhere in the shape rule it out too: neither behaves under a blast
+     * the way a repair round expects (glass shatters clean and drops
+     * nothing to count, water never breaks at all).
+     */
+    public boolean repairEligible() {
+        java.util.Set<org.bukkit.util.Vector> sealed = new java.util.HashSet<>();
+        for (DefenseBlock block : blocks) {
+            if (block.kind() == Material.GLASS || block.kind() == Material.GLASS_PANE
+                    || block.kind() == Material.WATER) {
+                return false;
+            }
+            org.bukkit.util.Vector at = new org.bukkit.util.Vector(block.x(), block.y(), block.z());
+            if (!DefenseFrame.isCover(at)) {
+                continue;
+            }
+            if (block.kind() == Material.OBSIDIAN || !block.kind().isSolid()) {
+                return false;
+            }
+            sealed.add(at);
+        }
+        return sealed.size() == DefenseFrame.COVER.size();
+    }
+
     public boolean containsKind(Material kind) {
         for (DefenseBlock block : blocks) {
             if (block.kind() == kind) {

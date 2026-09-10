@@ -2,6 +2,7 @@ package me.beekrbonkr.practicecore.command;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.beddefense.BedDefense;
+import me.beekrbonkr.practicecore.beddefense.BedDefenseSelection;
 import me.beekrbonkr.practicecore.beddefense.BedDefenseService;
 import me.beekrbonkr.practicecore.message.Messages;
 import me.beekrbonkr.practicecore.mode.BedDefenseMode;
@@ -111,9 +112,10 @@ public final class BedDefenseCommands {
     // ------------------------------------------------------------- players
 
     /**
-     * {@code play <id> [competitive|practice|obsidian]} — the mode word sets
-     * the round mode first: competitive and practice switch obsidian
-     * practice off, obsidian switches it on over whichever of the two is set.
+     * {@code play <id> [competitive|practice|obsidian|repair]} — the mode
+     * word sets the round mode first: competitive and practice switch
+     * obsidian practice and bed repair off, obsidian or repair switches
+     * that one on over whichever of the two is set.
      */
     private void play(Player player, String[] args, BedDefense defense) {
         if (args.length > 3) {
@@ -122,11 +124,15 @@ public final class BedDefenseCommands {
                 var selection = service().rawSelection(player.getUniqueId());
                 service().saveSelection(player.getUniqueId(),
                         selection.withCompetitive(mode.equals("competitive")));
-                service().play(player, defense, false);
+                service().play(player, defense, BedDefenseSelection.Variant.NORMAL);
                 return;
             }
             if (mode.equals("obsidian")) {
-                service().play(player, defense, true);
+                service().play(player, defense, BedDefenseSelection.Variant.OBSIDIAN);
+                return;
+            }
+            if (mode.equals("repair")) {
+                service().play(player, defense, BedDefenseSelection.Variant.REPAIR);
                 return;
             }
         }
@@ -347,7 +353,8 @@ public final class BedDefenseCommands {
         }
         if (args.length == 4) {
             return switch (sub) {
-                case "play" -> PracticeCommand.filter(List.of("competitive", "practice", "obsidian"), args[3]);
+                case "play" -> PracticeCommand.filter(
+                        List.of("competitive", "practice", "obsidian", "repair"), args[3]);
                 case "delete" -> PracticeCommand.filter(List.of("confirm"), args[3]);
                 default -> List.of();
             };
