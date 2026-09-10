@@ -34,7 +34,10 @@ At a glance, the five modes:
   with likes, favorites, reports, a block-by-block preview, guided building
   and an in-world editor; a defense goes public only once its author has
   built it for real. Obsidian practice starts with the defense standing:
-  break in, seal the bed with eight obsidian, build it back.
+  break in, seal the bed with eight obsidian, build it back. Bed repair
+  starts the same way and never stops: lit TNT and fireballs keep wrecking
+  the defense, and you rebuild it before the bed stays exposed too long,
+  scored in rounds survived.
 - **mlg**: water-bucket clutches from a random drop height; the score is your
   streak.
 - **pvpbot**: an endless spar against an AI opponent that strafes, combos,
@@ -300,7 +303,7 @@ your wool-color setting and shop purchases all count. Only water **source**
 blocks count (flowing water never does), and a waterlogged ladder is a
 ladder.
 
-Two ways to play, chosen in the setup menu, and an obsidian drill on top:
+Two ways to play, chosen in the setup menu, and two drills on top:
 
 - **Competitive**: a real match opening: sword, team-dyed leather, the
   base's iron and gold generators and the mirrored MBedwars shop; blocks are
@@ -333,14 +336,47 @@ Two ways to play, chosen in the setup menu, and an obsidian drill on top:
   tile, and the toggle counts how many defenses qualify. The preview shows
   the eight obsidian going onto the bed instead of the defense going up, and
   there is no guided building.
+- **Bed repair** (the Bed Repair toggle; it sets the mode aside while on,
+  and switches obsidian off — the two cannot run together): the defense
+  stands already built, and as long as it stands complete the sky attacks
+  it: a volley is either one or two lit TNT (`beddefense.repair.tnt`)
+  dropping from above random defense blocks, or a single fireball from the
+  side (`beddefense.repair.fireball`, a 35% chance by default), never both.
+  Explosions take out the defense and anything you placed, never the bed
+  or the map. Once the volley is spent your kit holds **exactly** the
+  blocks the damage took and nothing more — nothing is dealt up front, a
+  block placed in the wrong spot still counts against you until you break
+  it back — and the round is rebuilding. From then on, the moment any of
+  the eight cover spots (the six blocks touching the bed's sides at bed
+  height and the two on top) is not a solid block, the bed is **exposed**:
+  a title says so, the action bar counts down, and if it is not covered in
+  time the run is over — the arena resets and the next run starts fresh.
+  The limit starts at `beddefense.repair.exposed-seconds.start` (10) and
+  loses a second every `shrink-every-rounds` rounds survived (1), down to
+  `min` (3), so the run gets harder the longer it goes. Nothing else resets it: a blast that throws you off the island
+  puts you back at the spawn with the run going. Every volley you rebuild
+  after is a **round survived**; the next volley comes after a random pause
+  (`delay-seconds`, 3–6 by default) that only counts down while the defense
+  stands complete, so the TNT never falls on a broken defense. Runs are
+  scored in rounds, not time, ranked highest first on a board of their own,
+  and the score is written when the bed falls or when you leave or restart
+  mid-run. A defense qualifies only if it seals the bed with solid,
+  non-obsidian blocks on all eight cover spots — obsidian never breaks, and
+  a bed that cannot be exposed would survive forever — and has no glass
+  (panes included) or water anywhere in it; the gallery tile, the toggle's
+  count and the pick refusal all say so. No preview or guided
+  building; the sidebar shows rounds, your best, the blocks standing and
+  what the sky is up to.
 
 Boards are kept **per defense**, not per map: `beddefense#<id>` is the ranked
-competitive board and `beddefense#<id>#obsidian` the ranked obsidian board,
-both under the Bed Defense category in the leaderboards menu (two tiles per
-defense, the obsidian one wearing an obsidian icon), while
-`beddefense#<id>#practice` holds your private practice bests. Competitive and
-obsidian records and personal bests broadcast exactly like every other mode;
-practice ones stay with you. Playing from a board plays in that board's mode.
+competitive board, `beddefense#<id>#obsidian` the ranked obsidian board and
+`beddefense#<id>#repair` the ranked bed repair board (rounds survived,
+highest first), all under the Bed Defense category in the leaderboards menu
+(three tiles per defense, the obsidian one wearing an obsidian icon and the
+repair one TNT), while `beddefense#<id>#practice` holds your private
+practice bests. Competitive, obsidian and repair records and personal bests
+broadcast exactly like every other mode; practice ones stay with you.
+Playing from a board plays in that board's mode.
 `/practice top <map>` on a bed defense map points you at those boards rather
 than pretending the map has one.
 
@@ -404,7 +440,7 @@ actions: like (public, one per player), favorite (your private bookmark,
 also a shuffle pool), its boards, **report** (someone else's public
 defense), and, on your own, edit, publish/unpublish and delete (two
 clicks). `/practice beddefense` opens the map picker; `play <id>
-[competitive|practice|obsidian]`, `like|favorite|publish|unpublish|edit <id>`,
+[competitive|practice|obsidian|repair]`, `like|favorite|publish|unpublish|edit <id>`,
 `report <id> [reason]`, `delete <id> confirm` and `list` do the same from
 chat, and `/practice beddefense help` lists them.
 
@@ -455,7 +491,10 @@ carrying the blocks, likes, favorites, completions, `cleared-fingerprint`,
 `reports`, `reports-seen` and `auto-hidden`; `/practice reload` re-reads
 them. Tuning is under `beddefense:` in `config.yml`: the block list, the
 editor radius, defenses per player, name length, the obsidian practice
-tools (`obsidian.tools`), the publishing gate
+tools (`obsidian.tools`), bed repair (`repair.first-delay-seconds`,
+`repair.delay-seconds`, `repair.tnt`, `repair.fireball`,
+`repair.exposed-seconds.start|min|shrink-every-rounds`,
+`repair.volley-timeout-ticks`), the publishing gate
 (`require-author-clear`), reports (`reports.notify-moderators`,
 `reports.reason-max-length`, `reports.remind-on-join`,
 `reports.remind-minutes`, `reports.auto-hide.percent`,

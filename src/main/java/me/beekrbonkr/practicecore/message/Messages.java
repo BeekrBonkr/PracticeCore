@@ -277,6 +277,40 @@ public final class Messages {
                 cfg.set("help.beddefense-detail", updated);
             }
         }
+        if (from < 14) {
+            // v14: bed defense bed repair. The mode lore's ranked line, the
+            // boards' empty state and the flat button now mention it; lists
+            // still at their v13 default are dropped for top-up to rewrite,
+            // an admin's own wording stands. The command reference gains
+            // the repair word on its play line in place.
+            if (cfg.getStringList("gui.beddefense.mode.lore").equals(List.of(
+                    "<gray>Competitive is a real match start:",
+                    "<gray>sword, armor, generators and shop.",
+                    "<gray>Practice hands you the exact blocks.", "",
+                    "<gray>Mode: <mode>", "<gold>Competitive and obsidian are ranked."))) {
+                cfg.set("gui.beddefense.mode.lore", null);
+            }
+            if (cfg.getStringList("gui.beddefense.boards.empty.lore").equals(List.of(
+                    "<gray>Competitive and obsidian rounds", "<gray>put times here."))) {
+                cfg.set("gui.beddefense.boards.empty.lore", null);
+            }
+            if ("<gray><bold>No times yet".equals(cfg.getString("gui.beddefense.boards.empty.name"))) {
+                cfg.set("gui.beddefense.boards.empty.name", null);
+            }
+            if (cfg.getStringList("gui.beddefense.boards.flat-button.lore").equals(List.of(
+                    "<gray>Competitive and obsidian boards,", "<gray>per defense."))) {
+                cfg.set("gui.beddefense.boards.flat-button.lore", null);
+            }
+            List<String> detail = cfg.getStringList("help.beddefense-detail");
+            if (!detail.isEmpty()) {
+                List<String> updated = new ArrayList<>();
+                for (String line : detail) {
+                    updated.add(line.replace("play <id> [competitive|practice|obsidian] ",
+                            "play <id> [competitive|practice|obsidian|repair] "));
+                }
+                cfg.set("help.beddefense-detail", updated);
+            }
+        }
     }
 
     private void index(FileConfiguration cfg) {

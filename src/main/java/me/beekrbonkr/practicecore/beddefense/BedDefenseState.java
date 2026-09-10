@@ -76,6 +76,28 @@ public final class BedDefenseState {
     private boolean finishing;
     /** Obsidian practice has been explained once this session; resets need not repeat it. */
     private boolean obsidianIntroduced;
+    /** Bed repair has been explained once this session; resets need not repeat it. */
+    private boolean repairIntroduced;
+
+    // ---- repair
+    /** Rounds survived this run: volleys the defense was rebuilt after. */
+    private int rounds;
+    /** This run's score has been written; a second teardown must not write it again. */
+    private boolean repairRecorded;
+    /** Ticks until the next volley, or -1 while none is scheduled. Counts down only while the defense stands complete. */
+    private int volleyDelay = -1;
+    /** The TNT and fireballs of the volley in the air right now. */
+    private final List<org.bukkit.entity.Entity> volley = new ArrayList<>();
+    /** Ticks the current volley has been alive, for the stuck-entity cutoff. */
+    private int volleyAge;
+    /** A volley has landed and the defense is short: the player is repairing. */
+    private boolean awaitingRepair;
+    /** Ticks the bed has been exposed, or -1 while it is covered. */
+    private int exposedTicks = -1;
+    /** The whole second last announced of the exposure countdown, so it is said once. */
+    private int exposedAnnounced;
+    /** The first volley has flown: the run (and its clock) is under way. */
+    private boolean runStarted;
 
     // ---- preview
     private ItemStack[] stashedInventory;
@@ -205,6 +227,103 @@ public final class BedDefenseState {
 
     public void setFinishing(boolean finishing) {
         this.finishing = finishing;
+    }
+
+    // ---- repair
+
+    /** True while the round is bed repair: the defense stands and is kept standing. */
+    public boolean repair() {
+        return selection.repair();
+    }
+
+    /** True the first time only: whether bed repair still needs introducing. */
+    public boolean introduceRepair() {
+        if (repairIntroduced) {
+            return false;
+        }
+        repairIntroduced = true;
+        return true;
+    }
+
+    public int rounds() {
+        return rounds;
+    }
+
+    public void countRound() {
+        rounds++;
+    }
+
+    public boolean repairRecorded() {
+        return repairRecorded;
+    }
+
+    public void setRepairRecorded(boolean repairRecorded) {
+        this.repairRecorded = repairRecorded;
+    }
+
+    public int volleyDelay() {
+        return volleyDelay;
+    }
+
+    public void setVolleyDelay(int volleyDelay) {
+        this.volleyDelay = volleyDelay;
+    }
+
+    public List<org.bukkit.entity.Entity> volley() {
+        return volley;
+    }
+
+    public int volleyAge() {
+        return volleyAge;
+    }
+
+    public void setVolleyAge(int volleyAge) {
+        this.volleyAge = volleyAge;
+    }
+
+    public boolean awaitingRepair() {
+        return awaitingRepair;
+    }
+
+    public void setAwaitingRepair(boolean awaitingRepair) {
+        this.awaitingRepair = awaitingRepair;
+    }
+
+    public int exposedTicks() {
+        return exposedTicks;
+    }
+
+    public void setExposedTicks(int exposedTicks) {
+        this.exposedTicks = exposedTicks;
+    }
+
+    public int exposedAnnounced() {
+        return exposedAnnounced;
+    }
+
+    public void setExposedAnnounced(int exposedAnnounced) {
+        this.exposedAnnounced = exposedAnnounced;
+    }
+
+    public boolean runStarted() {
+        return runStarted;
+    }
+
+    public void setRunStarted(boolean runStarted) {
+        this.runStarted = runStarted;
+    }
+
+    /** A fresh run: nothing survived yet, nothing in the air, bed covered. */
+    public void resetRepair() {
+        rounds = 0;
+        repairRecorded = false;
+        volleyDelay = -1;
+        volley.clear();
+        volleyAge = 0;
+        awaitingRepair = false;
+        exposedTicks = -1;
+        exposedAnnounced = 0;
+        runStarted = false;
     }
 
     /**
