@@ -10,7 +10,6 @@ import org.bukkit.entity.Player;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -116,6 +115,30 @@ public final class StatsStore {
                     plugin.leaderboards().submit(player, names.get(player), template, millis);
                 }
                 pb = true;
+            }
+        }
+        saveAsync(player, yml);
+        return pb;
+    }
+
+    /**
+     * Records a finished scored run — bed repair's rounds survived — where
+     * higher is better; returns true if it set a new personal best. Same
+     * fields as {@link #record}: the score travels as {@code best-ms} so
+     * scans and menus need no second path, and the leaderboard knows which
+     * keys rank highest first.
+     */
+    public boolean recordScore(UUID player, String template, long score, boolean ranked) {
+        YamlConfiguration yml = data(player);
+        String base = "templates." + template + ".";
+        yml.set(base + "last-ms", score);
+        yml.set(base + "finishes", yml.getInt(base + "finishes") + 1);
+        long best = yml.getLong(base + "best-ms", -1);
+        boolean pb = plugin.leaderboards().better(template, score, best);
+        if (pb) {
+            yml.set(base + "best-ms", score);
+            if (ranked) {
+                plugin.leaderboards().submit(player, names.get(player), template, score);
             }
         }
         saveAsync(player, yml);
@@ -469,7 +492,7 @@ public final class StatsStore {
                     }
                 }
             }
-            boards.values().forEach(list -> list.sort(Comparator.comparingLong(LeaderboardService.Entry::millis)));
+            boards.forEach((template, list) -> list.sort(plugin.leaderboards().order(template)));
             if (!plugin.isEnabled()) {
                 return;
             }

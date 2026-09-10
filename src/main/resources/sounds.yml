@@ -131,3 +131,16 @@ beddefense:
   cleared: 'ENTITY_PLAYER_LEVELUP 0.8 1.6'
   # A report filed.
   report: 'BLOCK_NOTE_BLOCK_BASS 0.7 0.8'
+  # Bed repair: the last seconds before a drop, a volley launched, each
+  # TNT appearing (played at it) and each fireball (played where it comes
+  # from), the bed becoming exposed and every second it stays so, the bed
+  # covered again, a round survived, and the run lost.
+  repair-countdown: 'BLOCK_NOTE_BLOCK_HAT 0.8 1.2'
+  repair-incoming: 'BLOCK_NOTE_BLOCK_BELL 0.9 0.8'
+  repair-tnt: 'ENTITY_TNT_PRIMED 1.0 1.0'
+  repair-fireball: 'ENTITY_GHAST_SHOOT 0.8 1.0'
+  repair-exposed: 'ENTITY_ENDER_DRAGON_GROWL 0.5 1.6'
+  repair-exposed-tick: 'BLOCK_NOTE_BLOCK_BASS 1.0 0.7'
+  repair-covered: 'BLOCK_NOTE_BLOCK_PLING 0.7 1.6'
+  repair-survived: 'ENTITY_EXPERIENCE_ORB_PICKUP 0.8 1.4'
+  repair-failed: 'ENTITY_ITEM_BREAK 1.0 0.6'

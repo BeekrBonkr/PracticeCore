@@ -12,7 +12,7 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 13
+config-version: 14
 
 prefix: '<gold>Practice <dark_gray>» '
 
@@ -353,6 +353,7 @@ board:
     mode-competitive: '<gold>Competitive'
     mode-practice: '<white>Practice'
     mode-obsidian: '<light_purple>Obsidian'
+    mode-repair: '<red>Bed Repair'
     mode-preview: '<aqua>Preview'
     mode-guided: '<green>Guided'
     mode-edit: '<yellow>Editor'
@@ -361,6 +362,15 @@ board:
     progress-line: '<gray>Blocks: <white><placed><dark_gray>/<white><total>'
     # Obsidian practice: how many of the eight are on the bed. <placed> <total>
     obsidian-line: '<gray>Obsidian: <white><placed><dark_gray>/<white><total>'
+    # Bed repair: rounds survived this run and the best run. <rounds> <best>
+    repair-rounds-line: '<gray>Rounds: <white><rounds>'
+    repair-best-line: '<gray>Best: <white><best>'
+    # Bed repair status, one of these at a time. <seconds> <missing>
+    repair-exposed-line: '<red>Bed exposed! <white><seconds>s'
+    repair-incoming-line: '<gold>Incoming!'
+    repair-rebuild-line: '<yellow>Rebuild: <white><missing> <yellow>missing'
+    repair-next-line: '<gray>Next drop: <white><seconds>s'
+    repair-waiting-line: '<gray>Waiting…'
     # Competitive: your best on this defense. <best>
     best-line: '<gray>Best: <white><best>'
     casual-line: '<dark_gray>Not ranked — play competitive'
@@ -396,6 +406,48 @@ beddefense:
     ineligible: '<prefix><red><white><name><red> already has obsidian on the bed — it cannot be used for obsidian practice.'
     # Every defense left has obsidian on the bed: the toggle is switched off for this round.
     none-eligible: '<prefix><yellow>No defense you can play is without obsidian on the bed — obsidian practice is off.'
+  # Bed repair: the defense stands, TNT and fireballs keep wrecking it,
+  # rebuild it before the bed stays exposed too long. Scored in rounds.
+  repair:
+    # The first round of the session. <name> <seconds> <limit> <min>
+    entered: '<prefix><gray>Bed repair: <white><name><gray> stands. TNT starts falling in <white><seconds>s<gray> — rebuild after every blast, and never leave the bed exposed for <white><limit>s<gray> (down to <white><min>s<gray> as you go).'
+    # Action bar at the start of every later run. <seconds>
+    run-start: '<gray>New run — first drop in <white><seconds>s'
+    # Action bar, the last seconds before a drop. <seconds>
+    countdown: '<gray>Next drop in <white><seconds>s'
+    # Action bar as a volley is launched: TNT from above, or one fireball. <count>
+    incoming-tnt: '<gold>Incoming! <white><count> <gold>TNT'
+    incoming-fireball: '<gold>Incoming! <white>Fireball'
+    # Action bar once a volley is spent and the defense is short. <missing>
+    rebuild: '<yellow>Rebuild the defense — <white><missing> <yellow>missing'
+    # Action bar per second while the bed is exposed. <seconds>
+    exposed-bar: '<red><bold>BED EXPOSED <reset><red>— <white><seconds>s'
+    # Title when the bed becomes exposed. <seconds>
+    title-exposed: '<red><bold>BED EXPOSED'
+    subtitle-exposed: '<gray>Cover it within <white><seconds>s'
+    # Action bar when the bed is covered again.
+    covered: '<green>Bed covered'
+    # Action bar after each volley the defense was rebuilt from. <round>
+    survived: '<green>Round <white><round> <green>survived'
+    # The run ending: the bed stayed exposed. <rounds> <name>
+    failed: '<prefix><red>The bed fell — <white><name><red> held for <white><rounds><red> rounds.'
+    title-failed: '<red><bold>BED LOST'
+    subtitle-failed: '<gray><rounds> rounds survived'
+    # The score written, at the fail or when the run is cut short. <rounds> <best> <name>
+    ended-pb: '<prefix><green>Survived <white><rounds><green> rounds on <white><name><green> — new personal best!'
+    ended: '<prefix><gray>Survived <white><rounds><gray> rounds on <white><name><gray> (best <white><best><gray>).'
+    ended-first: '<prefix><gray>Survived <white><rounds><gray> rounds on <white><name><gray>.'
+    # Server-wide: a new #1, and a beaten one. <player> <arena> <rounds> <previous-holder> <previous>
+    record-broadcast: '<prefix><gold><player> <gray>set a new record on <white><arena> <gray>— <white><rounds> rounds<gray>!'
+    record-broadcast-beaten: '<prefix><gold><player> <gray>set a new record on <white><arena> <gray>— <white><rounds> rounds<gray>, beating <white><previous-holder><gray>''s <white><previous><gray>!'
+    # Server-wide: an improved personal best. <player> <arena> <rounds> <improvement>
+    pb-broadcast: '<prefix><gray><player> beat their personal best on <white><arena> <gray>— <white><rounds> rounds <gray>(<white>+<improvement><gray>).'
+    # A defense that has glass or water anywhere, or does not seal the bed with solid, non-obsidian blocks, cannot be used. <name>
+    ineligible: '<prefix><red><white><name><red> cannot be used for bed repair — no glass or water, and the bed must be sealed with solid, non-obsidian blocks.'
+    # Every defense left fails that test: the toggle is switched off for this round.
+    none-eligible: '<prefix><yellow>No defense you can play qualifies for bed repair (no glass or water, bed sealed with solid, non-obsidian blocks) — it is off.'
+    # Action bar: the preview and guided building have no place here.
+    no-preview: '<red>No preview or guided building in bed repair'
   # <name>
   deleted: '<prefix><gray>Deleted the bed defense <white><name><gray>.'
   # /practice beddefense delete without confirm (style guide R58). <name> <id>
@@ -416,6 +468,8 @@ beddefense:
   board-name-practice: '<name> (Bed Defense, practice)'
   # Obsidian practice has a ranked board of its own per defense.
   board-name-obsidian: '<name> (Bed Defense, obsidian)'
+  # Bed repair too — scored in rounds survived, highest first.
+  board-name-repair: '<name> (Bed Defense, bed repair)'
   list-empty: '<prefix><gray>No bed defenses to play yet. Design one with <white>/practice beddefense edit<gray>.'
   # <count>
   list-header: '<prefix><gray>Bed defenses you can play (<white><count><gray>):'
@@ -639,6 +693,8 @@ leaderboard:
   empty: '<prefix><gray>Nobody has finished <white><arena><gray> yet.'
   # <arena>
   header: '<prefix><gray>Top times — <white><arena><gray>:'
+  # Boards scored in rounds rather than times (bed repair). <arena>
+  header-score: '<prefix><gray>Top scores — <white><arena><gray>:'
   # <rank> <player> <time>
   entry: '<dark_gray> #<rank> <white><player> <gray>— <white><time>'
   # <rank> <total>
@@ -775,7 +831,7 @@ help:
     - '<prefix><gray>Bed defense practice:'
     - '<dark_gray> • <white>/practice beddefense <dark_gray>— the map picker'
     - '<dark_gray> • <white>/practice beddefense list <dark_gray>— every defense you can play'
-    - '<dark_gray> • <white>/practice beddefense play <id> [competitive|practice|obsidian] <dark_gray>— build that defense'
+    - '<dark_gray> • <white>/practice beddefense play <id> [competitive|practice|obsidian|repair] <dark_gray>— build that defense'
     - '<dark_gray> • <white>/practice beddefense like|favorite <id>'
     - '<dark_gray> • <white>/practice beddefense edit [id] <dark_gray>— the editor, fresh or on one of yours'
     - '<dark_gray> • <white>/practice beddefense publish|unpublish <id> <dark_gray>— public needs your own competitive completion first'
@@ -945,6 +1001,8 @@ label:
     public: '<green>public'
     private: '<gray>private'
     selected: '<green>selected'
+  # A bed repair score wherever a board shows a value. <count>
+  rounds: '<count> rounds'
   # Rush objective names — boards, stats, broadcasts and the rush menus.
   objective:
     bed: 'Bed Rush'
@@ -1029,6 +1087,9 @@ gui:
     pinned-obsidian: 'pinned by obsidian practice'
     not-in-obsidian: 'not in obsidian practice'
     no-obsidian-defenses: 'no defense without obsidian on the bed'
+    pinned-repair: 'pinned by bed repair'
+    not-in-repair: 'not in bed repair'
+    no-repair-defenses: 'no defense qualifies for bed repair'
     no-defense: 'no defense chosen'
     nothing-to-load: 'nothing to load'
     nothing-saved: 'nothing saved yet'
@@ -1260,6 +1321,8 @@ gui:
   board:
     # <arena>
     title: '<dark_gray><bold>Top Times — <arena>'
+    # Boards scored in rounds rather than times (bed repair). <arena>
+    title-score: '<dark_gray><bold>Top Scores — <arena>'
     empty:
       name: '<gray><bold>No times yet'
       lore:
@@ -1273,6 +1336,10 @@ gui:
     entry-lore:
       - '<gray>Time: <white><time>'
       - '<gray>Behind #1 by: <white><behind>'
+    # The same on a board scored in rounds; <time> then carries the score.
+    entry-lore-score:
+      - '<gray>Score: <white><time>'
+      - '<gray>Behind #1 by: <white><behind>'
     entry-lore-self-suffix:
       - ''
       - '<aqua>That''s you.'
@@ -1280,6 +1347,13 @@ gui:
       name: '<aqua>Your Standing'
       # <rank> <players> <best> <next> <gap>
       lore:
+        - '<gray>Rank: <white><rank> <dark_gray>of <players>'
+        - '<gray>Best: <white><best>'
+        - ''
+        - '<gray>Next up: <white><next>'
+        - '<gray>Gap: <white><gap>'
+      # The same on a board scored in rounds. <rank> <players> <best> <next> <gap>
+      lore-score:
         - '<gray>Rank: <white><rank> <dark_gray>of <players>'
         - '<gray>Best: <white><best>'
         - ''
@@ -1868,7 +1942,7 @@ gui:
         - '<gray>Practice hands you the exact blocks.'
         - ''
         - '<gray>Mode: <mode>'
-        - '<gold>Competitive and obsidian are ranked.'
+        - '<gold>Competitive, obsidian and bed repair are ranked.'
       # While obsidian practice is on the mode is set aside. <mode>
       lore-obsidian:
         - '<gray>Competitive is a real match start:'
@@ -1877,10 +1951,19 @@ gui:
         - ''
         - '<gray>Mode: <mode> <dark_gray>(set aside)'
         - '<light_purple>Obsidian practice is on.'
+      # While bed repair is on the mode is set aside. <mode>
+      lore-repair:
+        - '<gray>Competitive is a real match start:'
+        - '<gray>sword, armor, generators and shop.'
+        - '<gray>Practice hands you the exact blocks.'
+        - ''
+        - '<gray>Mode: <mode> <dark_gray>(set aside)'
+        - '<red>Bed repair is on.'
       option:
         competitive: '<gold>Competitive'
         practice: '<white>Practice'
         obsidian: '<light_purple>Obsidian'
+        repair: '<red>Bed Repair'
     obsidian:
       name: '<white><bold>Obsidian'
       # <state> <eligible> <available>
@@ -1892,6 +1975,21 @@ gui:
         - '<gray>Obsidian practice: <state>'
         - '<gray>Defenses without obsidian: <white><eligible><dark_gray>/<white><available>'
         - '<gold>Always ranked, on its own board.'
+    repair:
+      name: '<white><bold>Bed Repair'
+      # <state> <eligible> <available> <limit> <min>
+      lore:
+        - '<gray>The defense stands. Lit TNT or a'
+        - '<gray>fireball keeps wrecking it, and you'
+        - '<gray>rebuild with exactly the blocks it'
+        - '<gray>took. Never leave the bed exposed for'
+        - '<gray><white><limit>s<gray> — shrinking to <white><min>s<gray> — or the'
+        - '<gray>run is over.'
+        - ''
+        - '<gray>Bed repair: <state>'
+        - '<gray>Defenses that qualify: <white><eligible><dark_gray>/<white><available>'
+        - '<dark_gray>No glass or water; bed sealed solid.'
+        - '<gold>Always ranked, in rounds survived.'
     shuffle:
       name: '<white><bold>Shuffle'
       # <pool>
@@ -1927,6 +2025,12 @@ gui:
         - '<gray>first move.'
         - ''
         - '<gray>Starts on: <white><start>'
+      lore-repair:
+        - '<gray>When the clock starts. Bed repair'
+        - '<gray>is scored in rounds, not time; the'
+        - '<gray>clock runs from the first drop.'
+        - ''
+        - '<gray>Starts on: <white><start>'
       option:
         move: 'first movement'
         first_block: 'first block placed'
@@ -1954,6 +2058,7 @@ gui:
       name: '<green><bold>Start Practice'
       name-competitive: '<gold><bold>Start Competitive'
       name-obsidian: '<light_purple><bold>Start Obsidian'
+      name-repair: '<red><bold>Start Bed Repair'
       name-apply: '<green><bold>Apply and Restart'
       # <arena> <defense> <mode> <shuffle> <timer> <ranked>
       lore:
@@ -1972,6 +2077,12 @@ gui:
         - '<gray>Every defense you can play already'
         - '<gray>has obsidian on the bed. Switch'
         - '<gray>obsidian practice off, or design one.'
+      # Bed repair is on but no defense qualifies (glass or water, or an unsealed bed).
+      lore-repair-none:
+        - '<gray>No defense you can play qualifies:'
+        - '<gray>no glass or water, and the bed sealed'
+        - '<gray>with solid, non-obsidian blocks.'
+        - '<gray>Switch bed repair off, or design one.'
       # With no defense anywhere to build, Start becomes this.
       name-design: '<white><bold>New Defense'
       lore-design:
@@ -2038,6 +2149,10 @@ gui:
       obsidian-line: '<gray>Obsidian best: <white><best> <dark_gray>— <gray>Record: <white><record>'
       # Obsidian already on the bed: not for obsidian practice.
       obsidian-ineligible-line: '<dark_gray>Has obsidian on the bed — no obsidian practice'
+      # Bed repair on this defense. <best> <record> <record-holder>
+      repair-line: '<gray>Repair best: <white><best> <dark_gray>— <gray>Record: <white><record>'
+      # Glass or water in the shape, or the bed not sealed with solid, non-obsidian blocks: not for bed repair.
+      repair-ineligible-line: '<dark_gray>Glass, water or an unsealed bed — no bed repair'
       # Shown on the chosen defense.
       selected-line: '<gray>Currently: <green>selected'
       # Moderators see this on a reported defense. <count>
@@ -2200,13 +2315,13 @@ gui:
       flat-button:
         name: '<white><bold>Bed Defense'
         lore:
-          - '<gray>Competitive and obsidian boards,'
-          - '<gray>per defense.'
+          - '<gray>Competitive, obsidian and bed'
+          - '<gray>repair boards, per defense.'
       empty:
-        name: '<gray><bold>No times yet'
+        name: '<gray><bold>No results yet'
         lore:
-          - '<gray>Competitive and obsidian rounds'
-          - '<gray>put times here.'
+          - '<gray>Competitive, obsidian and bed'
+          - '<gray>repair rounds put results here.'
       # <board>
       entry-name: '<gold><bold><board>'
       # <name> <author> <players> <record> <record-holder> <rank>

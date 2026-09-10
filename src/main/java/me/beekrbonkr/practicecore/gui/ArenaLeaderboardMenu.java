@@ -4,7 +4,6 @@ import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.stats.LeaderboardService;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
 import me.beekrbonkr.practicecore.util.ItemBuilder;
-import me.beekrbonkr.practicecore.util.TimeFormat;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -61,7 +60,8 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
 
     @Override
     protected Component title() {
-        return text("gui.board.title", "arena", boardName);
+        return text(plugin.leaderboards().scored(boardKey) ? "gui.board.title-score" : "gui.board.title",
+                "arena", boardName);
     }
 
     @Override
@@ -79,18 +79,19 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
     protected ItemStack icon(LeaderboardService.Entry entry) {
         int rank = plugin.leaderboards().rank(boardKey, entry.uuid());
         boolean self = entry.uuid().equals(viewer.getUniqueId());
+        boolean scored = plugin.leaderboards().scored(boardKey);
         LeaderboardService.Entry leader = plugin.leaderboards().record(boardKey);
 
         String nameKey = rank == 1 ? "gui.board.entry-name-first"
                 : self ? "gui.board.entry-name-self" : "gui.board.entry-name";
         ItemBuilder row = base(entry, rank)
                 .name(name(nameKey, "rank", String.valueOf(rank), "player", entry.displayName()))
-                .lore(lore("gui.board.entry-lore",
+                .lore(lore(scored ? "gui.board.entry-lore-score" : "gui.board.entry-lore",
                         "rank", String.valueOf(rank),
                         "player", entry.displayName(),
-                        "time", TimeFormat.precise(entry.millis()),
+                        "time", plugin.leaderboards().format(boardKey, entry.millis()),
                         "behind", leader != null && rank > 1
-                                ? "+" + TimeFormat.precise(entry.millis() - leader.millis())
+                                ? "+" + plugin.leaderboards().formatGap(boardKey, entry.millis(), leader.millis())
                                 : raw("gui.none")));
         if (self) {
             row.lore(lore("gui.board.entry-lore-self-suffix"));
@@ -121,12 +122,14 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
         LeaderboardService.Entry ahead = ahead(rank);
         Button standing = Button.of(plugin, Material.NAME_TAG).name("gui.board.standing.name");
         if (rank > 0) {
-            standing.lore("gui.board.standing.lore",
+            standing.lore(plugin.leaderboards().scored(boardKey)
+                            ? "gui.board.standing.lore-score" : "gui.board.standing.lore",
                     "rank", "#" + rank,
                     "players", String.valueOf(plugin.leaderboards().size(boardKey)),
-                    "best", TimeFormat.precise(best),
+                    "best", plugin.leaderboards().format(boardKey, best),
                     "next", ahead != null ? ahead.displayName() : raw("gui.none"),
-                    "gap", ahead != null ? TimeFormat.precise(best - ahead.millis()) : raw("gui.none"));
+                    "gap", ahead != null
+                            ? plugin.leaderboards().formatGap(boardKey, best, ahead.millis()) : raw("gui.none"));
         } else {
             standing.lore("gui.board.standing.lore-none");
         }

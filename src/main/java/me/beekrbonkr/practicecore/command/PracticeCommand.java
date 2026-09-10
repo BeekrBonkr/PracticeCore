@@ -316,13 +316,14 @@ public final class PracticeCommand implements CommandExecutor, TabCompleter {
             msg().send(sender, "leaderboard.empty", "arena", display);
             return;
         }
-        msg().send(sender, "leaderboard.header", "arena", display);
+        boolean scored = plugin.leaderboards().scored(key);
+        msg().send(sender, scored ? "leaderboard.header-score" : "leaderboard.header", "arena", display);
         for (int i = 0; i < top.size(); i++) {
             LeaderboardService.Entry entry = top.get(i);
             msg().send(sender, "leaderboard.entry",
                     "rank", String.valueOf(i + 1),
                     "player", entry.displayName(),
-                    "time", TimeFormat.precise(entry.millis()));
+                    "time", plugin.leaderboards().format(key, entry.millis()));
         }
         if (sender instanceof Player player) {
             int rank = plugin.leaderboards().rank(key, player.getUniqueId());

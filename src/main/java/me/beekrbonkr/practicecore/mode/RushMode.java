@@ -215,10 +215,8 @@ public final class RushMode implements Mode {
      * defense shells. Never the map, and — unlike a pickaxe — never a bed;
      * bedwars beds are explosion-proof and runs must end by hand.
      */
-    public static boolean explosionCanBreak(PracticeSession session, Location loc) {
-        if (!(session.mode() instanceof RushMode)) {
-            return false;
-        }
+    @Override
+    public boolean explosionCanBreak(PracticeSession session, Location loc) {
         if (session.tracker().isTracked(loc)) {
             return true;
         }
