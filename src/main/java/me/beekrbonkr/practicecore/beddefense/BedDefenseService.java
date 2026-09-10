@@ -74,16 +74,28 @@ public final class BedDefenseService {
     private final Map<UUID, String> lastMap = new HashMap<>();
     private BukkitTask task;
     private BukkitTask reminderTask;
+    private final BedRepair repair;
 
     public BedDefenseService(PracticeCorePlugin plugin) {
         this.plugin = plugin;
         this.store = new DefenseStore(plugin);
         this.itemKey = new NamespacedKey(plugin, "beddefense-item");
+        this.repair = new BedRepair(plugin, this);
+        // Bed repair boards rank rounds survived, highest first, and read
+        // as "<n> rounds" wherever a board shows a value.
+        plugin.leaderboards().registerScoreKeys(BedDefenseService::isRepairStatsKey,
+                rounds -> plugin.messages().raw("label.rounds").replace("<count>", String.valueOf(rounds)));
     }
 
     public DefenseStore store() {
         return store;
     }
+
+    /** The bed repair engine: volleys, the exposure clock, the rounds score. */
+    public BedRepair repair() {
+        return repair;
+    }
+
 
     // --------------------------------------------------------- block kinds
 
@@ -157,6 +169,7 @@ public final class BedDefenseService {
         return new BedDefenseSelection(
                 stats.prefBool(player, "beddefense.competitive", false),
                 stats.prefBool(player, "beddefense.obsidian", false),
+                stats.prefBool(player, "beddefense.repair", false),
                 defense,
                 BedDefenseSelection.enumOr(BedDefenseSelection.Shuffle.class,
                         stats.pref(player, "beddefense.shuffle", null), defaults.shuffle()),
@@ -190,6 +203,7 @@ public final class BedDefenseService {
         Map<String, Object> values = new LinkedHashMap<>();
         values.put("beddefense.competitive", selection.competitive());
         values.put("beddefense.obsidian", selection.obsidian());
+        values.put("beddefense.repair", selection.repair());
         values.put("beddefense.defense", selection.defense());
         values.put("beddefense.shuffle", selection.shuffle().name());
         values.put("beddefense.timer-start", selection.timerStart().name());
@@ -200,15 +214,24 @@ public final class BedDefenseService {
         saveSelection(player, rawSelection(player).withDefense(id));
     }
 
-    // ------------------------------------------------------------- obsidian
+    // --------------------------------------------------- obsidian and repair
 
     /**
      * Whether a defense can be played under the given choices: any defense
-     * outside obsidian practice, and there only one with no obsidian on the
-     * bed already (see {@link BedDefense#obsidianEligible()}).
+     * in a plain round; in obsidian practice only one with no obsidian on
+     * the bed already (see {@link BedDefense#obsidianEligible()}); in bed
+     * repair only one that seals the bed with solid, non-obsidian blocks
+     * (see {@link BedDefense#repairEligible()}).
      */
     public static boolean playable(BedDefenseSelection selection, BedDefense defense) {
-        return defense != null && (!selection.obsidian() || defense.obsidianEligible());
+        return defense != null
+                && (!selection.obsidian() || defense.obsidianEligible())
+                && (!selection.repair() || defense.repairEligible());
+    }
+
+    /** The messages.yml key refusing a defense the choices cannot run on. */
+    public static String ineligibleKey(BedDefenseSelection selection) {
+        return selection.repair() ? "beddefense.repair.ineligible" : "beddefense.obsidian.ineligible";
     }
 
     /** The defenses this player can pick for obsidian practice. */
@@ -222,25 +245,49 @@ public final class BedDefenseService {
         return out;
     }
 
+    /** The defenses this player can pick for bed repair. */
+    public List<BedDefense> repairPlayableBy(UUID player) {
+        List<BedDefense> out = new ArrayList<>();
+        for (BedDefense defense : store.playableBy(player)) {
+            if (defense.repairEligible()) {
+                out.add(defense);
+            }
+        }
+        return out;
+    }
+
+    /** The defenses this player can pick under the given choices. */
+    public List<BedDefense> playableBy(UUID player, BedDefenseSelection selection) {
+        return switch (selection.variant()) {
+            case OBSIDIAN -> obsidianPlayableBy(player);
+            case REPAIR -> repairPlayableBy(player);
+            case NORMAL -> store.playableBy(player);
+        };
+    }
+
     /** The kit tools of an obsidian round, from config, with anything unknown dropped. */
     public List<Material> obsidianTools() {
         return plugin.pcConfig().bedDefenseObsidianTools();
     }
 
     /**
-     * Obsidian practice with nothing it can run on — every defense the
-     * player can play has obsidian on the bed already — is switched off,
-     * and the player told, so the round falls back to an ordinary one
-     * rather than into the editor. @return true when it was switched off
+     * Obsidian practice or bed repair with nothing it can run on — every
+     * defense the player can play has obsidian on the bed already, or none
+     * seals the bed — is switched off, and the player told, so the round
+     * falls back to an ordinary one rather than into the editor.
+     * @return true when it was switched off
      */
-    private boolean dropObsidianIfNothingEligible(Player player) {
+    private boolean dropVariantIfNothingEligible(Player player) {
         UUID id = player.getUniqueId();
         BedDefenseSelection raw = rawSelection(id);
-        if (!raw.obsidian() || !obsidianPlayableBy(id).isEmpty() || store.playableBy(id).isEmpty()) {
+        if (raw.variant() == BedDefenseSelection.Variant.NORMAL
+                || !playableBy(id, raw).isEmpty() || store.playableBy(id).isEmpty()) {
             return false;
         }
-        saveSelection(id, raw.withObsidian(false));
-        msg().send(player, "beddefense.obsidian.none-eligible");
+        boolean repairing = raw.repair();
+        saveSelection(id, raw.withVariant(BedDefenseSelection.Variant.NORMAL));
+        msg().send(player, repairing ? "beddefense.repair.none-eligible"
+                : "beddefense.obsidian.none-eligible");
         return true;
     }
 
@@ -401,7 +448,7 @@ public final class BedDefenseService {
         }
         UUID id = player.getUniqueId();
         if (upcomingPhase(id, null) == Phase.PLAY) {
-            dropObsidianIfNothingEligible(player);
+            dropVariantIfNothingEligible(player);
         }
         if (upcomingPhase(id, null) == Phase.PLAY && !pendingPlay.containsKey(id)) {
             PracticeSession current = plugin.sessions().get(id);
@@ -425,8 +472,9 @@ public final class BedDefenseService {
      */
     public void play(Player player, BedDefense defense) {
         UUID id = player.getUniqueId();
-        if (!playable(rawSelection(id), defense)) {
-            msg().send(player, "beddefense.obsidian.ineligible", "name", defense.name());
+        BedDefenseSelection selection = rawSelection(id);
+        if (!playable(selection, defense)) {
+            msg().send(player, ineligibleKey(selection), "name", defense.name());
             plugin.sounds().play(player, "menu.deny");
             return;
         }
@@ -456,15 +504,26 @@ public final class BedDefenseService {
      * anything changes.
      */
     public void play(Player player, BedDefense defense, boolean obsidian) {
+        play(player, defense, obsidian ? BedDefenseSelection.Variant.OBSIDIAN
+                : BedDefenseSelection.Variant.NORMAL);
+    }
+
+    /**
+     * {@link #play(Player, BedDefense)} in one variant — plain, obsidian or
+     * repair — switched to first. A defense the variant cannot run on is
+     * refused before anything changes.
+     */
+    public void play(Player player, BedDefense defense, BedDefenseSelection.Variant variant) {
         UUID id = player.getUniqueId();
         BedDefenseSelection selection = rawSelection(id);
-        if (obsidian && !defense.obsidianEligible()) {
-            msg().send(player, "beddefense.obsidian.ineligible", "name", defense.name());
+        BedDefenseSelection wanted = selection.withVariant(variant);
+        if (!playable(wanted, defense)) {
+            msg().send(player, ineligibleKey(wanted), "name", defense.name());
             plugin.sounds().play(player, "menu.deny");
             return;
         }
-        if (selection.obsidian() != obsidian) {
-            saveSelection(id, selection.withObsidian(obsidian));
+        if (selection.variant() != variant) {
+            saveSelection(id, wanted);
         }
         play(player, defense);
     }
@@ -555,9 +614,9 @@ public final class BedDefenseService {
         }
         if (picked == null) {
             // Nothing chosen (or it was deleted, or has obsidian on the bed
-            // in obsidian practice) — the first playable one.
-            List<BedDefense> playable = selection.obsidian()
-                    ? obsidianPlayableBy(player) : store.playableBy(player);
+            // in obsidian practice, or does not seal it for bed repair) —
+            // the first playable one.
+            List<BedDefense> playable = playableBy(player, selection);
             picked = playable.isEmpty() ? null : playable.get(0);
         }
         if (picked != null) {
@@ -632,15 +691,16 @@ public final class BedDefenseService {
         }
         state.setSelection(selection(id));
         BedDefenseSelection raw = rawSelection(id);
-        if (raw.competitive() && !raw.obsidian() && !state.selection().competitive()
-                && state.phase() != Phase.EDIT) {
+        if (raw.competitive() && raw.variant() == BedDefenseSelection.Variant.NORMAL
+                && !state.selection().competitive() && state.phase() != Phase.EDIT) {
             msg().send(player, "beddefense.competitive-needs-shop");
         }
-        if (state.phase() != Phase.EDIT && dropObsidianIfNothingEligible(player)) {
-            // Every defense left has obsidian on the bed already (the one
-            // without was deleted or hidden mid-session). The kit already
-            // dealt was the obsidian one, so the round restarts as an
-            // ordinary one rather than falling into the editor.
+        if (state.phase() != Phase.EDIT && dropVariantIfNothingEligible(player)) {
+            // Every defense left has obsidian on the bed already, or none
+            // seals it (the one that qualified was deleted or hidden
+            // mid-session). The kit already dealt was the variant's one, so
+            // the round restarts as an ordinary one rather than falling
+            // into the editor.
             state.setSelection(selection(id));
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (plugin.sessions().get(id) == session) {
@@ -676,6 +736,7 @@ public final class BedDefenseService {
             return;
         }
         boolean obsidian = state.selection().obsidian();
+        boolean repairing = state.selection().repair();
         state.obsidianTargets().clear();
         for (DefenseBlock block : defense.blocks()) {
             Location loc = state.frame().toWorld(block);
@@ -707,6 +768,11 @@ public final class BedDefenseService {
                 msg().send(player, "beddefense.obsidian.entered", "name", defense.name(),
                         "count", String.valueOf(state.obsidianTargets().size()));
             }
+        } else if (repairing) {
+            // The defense stands; the sky does the breaking. Nothing is
+            // bought here either, and there is no preview to hint at.
+            prebuild(player, session, state, defense);
+            repair.begin(player, session, state);
         } else {
             // Nothing is bought in obsidian practice: no generators, no dealer.
             armGenerators(session, state, defense);
@@ -718,7 +784,9 @@ public final class BedDefenseService {
                         dealer.yaw(), 0));
             }
         }
-        showHologram(player, state);
+        if (!repairing) {
+            showHologram(player, state);
+        }
         if (state.phase() == Phase.GUIDED) {
             // A reset never leaves a guide behind — guided is entered on purpose.
             state.setPhase(Phase.PLAY);
@@ -893,7 +961,8 @@ public final class BedDefenseService {
      * The kit for the player's upcoming round. Competitive is a match
      * opening: sword, team-dyed leather, the bed defense item and the menu
      * item. Practice adds the defense's exact blocks, one water bucket per
-     * water block. Obsidian practice is tools and eight obsidian. The editor
+     * water block. Obsidian practice is tools and eight obsidian; bed repair
+     * is armor alone, the blocks arriving with the damage. The editor
      * carries full stacks of every allowed block.
      */
     public Map<Integer, ItemStack> kit(Player player, ArenaTemplate template, BedDefenseState state) {
@@ -909,11 +978,16 @@ public final class BedDefenseService {
         }
         Phase phase = upcomingPhase(id, state);
         List<ItemStack> items = new ArrayList<>();
+        boolean repairing = phase != Phase.EDIT && selection(id).repair();
         Material sword = plugin.pcConfig().rushStarterSword();
-        if (sword != null) {
+        if (sword != null && !repairing) {
             items.add(new ItemStack(sword));
         }
-        if (phase == Phase.EDIT) {
+        if (repairing) {
+            // Bed repair deals no blocks up front: every volley hands over
+            // exactly what it took, and nothing else is needed.
+            phase = Phase.PLAY;
+        } else if (phase == Phase.EDIT) {
             for (Material kind : allowedKinds()) {
                 items.add(new ItemStack(kind == Material.WHITE_WOOL ? kitWool(player) : kind, 64));
             }
@@ -1079,6 +1153,12 @@ public final class BedDefenseService {
     public void previewOrGuide(Player player, PracticeSession session, BedDefenseState state) {
         switch (state.phase()) {
             case PLAY -> {
+                if (state.repair()) {
+                    // The defense is standing right there, and the sky
+                    // would not wait for a flying preview to finish.
+                    msg().actionBar(player, "beddefense.repair.no-preview");
+                    return;
+                }
                 if (state.attemptInProgress(session.timerRunning())) {
                     enterGuided(player, session, state, true);
                 } else {
@@ -1100,6 +1180,10 @@ public final class BedDefenseService {
 
     public void enterPreview(Player player, PracticeSession session, BedDefenseState state) {
         if (state.phase() != Phase.PLAY || state.defense() == null) {
+            return;
+        }
+        if (state.repair()) {
+            msg().actionBar(player, "beddefense.repair.no-preview");
             return;
         }
         // Stepping off the spawn started the clock, but with nothing built
@@ -1246,6 +1330,10 @@ public final class BedDefenseService {
             msg().actionBar(player, "beddefense.guided.not-in-obsidian");
             return;
         }
+        if (state.repair()) {
+            msg().actionBar(player, "beddefense.repair.no-preview");
+            return;
+        }
         if (state.phase() == Phase.PREVIEW) {
             undoPreview(state);
             restoreStash(player, state);
@@ -1386,6 +1474,11 @@ public final class BedDefenseService {
                            Location loc) {
         switch (state.phase()) {
             case PLAY -> {
+                if (state.repair()) {
+                    // Nothing to finish: the tick sees the defense standing
+                    // again and counts the round.
+                    return;
+                }
                 state.countPlaced();
                 if (session.state() == SessionState.READY) {
                     // Built without ever leaving the spawn block: the first
@@ -2148,6 +2241,26 @@ public final class BedDefenseService {
     }
 
     /**
+     * Where a bed repair run's score goes: rounds survived, ranked highest
+     * first on a public board of its own per defense.
+     */
+    public static String repairStatsKey(String defenseId) {
+        return "beddefense#" + defenseId + "#repair";
+    }
+
+    /** True for a key holding bed repair scores. */
+    public static boolean isRepairStatsKey(String key) {
+        return key != null && key.startsWith("beddefense#") && key.endsWith("#repair");
+    }
+
+    /** The variant a board key belongs to. */
+    public static BedDefenseSelection.Variant variantOfKey(String key) {
+        return isRepairStatsKey(key) ? BedDefenseSelection.Variant.REPAIR
+                : isObsidianStatsKey(key) ? BedDefenseSelection.Variant.OBSIDIAN
+                : BedDefenseSelection.Variant.NORMAL;
+    }
+
+    /**
      * The board key strict-order rounds used to write to. Strict order was
      * removed, so nothing writes this any more; it is still recognized so
      * times set before the removal keep resolving to their defense instead
@@ -2163,7 +2276,7 @@ public final class BedDefenseService {
             return null;
         }
         String rest = key.substring("beddefense#".length());
-        for (String suffix : List.of("#practice", "#obsidian", "#strict")) {
+        for (String suffix : List.of("#practice", "#obsidian", "#repair", "#strict")) {
             if (rest.endsWith(suffix)) {
                 rest = rest.substring(0, rest.length() - suffix.length());
                 break;
@@ -2177,10 +2290,11 @@ public final class BedDefenseService {
         return msg().raw("beddefense.board-name").replace("<name>", defense.name());
     }
 
-    /** The same, named for the key's variant: practice and obsidian times say so. */
+    /** The same, named for the key's variant: practice, obsidian and repair say so. */
     public String displayForKey(String key, BedDefense defense) {
         String name = isPracticeStatsKey(key) ? "beddefense.board-name-practice"
                 : isObsidianStatsKey(key) ? "beddefense.board-name-obsidian"
+                : isRepairStatsKey(key) ? "beddefense.board-name-repair"
                 : "beddefense.board-name";
         return msg().raw(name).replace("<name>", defense.name());
     }
@@ -2188,12 +2302,13 @@ public final class BedDefenseService {
     /** Every key a defense can hold times under, ranked or not. */
     public List<String> statsKeys(BedDefense defense) {
         return List.of(statsKey(defense.id()), practiceStatsKey(defense.id()),
-                obsidianStatsKey(defense.id()));
+                obsidianStatsKey(defense.id()), repairStatsKey(defense.id()));
     }
 
-    /** The public boards a defense keeps: competitive and obsidian. */
+    /** The public boards a defense keeps: competitive, obsidian and repair. */
     public List<String> rankedStatsKeys(BedDefense defense) {
-        return List.of(statsKey(defense.id()), obsidianStatsKey(defense.id()));
+        return List.of(statsKey(defense.id()), obsidianStatsKey(defense.id()),
+                repairStatsKey(defense.id()));
     }
 
     // ----------------------------------------------------------------- ticking
@@ -2238,6 +2353,12 @@ public final class BedDefenseService {
             switch (state.phase()) {
                 case PREVIEW -> tickPreview(player, state);
                 case GUIDED -> tickGuide(state);
+                case PLAY -> {
+                    if (state.repair() && (session.state() == SessionState.READY
+                            || session.state() == SessionState.ACTIVE)) {
+                        repair.tick(player, session, state, TICK_PERIOD);
+                    }
+                }
                 default -> {
                 }
             }
@@ -2318,6 +2439,11 @@ public final class BedDefenseService {
     /** Session end: entities gone, preview undone, phase intents forgotten. */
     public void cleanup(Player player, PracticeSession session, BedDefenseState state) {
         removeEntities(state);
+        if (state.repair()) {
+            // Leaving mid-run still counts the rounds survived so far.
+            repair.record(player, session, state);
+            repair.clearVolley(state);
+        }
         if (state.phase() == Phase.PREVIEW) {
             undoPreview(state);
             if (player != null) {

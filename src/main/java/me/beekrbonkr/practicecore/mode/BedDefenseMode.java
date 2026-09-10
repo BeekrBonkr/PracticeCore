@@ -41,6 +41,9 @@ import java.util.Map;
  * ones — the match-opening loadout with blocks bought from the shop — and
  * obsidian ones — the defense standing, tools and eight obsidian to break
  * in, seal the bed and build back — are ranked against other players.
+ * Bed repair ({@link me.beekrbonkr.practicecore.beddefense.BedRepair}) has
+ * no finish at all: the defense stands, the sky keeps wrecking it, and the
+ * run is scored in volleys survived until the bed stays exposed too long.
  *
  * <p>Beyond building there are three side phases, all in
  * {@link BedDefenseService}: a block-by-block <b>preview</b>, <b>guided</b>
@@ -82,17 +85,18 @@ public final class BedDefenseMode implements Mode {
 
     // ------------------------------------------------------------------ timer
 
+    /** Bed repair starts its own clock with the first volley; nothing else does. */
     @Override
     public boolean startsTimerOnMove(PracticeCorePlugin plugin, PracticeSession session) {
         BedDefenseState state = state(session);
-        return state != null && state.phase() == Phase.PLAY
+        return state != null && state.phase() == Phase.PLAY && !state.repair()
                 && state.selection().timerStart() == BedDefenseSelection.TimerStart.MOVE;
     }
 
     @Override
     public boolean startsTimerOnFirstBlock(PracticeCorePlugin plugin, PracticeSession session) {
         BedDefenseState state = state(session);
-        return state != null && state.phase() == Phase.PLAY
+        return state != null && state.phase() == Phase.PLAY && !state.repair()
                 && state.selection().timerStart() == BedDefenseSelection.TimerStart.FIRST_BLOCK;
     }
 
@@ -168,6 +172,7 @@ public final class BedDefenseMode implements Mode {
     /**
      * Boards are kept per defense, not per map: {@code beddefense#<id>} for
      * competitive, {@code beddefense#<id>#obsidian} for obsidian practice,
+     * {@code beddefense#<id>#repair} for bed repair's rounds survived,
      * {@code beddefense#<id>#practice} for the practice bests only the
      * player sees. Before a round has a defense (join preloads) the chosen
      * one stands in.
@@ -180,6 +185,9 @@ public final class BedDefenseMode implements Mode {
         String id = defense == null ? "none" : defense.id();
         BedDefenseSelection selection = state != null ? state.selection()
                 : plugin.bedDefenses().selection(session.playerId());
+        if (selection.repair()) {
+            return BedDefenseService.repairStatsKey(id);
+        }
         if (selection.obsidian()) {
             return BedDefenseService.obsidianStatsKey(id);
         }
@@ -221,6 +229,12 @@ public final class BedDefenseMode implements Mode {
             return;
         }
         plugin.bedDefenses().removeEntities(state);
+        if (state.repair()) {
+            // Any reset ends the run — a restart from the menu included —
+            // and the rounds survived so far are its score.
+            plugin.bedDefenses().repair().record(player, session, state);
+            plugin.bedDefenses().repair().clearVolley(state);
+        }
         if (state.phase() == Phase.EDIT) {
             plugin.bedDefenses().snapshotEdit(state);
         } else {
@@ -241,16 +255,43 @@ public final class BedDefenseMode implements Mode {
         }
     }
 
-    /** A preview flies; a fall while flying is a teleport home, not a failed run. */
+    /**
+     * A preview flies; a fall while flying is a teleport home, not a failed
+     * run. In bed repair a blast can throw the player off the island, and
+     * the run does not end for that either — they land back at the spawn
+     * with the clock still running.
+     */
     @Override
     public boolean onVoidFall(PracticeCorePlugin plugin, Player player, PracticeSession session) {
         BedDefenseState state = state(session);
-        if (state == null || state.phase() != Phase.PREVIEW) {
+        if (state == null) {
+            return false;
+        }
+        if (state.phase() == Phase.PLAY && state.repair()) {
+            plugin.sessions().teleportInternal(player, session.spawn());
+            player.setFallDistance(0);
+            player.setVelocity(new org.bukkit.util.Vector(0, 0, 0));
+            return true;
+        }
+        if (state.phase() != Phase.PREVIEW) {
             return false;
         }
         plugin.sessions().teleportInternal(player, session.spawn());
         player.setFlying(true);
         return true;
+    }
+
+    /** Bed repair's TNT and fireballs take out the standing defense and whatever the player added — never the bed or the map. */
+    @Override
+    public boolean explosionCanBreak(PracticeSession session, Location loc) {
+        BedDefenseState state = state(session);
+        if (state == null || !state.repair() || state.phase() != Phase.PLAY) {
+            return false;
+        }
+        if (state.frame() != null && state.frame().isBed(loc)) {
+            return false;
+        }
+        return session.tracker().isTracked(loc);
     }
 
     // ---------------------------------------------------------------- blocks
@@ -321,7 +362,8 @@ public final class BedDefenseMode implements Mode {
                 ? msg.component("board.timer-running", "time", TimeFormat.tenths(session.elapsedMs()))
                 : msg.component("board.timer-ready");
         String modeKey = switch (state.phase()) {
-            case PLAY -> state.obsidian() ? "board.beddefense.mode-obsidian"
+            case PLAY -> state.repair() ? "board.beddefense.mode-repair"
+                    : state.obsidian() ? "board.beddefense.mode-obsidian"
                     : state.selection().competitive()
                     ? "board.beddefense.mode-competitive" : "board.beddefense.mode-practice";
             case PREVIEW -> "board.beddefense.mode-preview";
@@ -339,6 +381,20 @@ public final class BedDefenseMode implements Mode {
         switch (state.phase()) {
             case PLAY, GUIDED -> {
                 int total = state.targets().size();
+                if (state.repair() && state.phase() == Phase.PLAY) {
+                    // Rounds, not times: the run's score so far, the best
+                    // score, the defense's state and what the sky is up to.
+                    long best = plugin.stats().bestMs(session.playerId(), statsKey(plugin, session));
+                    lines.add(msg.component("board.beddefense.repair-rounds-line",
+                            "rounds", String.valueOf(state.rounds())));
+                    lines.add(msg.component("board.beddefense.repair-best-line",
+                            "best", best >= 0 ? String.valueOf(best) : none));
+                    lines.add(msg.component("board.beddefense.progress-line",
+                            "placed", String.valueOf(state.satisfied()),
+                            "total", String.valueOf(total)));
+                    lines.add(plugin.bedDefenses().repair().statusLine(state));
+                    break;
+                }
                 if (state.obsidian()) {
                     lines.add(msg.component("board.beddefense.obsidian-line",
                             "placed", String.valueOf(state.obsidianSatisfied()),

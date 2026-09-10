@@ -2,9 +2,9 @@ package me.beekrbonkr.practicecore.gui;
 
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.beddefense.BedDefense;
+import me.beekrbonkr.practicecore.beddefense.BedDefenseSelection;
 import me.beekrbonkr.practicecore.beddefense.BedDefenseService;
 import me.beekrbonkr.practicecore.stats.LeaderboardService;
-import me.beekrbonkr.practicecore.util.TimeFormat;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -15,19 +15,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Bed defense leaderboards. Every defense keeps two public boards — its
- * competitive times and its obsidian practice times — and each is a tile
- * of its own. Opened from the leaderboards category picker it lists every
- * board with times on it; opened from a defense's actions it shows just
- * that defense's two. Each tile opens the full ranking.
+ * Bed defense leaderboards. Every defense keeps three public boards — its
+ * competitive times, its obsidian practice times and its bed repair rounds
+ * — and each is a tile of its own. Opened from the leaderboards category
+ * picker it lists every board with results on it; opened from a defense's
+ * actions it shows just that defense's three. Each tile opens the full
+ * ranking.
  */
 public final class BedDefenseBoardsMenu extends PagedMenu<BedDefenseBoardsMenu.Board> {
 
     /** One board: a defense and the key it is ranked under. */
     public record Board(BedDefense defense, String key) {
 
-        public boolean obsidian() {
-            return BedDefenseService.isObsidianStatsKey(key);
+        public BedDefenseSelection.Variant variant() {
+            return BedDefenseService.variantOfKey(key);
         }
     }
 
@@ -69,9 +70,11 @@ public final class BedDefenseBoardsMenu extends PagedMenu<BedDefenseBoardsMenu.B
     }
 
     private Material material(Board board) {
-        return board.obsidian()
-                ? plugin.guis().material("beddefense-boards.obsidian-material", Material.OBSIDIAN)
-                : board.defense().icon();
+        return switch (board.variant()) {
+            case OBSIDIAN -> plugin.guis().material("beddefense-boards.obsidian-material", Material.OBSIDIAN);
+            case REPAIR -> plugin.guis().material("beddefense-boards.repair-material", Material.TNT);
+            case NORMAL -> board.defense().icon();
+        };
     }
 
     @Override
@@ -87,7 +90,8 @@ public final class BedDefenseBoardsMenu extends PagedMenu<BedDefenseBoardsMenu.B
                         "name", defense.name(),
                         "author", defense.authorName(),
                         "players", String.valueOf(plugin.leaderboards().size(key)),
-                        "record", record != null ? TimeFormat.precise(record.millis()) : raw("gui.none"),
+                        "record", record != null
+                                ? plugin.leaderboards().format(key, record.millis()) : raw("gui.none"),
                         "record-holder", record != null ? record.displayName() : raw("gui.none"),
                         "rank", rank > 0 ? "#" + rank : raw("gui.none"))
                 .hint("view")
@@ -97,12 +101,12 @@ public final class BedDefenseBoardsMenu extends PagedMenu<BedDefenseBoardsMenu.B
     @Override
     protected void onEntryClick(Board board, InventoryClickEvent event) {
         click();
-        boolean obsidian = board.obsidian();
+        BedDefenseSelection.Variant variant = board.variant();
         later(() -> new ArenaLeaderboardMenu(plugin, viewer, this, board.key(),
                 plugin.bedDefenses().displayForKey(board.key(), board.defense()), material(board), () -> {
             viewer.closeInventory();
             // Playing from a board means playing in that board's mode.
-            plugin.bedDefenses().play(viewer, board.defense(), obsidian);
+            plugin.bedDefenses().play(viewer, board.defense(), variant);
         }).open());
     }
 }

@@ -689,6 +689,20 @@ public final class SessionManager {
         resetArena(player, session);
     }
 
+    /**
+     * A mode-driven reset with no verdict attached: no finish, no failure
+     * message, no time. Bed repair ends a run this way after saying its own
+     * piece — the score is rounds, not a time, and the mode has already
+     * recorded and announced it.
+     */
+    public void resetQuietly(Player player, PracticeSession session) {
+        if (session.state() != SessionState.ACTIVE && session.state() != SessionState.READY) {
+            return;
+        }
+        session.setState(SessionState.RESETTING);
+        resetArena(player, session);
+    }
+
     public void fail(Player player, PracticeSession session) {
         if (session.state() != SessionState.ACTIVE && session.state() != SessionState.READY) {
             return;

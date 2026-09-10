@@ -214,10 +214,11 @@ public final class ProtectionListener implements Listener {
     }
 
     /**
-     * Explosions (rush TNT and fireballs) behave the way bedwars players
-     * expect: blocks the player placed and generated bed defenses break, the
-     * map itself — beds included — never does, nothing drops, and the
-     * knockback the cancelled damage event would have applied is re-added.
+     * Explosions (rush TNT and fireballs, bed repair's falling TNT) behave
+     * the way bedwars players expect: blocks the player placed and generated
+     * bed defenses break, the map itself — beds included — never does,
+     * nothing drops, and the knockback the cancelled damage event would
+     * have applied is re-added. Each session's mode says what may go.
      */
     @EventHandler(ignoreCancelled = true)
     public void onExplode(EntityExplodeEvent event) {
@@ -228,8 +229,7 @@ public final class ProtectionListener implements Listener {
         event.blockList().removeIf(block -> {
             PracticeSession session = plugin.sessions().sessionAtBlock(block.getLocation());
             return session == null
-                    || !me.beekrbonkr.practicecore.mode.RushMode
-                            .explosionCanBreak(session, block.getLocation());
+                    || !session.mode().explosionCanBreak(session, block.getLocation());
         });
         plugin.rush().applyExplosionKnockback(event.getLocation());
     }

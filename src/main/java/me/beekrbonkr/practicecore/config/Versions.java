@@ -11,16 +11,21 @@ package me.beekrbonkr.practicecore.config;
 public final class Versions {
 
     /**
-     * config.yml — admin-editable. v9 adds the bed defense obsidian practice
+     * config.yml — admin-editable. v10 adds the bed defense repair section
+     * (additive); v9 added the bed defense obsidian practice
      * tools (additive); v8 added the bed defense publishing gate and report
      * keys (additive); v7 added the bed defense practice section (additive);
      * v6 raised the untouched competitive defender lineup from 0 to 4 per
      * team, so the competitive team-wipe preset has a lineup to pin.
      */
-    public static final int CONFIG = 9;
+    public static final int CONFIG = 10;
 
     /**
-     * messages.yml — admin-editable. v13 adds bed defense obsidian practice:
+     * messages.yml — admin-editable. v14 adds bed defense bed repair: its
+     * toggle, board name, sidebar lines and notices arrive (additive), and
+     * the mode lore, the boards' empty state and the command reference now
+     * mention it — lists still at their v13 default are rewritten, an
+     * admin's own wording stands. v13 adds bed defense obsidian practice:
      * its toggle, board name, sidebar line and notices arrive (additive),
      * and the mode lore, the boards' empty state and the command reference
      * now mention it — lists still at their old default are rewritten,
@@ -38,10 +43,13 @@ public final class Versions {
      * are reset to the new wording; edited ones stand. v8 added bed defense
      * practice; v7 the rush TNT modifier.
      */
-    public static final int MESSAGES = 13;
+    public static final int MESSAGES = 14;
 
     /**
-     * guis.yml — admin-editable menu layout. v9 adds the bed defense
+     * guis.yml — admin-editable menu layout. v11 moves the Bed Repair
+     * toggle in between Mode and Obsidian (28 → 22 where untouched). v10
+     * added the toggle and the repair icons for Start and the boards list,
+     * all additive. v9 adds the bed defense
      * Obsidian toggle to the setup menu's rules row, which spreads to
      * 19/21/23/25 (defense, mode, obsidian, timer); buttons still at
      * their v8 slots move, an admin's own row stands. v8 is the
@@ -57,7 +65,7 @@ public final class Versions {
      * one material means one thing. Values an admin never touched are reset;
      * edited ones stand. v5 added the bed defense menus.
      */
-    public static final int GUIS = 9;
+    public static final int GUIS = 11;
 
     /** sounds.yml — admin-editable sound cues. */
     public static final int SOUNDS = 1;

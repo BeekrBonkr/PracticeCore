@@ -3,6 +3,72 @@
 Notable changes to PracticeCore. Versions follow the plugin's own numbering;
 config file format versions (`config-version`) migrate automatically on start.
 
+## 0.12.0
+
+### Bed repair
+
+- **A new bed defense drill: bed repair.** The bed defense setup menu gains
+  a **Bed Repair** toggle (slot 22, between Mode and Obsidian). With it on,
+  the chosen defense stands already built and, as long as it stands
+  complete, the sky attacks it: a volley is either one or two lit TNT
+  dropping from above random defense blocks (`beddefense.repair.tnt`:
+  count, drop height, fuse) or a single fireball from the side
+  (`beddefense.repair.fireball`: chance, distance, height, speed, power),
+  never both. Explosions take out the standing defense and anything the
+  player placed, never the bed or the map. Once a volley is spent the kit
+  holds exactly the blocks the damage took and nothing more — nothing is
+  dealt up front — and the round is rebuilding. From then on, the moment
+  any of the eight cover spots is not a solid block the bed is exposed: a
+  title says so, the action bar counts down, and if it is not covered in
+  time the run is over — the arena resets and the next run starts fresh.
+  The limit starts at `beddefense.repair.exposed-seconds.start` (10) and
+  loses a second every `shrink-every-rounds` rounds survived (1), never
+  below `min` (3).
+  Nothing else resets it; a blast that throws the player off the island
+  puts them back at the spawn with the run going. Every volley rebuilt
+  after is a round survived, and the next one comes after a random pause
+  (`beddefense.repair.delay-seconds`, 3–6 by default) that only counts
+  down while the defense stands complete; the first waits
+  `first-delay-seconds` (5). A volley that never goes off is cleared after
+  `volley-timeout-ticks` (200).
+- **Scored in rounds, on its own board.** Runs are scored in rounds
+  survived rather than time, ranked highest first on
+  `beddefense#<id>#repair`, and written when the bed falls or when the
+  player leaves or restarts mid-run, with personal-best and record
+  broadcasts like every other mode. The leaderboards list shows a third,
+  TNT-iconed tile per defense (`beddefense-boards.repair-material` in
+  `guis.yml`), the gallery tile carries a repair best/record line, the
+  stats menu opens a repair board, playing from one plays in that mode,
+  and `/practice beddefense play <id> repair` switches the toggle on.
+  Boards, the stats menu and `/practice top` read such values as
+  "<n> rounds" (`label.rounds`), and their headers, entry and standing
+  lore have score variants (`gui.board.title-score`,
+  `gui.board.entry-lore-score`, `gui.board.standing.lore-score`,
+  `leaderboard.header-score`).
+- **Eligibility.** A defense qualifies only if it seals the bed with
+  solid, non-obsidian blocks on all eight cover spots — obsidian never
+  breaks, and a bed that cannot be exposed would survive forever — and
+  has no glass (panes included) or water anywhere in it. The
+  gallery tile says so, picking one is refused, the toggle counts how many
+  qualify, and if none is left the toggle switches itself off for the
+  round with a notice. Bed repair sets Practice/Competitive aside while on
+  and switches obsidian off (and obsidian switches it off); the timer is
+  pinned, running from the first drop. No preview or guided building. The
+  sidebar shows rounds, the best run, the blocks standing and the sky's
+  status; new sound cues under `beddefense.repair-*` in `sounds.yml`.
+- **Under the hood.** Explosions now ask each session's mode what may
+  break (`Mode.explosionCanBreak`) instead of rush alone; leaderboards can
+  rank a score highest-first for registered keys and format it, with
+  `StatsStore.recordScore` beside `record`; `SessionManager.resetQuietly`
+  resets without a verdict.
+
+File format bumps, all migrated automatically with backups: config.yml v10
+(`beddefense.repair`), messages.yml v14 (bed repair text; the mode lore's
+ranked line, the boards' empty state and flat button, and the command
+reference's play line are rewritten where still untouched), guis.yml v11
+(v10 added the Bed Repair toggle and the repair icons; v11 moves the toggle
+from 28 to 22 where still untouched).
+
 ## 0.11.1
 
 ### Fixed

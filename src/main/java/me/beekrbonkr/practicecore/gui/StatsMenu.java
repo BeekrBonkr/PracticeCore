@@ -4,7 +4,6 @@ import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.beddefense.BedDefenseService;
 import me.beekrbonkr.practicecore.stats.LeaderboardService;
 import me.beekrbonkr.practicecore.template.ArenaTemplate;
-import me.beekrbonkr.practicecore.util.TimeFormat;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -98,13 +97,13 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
                 .name("gui.stats.entry-name", "arena", display)
                 .lore("gui.stats.entry-lore",
                         "arena", display,
-                        "best", best >= 0 ? TimeFormat.precise(best) : raw("gui.none"),
-                        "last", last >= 0 ? TimeFormat.precise(last) : raw("gui.none"),
+                        "best", best >= 0 ? plugin.leaderboards().format(arena, best) : raw("gui.none"),
+                        "last", last >= 0 ? plugin.leaderboards().format(arena, last) : raw("gui.none"),
                         "finishes", String.valueOf(plugin.stats().finishes(subject, arena)),
                         "rank", rank > 0 ? "#" + rank : raw("gui.none"),
                         "players", String.valueOf(plugin.leaderboards().size(arena)),
                         "behind", record != null && rank > 1
-                                ? "+" + TimeFormat.precise(best - record.millis())
+                                ? "+" + plugin.leaderboards().formatGap(arena, best, record.millis())
                                 : raw("gui.none"));
         if (rank == 1) {
             tile.lore("gui.stats.record-line");
@@ -160,12 +159,16 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
                 return;
             }
             sound("menu.select");
-            boolean obsidian = BedDefenseService.isObsidianStatsKey(entry.getKey());
+            var variant = BedDefenseService.variantOfKey(entry.getKey());
+            Material icon = switch (variant) {
+                case OBSIDIAN -> Material.OBSIDIAN;
+                case REPAIR -> Material.TNT;
+                case NORMAL -> defense.icon();
+            };
             later(() -> new ArenaLeaderboardMenu(plugin, viewer, this, entry.getKey(),
-                    plugin.bedDefenses().displayForKey(entry.getKey(), defense),
-                    obsidian ? Material.OBSIDIAN : defense.icon(), () -> {
+                    plugin.bedDefenses().displayForKey(entry.getKey(), defense), icon, () -> {
                 viewer.closeInventory();
-                plugin.bedDefenses().play(viewer, defense, obsidian);
+                plugin.bedDefenses().play(viewer, defense, variant);
             }).open());
             return;
         }

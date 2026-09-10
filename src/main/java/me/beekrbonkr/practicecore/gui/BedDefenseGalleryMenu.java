@@ -138,6 +138,20 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
         } else {
             lines.add(name("gui.beddefense.gallery.obsidian-ineligible-line"));
         }
+        if (defense.repairEligible()) {
+            String repairKey = BedDefenseService.repairStatsKey(defense.id());
+            long repairBest = plugin.stats().bestMs(viewer.getUniqueId(), repairKey);
+            var repairRecord = plugin.leaderboards().record(repairKey);
+            lines.add(name("gui.beddefense.gallery.repair-line",
+                    "best", repairBest >= 0
+                            ? plugin.leaderboards().format(repairKey, repairBest) : raw("gui.none"),
+                    "record", repairRecord != null
+                            ? plugin.leaderboards().format(repairKey, repairRecord.millis()) : raw("gui.none"),
+                    "record-holder", repairRecord != null
+                            ? repairRecord.displayName() : raw("gui.none")));
+        } else {
+            lines.add(name("gui.beddefense.gallery.repair-ineligible-line"));
+        }
         if (defense.reportCount() > 0 && service.isModerator(viewer)) {
             lines.add(name("gui.beddefense.gallery.reports-line",
                     "count", String.valueOf(defense.reportCount())));
@@ -171,11 +185,13 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
             deny();
             return;
         }
-        if (purpose == Purpose.SELECT && !BedDefenseService.playable(
-                plugin.bedDefenses().rawSelection(viewer.getUniqueId()), defense)) {
-            // Obsidian practice is on and this one has obsidian on the bed already.
+        var selection = plugin.bedDefenses().rawSelection(viewer.getUniqueId());
+        if (purpose == Purpose.SELECT && !BedDefenseService.playable(selection, defense)) {
+            // Obsidian practice is on and this one has obsidian on the bed
+            // already, or bed repair is on and this one does not seal it.
             deny();
-            plugin.messages().send(viewer, "beddefense.obsidian.ineligible", "name", defense.name());
+            plugin.messages().send(viewer, BedDefenseService.ineligibleKey(selection),
+                    "name", defense.name());
             return;
         }
         sound("menu.select");

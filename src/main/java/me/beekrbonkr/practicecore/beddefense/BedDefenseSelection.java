@@ -20,9 +20,22 @@ import java.util.Locale;
  * and the times are comparable — obsidian rounds are always ranked, on a
  * board of their own. The competitive choice is kept underneath so
  * switching obsidian off restores it.
+ *
+ * <p><b>Repair</b> (bed repair) overrides both the same way: the defense
+ * stands, lit TNT and fireballs keep wrecking it, and the round is rebuilt
+ * with exactly the blocks the damage took. There is no finish — the run goes
+ * on until the bed has been exposed for too long — and it is scored in
+ * rounds survived, on a board of its own. Obsidian and repair are exclusive:
+ * the menu switches one off when the other goes on, and repair wins if a
+ * file somehow holds both.
  */
-public record BedDefenseSelection(boolean competitive, boolean obsidian, String defense,
-                                  Shuffle shuffle, TimerStart timerStart) {
+public record BedDefenseSelection(boolean competitive, boolean obsidian, boolean repair,
+                                  String defense, Shuffle shuffle, TimerStart timerStart) {
+
+    /** Which of the round variants the choices amount to. */
+    public enum Variant {
+        NORMAL, OBSIDIAN, REPAIR
+    }
 
     /** Which pool a fresh defense is drawn from every round. */
     public enum Shuffle {
@@ -50,48 +63,70 @@ public record BedDefenseSelection(boolean competitive, boolean obsidian, String 
     }
 
     public static BedDefenseSelection defaults() {
-        return new BedDefenseSelection(false, false, null, Shuffle.OFF, TimerStart.MOVE);
+        return new BedDefenseSelection(false, false, false, null, Shuffle.OFF, TimerStart.MOVE);
     }
 
     /**
-     * The choices as they play. Obsidian sets competitive aside (the kit is
-     * fixed, nothing is bought) and, like competitive, pins the timer to the
-     * first move so its ranked times compare; shuffle stays open to it.
-     * Competitive pins shuffle off as well.
+     * The choices as they play. Repair and obsidian set competitive aside
+     * (the kit is fixed, nothing is bought) and, like competitive, pin the
+     * timer to the first move so their ranked results compare; shuffle
+     * stays open to them. Competitive pins shuffle off as well.
      */
     public BedDefenseSelection effective() {
+        if (repair) {
+            return new BedDefenseSelection(false, false, true, defense, shuffle, TimerStart.MOVE);
+        }
         if (obsidian) {
-            return new BedDefenseSelection(false, true, defense, shuffle, TimerStart.MOVE);
+            return new BedDefenseSelection(false, true, false, defense, shuffle, TimerStart.MOVE);
         }
         if (!competitive) {
             return this;
         }
-        return new BedDefenseSelection(true, false, defense, Shuffle.OFF, TimerStart.MOVE);
+        return new BedDefenseSelection(true, false, false, defense, Shuffle.OFF, TimerStart.MOVE);
     }
 
-    /** Whether rounds under these choices are ranked: competitive or obsidian. */
+    /** Whether rounds under these choices are ranked: competitive, obsidian or repair. */
     public boolean ranked() {
-        return competitive || obsidian;
+        return competitive || obsidian || repair;
+    }
+
+    /** The variant these choices play: repair over obsidian over the plain round. */
+    public Variant variant() {
+        return repair ? Variant.REPAIR : obsidian ? Variant.OBSIDIAN : Variant.NORMAL;
+    }
+
+    /** Switches to one variant, switching the other special one off. */
+    public BedDefenseSelection withVariant(Variant variant) {
+        return new BedDefenseSelection(competitive, variant == Variant.OBSIDIAN,
+                variant == Variant.REPAIR, defense, shuffle, timerStart);
     }
 
     public BedDefenseSelection withCompetitive(boolean competitive) {
-        return new BedDefenseSelection(competitive, obsidian, defense, shuffle, timerStart);
+        return new BedDefenseSelection(competitive, obsidian, repair, defense, shuffle, timerStart);
     }
 
+    /** Obsidian on switches repair off: the two cannot run at once. */
     public BedDefenseSelection withObsidian(boolean obsidian) {
-        return new BedDefenseSelection(competitive, obsidian, defense, shuffle, timerStart);
+        return new BedDefenseSelection(competitive, obsidian, obsidian ? false : repair,
+                defense, shuffle, timerStart);
+    }
+
+    /** Repair on switches obsidian off: the two cannot run at once. */
+    public BedDefenseSelection withRepair(boolean repair) {
+        return new BedDefenseSelection(competitive, repair ? false : obsidian, repair,
+                defense, shuffle, timerStart);
     }
 
     public BedDefenseSelection withDefense(String defense) {
-        return new BedDefenseSelection(competitive, obsidian, defense, shuffle, timerStart);
+        return new BedDefenseSelection(competitive, obsidian, repair, defense, shuffle, timerStart);
     }
 
     public BedDefenseSelection withShuffle(Shuffle shuffle) {
-        return new BedDefenseSelection(competitive, obsidian, defense, shuffle, timerStart);
+        return new BedDefenseSelection(competitive, obsidian, repair, defense, shuffle, timerStart);
     }
 
     public BedDefenseSelection withTimerStart(TimerStart timerStart) {
-        return new BedDefenseSelection(competitive, obsidian, defense, shuffle, timerStart);
+        return new BedDefenseSelection(competitive, obsidian, repair, defense, shuffle, timerStart);
     }
 
     static <E extends Enum<E>> E enumOr(Class<E> type, String name, E def) {

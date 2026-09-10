@@ -123,6 +123,15 @@ public final class GuiConfig {
             relocate(cfg, "beddefense.buttons.mode.slot", 22, 21);
             relocate(cfg, "beddefense.buttons.timer.slot", 24, 25);
         }
+        // v10 adds the bed defense Bed Repair toggle and the repair icons
+        // for Start and the boards list — all additive, so the top-up
+        // writes them by itself.
+        if (from < 11) {
+            // v11 moves the Bed Repair toggle from the design row (28) in
+            // between Mode and Obsidian (22). Only a slot still at v10's
+            // default moves; an admin's own placement stands.
+            relocate(cfg, "beddefense.buttons.repair.slot", 28, 22);
+        }
     }
 
     /** Moves a slot only while it still sits where the previous version put it. */
