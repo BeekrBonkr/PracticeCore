@@ -67,10 +67,8 @@ public final class BedDefenseService {
     /** Players whose next round enters (or leaves) the editor; value = source defense id or "". */
     private final Map<UUID, String> pendingEdit = new HashMap<>();
     private final Map<UUID, Boolean> pendingPlay = new HashMap<>();
-    /** The defense the upcoming round builds, decided once per round (shuffle draws here). */
+    /** The defense the upcoming round builds, decided once per round. */
     private final Map<UUID, BedDefense> roundDefense = new HashMap<>();
-    /** The previous round's defense, so a shuffle never deals the same one twice running. */
-    private final Map<UUID, String> lastRound = new HashMap<>();
     /** The last bed defense map each player played, for /practice beddefense play. */
     private final Map<UUID, String> lastMap = new HashMap<>();
     private BukkitTask task;
@@ -172,15 +170,13 @@ public final class BedDefenseService {
                 stats.prefBool(player, "beddefense.obsidian", false),
                 stats.prefBool(player, "beddefense.repair", false),
                 defense,
-                BedDefenseSelection.enumOr(BedDefenseSelection.Shuffle.class,
-                        stats.pref(player, "beddefense.shuffle", null), defaults.shuffle()),
                 BedDefenseSelection.enumOr(BedDefenseSelection.TimerStart.class,
                         stats.pref(player, "beddefense.timer-start", null), defaults.timerStart()));
     }
 
     /**
-     * The gameplay-effective selection: competitive pins shuffle off and the
-     * timer to movement. Competitive also needs somewhere to buy blocks, so
+     * The gameplay-effective selection: competitive pins the timer to
+     * movement. Competitive also needs somewhere to buy blocks, so
      * without the MBedwars shop it plays as practice (and says so).
      */
     public BedDefenseSelection selection(UUID player) {
@@ -206,7 +202,6 @@ public final class BedDefenseService {
         values.put("beddefense.obsidian", selection.obsidian());
         values.put("beddefense.repair", selection.repair());
         values.put("beddefense.defense", selection.defense());
-        values.put("beddefense.shuffle", selection.shuffle().name());
         values.put("beddefense.timer-start", selection.timerStart().name());
         plugin.stats().setPrefs(player, values);
     }
@@ -602,10 +597,10 @@ public final class BedDefenseService {
     // --------------------------------------------------------------- rounds
 
     /**
-     * The defense the player's upcoming round builds: their chosen one, or a
-     * shuffle draw from favorites / the public gallery. Decided once and
-     * held until the round is over, so the kit dealt before the round and
-     * the targets built at READY agree.
+     * The defense the player's upcoming round builds: their chosen one, or
+     * the first they can play. Decided once and held until the round is
+     * over, so the kit dealt before the round and the targets built at
+     * READY agree.
      */
     public BedDefense roundDefense(UUID player) {
         BedDefense held = roundDefense.get(player);
@@ -613,28 +608,9 @@ public final class BedDefenseService {
             return held;
         }
         BedDefenseSelection selection = selection(player);
-        List<BedDefense> pool = switch (selection.shuffle()) {
-            case FAVORITES -> favorites(player);
-            case PUBLIC -> store.published();
-            case OFF -> List.of();
-        };
-        BedDefense picked = null;
-        if (!pool.isEmpty()) {
-            List<BedDefense> candidates = new ArrayList<>(pool);
-            // Obsidian practice draws only from what it can run on.
-            candidates.removeIf(d -> !playable(selection, d));
-            String previous = lastRound.get(player);
-            if (candidates.size() > 1 && previous != null) {
-                candidates.removeIf(d -> d.id().equals(previous));
-            }
-            picked = candidates.isEmpty() ? null
-                    : candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
-        }
-        if (picked == null) {
-            picked = store.get(selection.defense());
-            if (!visibleTo(player, picked) || !playable(selection, picked)) {
-                picked = null;
-            }
+        BedDefense picked = store.get(selection.defense());
+        if (!visibleTo(player, picked) || !playable(selection, picked)) {
+            picked = null;
         }
         if (picked == null) {
             // Nothing chosen (or it was deleted, or has obsidian on the bed
@@ -649,12 +625,9 @@ public final class BedDefenseService {
         return picked;
     }
 
-    /** Ends the current round's draw; the next kit/READY picks afresh. */
+    /** Ends the current round's pick; the next kit/READY picks afresh. */
     public void clearRound(UUID player) {
-        BedDefense held = roundDefense.remove(player);
-        if (held != null) {
-            lastRound.put(player, held.id());
-        }
+        roundDefense.remove(player);
     }
 
     /**
@@ -2499,7 +2472,6 @@ public final class BedDefenseService {
         pendingPlay.remove(player);
         pendingLoad.remove(player);
         roundDefense.remove(player);
-        lastRound.remove(player);
         lastMap.remove(player);
     }
 }

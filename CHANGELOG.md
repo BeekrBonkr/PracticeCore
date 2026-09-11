@@ -88,12 +88,16 @@ config file format versions (`config-version`) migrate automatically on start.
   slots 37/39/41/43): one click picks the mode and starts the round, and
   the mode you are set to glows. A mode with nothing it can run on is
   disabled and says why; competitive without MBedwars says `needs
-  MBedwars for the shop`. The rules row is Defense, Shuffle, Timer Start
-  (20/22/24) — Shuffle no longer hides behind Start. The in-arena bed
+  MBedwars for the shop`. The menu is five rows now: the team base on
+  the top row (4), Defense and Timer Start (12/14), New and Edit (21/23),
+  the start buttons (28/30/32/34). The in-arena bed
   defense menu grows to five rows and carries the same four buttons on
   its third row (28/30/32/34); there they switch the mode and restart the
   round in it. Its Round Settings button is a red bed, like the hotbar
   item that opens the menu.
+- **Shuffle is gone.** The bed defense round always builds the chosen
+  defense (or the first you can play); the favorites and public pools it
+  drew from are no more, and favorites are a plain bookmark again.
 - **Saving a defense starts it competitively.** Save in the editor now
   puts you into a competitive round on what you just built — the round
   that proves it buildable and lets it publish.
@@ -135,19 +139,21 @@ config file format versions (`config-version`) migrate automatically on start.
   empty falls back to `???` at run time either way.
 
 File format bumps, all migrated automatically with backups: config.yml v10
-(`beddefense.repair`), messages.yml v16 (v14: bed repair text; the mode
+(`beddefense.repair`), messages.yml v17 (v14: bed repair text; the mode
 lore's ranked line, the boards' empty state and flat button, and the
 command reference's play line are rewritten where still untouched; v15:
 the chat questions go, the anvil text arrives, the name and report lore
 are rewritten where still untouched, and a tagged `gui.none` becomes
 `???`; v16: every value still at its v15 default is rewritten — the
 titles, the four start buttons' text under `gui.beddefense.start.<mode>`,
-`gui.main.mode-settings` — and the removed controls' keys are dropped),
-guis.yml v12 (v10 added the Bed Repair toggle and the repair icons; v11
+`gui.main.mode-settings` — and the removed controls' keys are dropped;
+v17: shuffle's text goes and the lines that named it are rewritten where
+untouched), guis.yml v13 (v10 added the Bed Repair toggle and the repair icons; v11
 moves the toggle from 28 to 22 where still untouched; v12 resets every
 value still at its v11 default for the new layout, carries a moved or
 hidden `main.buttons.bot` over to `mode-settings`, and drops the removed
-buttons' keys).
+buttons' keys; v13 drops Shuffle and moves every setup-menu button still
+at its v12 slot one row up for the five-row menu).
 
 ## 0.11.1
 

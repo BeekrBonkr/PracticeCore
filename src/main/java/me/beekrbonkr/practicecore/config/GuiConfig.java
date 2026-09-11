@@ -156,6 +156,22 @@ public final class GuiConfig {
                 cfg.set(gone, null);
             }
         }
+        if (from < 13) {
+            // v13 drops Shuffle and takes a row out of the bed defense setup
+            // menu: five rows, everything one row up. Only slots still where
+            // v12 put them move; an admin's own row stands.
+            cfg.set("beddefense.buttons.shuffle", null);
+            relocate(cfg, "beddefense.rows", 6, 5);
+            relocate(cfg, "beddefense.buttons.team.slot", 13, 4);
+            relocate(cfg, "beddefense.buttons.defense.slot", 20, 12);
+            relocate(cfg, "beddefense.buttons.timer.slot", 24, 14);
+            relocate(cfg, "beddefense.buttons.new.slot", 30, 21);
+            relocate(cfg, "beddefense.buttons.edit.slot", 32, 23);
+            relocate(cfg, "beddefense.buttons.start-practice.slot", 37, 28);
+            relocate(cfg, "beddefense.buttons.start-competitive.slot", 39, 30);
+            relocate(cfg, "beddefense.buttons.start-obsidian.slot", 41, 32);
+            relocate(cfg, "beddefense.buttons.start-repair.slot", 43, 34);
+        }
     }
 
     /** Moves a slot only while it still sits where the previous version put it. */

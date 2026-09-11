@@ -12,7 +12,7 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 16
+config-version: 17
 
 prefix: '<gold>Practice <dark_gray>» '
 
@@ -1177,9 +1177,9 @@ gui:
         - '<gray>defenders and your base. Apply'
         - '<gray>restarts the run with them.'
       lore-beddefense:
-        - '<gray>Defense, shuffle, timer start,'
-        - '<gray>your base, and a start button'
-        - '<gray>for each of the four modes.'
+        - '<gray>Defense, timer start, your base,'
+        - '<gray>and a start button for each'
+        - '<gray>of the four modes.'
     settings:
       name: '<white><bold>Settings'
       lore:
@@ -1946,25 +1946,6 @@ gui:
         - ''
         - '<gray>Nobody has saved one yet.'
         - '<gray>Design the first one below.'
-    shuffle:
-      name: '<white><bold>Shuffle'
-      # <pool>
-      lore:
-        - '<gray>Draws a different defense from'
-        - '<gray>a pool every round. Off in'
-        - '<gray>competitive.'
-        - ''
-        - '<gray>Pool: <white><pool>'
-      lore-competitive:
-        - '<gray>Draws a different defense from'
-        - '<gray>a pool every round. Off in'
-        - '<gray>competitive.'
-        - ''
-        - '<gray>Pool: <white>off'
-      option:
-        'off': 'off'
-        favorites: 'your favorites'
-        public: 'every public defense'
     timer:
       name: '<white><bold>Timer Start'
       # <start>
@@ -2014,8 +1995,7 @@ gui:
         - '<gray>Saved: <white>0'
     # The four start buttons: one click picks the mode and starts (or,
     # while playing, restarts) the round in it. The mode you are set to
-    # glows. <arena> <defense> <shuffle> <timer> <eligible> <available>
-    # <limit> <min>
+    # glows. <arena> <defense> <timer> <eligible> <available> <limit> <min>
     start:
       practice:
         name: '<green><bold>Start Practice'
@@ -2026,7 +2006,6 @@ gui:
           - ''
           - '<gray>Map: <white><arena>'
           - '<gray>Defense: <white><defense>'
-          - '<gray>Shuffle: <white><shuffle>'
           - '<gray>Timer starts on: <white><timer>'
       competitive:
         name: '<gold><bold>Start Competitive'
@@ -2048,7 +2027,6 @@ gui:
           - ''
           - '<gray>Map: <white><arena>'
           - '<gray>Defense: <white><defense>'
-          - '<gray>Shuffle: <white><shuffle>'
           - '<gray>Defenses without obsidian: <white><eligible><dark_gray>/<white><available>'
           - '<gold>Ranked, on its own board.'
       repair:
@@ -2062,7 +2040,6 @@ gui:
           - ''
           - '<gray>Map: <white><arena>'
           - '<gray>Defense: <white><defense>'
-          - '<gray>Shuffle: <white><shuffle>'
           - '<gray>Defenses that qualify: <white><eligible><dark_gray>/<white><available>'
           - '<dark_gray>No glass or water; bed sealed solid.'
           - '<gold>Ranked, in rounds survived.'
@@ -2157,8 +2134,8 @@ gui:
         name: '<white><bold>Favorite'
         # <state>
         lore:
-          - '<gray>A private bookmark. Shuffle can'
-          - '<gray>draw from your favorites.'
+          - '<gray>A private bookmark, in the'
+          - '<gray>gallery''s Favorites tab.'
           - ''
           - '<gray>You: <state>'
       board:
@@ -2343,8 +2320,8 @@ gui:
       settings:
         name: '<white><bold>Round Settings'
         lore:
-          - '<gray>Defense, shuffle, timer start'
-          - '<gray>and your base.'
+          - '<gray>Defense, timer start and'
+          - '<gray>your base.'
       restart:
         name: '<yellow><bold>Restart'
         lore:

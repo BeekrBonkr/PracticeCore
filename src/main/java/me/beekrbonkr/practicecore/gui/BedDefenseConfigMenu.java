@@ -20,7 +20,7 @@ import java.util.UUID;
  * Pre-join setup for bed defense practice on one map, and the same menu
  * mid-session as the round settings. Reads top to bottom as the order the
  * choices are made: <em>where</em> (the team base, only on maps with more
- * than one), <em>what</em> (the defense, shuffle and the timer start),
+ * than one), <em>what</em> (the defense and the timer start),
  * <em>or design your own</em> (the editor), then <em>go</em>: one start
  * button per mode — practice, competitive, obsidian, bed repair. Every
  * change is persisted immediately.
@@ -46,7 +46,7 @@ public final class BedDefenseConfigMenu extends Menu {
 
     @Override
     protected int rows() {
-        return plugin.guis().rows("beddefense", 6);
+        return plugin.guis().rows("beddefense", 5);
     }
 
     private int slot(String button, int def) {
@@ -71,13 +71,12 @@ public final class BedDefenseConfigMenu extends Menu {
     @Override
     protected void render() {
         border();
-        teamButton(slot("team", 13));
-        defenseButton(slot("defense", 20));
-        shuffleButton(slot("shuffle", 22));
-        timerButton(slot("timer", 24));
-        newButton(slot("new", 30));
-        editButton(slot("edit", 32));
-        BedDefenseStartButtons.place(this, "beddefense", new int[] {37, 39, 41, 43},
+        teamButton(slot("team", 4));
+        defenseButton(slot("defense", 12));
+        timerButton(slot("timer", 14));
+        newButton(slot("new", 21));
+        editButton(slot("edit", 23));
+        BedDefenseStartButtons.place(this, "beddefense", new int[] {28, 30, 32, 34},
                 template, inSession());
         nav("beddefense");
     }
@@ -169,30 +168,6 @@ public final class BedDefenseConfigMenu extends Menu {
                 selection = selection.withDefense(picked.id());
                 save();
             }).open());
-        });
-    }
-
-    private void shuffleButton(int slot) {
-        BedDefenseSelection.Shuffle shuffle = selection.shuffle();
-        boolean pinned = selection.mode() == BedDefenseSelection.Mode.COMPETITIVE;
-        Button button = Button.of(plugin, icon("shuffle", Material.ENDER_EYE))
-                .name("gui.beddefense.shuffle.name")
-                .lore(pinned ? "gui.beddefense.shuffle.lore-competitive" : "gui.beddefense.shuffle.lore",
-                        plugin.messages().ref("pool", shuffle.messageKey()));
-        if (pinned) {
-            button.disabled("gui.reason.pinned-competitive");
-        } else {
-            button.glow(shuffle != BedDefenseSelection.Shuffle.OFF).hint("cycle");
-        }
-        set(slot, button.build(), event -> {
-            if (pinned) {
-                deny();
-                return;
-            }
-            click();
-            selection = selection.withShuffle(shuffle.next());
-            save();
-            refresh();
         });
     }
 

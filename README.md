@@ -311,7 +311,7 @@ round; the mode you are set to glows):
   base's iron and gold generators and the mirrored MBedwars shop; blocks are
   bought. When the defense needs obsidian an emerald generator runs on your
   own base gold spawner, so obsidian never costs a trip out to the middle.
-  The timer starts on first movement, shuffle is off, and these are the only
+  The timer starts on first movement, and these are the only
   rounds ranked against other players. Without MBedwars there is no shop to
   buy from, so competitive plays as practice and says so.
 - **Practice**: the same start with the defense's exact blocks already in the
@@ -319,9 +319,8 @@ round; the mode you are set to glows):
   the same way every time. Practice keeps a personal best of its own, shown
   on your sidebar and in `/practice stats`, but it is never ranked or
   broadcast — the blocks are handed to you, so the times are not comparable
-  with competitive ones. Extras: **shuffle** (a different defense every
-  round from your favorites or the public gallery) and **timer start** (first
-  movement or first block).
+  with competitive ones. Extra: **timer start** (first movement or first
+  block).
 - **Obsidian** (Start Obsidian): the
   defense stands already built when the round starts, and the goal is to
   break into it, put the eight obsidian in your kit on the bed — the six
@@ -332,7 +331,7 @@ round; the mode you are set to glows):
   in `config.yml`), the eight obsidian, sword and armor, with no generators
   or shop, so times compare and every obsidian round is **ranked**, on a
   board of its own. The timer runs from the first move (breaking a block
-  starts it too); shuffle still works. Broken blocks come straight back to
+  starts it too). Broken blocks come straight back to
   your inventory, as in practice. A defense that already has obsidian on any
   of those eight spots cannot be used for it — the gallery says so on its
   tile, and the start button counts how many defenses qualify. The preview shows
@@ -438,8 +437,8 @@ same way.
 three tabs: **Public**, sorted by likes, then by how many different players
 have built it; **Mine**; and **Favorites** (moderators see a fourth,
 **Review**, below). Left-click chooses a defense, right-click opens its
-actions: like (public, one per player), favorite (your private bookmark,
-also a shuffle pool), its boards, **report** (someone else's public
+actions: like (public, one per player), favorite (your private bookmark),
+its boards, **report** (someone else's public
 defense), and, on your own, edit, publish/unpublish and delete (two
 clicks). `/practice beddefense` opens the map picker; `play <id>
 [competitive|practice|obsidian|repair]`, `like|favorite|publish|unpublish|edit <id>`,

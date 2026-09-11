@@ -21,7 +21,9 @@ public final class Versions {
     public static final int CONFIG = 10;
 
     /**
-     * messages.yml — admin-editable. v16 is the menu simplification: every
+     * messages.yml — admin-editable. v17 removes bed defense shuffle: its
+     * button text goes and the lines that named it are rewritten where
+     * untouched. v16 is the menu simplification: every
      * menu title is unique, white and not bold; the bed defense setup
      * menu's Mode lever, Obsidian and Bed Repair toggles and single Start
      * give way to four start buttons (their text arrives under
@@ -55,10 +57,12 @@ public final class Versions {
      * are reset to the new wording; edited ones stand. v8 added bed defense
      * practice; v7 the rush TNT modifier.
      */
-    public static final int MESSAGES = 16;
+    public static final int MESSAGES = 17;
 
     /**
-     * guis.yml — admin-editable menu layout. v12 is the menu
+     * guis.yml — admin-editable menu layout. v13 drops the bed defense
+     * Shuffle button and takes the setup menu down to five rows, every
+     * button still at its v12 slot moving one row up. v12 is the menu
      * simplification: the bed defense setup menu's Mode, Obsidian, Bed
      * Repair and Start buttons become four start buttons on the go row, the
      * in-arena bed defense menu grows to five rows and carries the same
@@ -84,7 +88,7 @@ public final class Versions {
      * one material means one thing. Values an admin never touched are reset;
      * edited ones stand. v5 added the bed defense menus.
      */
-    public static final int GUIS = 12;
+    public static final int GUIS = 13;
 
     /** sounds.yml — admin-editable sound cues. */
     public static final int SOUNDS = 1;
