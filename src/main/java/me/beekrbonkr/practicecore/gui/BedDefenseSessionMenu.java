@@ -117,7 +117,7 @@ public final class BedDefenseSessionMenu extends Menu {
                         : icon("defense", Material.RED_BED))
                 .name("gui.beddefense.session.defense.name")
                 .lore("gui.beddefense.session.defense.lore",
-                        "name", defense != null ? defense.name() : raw("gui.none"))
+                        "name", defense != null ? defense.name() : none())
                 .hint("open")
                 .build(), event -> {
             click();

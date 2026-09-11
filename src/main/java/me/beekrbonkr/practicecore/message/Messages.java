@@ -246,6 +246,32 @@ public final class Messages {
                 cfg.set("help.setup-detail", updated);
             }
         }
+        if (from < 15) {
+            // v15 asks for text through an anvil instead of chat. The two
+            // chat questions are gone; the anvil's title and hint arrive by
+            // top-up under gui.beddefense. Lore lists that still say "in
+            // chat" at their old default are dropped for top-up to rewrite;
+            // an admin's own wording stands.
+            cfg.set("beddefense.edit.name-prompt", null);
+            cfg.set("beddefense.report.prompt", null);
+            if (cfg.getStringList("gui.beddefense.editor.name.lore").equals(List.of(
+                    "<gray>Asks for a name in chat.", "", "<gray>Currently: <white><name>"))) {
+                cfg.set("gui.beddefense.editor.name.lore", null);
+            }
+            if (cfg.getStringList("gui.beddefense.actions.report.lore").equals(List.of(
+                    "<gray>Flags this defense for a moderator.",
+                    "<gray>You are asked for a reason in chat.", "",
+                    "<gray>Your report: <state>"))) {
+                cfg.set("gui.beddefense.actions.report.lore", null);
+            }
+            // gui.none is substituted as plain text everywhere, so the tagged
+            // default the style guide pass wrote printed literally. The jar
+            // default became ??? in 0.11 without a version bump; a file still
+            // carrying the tagged value catches up here.
+            if ("<dark_gray>—".equals(cfg.getString("gui.none"))) {
+                cfg.set("gui.none", "???");
+            }
+        }
         if (from < 13) {
             // v13: bed defense obsidian practice. The mode lore's ranked line,
             // the boards' empty state and the flat button now mention it;
@@ -374,6 +400,18 @@ public final class Messages {
     public String raw(String key) {
         List<String> lines = lines(key);
         return lines.isEmpty() ? "" : lines.get(0);
+    }
+
+    /**
+     * The stand-in for a value with no data — no record yet, no holder,
+     * unranked. Every menu and sidebar substitutes it as plain text, so a
+     * MiniMessage tag in the configured value would print literally (the
+     * {@code <dark_gray>—} of an older default did exactly that); a value
+     * carrying one, or nothing at all, falls back to {@code ???}.
+     */
+    public String none() {
+        String raw = raw("gui.none");
+        return raw.isBlank() || raw.indexOf('<') >= 0 ? "???" : raw;
     }
 
     private TagResolver resolver(String... placeholders) {

@@ -114,9 +114,9 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
                 "likes", String.valueOf(defense.likeCount()),
                 "players", String.valueOf(defense.uniquePlayers()),
                 "completions", String.valueOf(defense.completions()),
-                "best", best >= 0 ? TimeFormat.precise(best) : raw("gui.none"),
-                "record", record != null ? TimeFormat.precise(record.millis()) : raw("gui.none"),
-                "record-holder", record != null ? record.displayName() : raw("gui.none")));
+                "best", best >= 0 ? TimeFormat.precise(best) : none(),
+                "record", record != null ? TimeFormat.precise(record.millis()) : none(),
+                "record-holder", record != null ? record.displayName() : none()));
         // What it is made of, most of first.
         List<Map.Entry<Material, Integer>> kinds = new ArrayList<>(defense.kindCounts().entrySet());
         kinds.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
@@ -130,11 +130,11 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
             long obsidianBest = plugin.stats().bestMs(viewer.getUniqueId(), obsidianKey);
             var obsidianRecord = plugin.leaderboards().record(obsidianKey);
             lines.add(name("gui.beddefense.gallery.obsidian-line",
-                    "best", obsidianBest >= 0 ? TimeFormat.precise(obsidianBest) : raw("gui.none"),
+                    "best", obsidianBest >= 0 ? TimeFormat.precise(obsidianBest) : none(),
                     "record", obsidianRecord != null
-                            ? TimeFormat.precise(obsidianRecord.millis()) : raw("gui.none"),
+                            ? TimeFormat.precise(obsidianRecord.millis()) : none(),
                     "record-holder", obsidianRecord != null
-                            ? obsidianRecord.displayName() : raw("gui.none")));
+                            ? obsidianRecord.displayName() : none()));
         } else {
             lines.add(name("gui.beddefense.gallery.obsidian-ineligible-line"));
         }
@@ -144,11 +144,11 @@ public final class BedDefenseGalleryMenu extends PagedMenu<BedDefense> {
             var repairRecord = plugin.leaderboards().record(repairKey);
             lines.add(name("gui.beddefense.gallery.repair-line",
                     "best", repairBest >= 0
-                            ? plugin.leaderboards().format(repairKey, repairBest) : raw("gui.none"),
+                            ? plugin.leaderboards().format(repairKey, repairBest) : none(),
                     "record", repairRecord != null
-                            ? plugin.leaderboards().format(repairKey, repairRecord.millis()) : raw("gui.none"),
+                            ? plugin.leaderboards().format(repairKey, repairRecord.millis()) : none(),
                     "record-holder", repairRecord != null
-                            ? repairRecord.displayName() : raw("gui.none")));
+                            ? repairRecord.displayName() : none()));
         } else {
             lines.add(name("gui.beddefense.gallery.repair-ineligible-line"));
         }

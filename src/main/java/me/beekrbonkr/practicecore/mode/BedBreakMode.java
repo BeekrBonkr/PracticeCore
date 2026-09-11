@@ -481,7 +481,7 @@ public final class BedBreakMode implements Mode {
         long runReaction = averageReaction(state);
         long reaction = runReaction >= 0 ? runReaction
                 : plugin.stats().reactionLastMs(session.playerId(), session.template().name());
-        String none = msg.raw("gui.none");
+        String none = msg.none();
         return msg.lore("board.bedbreak-lines",
                 TagResolver.resolver(msg.ref("time", timer)),
                 "arena", session.template().displayName(),

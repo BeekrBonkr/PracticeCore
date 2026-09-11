@@ -12,7 +12,7 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 14
+config-version: 15
 
 prefix: '<gold>Practice <dark_gray>» '
 
@@ -521,8 +521,6 @@ beddefense:
     # Saved from the editor while reports had it hidden. <name> <id>
     saved-auto-hidden: '<prefix><yellow>Saved <white><name><yellow> as private — player reports hid it, and a moderator has to review it before it can be public again.'
   report:
-    # <name> <max>
-    prompt: '<prefix><yellow>Why are you reporting <white><name><yellow>? Type the reason in chat (up to <max> characters).'
     # <name>
     sent: '<prefix><green>Reported <white><name><green>. A moderator will look at it.'
     updated: '<prefix><green>Your report on <white><name><green> was updated.'
@@ -625,8 +623,6 @@ beddefense:
     # <name>
     loaded: '<prefix><gray>Loaded <white><name><gray> into the editor.'
     reset: '<prefix><gray>Build cleared.'
-    # <max>
-    name-prompt: '<prefix><yellow>Name your bed defense in chat (up to <max> characters).'
     # <name>
     name-set: '<prefix><green>Named <white><name><green>.'
     # <max>
@@ -1078,6 +1074,12 @@ gui:
   # The last lore line of a control that cannot act right now / is locked (R51, R52).
   # <reason>
   unavailable: '<red>Unavailable: <gray><reason>'
+  # Text is asked for through an anvil: the question is its title, the paper
+  # on the left holds the current value with the question's own hint in its
+  # lore, and the result item confirms what was typed (hint.click.confirm).
+  prompt:
+    # The paper's last lore line.
+    cancel: '<dark_gray>Close to cancel'
   # <reason>
   locked: '<red>Locked: <gray><reason>'
   # Short lowercase reasons, inserted into the two lines above.
@@ -2233,9 +2235,17 @@ gui:
         # <state>
         lore:
           - '<gray>Flags this defense for a moderator.'
-          - '<gray>You are asked for a reason in chat.'
+          - '<gray>You are asked for a reason.'
           - ''
           - '<gray>Your report: <state>'
+      # The anvil that asks for it. <name> <max> — the shorter of
+      # beddefense.reports.reason-max-length and the 50 an anvil allows.
+      report-prompt:
+        title: '<dark_gray><bold>Report Reason'
+        lore:
+          - '<gray>Why are you reporting'
+          - '<white><name><gray>?'
+          - '<dark_gray>Up to <max> characters.'
       reported-yes: '<gold>sent'
       reported-no: '<dark_gray>none'
       # Moderators only. <count>
@@ -2386,9 +2396,17 @@ gui:
         name: '<white><bold>Name'
         # <name>
         lore:
-          - '<gray>Asks for a name in chat.'
+          - '<gray>Asks for a name.'
           - ''
           - '<gray>Currently: <white><name>'
+      # The anvil that asks for it. <max> is the shorter of
+      # beddefense.name-max-length and the 50 an anvil allows.
+      name-prompt:
+        title: '<dark_gray><bold>Defense Name'
+        lore:
+          - '<gray>Type a name in the box, then'
+          - '<gray>take the result.'
+          - '<dark_gray>Up to <max> characters.'
       save:
         name: '<green><bold>Save and Play'
         # <name> <blocks> <visibility>

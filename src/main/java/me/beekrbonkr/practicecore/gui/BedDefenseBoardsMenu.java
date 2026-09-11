@@ -91,9 +91,9 @@ public final class BedDefenseBoardsMenu extends PagedMenu<BedDefenseBoardsMenu.B
                         "author", defense.authorName(),
                         "players", String.valueOf(plugin.leaderboards().size(key)),
                         "record", record != null
-                                ? plugin.leaderboards().format(key, record.millis()) : raw("gui.none"),
-                        "record-holder", record != null ? record.displayName() : raw("gui.none"),
-                        "rank", rank > 0 ? "#" + rank : raw("gui.none"))
+                                ? plugin.leaderboards().format(key, record.millis()) : none(),
+                        "record-holder", record != null ? record.displayName() : none(),
+                        "rank", rank > 0 ? "#" + rank : none())
                 .hint("view")
                 .build();
     }

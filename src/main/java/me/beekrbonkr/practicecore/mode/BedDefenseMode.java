@@ -357,7 +357,7 @@ public final class BedDefenseMode implements Mode {
             return null;
         }
         Messages msg = plugin.messages();
-        String none = msg.raw("gui.none");
+        String none = msg.none();
         Component timer = session.state() == SessionState.ACTIVE
                 ? msg.component("board.timer-running", "time", TimeFormat.tenths(session.elapsedMs()))
                 : msg.component("board.timer-ready");

@@ -19,7 +19,7 @@ import java.util.function.Consumer;
 /**
  * Control panel for the open setup wizard: every wizard command as a button.
  * Text answers (display name, category, permission, team color) go through
- * a one-shot chat prompt and the panel reopens afterwards. The third row is
+ * a one-shot anvil prompt and the panel reopens afterwards. The third row is
  * mode-aware: rush and bed defense arenas get the team-base layout buttons,
  * PvP bot arenas the bot spawn marker. Text is fixed — see {@link SetupGui}.
  */
@@ -164,7 +164,8 @@ final class SetupActionsMenu extends Menu {
                 .build(), event -> {
             click();
             if (event.isRightClick()) {
-                promptThenReopen("Which material should the icon be?", answer -> {
+                promptThenReopen("Menu Icon", iconMaterial().name(),
+                        List.of("A material name."), answer -> {
                     Material material = Material.matchMaterial(answer);
                     if (material != null && material.isItem()) {
                         wizard().setIcon(viewer, material);
@@ -198,7 +199,8 @@ final class SetupActionsMenu extends Menu {
                 .hint("rename")
                 .build(), event -> {
             click();
-            promptThenReopen("What should the display name be?",
+            promptThenReopen("Display Name", wizard().activeDisplayName(),
+                    List.of("The name players see in menus."),
                     answer -> wizard().setDisplayName(viewer, answer));
         });
 
@@ -213,7 +215,10 @@ final class SetupActionsMenu extends Menu {
                 .hint("edit")
                 .build(), event -> {
             click();
-            promptThenReopen("Which category should this arena be in?",
+            promptThenReopen("Category",
+                    wizard().activeCategory() != null ? wizard().activeCategory() : "default",
+                    List.of("The menu group this arena is", "listed under, or default to",
+                            "group by mode."),
                     answer -> wizard().setCategory(viewer, answer));
         });
 
@@ -227,7 +232,10 @@ final class SetupActionsMenu extends Menu {
                 .hint("edit")
                 .build(), event -> {
             click();
-            promptThenReopen("Which permission node should gate this arena?",
+            promptThenReopen("Permission",
+                    wizard().activePermission() != null ? wizard().activePermission() : "default",
+                    List.of("The node that gates this arena,", "or default for the standard",
+                            "per-arena node."),
                     answer -> wizard().setPermission(viewer, answer));
         });
 
@@ -331,14 +339,13 @@ final class SetupActionsMenu extends Menu {
                         NamedTextColor.WHITE,
                         "Marks a team's spawn where you",
                         "stand. You are asked for the team",
-                        "color in chat.",
+                        "color.",
                         "")
                 .line(SetupGui.state("Bases", base))
                 .hint("run")
                 .build(), event -> {
             click();
-            promptTeam("Which team spawns here? (" + TEAM_COLOR_LIST + ")",
-                    color -> wizard().rushTeamSpawn(viewer, color));
+            promptTeam("Team Spawn", color -> wizard().rushTeamSpawn(viewer, color));
         });
 
         set(29, SetupGui.control(plugin, Material.RED_BED, "Bed Here", NamedTextColor.WHITE,
@@ -350,22 +357,22 @@ final class SetupActionsMenu extends Menu {
                 .hint("run")
                 .build(), event -> {
             click();
-            promptTeam("Which team's bed is this? (" + TEAM_COLOR_LIST + ")",
-                    color -> wizard().rushBed(viewer, color));
+            promptTeam("Team Bed", color -> wizard().rushBed(viewer, color));
         });
 
         set(30, SetupGui.control(plugin, Material.IRON_INGOT, "Generator Here",
                         NamedTextColor.WHITE,
                         "Marks a resource generator on the",
                         "block you stand on. You are asked",
-                        "for the type in chat.",
+                        "for the type.",
                         "")
                 .line(SetupGui.state("Generators",
                         Component.text(wizard().activeGeneratorCount(), NamedTextColor.WHITE)))
                 .hint("run")
                 .build(), event -> {
             click();
-            promptThenReopen("Which generator is this? (iron, gold, diamond or emerald)",
+            promptThenReopen("Generator", "",
+                    List.of("Which resource? One of iron,", "gold, diamond or emerald."),
                     answer -> wizard().rushGenerator(viewer, answer));
         });
 
@@ -480,8 +487,9 @@ final class SetupActionsMenu extends Menu {
     }
 
     /** Asks for a team color and only hands a known one on to the wizard. */
-    private void promptTeam(String question, Consumer<String> action) {
-        promptThenReopen(question, answer -> {
+    private void promptTeam(String title, Consumer<String> action) {
+        promptThenReopen(title, "", List.of("Which team? One of red, blue,",
+                "green, yellow, aqua, white,", "pink or gray."), answer -> {
             String color = answer.trim().toLowerCase(Locale.ROOT);
             if (!TEAM_COLORS.contains(color)) {
                 plugin.messages().problem(viewer, answer + " is not a team color. Use "
@@ -492,10 +500,11 @@ final class SetupActionsMenu extends Menu {
         });
     }
 
-    private void promptThenReopen(String question, Consumer<String> action) {
+    /** Opens an anvil prompt in place of this menu and reopens it once answered. */
+    private void promptThenReopen(String title, String initial, List<String> hint,
+                                  Consumer<String> action) {
         later(() -> {
-            viewer.closeInventory();
-            plugin.prompts().prompt(viewer, question, answer -> {
+            plugin.prompts().prompt(viewer, title, initial, hint, answer -> {
                 action.accept(answer);
                 if (viewer.isOnline() && wizard().isAdmin(viewer.getUniqueId())) {
                     new SetupActionsMenu(plugin, viewer).open();

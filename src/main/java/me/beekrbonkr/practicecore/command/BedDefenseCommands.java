@@ -152,7 +152,7 @@ public final class BedDefenseCommands {
         service().delete(player, defense);
     }
 
-    /** {@code report <id> [reason…]} — without a reason, the reason is asked for in chat. */
+    /** {@code report <id> [reason…]} — without a reason, the reason is asked for in an anvil. */
     private void report(Player player, String[] args, BedDefense defense) {
         if (args.length > 3) {
             service().report(player, defense, String.join(" ", Arrays.copyOfRange(args, 3, args.length)));

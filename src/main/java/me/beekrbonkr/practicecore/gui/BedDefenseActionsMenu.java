@@ -148,9 +148,9 @@ public final class BedDefenseActionsMenu extends Menu {
                 .name("gui.beddefense.actions.board.name")
                 .lore("gui.beddefense.actions.board.lore",
                         "players", String.valueOf(plugin.leaderboards().size(key)),
-                        "record", record != null ? TimeFormat.precise(record.millis()) : raw("gui.none"),
-                        "record-holder", record != null ? record.displayName() : raw("gui.none"),
-                        "rank", rank > 0 ? "#" + rank : raw("gui.none"));
+                        "record", record != null ? TimeFormat.precise(record.millis()) : none(),
+                        "record-holder", record != null ? record.displayName() : none(),
+                        "rank", rank > 0 ? "#" + rank : none());
         if (canView) {
             board.hint("view");
         } else {

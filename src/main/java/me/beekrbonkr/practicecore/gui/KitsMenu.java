@@ -110,7 +110,7 @@ public final class KitsMenu extends Menu {
         ItemStack helmet = contents.get(PvpKit.HELMET);
         lines.add(plugin.messages().name("gui.pvpbot.kits.armor-line", "armor",
                 helmet == null
-                        ? plugin.messages().raw("gui.none")
+                        ? plugin.messages().none()
                         : pretty(helmet.getType().name().replace("_HELMET", ""))));
         Map<Material, Integer> counted = new LinkedHashMap<>();
         for (Map.Entry<Integer, ItemStack> entry : contents.entrySet()) {

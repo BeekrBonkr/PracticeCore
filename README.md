@@ -402,7 +402,7 @@ with MBedwars installed that is every plain block your own item shop sells
 out bricks; without it, the `beddefense.blocks` list in `config.yml`. Water
 comes as buckets either way. You may place only
 within the radius, and break only your own blocks, instantly. The bed
-defense item opens the editor menu: **name** (asked in chat), **save** (and
+defense item opens the editor menu: **name** (asked in an anvil), **save** (and
 go play it), **load** one of yours, **clear** (two clicks), **visibility**
 (disabled, "complete it in competitive first", until the defense is cleared,
 see below) and **leave**. Saving refuses a defense that already exists, any
@@ -445,7 +445,7 @@ clicks). `/practice beddefense` opens the map picker; `play <id>
 chat, and `/practice beddefense help` lists them.
 
 **Reports**: `/practice beddefense report <id> [reason]`, or the Report
-button on a defense's actions menu, which asks for the reason in chat. Only
+button on a defense's actions menu, which asks for the reason in an anvil. Only
 public defenses can be reported, never your own; one report per player, a
 second replaces the first; the reason may run to
 `beddefense.reports.reason-max-length` characters (default 80).
@@ -1041,7 +1041,7 @@ re-read the file.
 | `/practice beddefense` | `practicecore.use` | The bed defense map picker (`help` lists every subcommand you may use) |
 | `/practice beddefense play <id> [competitive\|practice]` | `practicecore.use` | Build a defense, optionally setting the round mode first |
 | `/practice beddefense like\|favorite\|publish\|unpublish\|edit <id>` | `practicecore.use` | Gallery actions and the editor from chat (`edit` alone opens a fresh editor) |
-| `/practice beddefense report <id> [reason]` | `practicecore.use` | Flag someone else's public defense for a moderator (no reason: asked in chat) |
+| `/practice beddefense report <id> [reason]` | `practicecore.use` | Flag someone else's public defense for a moderator (no reason: asked in an anvil) |
 | `/practice beddefense delete <id> confirm` | `practicecore.use` | Delete one of your own defenses and every time on it |
 | `/practice beddefense list` | `practicecore.use` | Every defense you can play |
 | `/practice beddefense moderate\|reports\|all` | `practicecore.beddefense.moderate` | The moderation menu, every reported defense, every defense (private ones included) |
@@ -1141,7 +1141,7 @@ every arena (left-click opens its options, default, display name, icon,
 permission, PB blocks, category, mode, delete and info, plus the editor;
 right-click deletes; the crafting table creates a new one) and, while the
 wizard is open, shows a control panel with a button for each step, text
-answers like the display name are asked for in chat, and its third row
+answers like the display name are asked for in an anvil, and its third row
 carries the layout markers of the arena's mode (team spawn, bed, generator
 and dealer for rush and bed defense maps, the bot spawn for PvP bot
 arenas). The list's footer also reaches an **Import Maps** menu (shown

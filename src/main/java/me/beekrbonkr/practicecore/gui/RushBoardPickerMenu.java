@@ -55,9 +55,9 @@ public final class RushBoardPickerMenu extends Menu {
                     .lore("gui.rushboards.entry-lore",
                             "players", String.valueOf(plugin.leaderboards().size(key)),
                             "record", record != null
-                                    ? TimeFormat.precise(record.millis()) : raw("gui.none"),
-                            "record-holder", record != null ? record.displayName() : raw("gui.none"),
-                            "rank", rank > 0 ? "#" + rank : raw("gui.none"));
+                                    ? TimeFormat.precise(record.millis()) : none(),
+                            "record-holder", record != null ? record.displayName() : none(),
+                            "rank", rank > 0 ? "#" + rank : none());
             if (rank == 1) {
                 tile.line(name("gui.rushboards.record-line"));
             }

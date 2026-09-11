@@ -21,7 +21,12 @@ public final class Versions {
     public static final int CONFIG = 10;
 
     /**
-     * messages.yml — admin-editable. v14 adds bed defense bed repair: its
+     * messages.yml — admin-editable. v15 moves the text prompts (a bed
+     * defense's name, a report's reason) from chat into an anvil: the chat
+     * questions are gone, the anvil's title and hint arrive under
+     * {@code gui.beddefense} (additive), the lore that said "in chat" is
+     * rewritten where untouched, and a {@code gui.none} still at the tagged
+     * style-guide default becomes {@code ???}. v14 adds bed defense bed repair: its
      * toggle, board name, sidebar lines and notices arrive (additive), and
      * the mode lore, the boards' empty state and the command reference now
      * mention it — lists still at their v13 default are rewritten, an
@@ -43,7 +48,7 @@ public final class Versions {
      * are reset to the new wording; edited ones stand. v8 added bed defense
      * practice; v7 the rush TNT modifier.
      */
-    public static final int MESSAGES = 14;
+    public static final int MESSAGES = 15;
 
     /**
      * guis.yml — admin-editable menu layout. v11 moves the Bed Repair

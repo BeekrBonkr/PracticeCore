@@ -360,7 +360,9 @@ beddefense:
     # Whether a new report is announced in chat to every moderator online.
     # Reports are always kept for /practice beddefense moderate either way.
     notify-moderators: true
-    # How long a report reason may be.
+    # How long a report reason may be. The reason is typed into an anvil,
+    # which allows 50 characters at most; a longer limit only applies to
+    # /practice beddefense report <id> <reason>.
     reason-max-length: 80
     # Reports no moderator has looked at yet (opened the defense's review
     # menu, its reports, or `info <id>`) are brought up again: to a

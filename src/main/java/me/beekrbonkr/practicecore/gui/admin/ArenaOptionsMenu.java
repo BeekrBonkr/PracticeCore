@@ -86,7 +86,8 @@ final class ArenaOptionsMenu extends Menu {
                 return;
             }
             click();
-            promptThenReopen("What should the display name be?", answer -> {
+            promptThenReopen("Display Name", template.displayName(),
+                    List.of("The name players see in menus."), answer -> {
                 ArenaTemplate current = plugin.templates().get(arena);
                 if (current == null || busy()) {
                     return;
@@ -112,7 +113,8 @@ final class ArenaOptionsMenu extends Menu {
             }
             if (event.isRightClick()) {
                 click();
-                promptThenReopen("Which material should the icon be? (or auto)", answer -> {
+                promptThenReopen("Menu Icon", template.icon() != null ? template.icon().name() : "auto",
+                        List.of("A material name, or auto to", "derive it from the kit."), answer -> {
                     ArenaTemplate current = plugin.templates().get(arena);
                     if (current == null || busy()) {
                         return;
@@ -157,7 +159,9 @@ final class ArenaOptionsMenu extends Menu {
                 return;
             }
             click();
-            promptThenReopen("Which permission node should gate this arena?", answer -> {
+            promptThenReopen("Permission", template.permission() != null ? template.permission() : "default",
+                    List.of("The node that gates this arena,", "or default for the standard",
+                            "per-arena node."), answer -> {
                 ArenaTemplate current = plugin.templates().get(arena);
                 if (current == null || busy()) {
                     return;
@@ -207,7 +211,9 @@ final class ArenaOptionsMenu extends Menu {
                 return;
             }
             click();
-            promptThenReopen("Which category should this arena be in?", answer -> {
+            promptThenReopen("Category", template.category() != null ? template.category() : "default",
+                    List.of("The menu group this arena is", "listed under, or default to",
+                            "group by mode."), answer -> {
                 ArenaTemplate current = plugin.templates().get(arena);
                 if (current == null || busy()) {
                     return;
@@ -327,10 +333,11 @@ final class ArenaOptionsMenu extends Menu {
         return ids.get((index + 1) % ids.size());
     }
 
-    private void promptThenReopen(String question, Consumer<String> action) {
+    /** Opens an anvil prompt in place of this menu and reopens it once answered. */
+    private void promptThenReopen(String title, String initial, List<String> hint,
+                                  Consumer<String> action) {
         later(() -> {
-            viewer.closeInventory();
-            plugin.prompts().prompt(viewer, question, answer -> {
+            plugin.prompts().prompt(viewer, title, initial, hint, answer -> {
                 action.accept(answer);
                 if (viewer.isOnline()) {
                     open();
