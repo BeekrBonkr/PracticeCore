@@ -97,14 +97,14 @@ public final class StatsMenu extends PagedMenu<Map.Entry<String, Long>> {
                 .name("gui.stats.entry-name", "arena", display)
                 .lore("gui.stats.entry-lore",
                         "arena", display,
-                        "best", best >= 0 ? plugin.leaderboards().format(arena, best) : raw("gui.none"),
-                        "last", last >= 0 ? plugin.leaderboards().format(arena, last) : raw("gui.none"),
+                        "best", best >= 0 ? plugin.leaderboards().format(arena, best) : none(),
+                        "last", last >= 0 ? plugin.leaderboards().format(arena, last) : none(),
                         "finishes", String.valueOf(plugin.stats().finishes(subject, arena)),
-                        "rank", rank > 0 ? "#" + rank : raw("gui.none"),
+                        "rank", rank > 0 ? "#" + rank : none(),
                         "players", String.valueOf(plugin.leaderboards().size(arena)),
                         "behind", record != null && rank > 1
                                 ? "+" + plugin.leaderboards().formatGap(arena, best, record.millis())
-                                : raw("gui.none"));
+                                : none());
         if (rank == 1) {
             tile.lore("gui.stats.record-line");
         }

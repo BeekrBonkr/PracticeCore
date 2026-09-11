@@ -244,6 +244,11 @@ public abstract class Menu implements InventoryHolder {
         return plugin.messages().raw(key);
     }
 
+    /** The stand-in for a value with no data (gui.none), safe as plain text. */
+    protected String none() {
+        return plugin.messages().none();
+    }
+
     // ------------------------------------------------------------- helpers
 
     /**

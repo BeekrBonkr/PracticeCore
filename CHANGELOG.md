@@ -62,12 +62,41 @@ config file format versions (`config-version`) migrate automatically on start.
   `StatsStore.recordScore` beside `record`; `SessionManager.resetQuietly`
   resets without a verdict.
 
+### Text prompts
+
+- **Every text question is asked through an anvil, not chat.** Naming a
+  new arena, an arena's display name, icon, permission and category, the
+  team for a rush spawn or bed, a generator's type, a bed defense's name
+  and a report's reason all open an anvil whose name box is the field: the
+  question is its title, the paper on the left holds the current value
+  with the hint in its lore, and taking the result confirms. Closing the
+  anvil cancels. Nothing is typed into chat any more, so nothing can leak
+  into it. An anvil allows 50 characters at most; the hints show the
+  shorter of that and the configured limit. Runs on Paper builds that
+  carry the `MenuType` API (1.21.1 and later).
+- `beddefense.edit.name-prompt` and `beddefense.report.prompt` are gone;
+  the anvils read `gui.beddefense.editor.name-prompt` and
+  `gui.beddefense.actions.report-prompt` (title and lore) and the shared
+  `gui.prompt.cancel` line.
+
+### Fixed
+
+- **Missing values show `???` again instead of a raw `<dark_gray>` tag.**
+  The jar default for `gui.none` became `???` in 0.11.0, but a server that
+  had already run the style-guide migration kept `<dark_gray>—` in its
+  `messages.yml`, and every menu, sidebar and gallery tile printed it
+  literally (`Best: <dark_gray>—`). The messages migration now rewrites a
+  value still at that default, and a `gui.none` that carries a tag or is
+  empty falls back to `???` at run time either way.
+
 File format bumps, all migrated automatically with backups: config.yml v10
-(`beddefense.repair`), messages.yml v14 (bed repair text; the mode lore's
-ranked line, the boards' empty state and flat button, and the command
-reference's play line are rewritten where still untouched), guis.yml v11
-(v10 added the Bed Repair toggle and the repair icons; v11 moves the toggle
-from 28 to 22 where still untouched).
+(`beddefense.repair`), messages.yml v15 (v14: bed repair text; the mode
+lore's ranked line, the boards' empty state and flat button, and the
+command reference's play line are rewritten where still untouched; v15:
+the chat questions go, the anvil text arrives, the name and report lore
+are rewritten where still untouched, and a tagged `gui.none` becomes
+`???`), guis.yml v11 (v10 added the Bed Repair toggle and the repair
+icons; v11 moves the toggle from 28 to 22 where still untouched).
 
 ## 0.11.1
 

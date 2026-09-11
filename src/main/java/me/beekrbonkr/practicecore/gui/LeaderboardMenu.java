@@ -79,9 +79,9 @@ public final class LeaderboardMenu extends PagedMenu<ArenaTemplate> {
                 .lore("gui.leaderboards.entry-lore",
                         "arena", template.displayName(),
                         "players", String.valueOf(players),
-                        "record", record != null ? TimeFormat.precise(record.millis()) : raw("gui.none"),
-                        "record-holder", record != null ? record.displayName() : raw("gui.none"),
-                        "rank", bestRank > 0 ? "#" + bestRank : raw("gui.none"));
+                        "record", record != null ? TimeFormat.precise(record.millis()) : none(),
+                        "record-holder", record != null ? record.displayName() : none(),
+                        "rank", bestRank > 0 ? "#" + bestRank : none());
         if (bestRank == 1) {
             tile.lore("gui.leaderboards.record-line");
         }

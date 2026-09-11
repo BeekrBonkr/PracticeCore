@@ -3,6 +3,7 @@ package me.beekrbonkr.practicecore.beddefense;
 import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.beddefense.BedDefenseState.Phase;
 import me.beekrbonkr.practicecore.beddefense.BedDefenseState.Target;
+import me.beekrbonkr.practicecore.gui.AnvilPrompts;
 import me.beekrbonkr.practicecore.message.Messages;
 import me.beekrbonkr.practicecore.mode.BedDefenseMode;
 import me.beekrbonkr.practicecore.rush.RushMapData;
@@ -1820,12 +1821,14 @@ public final class BedDefenseService {
                 "name", duplicate.name(), "author", duplicate.authorName(), "id", duplicate.id());
     }
 
-    /** Asks for a name in chat; the callback runs once a valid one arrives. */
+    /** Asks for a name in an anvil; the callback runs once a valid one arrives. */
     public void promptName(Player player, PracticeSession session, BedDefenseState state,
                            Runnable then) {
-        player.closeInventory();
-        plugin.prompts().prompt(player, msg().component("beddefense.edit.name-prompt",
-                "max", String.valueOf(plugin.pcConfig().bedDefenseNameMaxLength())), answer -> {
+        String max = String.valueOf(Math.min(plugin.pcConfig().bedDefenseNameMaxLength(),
+                AnvilPrompts.MAX_LENGTH));
+        plugin.prompts().prompt(player, msg().component("gui.beddefense.editor.name-prompt.title"),
+                state.editName() == null ? "" : state.editName(),
+                msg().lore("gui.beddefense.editor.name-prompt.lore", "max", max), answer -> {
             if (plugin.sessions().get(player.getUniqueId()) != session
                     || state.phase() != Phase.EDIT) {
                 return;
@@ -2146,12 +2149,13 @@ public final class BedDefenseService {
         plugin.sounds().play(moderator, "beddefense.report");
     }
 
-    /** Asks for a reason in chat, then files the report. */
+    /** Asks for a reason in an anvil, then files the report. */
     public void promptReport(Player reporter, BedDefense defense) {
-        reporter.closeInventory();
-        plugin.prompts().prompt(reporter, msg().component("beddefense.report.prompt",
-                "name", defense.name(),
-                "max", String.valueOf(plugin.pcConfig().bedDefenseReportReasonMaxLength())), answer -> {
+        String max = String.valueOf(Math.min(plugin.pcConfig().bedDefenseReportReasonMaxLength(),
+                AnvilPrompts.MAX_LENGTH));
+        plugin.prompts().prompt(reporter, msg().component("gui.beddefense.actions.report-prompt.title"),
+                "", msg().lore("gui.beddefense.actions.report-prompt.lore",
+                        "name", defense.name(), "max", max), answer -> {
             // The live instance: a reshape or reload while they typed swaps it.
             BedDefense live = store.get(defense.id());
             if (live == null) {

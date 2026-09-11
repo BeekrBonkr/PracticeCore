@@ -107,7 +107,7 @@ public final class BoardService {
         }
         // Loop invariants: parsed once per pass, not once per player.
         Component ready = plugin.messages().component("board.timer-ready");
-        String none = plugin.messages().raw("gui.none");
+        String none = plugin.messages().none();
         for (Map.Entry<UUID, FastBoard> entry : boards.entrySet()) {
             PracticeSession session = plugin.sessions().get(entry.getKey());
             if (session == null) {

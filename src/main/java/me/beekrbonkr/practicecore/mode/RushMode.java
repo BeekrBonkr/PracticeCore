@@ -394,7 +394,7 @@ public final class RushMode implements Mode {
             return null;
         }
         Messages msg = plugin.messages();
-        String none = msg.raw("gui.none");
+        String none = msg.none();
         String arena = session.template().name();
         boolean competitive = state.selection().competitive();
         Component timer = session.state() == SessionState.ACTIVE

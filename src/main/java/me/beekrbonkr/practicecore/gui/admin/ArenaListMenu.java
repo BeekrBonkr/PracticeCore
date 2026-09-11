@@ -89,7 +89,7 @@ final class ArenaListMenu extends Menu {
                         "Create New Arena", NamedTextColor.GREEN,
                         "Starts a new arena from your",
                         "WorldEdit clipboard. You will be",
-                        "asked for a name in chat.")
+                        "asked for a name.")
                 .hint("run")
                 .build(), event -> {
             click();
@@ -234,8 +234,9 @@ final class ArenaListMenu extends Menu {
     // -------------------------------------------------------------- wizard
 
     private void promptCreate() {
-        viewer.closeInventory();
-        plugin.prompts().prompt(viewer, "What should the new arena be called? (a-z, 0-9, - and _)",
+        plugin.prompts().prompt(viewer, "New Arena", "",
+                List.of("The arena's id, used in commands", "and folder names.", "",
+                        "Letters, digits, - and _ only."),
                 name -> {
                     plugin.setup().start(viewer, SetupManager.normalize(name));
                     openActionsWhenReady(plugin, viewer);

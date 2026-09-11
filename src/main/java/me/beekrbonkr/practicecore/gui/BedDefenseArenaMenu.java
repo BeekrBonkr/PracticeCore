@@ -50,7 +50,7 @@ public final class BedDefenseArenaMenu extends PagedMenu<ArenaTemplate> {
                 .name("gui.beddefense.arenas.entry-name", "arena", template.displayName())
                 .lore("gui.beddefense.arenas.entry-lore",
                         "arena", template.displayName(),
-                        "team", base == null ? raw("gui.none") : RushMode.prettyTeam(base.name()),
+                        "team", base == null ? none() : RushMode.prettyTeam(base.name()),
                         "bases", String.valueOf(data.playableTeams().size()));
         if (allowed) {
             button.hint("open");

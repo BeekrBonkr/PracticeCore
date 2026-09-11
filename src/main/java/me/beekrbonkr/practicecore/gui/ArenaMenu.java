@@ -74,13 +74,13 @@ public final class ArenaMenu extends PagedMenu<ArenaTemplate> {
             tile.lore("gui.arenas.entry-lore",
                     "arena", template.displayName(),
                     "mode", modeName(template),
-                    "best", best >= 0 ? TimeFormat.precise(best) : raw("gui.none"),
-                    "rank", rank > 0 ? "#" + rank : raw("gui.none"),
+                    "best", best >= 0 ? TimeFormat.precise(best) : none(),
+                    "rank", rank > 0 ? "#" + rank : none(),
                     "players", String.valueOf(plugin.leaderboards().size(template.name())),
                     "finishes", String.valueOf(
                             plugin.stats().finishes(viewer.getUniqueId(), template.name())),
-                    "record", record != null ? TimeFormat.precise(record.millis()) : raw("gui.none"),
-                    "record-holder", record != null ? record.displayName() : raw("gui.none"));
+                    "record", record != null ? TimeFormat.precise(record.millis()) : none(),
+                    "record-holder", record != null ? record.displayName() : none());
             if (rank == 1) {
                 tile.lore("gui.arenas.record-line");
             }

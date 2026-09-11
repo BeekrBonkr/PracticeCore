@@ -105,7 +105,7 @@ public final class RushConfigMenu extends Menu {
         if (current == null && !teams.isEmpty()) {
             current = teams.get(0);
         }
-        String teamName = current == null ? raw("gui.none") : RushMode.prettyTeam(current.name());
+        String teamName = current == null ? none() : RushMode.prettyTeam(current.name());
         Button button = Button.of(plugin, teamWool(current))
                 .name("gui.rush.team.name")
                 .lore("gui.rush.team.lore",
@@ -153,7 +153,7 @@ public final class RushConfigMenu extends Menu {
         set(slot, Button.of(plugin, icon("blocks", Material.WHITE_WOOL), Math.max(1, tier.amount()))
                 .name("gui.rush.blocks.name")
                 .lore("gui.rush.blocks.lore", "amount",
-                        tier.amount() == 0 ? raw("gui.none") : String.valueOf(tier.amount()))
+                        tier.amount() == 0 ? none() : String.valueOf(tier.amount()))
                 .hint("cycle")
                 .build(), event -> {
             click();
@@ -168,8 +168,8 @@ public final class RushConfigMenu extends Menu {
         set(slot, Button.of(plugin, icon("currency", Material.IRON_INGOT), Math.max(1, tier.iron()))
                 .name("gui.rush.currency.name")
                 .lore("gui.rush.currency.lore",
-                        "iron", tier.iron() == 0 ? raw("gui.none") : String.valueOf(tier.iron()),
-                        "gold", tier.gold() == 0 ? raw("gui.none") : String.valueOf(tier.gold()))
+                        "iron", tier.iron() == 0 ? none() : String.valueOf(tier.iron()),
+                        "gold", tier.gold() == 0 ? none() : String.valueOf(tier.gold()))
                 .hint("cycle")
                 .build(), event -> {
             click();
@@ -248,7 +248,7 @@ public final class RushConfigMenu extends Menu {
         set(slot, Button.of(plugin, icon("tnt", Material.TNT), Math.max(1, tier.amount()))
                 .name("gui.rush.tnt.name")
                 .lore("gui.rush.tnt.lore", "amount",
-                        tier.amount() == 0 ? raw("gui.none") : String.valueOf(tier.amount()))
+                        tier.amount() == 0 ? none() : String.valueOf(tier.amount()))
                 .hint("cycle")
                 .build(), event -> {
             click();
@@ -267,7 +267,7 @@ public final class RushConfigMenu extends Menu {
         set(slot, Button.of(plugin, icon("bots", Material.ZOMBIE_HEAD), Math.max(1, bots))
                 .name("gui.rush.bots.name")
                 .lore("gui.rush.bots.lore", "count",
-                        bots == 0 ? raw("gui.none") : String.valueOf(bots))
+                        bots == 0 ? none() : String.valueOf(bots))
                 .hint("cycle")
                 .rightHint("cycle-back")
                 .build(), event -> {
@@ -432,7 +432,7 @@ public final class RushConfigMenu extends Menu {
             List<RushMapData.TeamBase> teams = data.playableTeams();
             team = teams.isEmpty() ? null : teams.get(0);
         }
-        return team == null ? raw("gui.none") : RushMode.prettyTeam(team.name());
+        return team == null ? none() : RushMode.prettyTeam(team.name());
     }
 
     /**

@@ -9,6 +9,7 @@ import me.beekrbonkr.practicecore.config.Versions;
 import me.beekrbonkr.practicecore.config.YamlMigrator;
 import me.beekrbonkr.practicecore.pvpbot.BotTuning;
 import me.beekrbonkr.practicecore.grid.SlotAllocator;
+import me.beekrbonkr.practicecore.gui.AnvilPrompts;
 import me.beekrbonkr.practicecore.gui.MenuListener;
 import me.beekrbonkr.practicecore.item.MenuItemListener;
 import me.beekrbonkr.practicecore.item.MenuItemService;
@@ -39,7 +40,6 @@ import me.beekrbonkr.practicecore.session.InventoryValidator;
 import me.beekrbonkr.practicecore.session.SessionManager;
 import me.beekrbonkr.practicecore.session.SpeedometerService;
 import me.beekrbonkr.practicecore.settings.SettingsService;
-import me.beekrbonkr.practicecore.setup.ChatPrompts;
 import me.beekrbonkr.practicecore.setup.SetupManager;
 import me.beekrbonkr.practicecore.snapshot.SnapshotStore;
 import me.beekrbonkr.practicecore.spectate.SpectateListener;
@@ -81,7 +81,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
     private SettingsService settings;
     private SpeedometerService speedometer;
     private InventoryValidator inventoryValidator;
-    private ChatPrompts prompts;
+    private AnvilPrompts prompts;
     private me.beekrbonkr.practicecore.notice.NoticeService notices;
     private RushService rush;
     private BedDefenseService bedDefenses;
@@ -145,7 +145,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         settings = new SettingsService(this);
         speedometer = new SpeedometerService(this);
         inventoryValidator = new InventoryValidator(this);
-        prompts = new ChatPrompts(this);
+        prompts = new AnvilPrompts(this);
         notices = new me.beekrbonkr.practicecore.notice.NoticeService(this);
         rush = new RushService(this);
         bedDefenses = new BedDefenseService(this);
@@ -208,6 +208,10 @@ public final class PracticeCorePlugin extends JavaPlugin {
         // (restores every player synchronously), then UI and pending writes.
         if (setup != null) {
             setup.cancelAll();
+        }
+        if (prompts != null) {
+            // An open prompt would hand its paper to the player on close.
+            prompts.closeAll();
         }
         if (spectate != null) {
             // Before sessions: a spectator restore must not race the world unload.
@@ -585,7 +589,7 @@ public final class PracticeCorePlugin extends JavaPlugin {
         return speedometer;
     }
 
-    public ChatPrompts prompts() {
+    public AnvilPrompts prompts() {
         return prompts;
     }
 

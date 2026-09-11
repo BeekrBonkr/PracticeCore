@@ -92,7 +92,7 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
                         "time", plugin.leaderboards().format(boardKey, entry.millis()),
                         "behind", leader != null && rank > 1
                                 ? "+" + plugin.leaderboards().formatGap(boardKey, entry.millis(), leader.millis())
-                                : raw("gui.none")));
+                                : none()));
         if (self) {
             row.lore(lore("gui.board.entry-lore-self-suffix"));
         }
@@ -127,9 +127,9 @@ public final class ArenaLeaderboardMenu extends PagedMenu<LeaderboardService.Ent
                     "rank", "#" + rank,
                     "players", String.valueOf(plugin.leaderboards().size(boardKey)),
                     "best", plugin.leaderboards().format(boardKey, best),
-                    "next", ahead != null ? ahead.displayName() : raw("gui.none"),
+                    "next", ahead != null ? ahead.displayName() : none(),
                     "gap", ahead != null
-                            ? plugin.leaderboards().formatGap(boardKey, best, ahead.millis()) : raw("gui.none"));
+                            ? plugin.leaderboards().formatGap(boardKey, best, ahead.millis()) : none());
         } else {
             standing.lore("gui.board.standing.lore-none");
         }

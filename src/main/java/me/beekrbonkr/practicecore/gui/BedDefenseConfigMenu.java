@@ -101,7 +101,7 @@ public final class BedDefenseConfigMenu extends Menu {
         if (current == null && !teams.isEmpty()) {
             current = teams.get(0);
         }
-        String teamName = current == null ? raw("gui.none") : RushMode.prettyTeam(current.name());
+        String teamName = current == null ? none() : RushMode.prettyTeam(current.name());
         Material wool = current == null ? Material.WHITE_WOOL
                 : DyeColors.wool(DyeColors.parse(current.name(), DyeColor.WHITE));
         RushMapData.TeamBase chosen = current;
