@@ -67,9 +67,7 @@ final class BedDefenseStartButtons {
             chosen = null;
         }
         String defenseLabel = chosen != null ? chosen.name()
-                : effective.shuffle() != BedDefenseSelection.Shuffle.OFF
-                        ? menu.raw(effective.shuffle().messageKey())
-                        : playable.isEmpty() ? menu.none() : playable.get(0).name();
+                : playable.isEmpty() ? menu.none() : playable.get(0).name();
         String reason = null;
         if (playable.isEmpty()) {
             reason = switch (mode) {
@@ -85,7 +83,6 @@ final class BedDefenseStartButtons {
                 .lore("gui.beddefense.start." + mode.key() + ".lore",
                         "arena", template.displayName(),
                         "defense", defenseLabel,
-                        "shuffle", menu.raw(effective.shuffle().messageKey()),
                         "timer", menu.raw(effective.timerStart().messageKey()),
                         "eligible", String.valueOf(playable.size()),
                         "available", String.valueOf(all),

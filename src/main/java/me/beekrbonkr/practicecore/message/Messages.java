@@ -351,6 +351,46 @@ public final class Messages {
                 cfg.set(gone, null);
             }
         }
+        if (from < 17) {
+            // v17 removes shuffle. Its button text goes; the lore lists that
+            // named it are dropped for top-up to rewrite while still at their
+            // v16 default, an admin's own wording stands.
+            cfg.set("gui.beddefense.shuffle", null);
+            resetIfDefault(cfg, "gui.main.mode-settings.lore-beddefense", List.of(
+                    "<gray>Defense, shuffle, timer start,", "<gray>your base, and a start button",
+                    "<gray>for each of the four modes."));
+            resetIfDefault(cfg, "gui.beddefense.start.practice.lore", List.of(
+                    "<gray>The defense's exact blocks are in", "<gray>your kit. Not ranked; keeps a",
+                    "<gray>personal best of your own.", "", "<gray>Map: <white><arena>",
+                    "<gray>Defense: <white><defense>", "<gray>Shuffle: <white><shuffle>",
+                    "<gray>Timer starts on: <white><timer>"));
+            resetIfDefault(cfg, "gui.beddefense.start.obsidian.lore", List.of(
+                    "<gray>The defense stands built. Break in,", "<gray>seal the bed with 8 obsidian, build",
+                    "<gray>it back. Tools and obsidian, no shop.", "", "<gray>Map: <white><arena>",
+                    "<gray>Defense: <white><defense>", "<gray>Shuffle: <white><shuffle>",
+                    "<gray>Defenses without obsidian: <white><eligible><dark_gray>/<white><available>",
+                    "<gold>Ranked, on its own board."));
+            resetIfDefault(cfg, "gui.beddefense.start.repair.lore", List.of(
+                    "<gray>The defense stands. Lit TNT or a", "<gray>fireball keeps wrecking it; rebuild",
+                    "<gray>with exactly the blocks it took.", "<gray>Never leave the bed exposed for",
+                    "<white><limit>s<gray>, shrinking to <white><min>s<gray>.", "",
+                    "<gray>Map: <white><arena>", "<gray>Defense: <white><defense>",
+                    "<gray>Shuffle: <white><shuffle>",
+                    "<gray>Defenses that qualify: <white><eligible><dark_gray>/<white><available>",
+                    "<dark_gray>No glass or water; bed sealed solid.", "<gold>Ranked, in rounds survived."));
+            resetIfDefault(cfg, "gui.beddefense.actions.favorite.lore", List.of(
+                    "<gray>A private bookmark. Shuffle can", "<gray>draw from your favorites.", "",
+                    "<gray>You: <state>"));
+            resetIfDefault(cfg, "gui.beddefense.session.settings.lore", List.of(
+                    "<gray>Defense, shuffle, timer start", "<gray>and your base."));
+        }
+    }
+
+    /** Drops a list still at the given old default so the top-up rewrites it. */
+    private static void resetIfDefault(FileConfiguration cfg, String key, List<String> old) {
+        if (cfg.getStringList(key).equals(old)) {
+            cfg.set(key, null);
+        }
     }
 
     /** Keys of controls v16 removed, dropped whatever they say. */

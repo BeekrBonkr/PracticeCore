@@ -10,7 +10,7 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 12
+config-version: 13
 
 # Navigation row shared by every paged menu (six-row menus).
 nav:
@@ -273,49 +273,45 @@ beddefense-session:
 # button per mode.
 beddefense:
   buttons:
-    # Row 2 — the defense (icon follows the chosen one), shuffle and the
-    # timer start.
+    # Row 1 — the defense (icon follows the chosen one) and the timer start.
     defense:
       material: RED_BED
-      slot: 20
+      slot: 12
     edit:
       material: WRITABLE_BOOK
-      slot: 32
-    # Row 3 — design your own: fresh, or one of yours.
+      slot: 23
+    # Row 2 — design your own: fresh, or one of yours.
     new:
       material: CRAFTING_TABLE
-      slot: 30
-    shuffle:
-      material: ENDER_EYE
-      slot: 22
-    # Row 4 — go: one click picks the mode and starts the round. The mode
+      slot: 21
+    # Row 3 — go: one click picks the mode and starts the round. The mode
     # you are set to glows.
     start-practice:
       material: LIME_DYE
-      slot: 37
+      slot: 28
     start-competitive:
       material: NETHER_STAR
-      slot: 39
+      slot: 30
     start-obsidian:
       material: OBSIDIAN
-      slot: 41
+      slot: 32
     start-repair:
       material: TNT
-      slot: 43
-    # Row 1 — the team base, only on maps with more than one. The icon is
+      slot: 34
+    # Row 0 — the team base, only on maps with more than one. The icon is
     # always the team's own wool.
     team:
-      slot: 13
+      slot: 4
     timer:
       material: REPEATER
-      slot: 24
+      slot: 14
   # With categories off, the flat arena and leaderboard lists carry this
   # button instead of a category tile.
   flat-button:
     enabled: true
     material: RED_BED
     slot: 51
-  rows: 6
+  rows: 5
 
 # The glass pane border drawn around every menu.
 filler:

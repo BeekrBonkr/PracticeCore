@@ -243,7 +243,7 @@ public final class BedDefenseMode implements Mode {
         if (state.phase() == Phase.PREVIEW) {
             plugin.bedDefenses().exitPreview(player, session, state, false);
         }
-        // The next round draws afresh (shuffle) — the kit dealt next needs it.
+        // The next round picks its defense afresh — the kit dealt next needs it.
         plugin.bedDefenses().clearRound(session.playerId());
     }
 
