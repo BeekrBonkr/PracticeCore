@@ -127,19 +127,27 @@ public final class ArenaMenu extends PagedMenu<ArenaTemplate> {
             return;
         }
         sound("menu.select");
+        later(() -> open(plugin, viewer, this, template));
+    }
+
+    /**
+     * What picking an arena does: rush and bed defense open their setup
+     * menu (the round settings) on top of {@code parent}; every other mode
+     * joins straight away. Also the route a one-arena picker skips to.
+     * Runs now — call it from a scheduled task when inside a click.
+     */
+    static void open(PracticeCorePlugin plugin, Player viewer, Menu parent, ArenaTemplate template) {
         if (template.mode().equals(me.beekrbonkr.practicecore.mode.RushMode.ID)) {
-            // Rush needs its objective/team/modifier choices before joining.
-            later(() -> new RushConfigMenu(plugin, viewer, this, template).open());
+            // Rush needs its team/modifier choices before joining.
+            new RushConfigMenu(plugin, viewer, parent, template).open();
             return;
         }
         if (template.mode().equals(me.beekrbonkr.practicecore.mode.BedDefenseMode.ID)) {
-            later(() -> new BedDefenseConfigMenu(plugin, viewer, this, template).open());
+            new BedDefenseConfigMenu(plugin, viewer, parent, template).open();
             return;
         }
-        later(() -> {
-            viewer.closeInventory();
-            // Switching from another arena is handled inside join().
-            plugin.sessions().join(viewer, template);
-        });
+        viewer.closeInventory();
+        // Switching from another arena is handled inside join().
+        plugin.sessions().join(viewer, template);
     }
 }

@@ -79,6 +79,51 @@ config file format versions (`config-version`) migrate automatically on start.
   `gui.beddefense.actions.report-prompt` (title and lore) and the shared
   `gui.prompt.cancel` line.
 
+### Menus
+
+- **Four start buttons instead of toggles.** The bed defense setup menu's
+  Mode lever, Obsidian and Bed Repair toggles and single Start are gone.
+  The go row now holds **Start Practice**, **Start Competitive**, **Start
+  Obsidian** and **Start Bed Repair** (`beddefense.buttons.start-<mode>`,
+  slots 37/39/41/43): one click picks the mode and starts the round, and
+  the mode you are set to glows. A mode with nothing it can run on is
+  disabled and says why; competitive without MBedwars says `needs
+  MBedwars for the shop`. The rules row is Defense, Shuffle, Timer Start
+  (20/22/24) — Shuffle no longer hides behind Start. The in-arena bed
+  defense menu grows to five rows and carries the same four buttons on
+  its third row (28/30/32/34); there they switch the mode and restart the
+  round in it. Its Round Settings button is a red bed, like the hotbar
+  item that opens the menu.
+- **Saving a defense starts it competitively.** Save in the editor now
+  puts you into a competitive round on what you just built — the round
+  that proves it buildable and lets it publish.
+- **Team Base only where there is a choice.** The rush and bed defense
+  setup menus hide the team button on maps with one base instead of
+  showing it disabled; it comes back on maps with more.
+- **One map skips the picker.** Clicking a category tile (or the Bed
+  Defense tile) that holds exactly one map you can play opens that map
+  straight away — the rush or bed defense round settings, or the arena
+  itself for the other modes. The same for the flat list with categories
+  off. The in-arena bed defense menu hides Other Maps when there is no
+  other map.
+- **Mode Settings on the hub.** The Bot Settings button becomes **Mode
+  Settings** (`main.buttons.mode-settings`, bottom row, slot 31): during
+  a session in a mode with settings of its own it opens them — the PvP
+  bot's knobs, the rush modifiers (Start reads *Apply and Restart* there)
+  or the bed defense round settings — wearing that mode's icon
+  (`material-pvpbot`, `material-rush`, `material-beddefense`). Bridging,
+  bed break and MLG have none, so it stays hidden there. A moved or
+  hidden Bot Settings carries over on upgrade.
+- **Every menu title is unique, white and not bold**, so a menu can be
+  named on sight: `Practice Menu`, `Player Settings`, `Practice Modes`,
+  `<category> Maps` / `All Maps`, `Leaderboard Categories`, `<category>
+  Leaderboards` / `All Leaderboards`, `Rush Setup — <arena>`, `Rush
+  Defenses — <arena>`, `Rush Boards — <arena>`, `Bot Kits`, `Kit Preview
+  — <kit>`, `Round Settings — <arena>` (the bed defense setup menu), `Bed
+  Defense — <arena>` (the in-arena menu), `Defense — <name>`, `Bed
+  Defense Boards`. The admin setup menus and the anvil prompts follow.
+  Style guide R41 is rewritten to match.
+
 ### Fixed
 
 - **Missing values show `???` again instead of a raw `<dark_gray>` tag.**
@@ -90,13 +135,19 @@ config file format versions (`config-version`) migrate automatically on start.
   empty falls back to `???` at run time either way.
 
 File format bumps, all migrated automatically with backups: config.yml v10
-(`beddefense.repair`), messages.yml v15 (v14: bed repair text; the mode
+(`beddefense.repair`), messages.yml v16 (v14: bed repair text; the mode
 lore's ranked line, the boards' empty state and flat button, and the
 command reference's play line are rewritten where still untouched; v15:
 the chat questions go, the anvil text arrives, the name and report lore
 are rewritten where still untouched, and a tagged `gui.none` becomes
-`???`), guis.yml v11 (v10 added the Bed Repair toggle and the repair
-icons; v11 moves the toggle from 28 to 22 where still untouched).
+`???`; v16: every value still at its v15 default is rewritten — the
+titles, the four start buttons' text under `gui.beddefense.start.<mode>`,
+`gui.main.mode-settings` — and the removed controls' keys are dropped),
+guis.yml v12 (v10 added the Bed Repair toggle and the repair icons; v11
+moves the toggle from 28 to 22 where still untouched; v12 resets every
+value still at its v11 default for the new layout, carries a moved or
+hidden `main.buttons.bot` over to `mode-settings`, and drops the removed
+buttons' keys).
 
 ## 0.11.1
 

@@ -37,6 +37,26 @@ public record BedDefenseSelection(boolean competitive, boolean obsidian, boolean
         NORMAL, OBSIDIAN, REPAIR
     }
 
+    /**
+     * The four ways a round can be started — what the start buttons offer.
+     * Each is one combination of the flags underneath: practice and
+     * competitive are the plain round with competitive off or on, obsidian
+     * and repair the two drills.
+     */
+    public enum Mode {
+        PRACTICE, COMPETITIVE, OBSIDIAN, REPAIR;
+
+        /** The lowercase key used under gui.beddefense.start.* and guis.yml. */
+        public String key() {
+            return name().toLowerCase(Locale.ROOT);
+        }
+
+        /** Whether rounds in this mode are ranked. */
+        public boolean ranked() {
+            return this != PRACTICE;
+        }
+    }
+
     /** Which pool a fresh defense is drawn from every round. */
     public enum Shuffle {
         OFF, FAVORITES, PUBLIC;
@@ -88,6 +108,18 @@ public record BedDefenseSelection(boolean competitive, boolean obsidian, boolean
     /** Whether rounds under these choices are ranked: competitive, obsidian or repair. */
     public boolean ranked() {
         return competitive || obsidian || repair;
+    }
+
+    /** The mode these choices start in: repair over obsidian over competitive over practice. */
+    public Mode mode() {
+        return repair ? Mode.REPAIR : obsidian ? Mode.OBSIDIAN
+                : competitive ? Mode.COMPETITIVE : Mode.PRACTICE;
+    }
+
+    /** The choices with the flags set for one mode; everything else is kept. */
+    public BedDefenseSelection withMode(Mode mode) {
+        return new BedDefenseSelection(mode == Mode.COMPETITIVE, mode == Mode.OBSIDIAN,
+                mode == Mode.REPAIR, defense, shuffle, timerStart);
     }
 
     /** The variant these choices play: repair over obsidian over the plain round. */

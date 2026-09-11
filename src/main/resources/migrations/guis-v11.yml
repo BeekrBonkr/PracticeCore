@@ -1,3 +1,131 @@
+pvpbot-kits:
+  rows: 5
+pvpbot-preview:
+  back:
+    slot: 0
+  close:
+    slot: 8
+pvpbot:
+  buttons:
+    accuracy:
+      material: TARGET
+      slot: 21
+    aggression:
+      material: BLAZE_POWDER
+      slot: 25
+    block:
+      material: SHIELD
+      slot: 32
+    bow:
+      material: BOW
+      slot: 30
+    build:
+      material: WHITE_WOOL
+      slot: 33
+    combos:
+      material: RABBIT_FOOT
+      slot: 23
+    cps:
+      material: SUGAR
+      slot: 20
+    evasiveness:
+      material: FEATHER
+      slot: 19
+    gear:
+      slot: 15
+    kit:
+      material: CHEST
+      slot: 11
+    preset:
+      material: EXPERIENCE_BOTTLE
+      slot: 13
+    reach:
+      material: STICK
+      slot: 24
+    rod:
+      material: FISHING_ROD
+      slot: 29
+  rows: 5
+rush:
+  buttons:
+    # The team button's icon always shows the selected team's wool.
+    team:
+      slot: 13
+    start:
+      slot: 39
+      material: LIME_DYE
+    # Row 2 — the six match modifiers.
+    blocks:
+      material: WHITE_WOOL
+      slot: 20
+    bot-armor:
+      slot: 31
+    bot-difficulty:
+      material: EXPERIENCE_BOTTLE
+      slot: 30
+    bot-sword:
+      slot: 32
+    # Row 3 — defender bots at enemy bases. The three lineup buttons only
+    # appear while the count is above zero; the armor and sword icons follow
+    # the selected tier.
+    bots:
+      material: ZOMBIE_HEAD
+      slot: 19
+    # Instant ranked start: generators on, no starting items, defenses on.
+    competitive:
+      material: NETHER_STAR
+      slot: 41
+    currency:
+      material: IRON_INGOT
+      slot: 21
+    # Opens the bed-defense gallery below; its icon follows the chosen preset.
+    defense:
+      slot: 23
+    generators:
+      material: FURNACE
+      slot: 24
+    pickaxe:
+      material: IRON_PICKAXE
+      slot: 22
+    preset-bed-break:
+      material: TNT
+      slot: 49
+    preset-bridge:
+      material: SCAFFOLDING
+      slot: 48
+    preset-competitive-wipe:
+      material: DIAMOND_SWORD
+      slot: 47
+    # The preset strip: each tile writes a known-good set of modifiers over
+    # the player's dials and starts the run immediately. The two competitive
+    # presets pin the ranked loadout; the rest are casual. A preset the
+    # config has switched off (per-team 0, bots capped at none) never shows.
+    preset-competitive:
+      material: DIAMOND
+      slot: 46
+    preset-sandbox:
+      material: CHEST
+      slot: 52
+    preset-skirmish:
+      material: IRON_SWORD
+      slot: 51
+    preset-warmup:
+      material: FEATHER
+      slot: 50
+    # Starter TNT — auto-ignites on place, like every rush TNT.
+    tnt:
+      material: TNT
+      slot: 25
+  rows: 6
+rushshop:
+  # An unfilled Quick Buy slot.
+  quickbuy-empty: RED_STAINED_GLASS_PANE
+  # The Quick Buy tab's icon.
+  quickbuy:
+    material: GOLD_BLOCK
+  # The separator row: the plain pane, and the pane under the open tab.
+  separator: GRAY_STAINED_GLASS_PANE
+  separator-selected: LIME_STAINED_GLASS_PANE
 # PracticeCore GUI layout
 #
 # This file controls menu STRUCTURE: which slot each button occupies, its icon
@@ -10,7 +138,7 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 12
+config-version: 11
 
 # Navigation row shared by every paged menu (six-row menus).
 nav:
@@ -30,14 +158,10 @@ nav:
 # The hub menu (/practice menu).
 main:
   buttons:
-    # Only rendered during a session in a mode with settings of its own —
-    # the PvP bot's knobs, the rush modifiers or the bed defense round
-    # settings. The icon follows the mode.
-    mode-settings:
+    # Only rendered during a PvP bot session.
+    bot:
       enabled: true
-      material-pvpbot: ZOMBIE_HEAD
-      material-rush: WHITE_BED
-      material-beddefense: RED_BED
+      material: ZOMBIE_HEAD
       slot: 31
     help:
       enabled: true
@@ -232,7 +356,6 @@ beddefense-session:
     guided:
       material: LEAD
       slot: 12
-    # Only with more than one bed defense map to go to.
     maps:
       material: FILLED_MAP
       slot: 23
@@ -245,70 +368,61 @@ beddefense-session:
     restart:
       material: CLOCK
       slot: 15
-    # The round settings (the setup menu below), a red bed like the item.
     settings:
-      material: RED_BED
+      material: COMPARATOR
       slot: 14
-    # Row 3 — the four start buttons: one click switches the mode and
-    # restarts the round in it. The mode you are set to glows.
-    start-practice:
-      material: LIME_DYE
-      slot: 28
-    start-competitive:
-      material: NETHER_STAR
-      slot: 30
-    start-obsidian:
-      material: OBSIDIAN
-      slot: 32
-    start-repair:
-      material: TNT
-      slot: 34
-  rows: 5
+  rows: 4
 
 # Bed defense practice. The category picker lists it as its own category
 # (admin-made bed defense maps only) and every one of its menus is laid out here.
 #
-# The setup menu, opened by picking a map (and the round settings while
-# playing): where you start, what you build, the editor, then one start
-# button per mode.
+# The setup menu, opened by picking a map: where you start, what you build
+# and under which rules, the editor, then go.
 beddefense:
   buttons:
-    # Row 2 — the defense (icon follows the chosen one), shuffle and the
-    # timer start.
+    # Row 2 — the defense (icon follows the chosen one) and the round rules.
     defense:
       material: RED_BED
-      slot: 20
+      slot: 19
     edit:
       material: WRITABLE_BOOK
       slot: 32
+    # material while practicing; material-competitive while competitive.
+    mode:
+      material: LEVER
+      material-competitive: NETHER_STAR
+      slot: 21
     # Row 3 — design your own: fresh, or one of yours.
     new:
       material: CRAFTING_TABLE
       slot: 30
+    # Obsidian practice: the defense stands, break in and seal the bed.
+    obsidian:
+      material: OBSIDIAN
+      slot: 23
+    # Bed repair: the defense stands, the sky wrecks it, rebuild it.
+    # Between Mode and Obsidian on the rules row.
+    repair:
+      material: TNT
+      slot: 22
     shuffle:
       material: ENDER_EYE
-      slot: 22
-    # Row 4 — go: one click picks the mode and starts the round. The mode
-    # you are set to glows.
-    start-practice:
+      slot: 40
+    # Row 4 — go. material for practice; material-competitive while
+    # competitive; material-obsidian while obsidian practice is on;
+    # material-repair while bed repair is on.
+    start:
       material: LIME_DYE
-      slot: 37
-    start-competitive:
-      material: NETHER_STAR
-      slot: 39
-    start-obsidian:
-      material: OBSIDIAN
-      slot: 41
-    start-repair:
-      material: TNT
-      slot: 43
-    # Row 1 — the team base, only on maps with more than one. The icon is
-    # always the team's own wool.
+      material-competitive: NETHER_STAR
+      material-obsidian: OBSIDIAN
+      material-repair: TNT
+      slot: 40
+    # Row 1 — the team base. The icon is always the team's own wool.
     team:
       slot: 13
     timer:
       material: REPEATER
-      slot: 24
+      slot: 25
   # With categories off, the flat arena and leaderboard lists carry this
   # button instead of a category tile.
   flat-button:
@@ -334,132 +448,3 @@ rushboards:
     team_wipe:
       slot: 16
   rows: 3
-
-pvpbot-kits:
-  rows: 5
-pvpbot-preview:
-  back:
-    slot: 0
-  close:
-    slot: 8
-pvpbot:
-  buttons:
-    accuracy:
-      material: TARGET
-      slot: 21
-    aggression:
-      material: BLAZE_POWDER
-      slot: 25
-    block:
-      material: SHIELD
-      slot: 32
-    bow:
-      material: BOW
-      slot: 30
-    build:
-      material: WHITE_WOOL
-      slot: 33
-    combos:
-      material: RABBIT_FOOT
-      slot: 23
-    cps:
-      material: SUGAR
-      slot: 20
-    evasiveness:
-      material: FEATHER
-      slot: 19
-    gear:
-      slot: 15
-    kit:
-      material: CHEST
-      slot: 11
-    preset:
-      material: EXPERIENCE_BOTTLE
-      slot: 13
-    reach:
-      material: STICK
-      slot: 24
-    rod:
-      material: FISHING_ROD
-      slot: 29
-  rows: 5
-rush:
-  buttons:
-    # The team button's icon always shows the selected team's wool.
-    team:
-      slot: 13
-    start:
-      slot: 39
-      material: LIME_DYE
-    # Row 2 — the six match modifiers.
-    blocks:
-      material: WHITE_WOOL
-      slot: 20
-    bot-armor:
-      slot: 31
-    bot-difficulty:
-      material: EXPERIENCE_BOTTLE
-      slot: 30
-    bot-sword:
-      slot: 32
-    # Row 3 — defender bots at enemy bases. The three lineup buttons only
-    # appear while the count is above zero; the armor and sword icons follow
-    # the selected tier.
-    bots:
-      material: ZOMBIE_HEAD
-      slot: 19
-    # Instant ranked start: generators on, no starting items, defenses on.
-    competitive:
-      material: NETHER_STAR
-      slot: 41
-    currency:
-      material: IRON_INGOT
-      slot: 21
-    # Opens the bed-defense gallery below; its icon follows the chosen preset.
-    defense:
-      slot: 23
-    generators:
-      material: FURNACE
-      slot: 24
-    pickaxe:
-      material: IRON_PICKAXE
-      slot: 22
-    preset-bed-break:
-      material: TNT
-      slot: 49
-    preset-bridge:
-      material: SCAFFOLDING
-      slot: 48
-    preset-competitive-wipe:
-      material: DIAMOND_SWORD
-      slot: 47
-    # The preset strip: each tile writes a known-good set of modifiers over
-    # the player's dials and starts the run immediately. The two competitive
-    # presets pin the ranked loadout; the rest are casual. A preset the
-    # config has switched off (per-team 0, bots capped at none) never shows.
-    preset-competitive:
-      material: DIAMOND
-      slot: 46
-    preset-sandbox:
-      material: CHEST
-      slot: 52
-    preset-skirmish:
-      material: IRON_SWORD
-      slot: 51
-    preset-warmup:
-      material: FEATHER
-      slot: 50
-    # Starter TNT — auto-ignites on place, like every rush TNT.
-    tnt:
-      material: TNT
-      slot: 25
-  rows: 6
-rushshop:
-  # An unfilled Quick Buy slot.
-  quickbuy-empty: RED_STAINED_GLASS_PANE
-  # The Quick Buy tab's icon.
-  quickbuy:
-    material: GOLD_BLOCK
-  # The separator row: the plain pane, and the pane under the open tab.
-  separator: GRAY_STAINED_GLASS_PANE
-  separator-selected: LIME_STAINED_GLASS_PANE

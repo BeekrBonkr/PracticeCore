@@ -99,8 +99,20 @@ public final class RushConfigMenu extends Menu {
 
     // ----------------------------------------------------------------- team
 
+    /** True while the viewer is already in a rush session on this map. */
+    private boolean inSession() {
+        var session = plugin.sessions().get(viewer.getUniqueId());
+        return session != null && session.mode().id().equals(RushMode.ID)
+                && session.template().name().equals(template.name());
+    }
+
     private void teamButton(int slot) {
         List<RushMapData.TeamBase> teams = data.playableTeams();
+        if (teams.size() <= 1) {
+            // Nothing to choose: the button only appears once a map has more
+            // than one base to start from.
+            return;
+        }
         RushMapData.TeamBase current = data.team(selection.team());
         if (current == null && !teams.isEmpty()) {
             current = teams.get(0);
@@ -111,16 +123,8 @@ public final class RushConfigMenu extends Menu {
                 .lore("gui.rush.team.lore",
                         "team", teamName,
                         "count", String.valueOf(teams.size()));
-        if (teams.size() <= 1) {
-            button.disabled("gui.reason.only-one-team");
-        } else {
-            button.hint("cycle").rightHint("cycle-back");
-        }
+        button.hint("cycle").rightHint("cycle-back");
         set(slot, button.build(), event -> {
-            if (teams.size() <= 1) {
-                deny();
-                return;
-            }
             click();
             int index = 0;
             for (int i = 0; i < teams.size(); i++) {
@@ -356,12 +360,13 @@ public final class RushConfigMenu extends Menu {
     // ----------------------------------------------------------------- start
 
     private void startButton(int slot) {
+        boolean inSession = inSession();
         set(slot, Button.of(plugin, icon("start", Material.LIME_DYE))
-                .name("gui.rush.start.name")
+                .name(inSession ? "gui.rush.start.name-apply" : "gui.rush.start.name")
                 .lore("gui.rush.start.lore", summary(),
                         "arena", template.displayName(),
                         "team", teamLabel())
-                .hint("play")
+                .hint(inSession ? "restart" : "play")
                 .build(), event -> {
             click();
             plugin.rush().setCompetitive(viewer.getUniqueId(), false);

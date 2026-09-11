@@ -132,7 +132,7 @@ public final class Button {
 
     /**
      * Exists but cannot act right now (R51). The reason is a short lowercase
-     * phrase from gui.reason.*, e.g. {@code only-one-team}.
+     * phrase from gui.reason.*, e.g. {@code no-defenses}.
      */
     public Button disabled(String reasonKey, String... placeholders) {
         return unavailable("gui.unavailable", Material.LIGHT_GRAY_STAINED_GLASS_PANE,

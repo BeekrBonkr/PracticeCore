@@ -11,6 +11,7 @@ import org.bukkit.inventory.ItemStack;
 
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Supplier;
 
 /** The hub every other menu hangs off. */
 public final class MainMenu extends Menu {
@@ -53,9 +54,15 @@ public final class MainMenu extends Menu {
                 later(() -> {
                     if (plugin.guis().categoriesEnabled()) {
                         new CategoryMenu(plugin, viewer, this).open();
-                    } else {
-                        new ArenaMenu(plugin, viewer, this, null).open();
+                        return;
                     }
+                    // The flat list with one map the viewer can play: skip it.
+                    List<ArenaTemplate> visible = plugin.templates().visibleTo(viewer);
+                    if (visible.size() == 1 && plugin.templates().canUse(viewer, visible.get(0))) {
+                        ArenaMenu.open(plugin, viewer, this, visible.get(0));
+                        return;
+                    }
+                    new ArenaMenu(plugin, viewer, this, null).open();
                 });
             });
         }
@@ -89,10 +96,12 @@ public final class MainMenu extends Menu {
         if (shown("restart") && session != null) {
             set(slot("restart", 14), restartIcon(session), event -> restart());
         }
-        if (shown("bot") && me.beekrbonkr.practicecore.pvpbot.PvpBotService.fightOf(session) != null) {
-            set(slot("bot", 31), botIcon(), event -> {
+        // The mode's own settings, only for a session in a mode that has some.
+        Supplier<Menu> modeSettings = modeSettings(session);
+        if (shown("mode-settings") && modeSettings != null) {
+            set(slot("mode-settings", 31), modeSettingsIcon(session), event -> {
                 click();
-                later(() -> new PvpBotSettingsMenu(plugin, viewer, this, session).open());
+                later(() -> modeSettings.get().open());
             });
         }
         // STYLE-GUIDE: needs logic change (R53) — same permission reveal as above.
@@ -191,10 +200,39 @@ public final class MainMenu extends Menu {
                 .build();
     }
 
-    private ItemStack botIcon() {
-        return Button.of(plugin, icon("bot", Material.ZOMBIE_HEAD))
-                .name("gui.main.bot.name")
-                .lore("gui.main.bot.lore")
+    /**
+     * The menu behind Mode Settings for this session, or null when the mode
+     * has none: the PvP bot's knobs, the rush modifiers, or the bed defense
+     * round settings. Each opens on top of the hub so Back returns here.
+     */
+    private Supplier<Menu> modeSettings(PracticeSession session) {
+        if (session == null) {
+            return null;
+        }
+        return switch (session.mode().id()) {
+            case me.beekrbonkr.practicecore.mode.PvpBotMode.ID ->
+                    me.beekrbonkr.practicecore.pvpbot.PvpBotService.fightOf(session) == null ? null
+                            : () -> new PvpBotSettingsMenu(plugin, viewer, this, session);
+            case me.beekrbonkr.practicecore.mode.RushMode.ID ->
+                    () -> new RushConfigMenu(plugin, viewer, this, session.template());
+            case me.beekrbonkr.practicecore.mode.BedDefenseMode.ID ->
+                    () -> new BedDefenseConfigMenu(plugin, viewer, this, session.template());
+            default -> null;
+        };
+    }
+
+    /** Mode Settings wears the mode's own icon: bot head, rush bed, red bed. */
+    private ItemStack modeSettingsIcon(PracticeSession session) {
+        String mode = session.mode().id();
+        Material fallback = switch (mode) {
+            case me.beekrbonkr.practicecore.mode.PvpBotMode.ID -> Material.ZOMBIE_HEAD;
+            case me.beekrbonkr.practicecore.mode.RushMode.ID -> Material.WHITE_BED;
+            default -> Material.RED_BED;
+        };
+        return Button.of(plugin, plugin.guis().material("main.buttons.mode-settings.material-" + mode,
+                        fallback))
+                .name("gui.main.mode-settings.name", "mode", session.mode().displayName())
+                .lore("gui.main.mode-settings.lore-" + mode, "arena", session.template().displayName())
                 .hint("open")
                 .build();
     }

@@ -12,7 +12,7 @@
 #
 # Do not edit config-version by hand; PracticeCore uses it to migrate this file
 # across upgrades (backups land in backups/).
-config-version: 16
+config-version: 15
 
 prefix: '<gold>Practice <dark_gray>» '
 
@@ -1084,6 +1084,7 @@ gui:
   locked: '<red>Locked: <gray><reason>'
   # Short lowercase reasons, inserted into the two lines above.
   reason:
+    only-one-team: 'only one team base'
     pinned-competitive: 'pinned by competitive mode'
     pinned-obsidian: 'pinned by obsidian practice'
     not-in-obsidian: 'not in obsidian practice'
@@ -1110,8 +1111,6 @@ gui:
     offline: 'went offline'
     own-defense: 'you cannot like your own'
     no-defenses: 'no defenses yet'
-    # Competitive buys its blocks from the mirrored MBedwars shop.
-    no-shop: 'needs MBedwars for the shop'
     # Publishing a bed defense needs the author's own competitive completion.
     needs-clear: 'complete it in competitive first'
     # Reports hid it; only a moderator can bring it back.
@@ -1123,7 +1122,7 @@ gui:
     incomplete: 'the arena is not finished'
 
   main:
-    title: '<white>Practice Menu'
+    title: '<dark_gray><bold>Practice'
     play:
       name: '<white><bold>Play'
       # <count>
@@ -1164,22 +1163,13 @@ gui:
       lore:
         - '<gray>How practice arenas work'
         - '<gray>and every command you can run.'
-    # Only shown during a session in a mode with settings of its own; the
-    # lore is the mode's (lore-<mode id>). <mode> <arena>
-    mode-settings:
-      name: '<white><bold><mode> Settings'
-      lore-pvpbot:
+    # Only shown while sparring the PvP bot.
+    bot:
+      name: '<white><bold>Bot Settings'
+      lore:
         - '<gray>Kit, difficulty and the bot''s'
         - '<gray>arsenal. The bot pauses while'
         - '<gray>this menu is open.'
-      lore-rush:
-        - '<gray>Blocks, currency, generators,'
-        - '<gray>defenders and your base. Apply'
-        - '<gray>restarts the run with them.'
-      lore-beddefense:
-        - '<gray>Defense, shuffle, timer start,'
-        - '<gray>your base, and a start button'
-        - '<gray>for each of the four modes.'
     settings:
       name: '<white><bold>Settings'
       lore:
@@ -1200,7 +1190,7 @@ gui:
         - '<gray>Sends you to: <white><destination>'
 
   settings:
-    title: '<white>Player Settings'
+    title: '<dark_gray><bold>Settings'
     night-vision:
       name: '<white><bold>Night Vision'
       # <state>
@@ -1241,7 +1231,7 @@ gui:
         - '<gray>Currently: <state>'
 
   categories:
-    title: '<white>Practice Modes'
+    title: '<dark_gray><bold>Play'
     empty:
       name: '<gray><bold>No arenas yet'
       lore:
@@ -1254,9 +1244,9 @@ gui:
       - '<gray>Arenas: <white><count>'
 
   arenas:
-    title: '<white>All Maps'
+    title: '<dark_gray><bold>Play'
     # <category>
-    title-category: '<white><category> Maps'
+    title-category: '<dark_gray><bold>Play — <category>'
     empty:
       name: '<gray><bold>No arenas yet'
       lore:
@@ -1284,7 +1274,7 @@ gui:
       - '<gold>You hold the record'
 
   spectate:
-    title: '<white>Spectate'
+    title: '<dark_gray><bold>Spectate'
     empty:
       name: '<gray><bold>No players yet'
       lore:
@@ -1301,13 +1291,13 @@ gui:
         - '<gray>Spectators: <white><watchers>'
 
   leaderboards:
-    title: '<white>All Leaderboards'
+    title: '<dark_gray><bold>Leaderboards'
     # <category>
-    title-category: '<white><category> Leaderboards'
+    title-category: '<dark_gray><bold>Leaderboards — <category>'
     # The category picker shown first (while guis.yml categories.enabled is
     # on): one tile per category, each opening that category's own boards.
     categories:
-      title: '<white>Leaderboard Categories'
+      title: '<dark_gray><bold>Leaderboards'
       # <category>
       entry-name: '<gold><bold><category>'
       # <category> <count>
@@ -1332,9 +1322,9 @@ gui:
 
   board:
     # <arena>
-    title: '<white>Top Times — <arena>'
+    title: '<dark_gray><bold>Top Times — <arena>'
     # Boards scored in rounds rather than times (bed repair). <arena>
-    title-score: '<white>Top Scores — <arena>'
+    title-score: '<dark_gray><bold>Top Scores — <arena>'
     empty:
       name: '<gray><bold>No times yet'
       lore:
@@ -1380,7 +1370,7 @@ gui:
 
   stats:
     # <player>
-    title: '<white>Stats — <player>'
+    title: '<dark_gray><bold>Stats — <player>'
     empty-self:
       name: '<gray><bold>No times yet'
       lore:
@@ -1410,7 +1400,7 @@ gui:
 
   rush:
     # <arena>
-    title: '<white>Rush Setup — <arena>'
+    title: '<dark_gray><bold>Rush — <arena>'
     # Lore keys hold description and state only; the click hints are appended
     # from gui.hint.* (style guide R30/R32).
     team:
@@ -1477,7 +1467,7 @@ gui:
     # The bed-defense gallery the button above opens.
     defenses:
       # <arena>
-      title: '<white>Rush Defenses — <arena>'
+      title: '<dark_gray><bold>Bed Defenses — <arena>'
       # <preset>
       tile-name: '<white><bold><preset>'
       # <layers> — how many materials thick the pyramid is
@@ -1566,7 +1556,6 @@ gui:
         diamond: 'diamond'
     start:
       name: '<green><bold>Start Practice'
-      name-apply: '<green><bold>Apply and Restart'
       # The whole match summarized, so nobody has to hover five buttons to
       # find out what they are about to play.
       # <arena> <team> <blocks> <currency> <pickaxe> <tnt> <defense> <generators>
@@ -1675,7 +1664,7 @@ gui:
   # freezes while this menu is open and re-reads everything on close.
   pvpbot:
     # <arena>
-    title: '<white>Bot Settings — <arena>'
+    title: '<dark_gray><bold>Bot Settings — <arena>'
     kit:
       name: '<white><bold>Kit'
       # <kit>
@@ -1711,7 +1700,7 @@ gui:
         - '<gray>Difficulty: <level>'
     # The kit gallery.
     kits:
-      title: '<white>Bot Kits'
+      title: '<dark_gray><bold>Kits'
       # <kit>
       entry-name: '<white><bold><kit>'
       # <armor>
@@ -1728,7 +1717,7 @@ gui:
     # The full-inventory kit preview.
     preview:
       # <kit>
-      title: '<white>Kit Preview — <kit>'
+      title: '<dark_gray><bold>Preview — <kit>'
       # <kit>
       banner-name: '<white><kit>'
       icon-lore:
@@ -1864,7 +1853,7 @@ gui:
         - '<gray>Currently: <state>'
 
   rushshop:
-    title: '<white>Item Shop'
+    title: '<dark_gray><bold>Item Shop'
     # Appended under the open tab's own MBedwars lore.
     tab-selected: '<gray>Currently: <green>selected'
     # <amount> <currency>
@@ -1881,7 +1870,7 @@ gui:
 
   rushboards:
     # <arena>
-    title: '<white>Rush Boards — <arena>'
+    title: '<dark_gray><bold>Boards — <arena>'
     # <objective>
     entry-name: '<gold><bold><objective>'
     # <players> <record> <record-holder> <rank>
@@ -1906,7 +1895,7 @@ gui:
         - '<gray>Base: <white><team> <dark_gray>(<count> available)'
     # The map picker (the mode's category tile opens it).
     arenas:
-      title: '<white>Bed Defense Maps'
+      title: '<dark_gray><bold>Bed Defense Maps'
       empty:
         name: '<gray><bold>No maps yet'
         lore:
@@ -1925,7 +1914,7 @@ gui:
           - '<gray>Build saved bed defenses'
           - '<gray>against the clock.'
     # The round setup menu. <arena>
-    title: '<white>Round Settings — <arena>'
+    title: '<dark_gray><bold>Bed Defense — <arena>'
     defense:
       name: '<white><bold>Choose Defense'
       # <name> <author> <blocks> <available>
@@ -1946,19 +1935,74 @@ gui:
         - ''
         - '<gray>Nobody has saved one yet.'
         - '<gray>Design the first one below.'
+    mode:
+      name: '<white><bold>Mode'
+      # <mode>
+      lore:
+        - '<gray>Competitive is a real match start:'
+        - '<gray>sword, armor, generators and shop.'
+        - '<gray>Practice hands you the exact blocks.'
+        - ''
+        - '<gray>Mode: <mode>'
+        - '<gold>Competitive, obsidian and bed repair are ranked.'
+      # While obsidian practice is on the mode is set aside. <mode>
+      lore-obsidian:
+        - '<gray>Competitive is a real match start:'
+        - '<gray>sword, armor, generators and shop.'
+        - '<gray>Practice hands you the exact blocks.'
+        - ''
+        - '<gray>Mode: <mode> <dark_gray>(set aside)'
+        - '<light_purple>Obsidian practice is on.'
+      # While bed repair is on the mode is set aside. <mode>
+      lore-repair:
+        - '<gray>Competitive is a real match start:'
+        - '<gray>sword, armor, generators and shop.'
+        - '<gray>Practice hands you the exact blocks.'
+        - ''
+        - '<gray>Mode: <mode> <dark_gray>(set aside)'
+        - '<red>Bed repair is on.'
+      option:
+        competitive: '<gold>Competitive'
+        practice: '<white>Practice'
+        obsidian: '<light_purple>Obsidian'
+        repair: '<red>Bed Repair'
+    obsidian:
+      name: '<white><bold>Obsidian'
+      # <state> <eligible> <available>
+      lore:
+        - '<gray>The defense stands built. Break in,'
+        - '<gray>seal the bed with 8 obsidian, build'
+        - '<gray>it back. Tools and obsidian, no shop.'
+        - ''
+        - '<gray>Obsidian practice: <state>'
+        - '<gray>Defenses without obsidian: <white><eligible><dark_gray>/<white><available>'
+        - '<gold>Always ranked, on its own board.'
+    repair:
+      name: '<white><bold>Bed Repair'
+      # <state> <eligible> <available> <limit> <min>
+      lore:
+        - '<gray>The defense stands. Lit TNT or a'
+        - '<gray>fireball keeps wrecking it, and you'
+        - '<gray>rebuild with exactly the blocks it'
+        - '<gray>took. Never leave the bed exposed for'
+        - '<gray><white><limit>s<gray> — shrinking to <white><min>s<gray> — or the'
+        - '<gray>run is over.'
+        - ''
+        - '<gray>Bed repair: <state>'
+        - '<gray>Defenses that qualify: <white><eligible><dark_gray>/<white><available>'
+        - '<dark_gray>No glass or water; bed sealed solid.'
+        - '<gold>Always ranked, in rounds survived.'
     shuffle:
       name: '<white><bold>Shuffle'
       # <pool>
       lore:
         - '<gray>Draws a different defense from'
-        - '<gray>a pool every round. Off in'
-        - '<gray>competitive.'
+        - '<gray>a pool every round. Practice only.'
         - ''
         - '<gray>Pool: <white><pool>'
       lore-competitive:
         - '<gray>Draws a different defense from'
-        - '<gray>a pool every round. Off in'
-        - '<gray>competitive.'
+        - '<gray>a pool every round. Practice only.'
         - ''
         - '<gray>Pool: <white>off'
       option:
@@ -2012,63 +2056,44 @@ gui:
         - '<gray>into the editor.'
         - ''
         - '<gray>Saved: <white>0'
-    # The four start buttons: one click picks the mode and starts (or,
-    # while playing, restarts) the round in it. The mode you are set to
-    # glows. <arena> <defense> <shuffle> <timer> <eligible> <available>
-    # <limit> <min>
     start:
-      practice:
-        name: '<green><bold>Start Practice'
-        lore:
-          - '<gray>The defense''s exact blocks are in'
-          - '<gray>your kit. Not ranked; keeps a'
-          - '<gray>personal best of your own.'
-          - ''
-          - '<gray>Map: <white><arena>'
-          - '<gray>Defense: <white><defense>'
-          - '<gray>Shuffle: <white><shuffle>'
-          - '<gray>Timer starts on: <white><timer>'
-      competitive:
-        name: '<gold><bold>Start Competitive'
-        lore:
-          - '<gray>A real match start: sword, armor,'
-          - '<gray>generators and shop. Blocks are'
-          - '<gray>bought; the clock runs from the'
-          - '<gray>first move.'
-          - ''
-          - '<gray>Map: <white><arena>'
-          - '<gray>Defense: <white><defense>'
-          - '<gold>Ranked.'
-      obsidian:
-        name: '<light_purple><bold>Start Obsidian'
-        lore:
-          - '<gray>The defense stands built. Break in,'
-          - '<gray>seal the bed with 8 obsidian, build'
-          - '<gray>it back. Tools and obsidian, no shop.'
-          - ''
-          - '<gray>Map: <white><arena>'
-          - '<gray>Defense: <white><defense>'
-          - '<gray>Shuffle: <white><shuffle>'
-          - '<gray>Defenses without obsidian: <white><eligible><dark_gray>/<white><available>'
-          - '<gold>Ranked, on its own board.'
-      repair:
-        name: '<red><bold>Start Bed Repair'
-        lore:
-          - '<gray>The defense stands. Lit TNT or a'
-          - '<gray>fireball keeps wrecking it; rebuild'
-          - '<gray>with exactly the blocks it took.'
-          - '<gray>Never leave the bed exposed for'
-          - '<white><limit>s<gray>, shrinking to <white><min>s<gray>.'
-          - ''
-          - '<gray>Map: <white><arena>'
-          - '<gray>Defense: <white><defense>'
-          - '<gray>Shuffle: <white><shuffle>'
-          - '<gray>Defenses that qualify: <white><eligible><dark_gray>/<white><available>'
-          - '<dark_gray>No glass or water; bed sealed solid.'
-          - '<gold>Ranked, in rounds survived.'
+      name: '<green><bold>Start Practice'
+      name-competitive: '<gold><bold>Start Competitive'
+      name-obsidian: '<light_purple><bold>Start Obsidian'
+      name-repair: '<red><bold>Start Bed Repair'
+      name-apply: '<green><bold>Apply and Restart'
+      # <arena> <defense> <mode> <shuffle> <timer> <ranked>
+      lore:
+        - '<gray>Map: <white><arena>'
+        - '<gray>Defense: <white><defense>'
+        - ''
+        - '<gray>Mode: <mode>'
+        - '<gray>Shuffle: <white><shuffle>'
+        - '<gray>Timer starts on: <white><timer>'
+        - ''
+        - '<ranked>'
+      ranked: '<gold>Times are recorded and ranked.'
+      unranked: '<gray>Practice rounds are not ranked.'
+      # Obsidian practice is on but every defense has obsidian on the bed.
+      lore-obsidian-none:
+        - '<gray>Every defense you can play already'
+        - '<gray>has obsidian on the bed. Switch'
+        - '<gray>obsidian practice off, or design one.'
+      # Bed repair is on but no defense qualifies (glass or water, or an unsealed bed).
+      lore-repair-none:
+        - '<gray>No defense you can play qualifies:'
+        - '<gray>no glass or water, and the bed sealed'
+        - '<gray>with solid, non-obsidian blocks.'
+        - '<gray>Switch bed repair off, or design one.'
+      # With no defense anywhere to build, Start becomes this.
+      name-design: '<white><bold>New Defense'
+      lore-design:
+        - '<gray>Nobody has saved a bed defense yet.'
+        - '<gray>Build one around your bed, save it,'
+        - '<gray>and practice it.'
     # The gallery. <tab>
     gallery:
-      title: '<white>Defenses — <tab>'
+      title: '<dark_gray><bold>Defenses — <tab>'
       tab:
         public: 'Public'
         mine: 'Mine'
@@ -2138,7 +2163,7 @@ gui:
       kind-line: '<dark_gray> • <gray><count>× <material>'
     # One defense's actions. <name>
     actions:
-      title: '<white>Defense — <name>'
+      title: '<dark_gray><bold><name>'
       play:
         name: '<green><bold>Build It'
         # <name>
@@ -2216,7 +2241,7 @@ gui:
       # The anvil that asks for it. <name> <max> — the shorter of
       # beddefense.reports.reason-max-length and the 50 an anvil allows.
       report-prompt:
-        title: '<white>Report Reason'
+        title: '<dark_gray><bold>Report Reason'
         lore:
           - '<gray>Why are you reporting'
           - '<white><name><gray>?'
@@ -2233,8 +2258,8 @@ gui:
           - '<gray>Reports: <white><count>'
     # The moderation list: reported defenses first, then everything. <count>
     moderation:
-      title: '<white>Defenses — Moderation'
-      title-reported: '<white>Defenses — Reported'
+      title: '<dark_gray><bold>Defenses — Moderation'
+      title-reported: '<dark_gray><bold>Defenses — Reported'
       empty:
         name: '<gray><bold>No defenses yet'
         lore:
@@ -2267,7 +2292,7 @@ gui:
           - '<gray>Currently: <state>'
     # One defense's reports. <name>
     reports:
-      title: '<white>Reports — <name>'
+      title: '<dark_gray><bold>Reports — <name>'
       empty:
         name: '<gray><bold>No reports'
         lore:
@@ -2294,8 +2319,8 @@ gui:
           - '<red>Every report is dropped.'
     # The leaderboards. <name>
     boards:
-      title: '<white>Bed Defense Boards'
-      title-one: '<white>Bed Defense Boards — <name>'
+      title: '<dark_gray><bold>Boards — Bed Defense'
+      title-one: '<dark_gray><bold>Boards — <name>'
       # The flat leaderboard list's button (categories off).
       flat-button:
         name: '<white><bold>Bed Defense'
@@ -2318,7 +2343,7 @@ gui:
         - '<gray>Your rank: <white><rank>'
     # The in-arena menu behind the bed defense item. <arena>
     session:
-      title: '<white>Bed Defense — <arena>'
+      title: '<dark_gray><bold>Bed Defense — <arena>'
       preview:
         name: '<white><bold>Preview'
         lore:
@@ -2343,7 +2368,7 @@ gui:
       settings:
         name: '<white><bold>Round Settings'
         lore:
-          - '<gray>Defense, shuffle, timer start'
+          - '<gray>Mode, shuffle, timer start'
           - '<gray>and your base.'
       restart:
         name: '<yellow><bold>Restart'
@@ -2359,14 +2384,13 @@ gui:
         # <radius>
         lore:
           - '<gray>Opens the editor with an empty bed.'
-      # Only with more than one map to go to.
       maps:
         name: '<white><bold>Other Maps'
         lore:
           - '<gray>Practice on a different map.'
     # The editor's menu behind the same item.
     editor:
-      title: '<white>Defense Editor'
+      title: '<dark_gray><bold>Defense Editor'
       unnamed: '<dark_gray>(unnamed)'
       name:
         name: '<white><bold>Name'
@@ -2378,7 +2402,7 @@ gui:
       # The anvil that asks for it. <max> is the shorter of
       # beddefense.name-max-length and the 50 an anvil allows.
       name-prompt:
-        title: '<white>Defense Name'
+        title: '<dark_gray><bold>Defense Name'
         lore:
           - '<gray>Type a name in the box, then'
           - '<gray>take the result.'
