@@ -99,6 +99,15 @@ public final class CategoryMenu extends PagedMenu<String> {
     @Override
     protected void onEntryClick(String category, InventoryClickEvent event) {
         sound("menu.select");
+        // One map the viewer can play: nothing to pick, so the picker is
+        // skipped and its setup (or the arena itself) opens straight away.
+        List<ArenaTemplate> arenas = bedDefense(category)
+                ? plugin.bedDefenses().maps(viewer)
+                : byCategory.getOrDefault(category, List.of());
+        if (arenas.size() == 1 && plugin.templates().canUse(viewer, arenas.get(0))) {
+            later(() -> ArenaMenu.open(plugin, viewer, this, arenas.get(0)));
+            return;
+        }
         if (bedDefense(category)) {
             later(() -> new BedDefenseArenaMenu(plugin, viewer, this).open());
             return;

@@ -12,8 +12,9 @@ import org.bukkit.entity.Player;
 
 /**
  * The in-arena menu behind the bed defense hotbar item while playing:
- * preview, guided building, a different defense, the round settings, and
- * the way into the editor.
+ * preview, guided building, a different defense, the round settings, the
+ * way into the editor, and the four start buttons that switch the mode
+ * and restart the round in it.
  */
 public final class BedDefenseSessionMenu extends Menu {
 
@@ -34,7 +35,7 @@ public final class BedDefenseSessionMenu extends Menu {
 
     @Override
     protected int rows() {
-        return plugin.guis().rows("beddefense-session", 4);
+        return plugin.guis().rows("beddefense-session", 5);
     }
 
     private int slot(String button, int def) {
@@ -128,7 +129,7 @@ public final class BedDefenseSessionMenu extends Menu {
             }).open());
         });
 
-        set(slot("settings", 14), Button.of(plugin, icon("settings", Material.COMPARATOR))
+        set(slot("settings", 14), Button.of(plugin, icon("settings", Material.RED_BED))
                 .name("gui.beddefense.session.settings.name")
                 .lore("gui.beddefense.session.settings.lore")
                 .hint("open")
@@ -178,14 +179,19 @@ public final class BedDefenseSessionMenu extends Menu {
                 service.edit(viewer, null);
             });
         });
-        set(slot("maps", 23), Button.of(plugin, icon("maps", Material.FILLED_MAP))
-                .name("gui.beddefense.session.maps.name")
-                .lore("gui.beddefense.session.maps.lore")
-                .hint("open")
-                .build(), event -> {
-            click();
-            later(() -> new BedDefenseArenaMenu(plugin, viewer, this).open());
-        });
+        if (service.maps(viewer).size() > 1) {
+            // Only once there is another map to go to.
+            set(slot("maps", 23), Button.of(plugin, icon("maps", Material.FILLED_MAP))
+                    .name("gui.beddefense.session.maps.name")
+                    .lore("gui.beddefense.session.maps.lore")
+                    .hint("open")
+                    .build(), event -> {
+                click();
+                later(() -> new BedDefenseArenaMenu(plugin, viewer, this).open());
+            });
+        }
+        BedDefenseStartButtons.place(this, "beddefense-session", new int[] {28, 30, 32, 34},
+                session.template(), true);
         nav("beddefense-session");
     }
 }

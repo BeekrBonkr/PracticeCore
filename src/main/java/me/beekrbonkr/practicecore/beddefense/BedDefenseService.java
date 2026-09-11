@@ -530,6 +530,29 @@ public final class BedDefenseService {
     }
 
     /**
+     * Starts a round on this map under these choices — the start buttons.
+     * The choices are saved first; a session already running on the map
+     * restarts into them, anything else joins the map.
+     */
+    public void start(Player player, ArenaTemplate template, BedDefenseSelection selection) {
+        UUID id = player.getUniqueId();
+        saveSelection(id, selection);
+        clearRound(id);
+        requestPlay(id);
+        PracticeSession session = plugin.sessions().get(id);
+        if (session != null && session.mode() instanceof BedDefenseMode
+                && session.template().name().equals(template.name())) {
+            BedDefenseState state = BedDefenseMode.state(session);
+            if (state != null && state.phase() == Phase.PREVIEW) {
+                exitPreview(player, session, state, false);
+            }
+            plugin.sessions().restart(player);
+            return;
+        }
+        join(player, template);
+    }
+
+    /**
      * Opens the editor — on a defense of the player's own, or fresh with
      * null — in the current session, their last map, or via the map picker.
      */
@@ -1804,8 +1827,10 @@ public final class BedDefenseService {
             msg().send(player, withdrawn, "name", saved.name(), "id", saved.id());
         }
         plugin.sounds().play(player, "beddefense.saved");
-        // Straight into playing what was just designed.
-        selectDefense(id, saved.id());
+        // Straight into playing what was just designed — competitively, the
+        // round that proves it buildable and lets it publish.
+        saveSelection(id, rawSelection(id).withDefense(saved.id())
+                .withMode(BedDefenseSelection.Mode.COMPETITIVE));
         clearRound(id);
         requestPlay(id);
         plugin.sessions().restart(player);

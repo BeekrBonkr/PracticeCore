@@ -337,7 +337,33 @@ public final class Messages {
                 cfg.set("help.beddefense-detail", updated);
             }
         }
+        if (from < 16) {
+            // v16 is the menu simplification: every title is unique, white
+            // and not bold; the bed defense setup menu's Mode lever, Obsidian
+            // and Bed Repair toggles and single Start become four start
+            // buttons; the hub's Bot Settings becomes Mode Settings. Anything
+            // still at its v15 default is reset so the top-up writes the new
+            // text; an admin's own wording stands. The removed controls' keys
+            // go whatever they say — there is nothing left to show them on.
+            YamlMigrator.resetUntouched(cfg,
+                    Backups.jarDefaults(plugin, "migrations/messages-v15.yml"));
+            for (String gone : GONE_IN_16) {
+                cfg.set(gone, null);
+            }
+        }
     }
+
+    /** Keys of controls v16 removed, dropped whatever they say. */
+    private static final List<String> GONE_IN_16 = List.of(
+            "gui.main.bot",
+            "gui.beddefense.mode", "gui.beddefense.obsidian", "gui.beddefense.repair",
+            "gui.beddefense.start.name", "gui.beddefense.start.name-competitive",
+            "gui.beddefense.start.name-obsidian", "gui.beddefense.start.name-repair",
+            "gui.beddefense.start.name-apply", "gui.beddefense.start.lore",
+            "gui.beddefense.start.ranked", "gui.beddefense.start.unranked",
+            "gui.beddefense.start.lore-obsidian-none", "gui.beddefense.start.lore-repair-none",
+            "gui.beddefense.start.name-design", "gui.beddefense.start.lore-design",
+            "gui.reason.only-one-team");
 
     private void index(FileConfiguration cfg) {
         for (String key : cfg.getKeys(true)) {

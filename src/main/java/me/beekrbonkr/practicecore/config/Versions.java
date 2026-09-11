@@ -21,7 +21,14 @@ public final class Versions {
     public static final int CONFIG = 10;
 
     /**
-     * messages.yml — admin-editable. v15 moves the text prompts (a bed
+     * messages.yml — admin-editable. v16 is the menu simplification: every
+     * menu title is unique, white and not bold; the bed defense setup
+     * menu's Mode lever, Obsidian and Bed Repair toggles and single Start
+     * give way to four start buttons (their text arrives under
+     * {@code gui.beddefense.start.<mode>}); the hub's Bot Settings button
+     * becomes the mode-aware Mode Settings. Values still at their v15
+     * default are rewritten, an admin's own wording stands; the keys of the
+     * removed controls are dropped. v15 moves the text prompts (a bed
      * defense's name, a report's reason) from chat into an anvil: the chat
      * questions are gone, the anvil's title and hint arrive under
      * {@code gui.beddefense} (additive), the lore that said "in chat" is
@@ -48,10 +55,17 @@ public final class Versions {
      * are reset to the new wording; edited ones stand. v8 added bed defense
      * practice; v7 the rush TNT modifier.
      */
-    public static final int MESSAGES = 15;
+    public static final int MESSAGES = 16;
 
     /**
-     * guis.yml — admin-editable menu layout. v11 moves the Bed Repair
+     * guis.yml — admin-editable menu layout. v12 is the menu
+     * simplification: the bed defense setup menu's Mode, Obsidian, Bed
+     * Repair and Start buttons become four start buttons on the go row, the
+     * in-arena bed defense menu grows to five rows and carries the same
+     * four, its Round Settings icon is a red bed, and the hub's {@code bot}
+     * button becomes {@code mode-settings}. Values still at their v11
+     * defaults are reset so the new layout applies; an admin's own
+     * arrangement stands. v11 moves the Bed Repair
      * toggle in between Mode and Obsidian (28 → 22 where untouched). v10
      * added the toggle and the repair icons for Start and the boards list,
      * all additive. v9 adds the bed defense
@@ -70,7 +84,7 @@ public final class Versions {
      * one material means one thing. Values an admin never touched are reset;
      * edited ones stand. v5 added the bed defense menus.
      */
-    public static final int GUIS = 11;
+    public static final int GUIS = 12;
 
     /** sounds.yml — admin-editable sound cues. */
     public static final int SOUNDS = 1;

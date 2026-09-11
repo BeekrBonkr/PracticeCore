@@ -33,8 +33,9 @@ public final class SetupGui {
 
     // ------------------------------------------- fixed-style item shorthands
 
+    /** A menu title: white, not bold, like every player menu's (R41). */
     static Component title(String text) {
-        return Component.text(text, NamedTextColor.DARK_GRAY, TextDecoration.BOLD);
+        return Component.text(text, NamedTextColor.WHITE);
     }
 
     /**

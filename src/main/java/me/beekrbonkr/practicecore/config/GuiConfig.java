@@ -132,6 +132,30 @@ public final class GuiConfig {
             // default moves; an admin's own placement stands.
             relocate(cfg, "beddefense.buttons.repair.slot", 28, 22);
         }
+        if (from < 12) {
+            // v12 is the menu simplification: the bed defense setup menu's
+            // Mode, Obsidian, Bed Repair and Start buttons become four start
+            // buttons on the go row, the in-arena bed defense menu grows to
+            // five rows and carries the same four, its Round Settings icon
+            // is a red bed, and the hub's Bot Settings button becomes the
+            // mode-aware Mode Settings. Values still at their v11 defaults
+            // are reset so the new layout applies; an admin's own
+            // arrangement stands — a moved or hidden Bot Settings carries
+            // over to Mode Settings. The removed buttons' keys go.
+            YamlMigrator.resetUntouched(cfg,
+                    Backups.jarDefaults(plugin, "migrations/guis-v11.yml"));
+            if (cfg.isSet("main.buttons.bot.slot")) {
+                cfg.set("main.buttons.mode-settings.slot", cfg.get("main.buttons.bot.slot"));
+            }
+            if (cfg.isSet("main.buttons.bot.enabled")) {
+                cfg.set("main.buttons.mode-settings.enabled", cfg.get("main.buttons.bot.enabled"));
+            }
+            cfg.set("main.buttons.bot", null);
+            for (String gone : List.of("beddefense.buttons.mode", "beddefense.buttons.obsidian",
+                    "beddefense.buttons.repair", "beddefense.buttons.start")) {
+                cfg.set(gone, null);
+            }
+        }
     }
 
     /** Moves a slot only while it still sits where the previous version put it. */

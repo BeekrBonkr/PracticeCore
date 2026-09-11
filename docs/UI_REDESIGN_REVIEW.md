@@ -6,6 +6,8 @@ Foundation: `gui/Button.java` (one builder for every control), `Menu.nav()` (bac
 
 Updated 2026-09-08 for 0.11.0 (branch `dev`): rows and items marked **(0.11.0)** cover the bed defense maps, the publishing gate, notices, reports and moderation, the guis.yml v8 re-layout (from the user's own hand-edited layout; untouched values are reset to the new defaults, `migrations/guis-v7.yml`), and the admin GUI additions. `messages.yml` is now v12, `guis.yml` v8, `config.yml` v8.
 
+Updated 2026-09-11 for 0.12.0 (branch `main`): rows and items marked **(0.12.0)** cover the menu simplification — four bed defense start buttons in place of the Mode lever, the Obsidian and Bed Repair toggles and Start; the hub's Bot Settings generalized to Mode Settings; the team button hidden on one-base maps; one-map categories skipping the picker; every title unique, white and not bold (R41 rewritten). `messages.yml` is now v16, `guis.yml` v12 (untouched values reset to the new defaults, `migrations/messages-v15.yml` and `migrations/guis-v11.yml`).
+
 ## 1. What was touched
 
 ### Menus (26)
@@ -53,6 +55,13 @@ New and changed in 0.11.0:
 | BedDefenseGalleryMenu **(0.11.0)** | Defenses — Public / Mine / Favorites / Review | Review tab (LECTERN, slot 52) for moderators only, reported first then everything incl. private; a remembered Review tab falls back to Public once the node is gone; reported defenses carry a red `Reports: <count>` line for moderators |
 | BedDefenseActionsMenu **(0.11.0)** | <name> | Report (BELL, 15) on someone else's public defense, asks for the reason in an anvil, shows `Your report: sent/none`; Visibility on your own is disabled with `complete it in competitive first` until cleared (or `hidden by reports — a moderator has to review it` after an auto-hide, with a red `Hidden by player reports` line), lore shows `Cleared by you`; moderators see Visibility (with author and `Cleared by author`, disabled with `complete it in competitive first` on an uncleared defense — no bypass), Delete and Reports (WRITTEN_BOOK, 23, disabled with `no reports`) on anyone's; opening a reported defense as a moderator marks its reports seen |
 | BedDefenseEditMenu **(0.11.0)** | Defense Editor | Visibility disabled with `complete it in competitive first` for a fresh or uncleared build; lore says changing the blocks makes it private again |
+| Every menu **(0.12.0)** | unique, `<white>`, not bold | `Practice Menu`, `Player Settings`, `Practice Modes`, `<category> Maps` / `All Maps`, `Leaderboard Categories`, `<category> Leaderboards` / `All Leaderboards`, `Rush Setup — <arena>`, `Rush Defenses — <arena>`, `Rush Boards — <arena>`, `Bot Kits`, `Kit Preview — <kit>`, `Round Settings — <arena>`, `Bed Defense — <arena>`, `Defense — <name>`, `Bed Defense Boards`; admin menus and anvil prompts white too |
+| MainMenu **(0.12.0)** | Practice Menu | Bot Settings → **Mode Settings** (`main.buttons.mode-settings`, slot 31): PvP bot knobs, rush modifiers or bed defense round settings, icon per mode; hidden for modes without settings. Flat list (categories off) with one playable map skips the picker |
+| CategoryMenu **(0.12.0)** | Practice Modes | A category (or the Bed Defense tile) with exactly one playable map skips its picker and opens the map's setup, or joins it |
+| RushConfigMenu **(0.12.0)** | Rush Setup — <arena> | Team Base hidden (not disabled) on a one-base map; Start reads `Apply and Restart` inside a run on the map |
+| BedDefenseConfigMenu **(0.12.0)** | Round Settings — <arena> | Mode, Obsidian, Bed Repair and Start replaced by **Start Practice / Competitive / Obsidian / Bed Repair** (37/39/41/43); rules row Defense 20, Shuffle 22, Timer Start 24 (Shuffle no longer hidden); Team Base hidden on a one-base map; the set mode glows; a mode with nothing to run on is disabled with its reason, competitive without MBedwars with `needs MBedwars for the shop` |
+| BedDefenseSessionMenu **(0.12.0)** | Bed Defense — <arena> | Five rows; Round Settings = RED_BED; the same four start buttons on row 3 (28/30/32/34) switch the mode and restart; Other Maps hidden with one map |
+| BedDefenseEditMenu **(0.12.0)** | Defense Editor | Save starts a competitive round on the saved defense |
 | BedDefenseArenaMenu **(0.11.0)** | Bed Defense Maps | Lists only arenas of mode `beddefense` with a playable base; empty state points admins at `/practice beddefense import <map>` |
 | admin ArenaListMenu **(0.11.0)** | Arena Setup | Left-click opens the arena's options, not the wizard; tiles show `Default: yes`; footer gains Bed Defenses (LECTERN, locked without the moderate node), Import Maps (HOPPER, MBedwars only) and Reload (COMMAND_BLOCK, two clicks, locked without `practicecore.reload`) |
 | admin SetupActionsMenu **(0.11.0)** | Creating — / Editing — <arena> | Third row is mode-aware: Team Spawn Here, Bed Here, Generator Here, Dealer Here and a clear for rush and bed defense arenas, Bot Spawn Here / Clear Bot Spawn for PvP bot arenas; Save disabled with `needs a team base with a bed` on those modes until one exists |
@@ -133,6 +142,9 @@ Start a server with a copy of an existing `plugins/PracticeCore/` folder so the 
 - [ ] Glow appears only on the selected kit/defense/preset/tab and on toggles that are on
 
 ### Hub and play
+
+- [ ] **(0.12.0)** Mode Settings shows on the bottom row only in a PvP bot, rush or bed defense session, wears that mode's icon, and opens its menu with Back returning to the hub; absent in bridging, bed break and MLG
+- [ ] **(0.12.0)** A category with one playable map opens that map's setup (rush, bed defense) or joins it directly; with two or more the picker shows; a single locked map still shows the picker
 - [ ] `/practice menu`: Close works; Random Arena and Settings are white; Leave plays the normal click sound
 - [ ] Play → category → arena: titles read `Play`, `Play — <category>`
 - [ ] A locked arena shows iron bars, a gray name, and `Locked: …` (node visible only with `practicecore.arena`)
@@ -157,6 +169,11 @@ Start a server with a copy of an existing `plugins/PracticeCore/` folder so the 
 - [ ] Die to a defender: title text comes from `rush.title.*` (edit it in messages.yml to confirm)
 
 ### Bed defense
+
+- [ ] **(0.12.0)** Round Settings: four start buttons, the set mode glowing; each starts the round in its mode and the sidebar/board agree; Team Base absent on a one-base map and present on a multi-base one
+- [ ] **(0.12.0)** In-arena menu is five rows; the red bed opens Round Settings; the four start buttons switch the mode and restart; Other Maps absent with one map
+- [ ] **(0.12.0)** Saving in the editor lands in a competitive round on the saved defense
+- [ ] **(0.12.0)** Upgrade from v11/v15 files: the old Mode/Obsidian/Repair/Start keys are gone, a moved Bot Settings slot becomes Mode Settings' slot, edited lore survives
 - [ ] Map picker title `Bed Defense Maps`; config menu `Bed Defense — <arena>` with `Choose Defense`, `New Defense`, `Edit Defense`
 - [ ] In competitive mode, Shuffle and Timer Start are gray panes with `Unavailable: pinned by competitive mode`
 - [ ] Gallery tabs at the footer; Mine tab shows your head; empty tabs read `No … yet`

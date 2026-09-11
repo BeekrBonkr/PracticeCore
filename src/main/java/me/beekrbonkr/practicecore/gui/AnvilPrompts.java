@@ -4,7 +4,6 @@ import me.beekrbonkr.practicecore.PracticeCorePlugin;
 import me.beekrbonkr.practicecore.util.ItemBuilder;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -72,7 +71,7 @@ public final class AnvilPrompts implements Listener {
         for (String line : hint) {
             lines.add(line.isEmpty() ? Component.empty() : Component.text(line, NamedTextColor.GRAY));
         }
-        prompt(player, Component.text(title, NamedTextColor.DARK_GRAY, TextDecoration.BOLD),
+        prompt(player, Component.text(title, NamedTextColor.WHITE),
                 initial, lines, callback);
     }
 

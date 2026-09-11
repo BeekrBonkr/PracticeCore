@@ -1,0 +1,2516 @@
+# PracticeCore messages
+#
+# Every piece of text the plugin shows a player lives here. Formatting is
+# MiniMessage (https://docs.advntr.dev/minimessage/format.html), so colors,
+# gradients, hover and click are all available.
+#
+# - <prefix> inserts the prefix defined below.
+# - Values in <angle.brackets> listed above each entry are its placeholders.
+#   Player-supplied text is inserted literally and can never inject formatting.
+# - Set a message to '' to silence it entirely.
+# - A message may be a single line or a list of lines.
+#
+# Do not edit config-version by hand; PracticeCore uses it to migrate this file
+# across upgrades (backups land in backups/).
+config-version: 15
+
+prefix: '<gold>Practice <dark_gray>» '
+
+general:
+  players-only: '<prefix><red>That has to be run in-game.'
+  # <usage> — always "/practice sub <required> [optional]"; never prose (style guide R14).
+  usage: '<prefix><red>Usage: <white><usage>'
+
+permission:
+  use: '<prefix><red>You may not use practice arenas.'
+  menu: '<prefix><red>You may not open the practice menu.'
+  leaderboard: '<prefix><red>You may not view leaderboards.'
+  spectate: '<prefix><red>You may not spectate practice sessions.'
+  stats-other: '<prefix><red>You may not view other players'' stats.'
+  setup: '<prefix><red>You may not configure arenas.'
+  arena-admin: '<prefix><red>You may not administer arenas.'
+  pb-reset: '<prefix><red>You may not wipe personal bests.'
+  item: '<prefix><red>You may not give out the practice menu item.'
+  reload: '<prefix><red>You may not reload PracticeCore.'
+  world: '<prefix><red>You may not manage the practice world.'
+  beddefense-moderate: '<prefix><red>You may not moderate bed defenses.'
+
+session:
+  ready: '<prefix><green>Arena ready — the timer starts when you move. Good luck!'
+  # <arena>
+  switched: '<prefix><green>Switched to <white><arena><green>.'
+  ended: '<prefix><gray>Practice session ended.'
+  not-practicing: '<prefix><red>You are not practicing.'
+  preparing: '<prefix><red>Your arena is still being prepared — one moment.'
+  # Action bar the moment a join starts — big maps take a second or two to
+  # paste, and silence after the command reads as lag. <arena>
+  building: '<gray>Building <white><arena></white><gray>…'
+  # Action bar when the arena is built and the teleport is on its way.
+  teleporting: '<gray>Arena ready — teleporting you in…'
+  # Title covering the whole join — the paste and the teleport after it. It
+  # appears only if the join is still running after effects.title-delay-ticks
+  # (so an instant join flashes nothing) and comes down when the player is
+  # standing in the arena, so a slow paste never looks like a frozen client.
+  # Blank both lines to switch it off. <arena>
+  building-title: '<yellow><bold>Loading'
+  building-subtitle: '<gray>Building <white><arena><gray>…'
+  setup-in-progress: '<prefix><red>Finish or cancel arena setup first.'
+  teleport-failed: '<prefix><red>Could not send you to the arena.'
+  state-restored: '<prefix><gray>Your pre-practice state was restored.'
+  # Shown when a switch or join fails after the previous session already ended.
+  restored-after-failure: '<prefix><red>That arena could not be opened, so you were returned to where you started.'
+
+run:
+  # <time>
+  finished-pb: '<prefix><green>Finished in <white><time><green> — new personal best!'
+  # <time> <best>
+  finished: '<prefix><gray>Finished in <white><time><gray> (best <white><best><gray>).'
+  # <time>
+  finished-first: '<prefix><gray>Finished in <white><time><gray>.'
+  failed: '<prefix><gray>You fell — resetting.'
+  restarted: '<prefix><gray>Run restarted.'
+  timer-not-started: '<yellow>The timer has not started yet'
+  title:
+    # <time>
+    pb: '<gold><time>'
+    normal: '<yellow><time>'
+  subtitle:
+    pb: '<green>New personal best!'
+    # <delta>
+    behind: '<gray>+<delta> off your best'
+    first: '<gray>Run complete'
+  # <player> <arena> <time> <previous-holder> <delta>
+  record-broadcast: '<prefix><gold><player> <gray>set a new record on <white><arena> <gray>— <white><time><gray>!'
+  record-broadcast-beaten: '<prefix><gold><player> <gray>set a new record on <white><arena> <gray>— <white><time><gray>, beating <white><previous-holder><gray> by <white><delta><gray>!'
+  # Quieter than the record shout — an improved personal best, not a takeover.
+  # <player> <arena> <time> <improvement>
+  pb-broadcast: '<prefix><gray><player> beat their personal best on <white><arena> <gray>— <white><time> <gray>(<white>-<improvement><gray>).'
+
+build:
+  out-of-bounds: '<red>Out of bounds'
+  break-own-only: '<red>You can only break blocks you placed'
+
+mlg:
+  # Shown when the bucket is used while still standing on the platform.
+  jump-first: '<red>Clutch on the way down, not before'
+  # <streak>
+  success: '<prefix><green>MLG landed. <gray>Streak: <white><streak><gray>.'
+  # <streak> — the clutch that beat your highest streak ever
+  success-best: '<prefix><green>MLG landed. <gray>Streak: <white><streak> <gray>— new best!'
+
+# Spectator mode: /practice spectate, the main menu's Spectate button, and
+# the three hotbar tools every spectator carries.
+spectate:
+  # <target> <arena>
+  started: '<prefix><gray>Now spectating <white><target> <gray>on <white><arena><gray>. Fly freely — the bed brings you back.'
+  stopped: '<prefix><gray>Stopped spectating — welcome back.'
+  # The spectator was pulled out by an external teleport (/spawn, /tpa, …).
+  ended: '<prefix><gray>Spectating ended.'
+  # The watched player's session ended (they left, finished for good, or quit).
+  target-left: '<prefix><gray>The player you were watching stopped practicing.'
+  # <player>
+  target-not-practicing: '<prefix><red><player> is not practicing right now.'
+  not-spectating: '<prefix><red>You are not spectating anyone.'
+  # Spectating is switched off server-wide (spectate.enabled in config.yml).
+  disabled: '<prefix><red>Spectating is disabled on this server.'
+  # Another plugin cancelled the teleport into the practice world.
+  entry-blocked: '<prefix><red>Something blocked your way into the practice world — tell an admin.'
+  self: '<prefix><red>You cannot spectate yourself.'
+  # <player>
+  unknown-player: '<prefix><red>No online player named <white><player><red>.'
+  # Sent to the watched player. <player>
+  watcher-joined: '<prefix><gray><player> is now spectating you.'
+  # <player>
+  watcher-left: '<prefix><gray><player> stopped spectating you.'
+  # Action bar when a spectator drifts too far and is pulled back.
+  leash: '<gray>Pulled back to the arena you are spectating'
+  # Hotbar tools (style guide R66): description, blank, right-click hint.
+  item:
+    teleport:
+      # <target>
+      name: '<white><bold>Teleport to <target>'
+      lore:
+        - '<gray>Snap back to the player'
+        - '<gray>you are watching.'
+        - ''
+        - '<yellow>Right-click to teleport'
+    menu:
+      name: '<white><bold>Switch Player'
+      lore:
+        - '<gray>Pick another player to watch.'
+        - ''
+        - '<yellow>Right-click to open'
+    leave:
+      name: '<red><bold>Stop Spectating'
+      lore:
+        - '<gray>Head back into an arena'
+        - '<gray>of your own.'
+        - ''
+        - '<yellow>Right-click to leave'
+
+rush:
+  not-configured: '<prefix><red>This rush arena has no playable team base — tell an admin.'
+  # Action bar on finishing a casual run.
+  records-disabled: '<yellow>Not ranked — play competitive to set records'
+  mbedwars-missing: '<prefix><red>MBedwars is not installed — there is nothing to import from.'
+  shop-unavailable: '<prefix><red>The shop needs MBedwars installed on this server.'
+  shop-empty: '<prefix><red>The MBedwars shop has nothing usable in practice.'
+  shop-cannot-afford: '<red>You cannot afford that'
+  shop-inventory-full: '<yellow>Your inventory is full — the rest was dropped at your feet'
+  # Action bar when using a special item that genuinely needs a real
+  # multiplayer game around it (trap, magic milk, magnet shoes, …).
+  special-unsupported: '<yellow>This item has no effect in solo practice'
+  # The run's own ender chest, opened from any ender chest block on the map.
+  ender-chest-title: '<dark_purple>Ender Chest'
+  # Punch-to-deposit action bars. <count> is the resources moved.
+  deposited: '<green>Deposited <white><count></white> resource(s)'
+  deposit-full: '<yellow>Deposited <white><count></white> — the chest is full, the rest stayed with you'
+  deposit-nothing: '<gray>Nothing to deposit'
+  # Quick-buy pinning in the shop (mirrored into your MBedwars profile).
+  quickbuy-pinned: '<green>Pinned to Quick Buy'
+  quickbuy-unpinned: '<yellow>Removed from Quick Buy'
+  quickbuy-full: '<red>Quick Buy is full — remove something first'
+  # The teleporter special item: channel, cancel, land. <seconds>
+  teleporter-channel: '<gray>Teleporting in <yellow><seconds>s<gray>… stand still'
+  teleporter-cancelled: '<red>Teleport canceled — you moved'
+  teleporter-done: '<gray>Back at your base'
+  # The tracker special item. <team> <distance>
+  tracker: '<gray>Nearest target: <white><team> <dark_gray>— <yellow><distance>m <gray>(compass set)'
+  tracker-nothing: '<yellow>Nothing left to track'
+  # Titles on a combat-run death and respawn (style guide R20 — rush no
+  # longer borrows the PvP bot's keys). <seconds>
+  title:
+    death: '<red><bold>YOU DIED'
+    death-sub: '<gray>Respawning in <yellow><seconds><gray>…'
+    respawned: '<green><bold>FIGHT'
+    respawned-sub: ''
+  # Defender bots (combat runs).
+  bots:
+    # Floats over each defender's head. <team> <health>
+    tag: '<gray><team> Defender <red>♥ <white><health>'
+    # A defender fell but its bed still stands — it will be back. <team>
+    defender-down: '<yellow><team> defender down — it respawns while their bed stands'
+    # A defender fell after its bed was gone: out for good. <team>
+    defender-eliminated: '<prefix><green>A <white><team></white> defender is eliminated — no bed, no respawn.'
+    # The player broke a team's bed on a combat run. <team>
+    bed-destroyed: '<prefix><gold>Bed destroyed. <gray><white><team></white> defenders can no longer respawn.'
+    # One enemy team fully out — the wipe that ends the run. <team>
+    team-wiped: '<prefix><gold><bold>TEAM WIPE!</bold> <gray>Team <white><team></white> is out — bed gone, every defender down.'
+    # A defender killed the player: a bedwars respawn, not a failed run.
+    player-died: '<prefix><red>You were slain. Your bed still stands, so you respawn at your base; bought items are lost.'
+
+# The PvP bot spar: an endless fight against an AI opponent. No timer, no
+# leaderboard — kills, deaths and combos live on the sidebar.
+pvpbot:
+  # Floats over the bot's head as a single line; the disguise's own player
+  # nameplate is hidden. <health> is the bot's remaining health points
+  # (half-hearts, the scoreboard's 0-20 scale).
+  bot-tag: '<white>Bot <red>♥ <white><health>'
+  # Floating damage indicator; <damage> is the health points one hit dealt.
+  damage-indicator: '<red>-<damage>❤'
+  # Titles on losing / winning a stock. The death title's subtitle is the
+  # 3-second respawn countdown (<seconds>); K/D lives in the chat summary.
+  title:
+    death: '<red><bold>YOU DIED'
+    respawn-sub: '<gray>Respawning in <yellow><seconds><gray>…'
+    respawned: '<green><bold>FIGHT'
+    respawned-sub: ''
+    kill: '<green><bold>Bot slain'
+    kill-sub: '<gray>Kills <green><kills> <dark_gray>/ <gray>Deaths <red><deaths>'
+  # Action bar counting down the bot's own 3-second respawn. <seconds>
+  respawn-bar: '<gray>Bot respawns in <yellow><seconds><gray>…'
+  # Chat summary after each stock; <hearts> is the health points (half-hearts)
+  # the survivor had left.
+  chat:
+    bot-killed-player: '<prefix><red>The bot killed you <dark_gray>(<gray>it had <white><hearts>❤<gray> left<dark_gray>).'
+    player-killed-bot: '<prefix><green>You killed the bot <dark_gray>(<gray>you had <white><hearts>❤<gray> left<dark_gray>).'
+    # Round results sent to everyone spectating the fight. <player> is the
+    # practicing player; <hearts> the health the victor had left.
+    spectator-bot-killed: '<prefix><red>The bot killed <white><player> <dark_gray>(<gray>it had <white><hearts>❤<gray> left<dark_gray>).'
+    spectator-player-killed: '<prefix><green><white><player><green> killed the bot <dark_gray>(<gray>they had <white><hearts>❤<gray> left<dark_gray>).'
+    # The session stats were wiped because the bot's difficulty or settings
+    # changed — numbers against one opponent must not blend into another's.
+    stats-reset: '<prefix><gray>Bot settings changed — your session stats were reset.'
+
+# Action-bar speedometer shown during bridging runs.
+# <speed> — current speed in m/s, <moved> — blocks traveled this run,
+# <placed> — blocks placed this run. Set to '' to disable the text entirely.
+speedometer:
+  bar: '<gray>Speed <white><speed> m/s <dark_gray>• <gray>Moved <white><moved>m <dark_gray>• <gray>Placed <white><placed>'
+
+inventory:
+  stripped: '<red>Items that are not part of your kit were removed'
+  # Action bar when a post-spawn check found kit items missing and put them back.
+  kit-restored: '<yellow>Your kit was incomplete and has been restored'
+
+# The live sidebar. <time> is the running timer (or the ready label below);
+# values with no data show the gui.none placeholder.
+board:
+  title: '<gold><bold>Practice'
+  timer-ready: '<dark_gray>ready'
+  # <time>
+  timer-running: '<yellow><time>'
+  # Appended to the bottom of every sidebar once scoreboard.server-ip is set
+  # in config.yml — every mode's board signs off the same way.
+  # <server_ip>
+  footer:
+    - ''
+    - '<gradient:#ffe08a:#ff9d2e><bold><server_ip>'
+  # <arena> <time> <last> <best> <rank> <blocks>
+  lines:
+    - ''
+    - '<gray>Arena: <white><arena>'
+    - ''
+    - '<gray>Time: <time>'
+    - '<gray>Last: <white><last>'
+    - '<gray>Best: <white><best>'
+    - '<gray>Rank: <white><rank>'
+    - ''
+    - '<gray>Blocks: <white><blocks>'
+  # <arena> <time> <broken> <total> <reaction> <last> <best> <rank>
+  # <reaction> is the average tool-switch reaction time this run.
+  bedbreak-lines:
+    - ''
+    - '<gray>Arena: <white><arena>'
+    - ''
+    - '<gray>Time: <time>'
+    - '<gray>Broken: <white><broken><dark_gray>/<total>'
+    - '<gray>Reaction: <white><reaction>'
+    - '<gray>Last: <white><last>'
+    - '<gray>Best: <white><best>'
+    - '<gray>Rank: <white><rank>'
+  # <arena> <streak> <best> <drop>
+  # <streak> is consecutive successful clutches; <best> your highest ever;
+  # <drop> is this round's rolled fall distance in blocks.
+  mlg-lines:
+    - ''
+    - '<gray>Arena: <white><arena>'
+    - ''
+    - '<gray>Drop: <white><drop> blocks'
+    - '<gray>Streak: <white><streak>'
+    - '<gray>Best: <white><best>'
+  # The PvP bot spar board: session stats, no timer. <difficulty> is the
+  # named preset the bot's knobs currently add up to (label.difficulty.short),
+  # or Custom for a hand-tuned mix. Stats reset when the bot's settings
+  # change. <accuracy> is hits landed over swings thrown; <kd> kills over
+  # deaths; <dodged> bot attacks that failed to land on you.
+  # <arena> <kit> <difficulty> <kills> <deaths> <kd> <hits> <taken>
+  # <accuracy> <dodged> <combo> <best-combo>
+  pvpbot-lines:
+    - ''
+    - '<gray>Arena: <white><arena>'
+    - '<gray>Kit: <white><kit>'
+    - '<gray>Difficulty: <difficulty>'
+    - ''
+    - '<gray>Kills: <green><kills> <dark_gray>/ <gray>Deaths: <red><deaths> <dark_gray>(K/D <white><kd><dark_gray>)'
+    - '<gray>Hits: <white><hits> <dark_gray>/ <gray>Taken: <white><taken>'
+    - '<gray>Accuracy: <white><accuracy> <dark_gray>• <gray>Dodged: <white><dodged>'
+    - '<gray>Combo: <white><combo> <dark_gray>(best <best-combo>)'
+  # The spectator sidebar summary: who you watch and their live run. Only
+  # used when scoreboard.spectators-see-player-board is false in config.yml —
+  # by default spectators see the watched player's own board instead.
+  # <target> <arena> <mode> <time>
+  spectate-lines:
+    - ''
+    - '<gray>Watching: <white><target>'
+    - ''
+    - '<gray>Arena: <white><arena>'
+    - '<gray>Mode: <white><mode>'
+    - '<gray>Time: <time>'
+  # The rush board is assembled per run: these header lines, then one
+  # objective-line per objective the map actually supports, then the
+  # casual-line on unranked runs.
+  rush:
+    # <arena> <team> <mode> <time>
+    lines:
+      - ''
+      - '<gray>Map: <white><arena>'
+      - '<gray>Base: <white><team>'
+      - '<gray>Mode: <mode>'
+      - ''
+      - '<gray>Time: <time>'
+      - ''
+    mode-competitive: '<gold>Competitive'
+    mode-casual: '<white>Casual'
+    # <objective> <best> — your best competitive time on that board
+    objective-line: '<gray><objective>: <white><best>'
+    # Combat runs only: the state of the wipe. <beds> enemy beds standing,
+    # <defenders> defenders not yet eliminated, <deaths> your deaths this run.
+    combat-line: '<gray>Beds: <white><beds> <dark_gray>• <gray>Defenders: <white><defenders> <dark_gray>• <gray>Deaths: <red><deaths>'
+    casual-line: '<dark_gray>Not ranked — play competitive'
+
+  beddefense:
+    # <arena> <team> <mode> <defense> <time>
+    lines:
+      - ''
+      - '<gray>Map: <white><arena>'
+      - '<gray>Base: <white><team>'
+      - '<gray>Mode: <mode>'
+      - '<gray>Defense: <white><defense>'
+      - ''
+      - '<gray>Time: <time>'
+      - ''
+    mode-competitive: '<gold>Competitive'
+    mode-practice: '<white>Practice'
+    mode-obsidian: '<light_purple>Obsidian'
+    mode-repair: '<red>Bed Repair'
+    mode-preview: '<aqua>Preview'
+    mode-guided: '<green>Guided'
+    mode-edit: '<yellow>Editor'
+    unnamed: 'unnamed'
+    # <placed> <total>
+    progress-line: '<gray>Blocks: <white><placed><dark_gray>/<white><total>'
+    # Obsidian practice: how many of the eight are on the bed. <placed> <total>
+    obsidian-line: '<gray>Obsidian: <white><placed><dark_gray>/<white><total>'
+    # Bed repair: rounds survived this run and the best run. <rounds> <best>
+    repair-rounds-line: '<gray>Rounds: <white><rounds>'
+    repair-best-line: '<gray>Best: <white><best>'
+    # Bed repair status, one of these at a time. <seconds> <missing>
+    repair-exposed-line: '<red>Bed exposed! <white><seconds>s'
+    repair-incoming-line: '<gold>Incoming!'
+    repair-rebuild-line: '<yellow>Rebuild: <white><missing> <yellow>missing'
+    repair-next-line: '<gray>Next drop: <white><seconds>s'
+    repair-waiting-line: '<gray>Waiting…'
+    # Competitive: your best on this defense. <best>
+    best-line: '<gray>Best: <white><best>'
+    casual-line: '<dark_gray>Not ranked — play competitive'
+    # Guided: the block the marker points at. <material>
+    next-line: '<gray>Next: <white><material>'
+    # Preview: how far the animation is. <step> <total>
+    preview-line: '<gray>Step: <white><step><dark_gray>/<white><total>'
+    # Editor. <blocks> <radius>
+    edit-line: '<gray>Placed: <white><blocks> <dark_gray>(radius <radius>)'
+
+# Bed defense practice: chat, action bar and title text. Menus are under
+# gui.beddefense further down, the sidebar under board.beddefense.
+beddefense:
+  # The name the category picker and leaderboards show the mode under (when
+  # guis.yml categories.entries has no 'beddefense' entry of its own).
+  category-name: 'Bed Defense'
+  # Joining an arena of this mode whose layout has no team base with a bed.
+  not-a-map: '<prefix><red>That bed defense map has no team base with a bed — tell an admin.'
+  # Action bar. Blocks may never go lower than the bed, in the editor or a round.
+  below-bed: '<red>Nothing goes under the bed'
+  no-defense: '<prefix><yellow>There is no bed defense to build yet — design one in the editor, or pick one from the gallery.'
+  forced-edit: '<prefix><yellow>No bed defenses exist yet, so you are in the <white>editor<yellow>: build one around your bed and save it.'
+  # <id>
+  unknown: '<prefix><red>No bed defense with id <white><id><red>.'
+  not-owner: '<prefix><red>That is not one of your bed defenses.'
+  competitive-needs-shop: '<prefix><yellow>Competitive needs the MBedwars shop to buy blocks from — this round plays as practice.'
+  # Obsidian practice: the defense stands built; break in, put the eight
+  # obsidian on the bed, build it back.
+  obsidian:
+    # The round starting. <name> <count>
+    entered: '<prefix><gray>Obsidian practice: break into <white><name><gray>, seal the bed with <white><count><gray> obsidian, and build it back.'
+    # A defense that already has obsidian on the bed cannot be used. <name>
+    ineligible: '<prefix><red><white><name><red> already has obsidian on the bed — it cannot be used for obsidian practice.'
+    # Every defense left has obsidian on the bed: the toggle is switched off for this round.
+    none-eligible: '<prefix><yellow>No defense you can play is without obsidian on the bed — obsidian practice is off.'
+  # Bed repair: the defense stands, TNT and fireballs keep wrecking it,
+  # rebuild it before the bed stays exposed too long. Scored in rounds.
+  repair:
+    # The first round of the session. <name> <seconds> <limit> <min>
+    entered: '<prefix><gray>Bed repair: <white><name><gray> stands. TNT starts falling in <white><seconds>s<gray> — rebuild after every blast, and never leave the bed exposed for <white><limit>s<gray> (down to <white><min>s<gray> as you go).'
+    # Action bar at the start of every later run. <seconds>
+    run-start: '<gray>New run — first drop in <white><seconds>s'
+    # Action bar, the last seconds before a drop. <seconds>
+    countdown: '<gray>Next drop in <white><seconds>s'
+    # Action bar as a volley is launched: TNT from above, or one fireball. <count>
+    incoming-tnt: '<gold>Incoming! <white><count> <gold>TNT'
+    incoming-fireball: '<gold>Incoming! <white>Fireball'
+    # Action bar once a volley is spent and the defense is short. <missing>
+    rebuild: '<yellow>Rebuild the defense — <white><missing> <yellow>missing'
+    # Action bar per second while the bed is exposed. <seconds>
+    exposed-bar: '<red><bold>BED EXPOSED <reset><red>— <white><seconds>s'
+    # Title when the bed becomes exposed. <seconds>
+    title-exposed: '<red><bold>BED EXPOSED'
+    subtitle-exposed: '<gray>Cover it within <white><seconds>s'
+    # Action bar when the bed is covered again.
+    covered: '<green>Bed covered'
+    # Action bar after each volley the defense was rebuilt from. <round>
+    survived: '<green>Round <white><round> <green>survived'
+    # The run ending: the bed stayed exposed. <rounds> <name>
+    failed: '<prefix><red>The bed fell — <white><name><red> held for <white><rounds><red> rounds.'
+    title-failed: '<red><bold>BED LOST'
+    subtitle-failed: '<gray><rounds> rounds survived'
+    # The score written, at the fail or when the run is cut short. <rounds> <best> <name>
+    ended-pb: '<prefix><green>Survived <white><rounds><green> rounds on <white><name><green> — new personal best!'
+    ended: '<prefix><gray>Survived <white><rounds><gray> rounds on <white><name><gray> (best <white><best><gray>).'
+    ended-first: '<prefix><gray>Survived <white><rounds><gray> rounds on <white><name><gray>.'
+    # Server-wide: a new #1, and a beaten one. <player> <arena> <rounds> <previous-holder> <previous>
+    record-broadcast: '<prefix><gold><player> <gray>set a new record on <white><arena> <gray>— <white><rounds> rounds<gray>!'
+    record-broadcast-beaten: '<prefix><gold><player> <gray>set a new record on <white><arena> <gray>— <white><rounds> rounds<gray>, beating <white><previous-holder><gray>''s <white><previous><gray>!'
+    # Server-wide: an improved personal best. <player> <arena> <rounds> <improvement>
+    pb-broadcast: '<prefix><gray><player> beat their personal best on <white><arena> <gray>— <white><rounds> rounds <gray>(<white>+<improvement><gray>).'
+    # A defense that has glass or water anywhere, or does not seal the bed with solid, non-obsidian blocks, cannot be used. <name>
+    ineligible: '<prefix><red><white><name><red> cannot be used for bed repair — no glass or water, and the bed must be sealed with solid, non-obsidian blocks.'
+    # Every defense left fails that test: the toggle is switched off for this round.
+    none-eligible: '<prefix><yellow>No defense you can play qualifies for bed repair (no glass or water, bed sealed with solid, non-obsidian blocks) — it is off.'
+    # Action bar: the preview and guided building have no place here.
+    no-preview: '<red>No preview or guided building in bed repair'
+  # <name>
+  deleted: '<prefix><gray>Deleted the bed defense <white><name><gray>.'
+  # /practice beddefense delete without confirm (style guide R58). <name> <id>
+  delete-confirm:
+    - '<prefix><yellow>This deletes <white><name><yellow> and every time recorded on it.'
+    - '<prefix><gray>Run <white>/practice beddefense delete <id> confirm<gray> to go ahead.'
+  # The author finished their own defense in a competitive round for the
+  # first time — the proof publishing asks for. <name> <id>
+  cleared: '<prefix><green>You completed <white><name><green> in competitive — it can be made public now.'
+  cleared-actions: '<dark_gray>[<click:run_command:''/practice beddefense publish <id>''><hover:show_text:''<yellow>Click to publish<newline><gray>/practice beddefense publish <id>''><green>Publish it</hover></click><dark_gray>]'
+  # Action bar at the end of a practice round.
+  records-disabled: '<yellow>Practice best saved — play competitive to be ranked'
+  # The hint floating over the bed at the start of a round. Blank to disable.
+  hologram: '<yellow>Drop a block or use the menu<newline><gray>to preview this defense'
+  # Board names: <name> is the defense's name.
+  board-name: '<name> (Bed Defense)'
+  # Practice times are kept per defense too, but only the player sees them.
+  board-name-practice: '<name> (Bed Defense, practice)'
+  # Obsidian practice has a ranked board of its own per defense.
+  board-name-obsidian: '<name> (Bed Defense, obsidian)'
+  # Bed repair too — scored in rounds survived, highest first.
+  board-name-repair: '<name> (Bed Defense, bed repair)'
+  list-empty: '<prefix><gray>No bed defenses to play yet. Design one with <white>/practice beddefense edit<gray>.'
+  # <count>
+  list-header: '<prefix><gray>Bed defenses you can play (<white><count><gray>):'
+  # <id> <name> <author> <likes> <players> <blocks>
+  # The name is clickable: it runs the play command (style guide R15).
+  list-entry: '<dark_gray> • <click:run_command:''/practice beddefense play <id>''><hover:show_text:''<yellow>Click to play<newline><gray>/practice beddefense play <id>''><white><name></hover></click> <dark_gray>by <gray><author> <gray>— <white><likes><gray> likes, <white><players><gray> players, <white><blocks><gray> blocks'
+  like:
+    # <name>
+    added: '<prefix><green>You liked <white><name><green>.'
+    removed: '<prefix><gray>Like removed from <white><name><gray>.'
+    own: '<prefix><red>You cannot like your own bed defense.'
+  favorite:
+    # <name>
+    added: '<prefix><green><white><name><green> added to your favorites.'
+    removed: '<prefix><gray><white><name><gray> removed from your favorites.'
+  visibility:
+    # <name>
+    public: '<prefix><green><white><name><green> is now public — everyone can play it.'
+    private: '<prefix><gray><white><name><gray> is now private — only you can play it.'
+    already-public: '<prefix><gray><white><name><gray> is already public.'
+    already-private: '<prefix><gray><white><name><gray> is already private.'
+    # Publishing refused: the author has not built this exact shape in a
+    # competitive round yet. <name> <id>
+    needs-clear: '<prefix><yellow><white><name><yellow> stays private until you complete it yourself in competitive mode.'
+    needs-clear-actions: '<dark_gray>[<click:run_command:''/practice beddefense play <id> competitive''><hover:show_text:''<yellow>Click to play<newline><gray>/practice beddefense play <id> competitive''><gold>Play it competitively</hover></click><dark_gray>]'
+    # A moderator flipped someone else's defense. <name> <author>
+    moderator-public: '<prefix><green>Made <white><name><green> by <white><author><green> public — they have been told.'
+    moderator-private: '<prefix><yellow>Made <white><name><yellow> by <white><author><yellow> private — they have been told.'
+    # A moderator tried to publish a defense its author has not cleared:
+    # nobody bypasses the gate. <name> <author>
+    moderator-needs-clear: '<prefix><yellow><white><name><yellow> by <white><author><yellow> stays private until they complete it themselves in competitive mode.'
+    # The author tried to publish a defense reports have hidden. <name>
+    auto-hidden: '<prefix><yellow><white><name><yellow> was hidden by player reports and stays private until a moderator has reviewed it.'
+    # A moderator published an auto-hidden defense: that closes its
+    # reports. <name> <count>
+    moderator-restored: '<prefix><green>Its <white><count><green> report(s) are closed and the automatic hide is lifted.'
+  # What the author is told when their defense changes state, at once or on
+  # their next login. <name> <id> <moderator>
+  notice:
+    private-changed: '<prefix><yellow><white><name><yellow> is private again: you changed its blocks, so complete the new version in competitive mode before publishing it.'
+    saved-private: '<prefix><yellow>Saved <white><name><yellow> as private — complete it in competitive mode to publish it.'
+    public-by-moderator: '<prefix><green>A moderator made your bed defense <white><name><green> public.'
+    private-by-moderator: '<prefix><yellow>A moderator made your bed defense <white><name><yellow> private.'
+    deleted-by-moderator: '<prefix><red>A moderator deleted your bed defense <white><name><red>.'
+    # Enough of its builders reported it. <name> <id> <reports> <players>
+    auto-hidden: '<prefix><red>Your bed defense <white><name><red> was hidden: <white><reports><red> of the <white><players><red> players who built it reported it. It stays private until a moderator has reviewed it.'
+    # A moderator dismissed the last report on an auto-hidden defense. <name> <id> <moderator>
+    auto-hide-lifted: '<prefix><green>A moderator closed the reports on <white><name><green>. It is still private, but you may publish it again.'
+    # Saved from the editor while reports had it hidden. <name> <id>
+    saved-auto-hidden: '<prefix><yellow>Saved <white><name><yellow> as private — player reports hid it, and a moderator has to review it before it can be public again.'
+  report:
+    # <name>
+    sent: '<prefix><green>Reported <white><name><green>. A moderator will look at it.'
+    updated: '<prefix><green>Your report on <white><name><green> was updated.'
+    own: '<prefix><red>You cannot report your own bed defense.'
+    private: '<prefix><red>Only public bed defenses can be reported.'
+    # <max>
+    reason-invalid: '<prefix><red>Give a reason — 1 to <max> printable characters.'
+    # To every moderator online. <player> <name> <id> <author> <reason> <count>
+    alert: '<prefix><yellow><white><player><yellow> reported <white><name> <dark_gray>by <gray><author> <dark_gray>(<count> report(s))<yellow>: <white><reason>'
+    alert-actions: '<dark_gray>[<click:run_command:''/practice beddefense review <id>''><hover:show_text:''<yellow>Click to open<newline><gray>/practice beddefense review <id>''><yellow>Review</hover></click><dark_gray>] [<click:run_command:''/practice beddefense play <id>''><hover:show_text:''<yellow>Click to play<newline><gray>/practice beddefense play <id>''><green>Play it</hover></click><dark_gray>]'
+    # To every moderator online when enough builders reported a defense to
+    # hide it, whatever notify-moderators says. <name> <id> <author> <reports> <players>
+    auto-hidden-alert: '<prefix><red><white><name> <dark_gray>by <gray><author> <red>hid itself: <white><reports><red> of the <white><players><red> players who built it reported it.'
+    # <name> <count>
+    dismissed: '<prefix><green>Dismissed <white><count><green> report(s) on <white><name><green>.'
+    # Dismissing the last report on an auto-hidden defense lets its author publish again. <name>
+    auto-hide-lifted: '<prefix><green>No reports left on <white><name><green> — its automatic hide is lifted and the author may publish it again.'
+    # The unseen-report reminder: to a moderator a moment after joining and
+    # to every moderator online every reports.remind-minutes. <count> defenses, <reports> reports
+    reminder: '<prefix><yellow><white><count><yellow> bed defense(s) carry <white><reports><yellow> report(s) no moderator has looked at:'
+    # <id> <name> <author> <count> <unseen> <reporter> <reason> <state>
+    reminder-entry: '<dark_gray> • <click:run_command:''/practice beddefense review <id>''><hover:show_text:''<yellow>Click to open<newline><gray>/practice beddefense review <id>''><white><name></hover></click> <dark_gray>by <gray><author> <state> <dark_gray>— <white><unseen> <gray>new of <white><count><gray>, latest from <white><reporter><gray>: <reason>'
+    # The <state> word in a reminder entry.
+    reminder-hidden: '<red>(hidden)'
+    reminder-open: '<dark_gray>(public)'
+    # <count> more defenses than the reminder lists
+    reminder-more: '<dark_gray>   … and <white><count><gray> more.'
+    reminder-actions: '<dark_gray>[<click:run_command:''/practice beddefense moderate''><hover:show_text:''<yellow>Click to open<newline><gray>/practice beddefense moderate''><yellow>Open moderation</hover></click><dark_gray>] [<click:run_command:''/practice beddefense reports''><hover:show_text:''<yellow>Click to list<newline><gray>/practice beddefense reports''><gray>List reports</hover></click><dark_gray>]'
+    # <name>
+    none: '<prefix><gray><white><name><gray> has no reports.'
+    list-empty: '<prefix><gray>No reported bed defenses.'
+    # <count>
+    list-header: '<prefix><gray>Reported bed defenses (<white><count><gray>):'
+    # <id> <name> <author> <count> <reporter> <reason>
+    # The name is clickable: it opens the review menu (style guide R15).
+    list-entry: '<dark_gray> • <click:run_command:''/practice beddefense review <id>''><hover:show_text:''<yellow>Click to open<newline><gray>/practice beddefense review <id>''><white><name></hover></click> <dark_gray>by <gray><author> <dark_gray>— <white><count> <gray>report(s), latest from <white><reporter><gray>: <reason>'
+  # Moderator chat views.
+  moderate:
+    all-empty: '<prefix><gray>No bed defenses exist yet.'
+    # <count>
+    all-header: '<prefix><gray>Every bed defense (<white><count><gray>):'
+    # <id> <name> <author> <reports> <visibility>
+    all-entry: '<dark_gray> • <click:run_command:''/practice beddefense review <id>''><hover:show_text:''<yellow>Click to open<newline><gray>/practice beddefense review <id>''><white><name></hover></click> <dark_gray>by <gray><author> <dark_gray>— <visibility><dark_gray>, <white><reports> <gray>report(s)'
+    # <name> <id>
+    info-header: '<prefix><gray>Bed defense <white><name> <dark_gray>(<id>)<gray>:'
+    # <key> <value>
+    info-line: '<dark_gray>   <key>: <white><value>'
+    info-key:
+      author: 'Author'
+      visibility: 'Visibility'
+      cleared: 'Cleared by author'
+      blocks: 'Blocks'
+      likes: 'Likes'
+      players: 'Players'
+      runs: 'Runs'
+      reports: 'Reports'
+      builder-reports: 'Reports from builders'
+      auto-hidden: 'Hidden by reports'
+    cleared-yes: '<green>yes'
+    cleared-no: '<red>no'
+    auto-hidden-yes: '<red>yes — awaiting review'
+    # <reporter> <reason>
+    info-report: '<dark_gray>     • <white><reporter><gray>: <reason>'
+    # <name> <id>
+    info-actions: '<dark_gray>[<click:run_command:''/practice beddefense play <id>''><hover:show_text:''<yellow>Click to play<newline><gray>/practice beddefense play <id>''><green>Play it</hover></click><dark_gray>] [<click:run_command:''/practice beddefense unpublish <id>''><hover:show_text:''<yellow>Click to hide<newline><gray>/practice beddefense unpublish <id>''><yellow>Hide it</hover></click><dark_gray>] [<click:run_command:''/practice beddefense dismiss <id>''><hover:show_text:''<yellow>Click to dismiss reports<newline><gray>/practice beddefense dismiss <id>''><gray>Dismiss reports</hover></click><dark_gray>] [<click:suggest_command:''/practice beddefense delete <id> confirm''><hover:show_text:''<yellow>Click to delete<newline><gray>/practice beddefense delete <id> confirm''><red>Delete it</hover></click><dark_gray>]'
+  preview:
+    # <name>
+    entered: '<prefix><gray>Previewing <white><name><gray>. Use the hotbar to step through it; drop or use the exit item to leave.'
+    exited: '<prefix><gray>Preview over — back to building.'
+    # <step> <total> <material>
+    step: '<gray>Block <white><step><gray>/<white><total> <dark_gray>— <gray><material>'
+    start: '<gray>At the start'
+    done: '<green>That is the whole defense'
+    playing: '<gray>Playing'
+    paused: '<gray>Paused'
+    no-building: '<red>Not while previewing'
+    not-in-editor: '<red>Previews are for playing — save the build first'
+  guided:
+    entered: '<prefix><gray>Guided building: the glowing block is the next one to place. Untimed.'
+    from-attempt: '<prefix><yellow>Timer canceled. <gray>Guided building: the glowing block is the next one to place.'
+    exited: '<prefix><gray>Guidance off — the next attempt is timed again.'
+    # Action bar: the defense already stands in obsidian practice.
+    not-in-obsidian: '<red>No guided building in obsidian practice'
+    # <material> <step> <total>
+    next: '<gray>Next: <white><material> <dark_gray>(<step>/<total>)'
+    # <name>
+    done: '<prefix><green>Defense complete. <gray>Resetting for a timed attempt.'
+  edit:
+    # <radius>
+    entered: '<prefix><gray>Editor: build within <white><radius><gray> blocks of the bed, then save from the bed defense item.'
+    exit: '<prefix><gray>Leaving the editor.'
+    out-of-radius: '<red>Too far from the bed'
+    # <material>
+    not-allowed: '<red><material> is not a bed defense block'
+    bed-protected: '<red>The bed stays'
+    empty: '<prefix><red>Nothing to save — place some blocks around the bed first.'
+    # <name> <blocks>
+    saved: '<prefix><green>Saved <white><name><green> (<blocks> blocks). It is private; publish it from the gallery to share it.'
+    saved-public: '<prefix><green>Saved and published <white><name><green> (<blocks> blocks).'
+    # <name>
+    loaded: '<prefix><gray>Loaded <white><name><gray> into the editor.'
+    reset: '<prefix><gray>Build cleared.'
+    # <name>
+    name-set: '<prefix><green>Named <white><name><green>.'
+    # <max>
+    name-invalid: '<prefix><red>That name will not do — 1 to <max> printable characters.'
+    # <max>
+    limit: '<prefix><red>You already have <max> saved bed defenses. Delete one to make room.'
+    # A save refused because the exact same defense already exists.
+    # <name> <author> <id>
+    duplicate-title: '<red><bold>Already exists'
+    duplicate-subtitle: '<gray><name> <dark_gray>by <gray><author>'
+    duplicate: '<prefix><red>That bed defense already exists: <white><name> <gray>by <white><author><gray>.'
+    duplicate-actions: '<dark_gray>[<click:run_command:''/practice beddefense play <id>''><hover:show_text:''Play <name>''><green>Play it</hover></click><dark_gray>] [<click:run_command:''/practice beddefense like <id>''><hover:show_text:''Like <name>''><gold>Like it</hover></click><dark_gray>] [<click:run_command:''/practice beddefense favorite <id>''><hover:show_text:''Favorite <name>''><aqua>Favorite it</hover></click><dark_gray>]'
+
+protect:
+  pearls-disabled: '<prefix><red>Ender pearls are disabled in practice.'
+  gamemode-locked: '<prefix><red>Leave practice before changing gamemode: <white>/practice leave<red>.'
+
+world:
+  unavailable: '<prefix><red>The practice world is unavailable — tell an admin.'
+  entry-denied: '<prefix><red>Use <white>/practice join<red> to enter the practice world.'
+
+leave:
+  # <server>
+  sending: '<prefix><gray>Sending you to <white><server><gray>.'
+
+menu:
+  # <menu> <menus>
+  unknown: '<prefix><red>No menu named <white><menu><red>. Menus: <white><menus><red>.'
+  item-locked: '<yellow>You need that to get back out'
+  # <slot>
+  item-given: '<prefix><green>Practice menu item added to hotbar slot <white><slot><green>.'
+  item-given-hint: '<prefix><gray>Arrange your kit and run <white>/practice setup kit<gray> to include it for players.'
+  # <player>
+  item-given-other: '<prefix><green>Gave the practice menu item to <white><player><green>.'
+  item-disabled: '<prefix><red>The menu item is disabled in config.yml (menu-item.enabled).'
+  # <player>
+  player-offline: '<prefix><red><player> is not online.'
+
+sidebar:
+  shown: '<prefix><green>Practice sidebar shown.'
+  hidden: '<prefix><green>Practice sidebar hidden.'
+
+arena:
+  # <arena>
+  unknown: '<prefix><red>No arena named <white><arena><red>. See <white>/practice list<red>.'
+  # <arena>
+  incomplete: '<prefix><red>Arena <white><arena><red> is not fully configured.'
+  # <arena>
+  locked: '<prefix><red>You do not have access to the <white><arena><red> arena.'
+  none-available: '<prefix><red>There are no arenas you can join.'
+  broken: '<prefix><red>This arena is missing its spawn or finish trigger — tell an admin.'
+  broken-trigger: '<prefix><red>This arena''s finish trigger is misconfigured — tell an admin.'
+  schematic-failed: '<prefix><red>Could not load the arena schematic — tell an admin.'
+  paste-failed: '<prefix><red>Failed to build your arena — tell an admin.'
+  list-empty: '<prefix><gray>No arenas are available yet. Admins: <white>/practice setup start <name><gray>.'
+  list-header: '<prefix><gray>Arenas:'
+  # <arena> <display> <mode> <locked>
+  # The name is clickable: it runs the join command (style guide R15).
+  list-entry: '<dark_gray> • <click:run_command:''/practice join <arena>''><hover:show_text:''<yellow>Click to play<newline><gray>/practice join <arena>''><white><arena></hover></click> <gray>— <display> <dark_gray>[<mode>]<locked>'
+  list-locked-suffix: ' <red>(locked)'
+
+leaderboard:
+  # <arena>
+  empty: '<prefix><gray>Nobody has finished <white><arena><gray> yet.'
+  # <arena>
+  header: '<prefix><gray>Top times — <white><arena><gray>:'
+  # Boards scored in rounds rather than times (bed repair). <arena>
+  header-score: '<prefix><gray>Top scores — <white><arena><gray>:'
+  # <rank> <player> <time>
+  entry: '<dark_gray> #<rank> <white><player> <gray>— <white><time>'
+  # <rank> <total>
+  your-rank: '<dark_gray>   <gray>You are <white>#<rank><gray> of <white><total><gray>.'
+  # <arena>
+  rush-pick-board: '<prefix><gray><white><arena><gray> is a rush arena — pick a board: <white><arena>#bed<gray>, <white><arena>#emerald<gray>, <white><arena>#diamond<gray> or <white><arena>#team_wipe<gray>.'
+  # /practice top beddefense — the bed defense boards live in the menu.
+  # /practice top on a practice key — those times are never ranked.
+  beddefense-practice: '<prefix><gray>Practice times are yours alone and are not ranked. Your best is in <white>/practice stats<gray>.'
+  beddefense-pick-board: '<prefix><gray>Bed defense boards are kept per defense: open <white>/practice menu leaderboards<gray>, or name one as <white>beddefense#<id><gray>.'
+  # Arenas of modes that score in-session (MLG streaks, PvP bot spars).
+  not-ranked: '<prefix><gray><white><arena><gray> has no time leaderboard — its mode is scored in-session, on the sidebar.'
+
+stats:
+  # <player>
+  unknown-player: '<prefix><red>No player named <white><player><red> in the plugin''s records.'
+  # <player>
+  empty: '<prefix><gray><player> has no recorded times.'
+  # <player>
+  header: '<prefix><gray>Personal bests — <white><player><gray>:'
+  # <arena> <time> <rank> <finishes>
+  # The arena name is clickable: it opens that board (style guide R15).
+  entry: '<dark_gray> • <click:run_command:''/practice top <arena>''><hover:show_text:''<yellow>Click to view<newline><gray>/practice top <arena>''><white><arena></hover></click> <gray>— <white><time> <dark_gray>(#<rank>, <finishes> run(s))'
+  # <arena> <time> <finishes>
+  entry-unranked: '<dark_gray> • <white><arena> <gray>— <white><time> <dark_gray>(<finishes> run(s))'
+  # <player>
+  reset-notice: '<prefix><gray>An admin reset your practice personal bests.'
+  # Clicking a stats entry whose arena has since been deleted.
+  arena-gone: '<prefix><red>That arena no longer exists.'
+  # Clicking a practice tile: there is no ranking behind it to open.
+  practice-only: '<prefix><gray>Practice times are yours alone — no ranking to open. Play competitive to be ranked.'
+
+help:
+  player:
+    - '<prefix><gray>Practice commands:'
+    - '<dark_gray> • <white>/practice join [arena] <dark_gray>— start practicing'
+    - '<dark_gray> • <white>/practice leave <dark_gray>— return to where you were'
+    - '<dark_gray> • <white>/practice menu [menu] <dark_gray>— open the practice GUI (or one menu directly)'
+    - '<dark_gray> • <white>/practice list <dark_gray>— available arenas'
+    - '<dark_gray> • <white>/practice stats [player] <dark_gray>— personal bests'
+    - '<dark_gray> • <white>/practice top [arena] <dark_gray>— leaderboards'
+    - '<dark_gray> • <white>/practice beddefense <dark_gray>— bed defense practice: maps, gallery, editor (<white>/practice beddefense help<dark_gray> lists it all)'
+    - '<dark_gray> • <white>/practice sidebar <dark_gray>— show or hide the live timer'
+    - '<dark_gray> • <white>/practice spectate [player] <dark_gray>— watch someone practice'
+    - '<dark_gray> • <white>/spectate <player> <dark_gray>— the same, one word shorter'
+  setup:
+    - '<dark_gray> • <white>/practice setup … <dark_gray>— create an arena'
+    - '<dark_gray> • <white>/practice edit <arena> <dark_gray>— reopen a saved arena'
+    - '<dark_gray> • <white>/practice rush import <map> <dark_gray>— pull a map from MBedwars'
+    - '<dark_gray> • <white>/practice rush importall teams:<n> size:<n> <dark_gray>— pull every matching map'
+    - '<dark_gray> • <white>/practice beddefense import <map> <dark_gray>— the same, as a bed defense map'
+  setup-detail:
+    - '<prefix><gray>Creating an arena:'
+    - '<dark_gray> • <white>/practice setup start <name> <dark_gray>— begin (needs a //copy''d build)'
+    - '<dark_gray> • <white>/practice setup spawn <dark_gray>— set the player spawn where you stand'
+    - '<dark_gray> • <gray>place buttons or plates <dark_gray>— each adds a finish trigger (<white>/practice setup trigger clear<gray> restarts)'
+    - '<dark_gray> • <white>/practice setup gui <dark_gray>— do all of this from a menu instead'
+    - '<dark_gray> • <white>/practice setup kit [load] <dark_gray>— save your inventory as the kit'
+    - '<dark_gray> • <white>/practice setup <save|cancel|info>'
+    - '<prefix><gray>Editing an existing arena:'
+    - '<dark_gray> • <white>/practice edit <arena> <dark_gray>— reopen it with every setting pre-loaded'
+    - '<dark_gray> • <white>/practice setup capture <dark_gray>— save in-world changes into the schematic'
+    - '<dark_gray> • <white>/practice setup schematic <dark_gray>— replace it from your WorldEdit clipboard'
+    - '<dark_gray> • <white>/practice setup display <text> <dark_gray>— the name players see'
+    - '<dark_gray> • <white>/practice setup icon [material] <dark_gray>— the menu icon (held item if omitted)'
+    - '<dark_gray> • <white>/practice setup permission [node] <dark_gray>— gate it, or reset to the default node'
+    - '<dark_gray> • <white>/practice setup mode <id> <dark_gray>— bridging, bedbreak, mlg, rush, beddefense, pvpbot, …'
+    - '<dark_gray> • <white>/practice setup category [name] <dark_gray>— the Play category, or reset'
+    - '<dark_gray> • <white>/practice setup blocks <true|false> <dark_gray>— whether a PB needs placed blocks'
+    - '<dark_gray> • <white>/practice setup rush … <dark_gray>— team spawns, beds, generators, dealers (rush mode)'
+    - '<dark_gray> • <white>/practice setup beddefense … <dark_gray>— the same layout for a bed defense map'
+    - '<dark_gray> • <white>/practice setup pvpbot bot <dark_gray>— the bot''s spawn point (pvpbot mode)'
+  setup-rush:
+    - '<prefix><gray>Building a rush arena by hand (after <white>/practice setup mode rush<gray>):'
+    - '<dark_gray> • <white>/practice setup rush team <color> <dark_gray>— set that base''s spawn where you stand'
+    - '<dark_gray> • <white>/practice setup rush bed <color> <dark_gray>— look at that team''s bed'
+    - '<dark_gray> • <white>/practice setup rush gen <iron|gold|diamond|emerald> <dark_gray>— stand on the spawner block'
+    - '<dark_gray> • <white>/practice setup rush dealer <dark_gray>— shop NPC spot where you stand'
+    - '<dark_gray> • <white>/practice setup rush clear <dark_gray>— wipe the rush layout'
+    - '<dark_gray> • <gray>Or skip all of this: <white>/practice rush import <mbedwars-arena>'
+  setup-beddefense:
+    - '<prefix><gray>Building a bed defense map by hand (after <white>/practice setup mode beddefense<gray>):'
+    - '<dark_gray> • <white>/practice setup beddefense team <color> <dark_gray>— set that base''s spawn where you stand'
+    - '<dark_gray> • <white>/practice setup beddefense bed <color> <dark_gray>— look at that team''s bed'
+    - '<dark_gray> • <white>/practice setup beddefense gen <iron|gold|diamond|emerald> <dark_gray>— stand on the spawner block'
+    - '<dark_gray> • <white>/practice setup beddefense dealer <dark_gray>— shop NPC spot where you stand'
+    - '<dark_gray> • <white>/practice setup beddefense clear <dark_gray>— wipe the layout'
+    - '<dark_gray> • <gray>One base with a spawn and a bed is enough. Or skip all of this: <white>/practice beddefense import <mbedwars-arena>'
+  setup-pvpbot:
+    - '<prefix><gray>Building a PvP bot arena (after <white>/practice setup mode pvpbot<gray>):'
+    - '<dark_gray> • <white>/practice setup pvpbot bot <dark_gray>— set the bot''s spawn where you stand'
+    - '<dark_gray> • <white>/practice setup pvpbot clear <dark_gray>— remove the bot spawn marker'
+    - '<dark_gray> • <gray>No marker? The bot spawns a few blocks ahead of the player spawn.'
+  arena:
+    - '<dark_gray> • <white>/practice arena … <dark_gray>— administer saved arenas'
+  item:
+    - '<dark_gray> • <white>/practice item [player] <dark_gray>— get the hotbar menu item'
+  pb:
+    - '<dark_gray> • <white>/practice pb reset <player> [arena|all] <dark_gray>— wipe personal bests'
+  world:
+    - '<dark_gray> • <white>/practice world <info|regen> <dark_gray>— practice world management'
+  reload:
+    - '<dark_gray> • <white>/practice reload <dark_gray>— reload config, messages and arenas'
+  # The full /practice arena reference.
+  arena-detail:
+    - '<prefix><gray>Arena administration:'
+    - '<dark_gray> • <white>/practice arena list <dark_gray>— every saved arena and its access'
+    - '<dark_gray> • <white>/practice arena info <arena> <dark_gray>— one arena''s settings'
+    - '<dark_gray> • <white>/practice arena default [arena|none] <dark_gray>— the arena /practice join uses'
+    - '<dark_gray> • <white>/practice arena delete <arena> confirm <dark_gray>— remove it and every time on it'
+    - '<dark_gray> • <white>/practice arena permission <arena> <node|default|none> <dark_gray>— who may play it'
+    - '<dark_gray> • <white>/practice arena display <arena> <text> <dark_gray>— the name players see'
+    - '<dark_gray> • <white>/practice arena icon <arena> <material|auto> <dark_gray>— the menu icon'
+    - '<dark_gray> • <white>/practice arena blocks <arena> <true|false> <dark_gray>— whether a PB needs placed blocks'
+    - '<dark_gray> • <white>/practice arena category <arena> <name|default> <dark_gray>— the Play category it sits in'
+    - '<dark_gray> • <white>/practice arena mode <arena> <id> <dark_gray>— change a saved arena''s mode'
+  # The full /practice world reference.
+  world-detail:
+    - '<prefix><gray>Practice world:'
+    - '<dark_gray> • <white>/practice world info <dark_gray>— world and grid status'
+    - '<dark_gray> • <white>/practice world regen confirm <dark_gray>— delete and rebuild it from nothing'
+  # The full /practice rush reference.
+  rush-detail:
+    - '<prefix><gray>Rush maps from MBedwars:'
+    - '<dark_gray> • <white>/practice rush list <dark_gray>— every MBedwars arena on this server'
+    - '<dark_gray> • <white>/practice rush import <arena> [name] [overwrite] <dark_gray>— pull one map'
+    - '<dark_gray> • <white>/practice rush importall [teams:<n>] [size:<n>] [category:<name>] [overwrite] <dark_gray>— pull every matching map'
+  # The /practice pb reference.
+  pb-detail:
+    - '<prefix><gray>Personal bests:'
+    - '<dark_gray> • <white>/practice pb reset <player> [arena|all] <dark_gray>— wipe personal bests'
+  # The full /practice beddefense reference, in three parts by permission.
+  beddefense-detail:
+    - '<prefix><gray>Bed defense practice:'
+    - '<dark_gray> • <white>/practice beddefense <dark_gray>— the map picker'
+    - '<dark_gray> • <white>/practice beddefense list <dark_gray>— every defense you can play'
+    - '<dark_gray> • <white>/practice beddefense play <id> [competitive|practice|obsidian|repair] <dark_gray>— build that defense'
+    - '<dark_gray> • <white>/practice beddefense like|favorite <id>'
+    - '<dark_gray> • <white>/practice beddefense edit [id] <dark_gray>— the editor, fresh or on one of yours'
+    - '<dark_gray> • <white>/practice beddefense publish|unpublish <id> <dark_gray>— public needs your own competitive completion first'
+    - '<dark_gray> • <white>/practice beddefense delete <id> confirm'
+    - '<dark_gray> • <white>/practice beddefense report <id> [reason] <dark_gray>— flag a public defense for a moderator'
+  beddefense-moderate:
+    - '<dark_gray> • <white>/practice beddefense moderate <dark_gray>— review reported and hidden bed defenses'
+  beddefense-moderate-detail:
+    - '<prefix><gray>Moderating bed defenses:'
+    - '<dark_gray> • <white>/practice beddefense moderate <dark_gray>— the moderation menu'
+    - '<dark_gray> • <white>/practice beddefense reports <dark_gray>— every reported defense'
+    - '<dark_gray> • <white>/practice beddefense all <dark_gray>— every defense, private ones included'
+    - '<dark_gray> • <white>/practice beddefense review|info <id> <dark_gray>— one defense: its menu, or its details in chat'
+    - '<dark_gray> • <white>/practice beddefense publish|unpublish <id> <dark_gray>— show or hide anyone''s (the author is told; public still needs their competitive completion)'
+    - '<dark_gray> • <white>/practice beddefense dismiss <id> <dark_gray>— close its reports (lifts an automatic hide)'
+    - '<dark_gray> • <white>/practice beddefense delete <id> confirm <dark_gray>— remove anyone''s'
+  beddefense-admin-detail:
+    - '<prefix><gray>Bed defense maps:'
+    - '<dark_gray> • <white>/practice beddefense maps <dark_gray>— every bed defense map'
+    - '<dark_gray> • <white>/practice beddefense import <arena> [name] [overwrite] <dark_gray>— pull one map from MBedwars'
+    - '<dark_gray> • <white>/practice beddefense importall [teams:<n>] [size:<n>] [category:<name>] [overwrite] <dark_gray>— pull every matching map'
+    - '<dark_gray> • <white>/practice setup beddefense … <dark_gray>— or build one by hand in the wizard'
+
+# ---------------------------------------------------------------- admin text
+
+admin:
+  # Free-form admin output. Color is severity (style guide R4): gray info,
+  # red failure, green done, yellow caution.
+  # <note>
+  note: '<prefix><gray><note>'
+  # <note>
+  problem: '<prefix><red><note>'
+  # <note>
+  done: '<prefix><green><note>'
+  # <note> — a caution that is not a failure, e.g. "this needs confirm".
+  warn: '<prefix><yellow><note>'
+  # <command> — the second line of every chat-side confirmation (R58).
+  confirm-hint: '<prefix><gray>Run <white><command><gray> to go ahead.'
+
+setup:
+  # Action bar while the wizard pastes an arena — big maps take a moment.
+  # <arena>
+  pasting: '<gray>Pasting <white><arena></white><gray>…'
+  # Title over the same wait, on the same delay, taken down when the paste
+  # lands. <arena>
+  pasting-title: '<yellow><bold>Loading'
+  pasting-subtitle: '<gray>Pasting <white><arena><gray>…'
+  # <arena> <holder>
+  busy: '<prefix><red>Setup is already in progress by <white><holder><red> on <white><arena><red>.'
+  clipboard-empty: '<prefix><red>Your WorldEdit clipboard is empty. Select your arena build and run //copy first.'
+  # <arena>
+  exists: '<prefix><red>Arena <white><arena><red> already exists. Use <white>/practice edit <arena><red> instead.'
+  bad-name: '<prefix><red>Arena names must match [a-z0-9_-], max 32 characters.'
+  # <width> <length> <max>
+  too-big: '<prefix><red>Schematic is <width>×<length> blocks; the limit is <max> so neighboring arenas can never overlap.'
+  folder-failed: '<prefix><red>Could not create the arena folder.'
+  # <error>
+  schematic-save-failed: '<prefix><red>Could not save the schematic: <error>'
+  # <error>
+  paste-failed: '<prefix><red>Failed to paste the arena: <error>'
+  teleport-failed: '<prefix><red>Could not teleport you to the setup area.'
+  none-active: '<prefix><red>No setup in progress. Start with <white>/practice setup start <name><red> or <white>/practice edit <arena><red>.'
+  # <arena>
+  left-session: '<prefix><gray>Ended your practice session on <white><arena><gray> to open the editor.'
+  world-unavailable: '<prefix><red>The practice world is unavailable — run <white>/practice world regen confirm<red>.'
+  # <arena>
+  started: '<prefix><green>Configuring <white><arena><green>. Steps:'
+  start-steps:
+    - '<dark_gray> 1. <gray>Stand at the player spawn and run <white>/practice setup spawn'
+    - '<dark_gray> 2. <gray>Place the given button or pressure plate at the finish (place several for multiple finishes)'
+    - '<dark_gray> 3. <gray>Optional: arrange your inventory, then <white>/practice setup kit'
+    - '<dark_gray> 4. <white>/practice setup save <gray>(or <white>/practice setup cancel<gray>)'
+  # <arena>
+  editing: '<prefix><green>Editing <white><arena><green>. Everything is pre-loaded — change what you like.'
+  edit-steps:
+    - '<dark_gray> • <gray>Reshape the arena in-world, then <white>/practice setup capture <gray>to bake it in'
+    - '<dark_gray> • <white>/practice setup info <gray>shows the current state'
+    - '<dark_gray> • <white>/practice setup save <gray>when you are done'
+  spawn-set: '<prefix><green>Spawn point set (facing preserved).'
+  spawn-outside: '<prefix><red>Stand inside the arena to set its spawn.'
+  out-of-bounds: '<prefix><red>Keep setup changes inside the arena bounds.'
+  # <type> <count>
+  trigger-added: '<prefix><green>Finish trigger added (<type>) — <white><count><green> total. Place more, or <white>/practice setup trigger clear<green> to start over.'
+  triggers-cleared: '<prefix><green>All finish triggers removed. Place new buttons or plates.'
+  trigger-button: 'button'
+  trigger-plate: 'pressure plate'
+  # <data>
+  trigger-invalid: '<prefix><red>This arena''s saved trigger block is invalid (<white><data><red>) — place a new button or plate.'
+  not-captured-hint: '<yellow>Run /practice setup capture to keep these blocks'
+  # <count>
+  kit-saved: '<prefix><green>Kit saved (<count> stack(s)).'
+  kit-saved-with-item: '<prefix><gray>The practice menu item is included.'
+  kit-empty: '<prefix><red>This arena has no kit saved yet.'
+  kit-loaded: '<prefix><green>Kit loaded into your inventory. Rearrange it, then <white>/practice setup kit<green>.'
+  # <item>
+  kit-warning: '<prefix><yellow><white><item><yellow> in the kit can skip or break runs (kept anyway).'
+  # <name>
+  display-set: '<prefix><green>Display name set to <white><name><green>.'
+  # <material>
+  icon-set: '<prefix><green>Menu icon set to <white><material><green>.'
+  icon-need-item: '<prefix><red>Hold the item you want as the menu icon, or name one: <white>/practice setup icon <material><red>.'
+  # <material>
+  icon-invalid: '<prefix><red><white><material><red> is not an item material.'
+  # <node>
+  permission-set: '<prefix><green>Arena gated behind <white><node><green>.'
+  permission-cleared: '<prefix><green>Permission reset to this arena''s default node.'
+  blocks-required: '<prefix><green>Personal bests now require at least one placed block.'
+  blocks-not-required: '<prefix><green>Personal bests no longer require placed blocks.'
+  # <mode> <modes>
+  mode-set: '<prefix><green>Mode set to <white><mode><green>.'
+  mode-unknown: '<prefix><red>Unknown mode <white><mode><red>. Known: <white><modes><red>.'
+  # <category>
+  category-set: '<prefix><green>Category set to <white><category><green> — saving moves the arena into <white>templates/<category>/<green>.'
+  category-cleared: '<prefix><green>Category reset to this arena''s mode — saving moves its folder back into templates/.'
+  category-bad-name: '<prefix><red>Categories are folder names: [a-z0-9_-], max 32 characters.'
+  # <category> <error>
+  category-move-failed: '<prefix><red>Saved, but the arena could not be moved into category <white><category><red>: <error>'
+  captured: '<prefix><green>Arena captured — the schematic now matches what you see.'
+  # <error>
+  capture-failed: '<prefix><red>Could not capture the arena: <error>'
+  schematic-replaced: '<prefix><green>Schematic replaced from your clipboard.'
+  schematic-replaced-hint: '<prefix><gray>Check the spawn and finish trigger — their offsets may no longer line up.'
+  # <error>
+  schematic-replace-failed: '<prefix><red>Could not replace the schematic: <error>'
+  need-spawn: '<prefix><red>Set the spawn first: <white>/practice setup spawn<red>.'
+  need-trigger: '<prefix><red>Place the finish button or pressure plate first.'
+  # <error>
+  save-failed: '<prefix><red>Could not write arena.yml: <error>'
+  # <arena>
+  saved: '<prefix><green>Arena <white><arena><green> saved. Play it with <white>/practice join <arena><green>.'
+  # <arena>
+  updated: '<prefix><green>Arena <white><arena><green> updated. Play it with <white>/practice join <arena><green>.'
+  cancelled: '<prefix><gray>Setup canceled; nothing was saved.'
+  edit-cancelled: '<prefix><gray>Edit canceled; the saved arena is unchanged.'
+  # <arena> <editing>
+  info-header: '<prefix><gray><editing> arena <white><arena><gray>:'
+  # <key> <value>
+  info-line: '<dark_gray>   <key>: <white><value>'
+  info-ready: '<prefix><green>Ready to save.'
+  info-not-ready: '<prefix><red>Spawn and trigger are both required before saving.'
+  # <team>
+  rush-spawn-set: '<prefix><green>Rush spawn for team <white><team><green> set where you stand.'
+  # <team>
+  rush-bed-set: '<prefix><green>Rush bed for team <white><team><green> set.'
+  rush-need-bed: '<prefix><red>Look at a bed block (within 6 blocks) to set it.'
+  # <type>
+  rush-generator-set: '<prefix><green>Rush <white><type><green> generator set on the block below you.'
+  # <type>
+  rush-bad-generator: '<prefix><red><white><type><red> is not a generator type. Use iron, gold, diamond or emerald.'
+  rush-dealer-set: '<prefix><green>Rush shop dealer spot set where you stand.'
+  rush-cleared: '<prefix><green>Rush layout cleared — teams, generators and dealers removed.'
+  rush-need-base: '<prefix><red>A rush arena needs at least one team with both a spawn and a bed: <white>/practice setup rush team <color><red> and <white>/practice setup rush bed <color><red>.'
+  beddefense-need-base: '<prefix><red>A bed defense map needs at least one team with both a spawn and a bed: <white>/practice setup beddefense team <color><red> and <white>/practice setup beddefense bed <color><red>.'
+  pvpbot-spawn-set: '<prefix><green>Bot spawn set where you stand. Without one, the bot spawns a few blocks ahead of the player spawn.'
+  pvpbot-cleared: '<prefix><green>PvP bot layout cleared — the bot spawn marker was removed.'
+
+# ------------------------------------------------------------ GUI menu text
+
+# Shared labels used by menus AND by chat, boards and broadcasts.
+label:
+  # Boolean state words. The word carries the meaning; the color decorates (R31).
+  state:
+    'on': '<green>on'
+    'off': '<red>off'
+    shown: '<green>shown'
+    hidden: '<red>hidden'
+    public: '<green>public'
+    private: '<gray>private'
+    selected: '<green>selected'
+  # A bed repair score wherever a board shows a value. <count>
+  rounds: '<count> rounds'
+  # Rush objective names — boards, stats, broadcasts and the rush menus.
+  objective:
+    bed: 'Bed Rush'
+    emerald: 'Emerald Rush'
+    diamond: 'Diamond Rush'
+    team_wipe: 'Team Wipe'
+  # PvP bot difficulty presets, keyed by preset id. `long` carries a
+  # tagline for menus; `short` is the bare name for the sidebar.
+  difficulty:
+    long:
+      rookie: '<green>Rookie <dark_gray>— slow hands, soft aim'
+      brawler: '<yellow>Brawler <dark_gray>— a fair fight'
+      veteran: '<red>Veteran <dark_gray>— sharp and relentless'
+      demon: '<dark_red>Demon <dark_gray>— frame-perfect menace'
+      unfair: '<dark_purple><bold>Unfair</bold> <dark_gray>— it read your habits before you had them'
+      suffer: '<red><bold>Suffer</bold> <dark_gray>— nothing it does is impossible; all of it is'
+      custom: '<white>Custom <dark_gray>— your own mix'
+    short:
+      rookie: '<green>Rookie'
+      brawler: '<yellow>Brawler'
+      veteran: '<red>Veteran'
+      demon: '<dark_red>Demon'
+      unfair: '<dark_purple><bold>Unfair'
+      suffer: '<red><bold>Suffer'
+      custom: '<white>Custom'
+
+gui:
+  # Shown wherever a value is missing: no record yet, no holder, unranked.
+  # It is substituted into lore as plain text, so keep it tag-free — a
+  # MiniMessage tag here would be printed literally, not colored.
+  none: '???'
+  # Navigation chrome, identical in every menu (R45).
+  back: '<yellow><bold>Back'
+  back-lore: '<gray>Return to the previous menu.'
+  close: '<red><bold>Close'
+  close-lore: '<gray>Close this menu.'
+  previous-page: '<yellow><bold>Previous Page'
+  next-page: '<yellow><bold>Next Page'
+  # <page> <pages>
+  page: '<white><bold>Page <page> <gray>of <pages>'
+  # The closed click-hint vocabulary (R32). Every clickable control ends
+  # with one of these; menus append them, so lore keys never contain them.
+  hint:
+    click:
+      open: '<yellow>Click to open'
+      select: '<yellow>Click to select'
+      play: '<yellow>Click to play'
+      view: '<yellow>Click to view'
+      toggle: '<yellow>Click to toggle'
+      cycle: '<yellow>Click to cycle'
+      confirm: '<yellow>Click to confirm'
+      cancel: '<yellow>Click to cancel'
+      close: '<yellow>Click to close'
+      run: '<yellow>Click to run'
+      delete: '<yellow>Click to delete'
+      edit: '<yellow>Click to edit'
+      save: '<yellow>Click to save'
+      buy: '<yellow>Click to buy'
+      rename: '<yellow>Click to rename'
+      leave: '<yellow>Click to leave'
+      restart: '<yellow>Click to restart'
+      report: '<yellow>Click to report'
+    right:
+      cycle-back: '<yellow>Right-click to cycle back'
+      view: '<yellow>Right-click to view'
+      options: '<yellow>Right-click for options'
+      delete: '<yellow>Right-click to delete'
+      load: '<yellow>Right-click to load'
+      prompt: '<yellow>Right-click to type a name'
+    shift:
+      pin: '<dark_gray>Shift-click to pin to Quick Buy'
+      unpin: '<dark_gray>Shift-click to unpin from Quick Buy'
+  # The last lore line of a control that cannot act right now / is locked (R51, R52).
+  # <reason>
+  unavailable: '<red>Unavailable: <gray><reason>'
+  # Text is asked for through an anvil: the question is its title, the paper
+  # on the left holds the current value with the question's own hint in its
+  # lore, and the result item confirms what was typed (hint.click.confirm).
+  prompt:
+    # The paper's last lore line.
+    cancel: '<dark_gray>Close to cancel'
+  # <reason>
+  locked: '<red>Locked: <gray><reason>'
+  # Short lowercase reasons, inserted into the two lines above.
+  reason:
+    only-one-team: 'only one team base'
+    pinned-competitive: 'pinned by competitive mode'
+    pinned-obsidian: 'pinned by obsidian practice'
+    not-in-obsidian: 'not in obsidian practice'
+    no-obsidian-defenses: 'no defense without obsidian on the bed'
+    pinned-repair: 'pinned by bed repair'
+    not-in-repair: 'not in bed repair'
+    no-repair-defenses: 'no defense qualifies for bed repair'
+    no-defense: 'no defense chosen'
+    nothing-to-load: 'nothing to load'
+    nothing-saved: 'nothing saved yet'
+    already-selected: 'already selected'
+    needs-spawn: 'needs a spawn first'
+    needs-trigger: 'needs a finish trigger first'
+    no-blocks: 'place some blocks first'
+    wrong-phase: 'not while previewing'
+    cannot-afford: 'cannot afford'
+    no-presets: 'no difficulty presets configured'
+    no-arenas: 'no arenas you can play'
+    no-permission: 'no permission'
+    # <node>
+    needs-node: 'needs <white><node>'
+    gone: 'no longer exists'
+    not-ranked: 'practice times are yours alone'
+    offline: 'went offline'
+    own-defense: 'you cannot like your own'
+    no-defenses: 'no defenses yet'
+    # Publishing a bed defense needs the author's own competitive completion.
+    needs-clear: 'complete it in competitive first'
+    # Reports hid it; only a moderator can bring it back.
+    auto-hidden: 'hidden by reports — a moderator has to review it'
+    # Saving a rush or bed defense arena without a team base.
+    needs-base: 'needs a team base with a bed'
+    no-reports: 'no reports'
+    # Making an unfinished arena the default.
+    incomplete: 'the arena is not finished'
+
+  main:
+    title: '<dark_gray><bold>Practice'
+    play:
+      name: '<white><bold>Play'
+      # <count>
+      lore:
+        - '<gray>Pick an arena to practice in.'
+        - ''
+        - '<gray>Arenas: <white><count>'
+    random:
+      name: '<white><bold>Random Arena'
+      lore:
+        - '<gray>Drops you into one of the'
+        - '<gray>arenas you can play.'
+    leaderboards:
+      name: '<gold><bold>Leaderboards'
+      lore:
+        - '<gray>The fastest times on every arena.'
+    stats:
+      name: '<white><bold>My Stats'
+      lore:
+        - '<gray>Your bests, ranks and run counts.'
+    restart:
+      name: '<yellow><bold>Restart Run'
+      # <arena>
+      lore:
+        - '<gray>Wipes your blocks and starts over'
+        - '<gray>from the arena spawn.'
+        - ''
+        - '<gray>Arena: <white><arena>'
+    sidebar:
+      name: '<white><bold>Sidebar'
+      # <state>
+      lore:
+        - '<gray>The live timer scoreboard.'
+        - ''
+        - '<gray>Currently: <state>'
+    help:
+      name: '<white><bold>Help'
+      lore:
+        - '<gray>How practice arenas work'
+        - '<gray>and every command you can run.'
+    # Only shown while sparring the PvP bot.
+    bot:
+      name: '<white><bold>Bot Settings'
+      lore:
+        - '<gray>Kit, difficulty and the bot''s'
+        - '<gray>arsenal. The bot pauses while'
+        - '<gray>this menu is open.'
+    settings:
+      name: '<white><bold>Settings'
+      lore:
+        - '<gray>Night vision, wool color and'
+        - '<gray>your arena''s time of day.'
+    spectate:
+      name: '<white><bold>Spectate'
+      lore:
+        - '<gray>Watch another player practice'
+        - '<gray>without disturbing their run.'
+    leave:
+      name: '<red><bold>Leave'
+      # <destination>
+      lore:
+        - '<gray>Restores your inventory and'
+        - '<gray>location exactly as they were.'
+        - ''
+        - '<gray>Sends you to: <white><destination>'
+
+  settings:
+    title: '<dark_gray><bold>Settings'
+    night-vision:
+      name: '<white><bold>Night Vision'
+      # <state>
+      lore:
+        - '<gray>Permanent night vision while'
+        - '<gray>you are practicing.'
+        - ''
+        - '<gray>Currently: <state>'
+    wool-color:
+      name: '<white><bold>Wool Color'
+      # <color>
+      lore:
+        - '<gray>Cycles the wool color in your kit.'
+        - ''
+        - '<gray>Currently: <white><color>'
+      default: 'kit default'
+    time:
+      name: '<white><bold>Time of Day'
+      # <time>
+      lore:
+        - '<gray>The time of day in your arena.'
+        - '<gray>Only you see it.'
+        - ''
+        - '<gray>Currently: <white><time>'
+      option:
+        default: 'server time'
+        day: 'day'
+        noon: 'noon'
+        sunset: 'sunset'
+        night: 'night'
+        midnight: 'midnight'
+    sidebar:
+      name: '<white><bold>Sidebar'
+      # <state>
+      lore:
+        - '<gray>The live timer scoreboard.'
+        - ''
+        - '<gray>Currently: <state>'
+
+  categories:
+    title: '<dark_gray><bold>Play'
+    empty:
+      name: '<gray><bold>No arenas yet'
+      lore:
+        - '<gray>Nothing has been set up, or you'
+        - '<gray>lack permission for them all.'
+    # <category>
+    entry-name: '<white><bold><category>'
+    # <category> <count>
+    entry-lore:
+      - '<gray>Arenas: <white><count>'
+
+  arenas:
+    title: '<dark_gray><bold>Play'
+    # <category>
+    title-category: '<dark_gray><bold>Play — <category>'
+    empty:
+      name: '<gray><bold>No arenas yet'
+      lore:
+        - '<gray>Nothing has been set up, or you'
+        - '<gray>lack permission for them all.'
+    # <arena>
+    entry-name: '<green><bold><arena>'
+    # <mode> <best> <rank> <players> <finishes> <record> <record-holder>
+    entry-lore:
+      - '<gray>Mode: <white><mode>'
+      - ''
+      - '<gray>Your best: <white><best>'
+      - '<gray>Your rank: <white><rank> <dark_gray>of <players>'
+      - '<gray>Runs: <white><finishes>'
+      - '<gray>Record: <white><record>'
+      - '<gray>Held by: <white><record-holder>'
+    # Tiles for modes without shared time boards (MLG streaks, PvP bot spar):
+    # no dead best/rank/record fields. <mode>
+    entry-lore-unranked:
+      - '<gray>Mode: <white><mode>'
+      - ''
+      - '<gray>Scored in-session — no time board.'
+    # Appended when the viewer holds the arena record (R35).
+    record-line:
+      - '<gold>You hold the record'
+
+  spectate:
+    title: '<dark_gray><bold>Spectate'
+    empty:
+      name: '<gray><bold>No players yet'
+      lore:
+        - '<gray>Nobody is practicing right now.'
+        - '<gray>Players appear here the moment'
+        - '<gray>they enter an arena.'
+    entry:
+      # <player>
+      name: '<white><bold><player>'
+      # <arena> <mode> <watchers>
+      lore:
+        - '<gray>Arena: <white><arena>'
+        - '<gray>Mode: <white><mode>'
+        - '<gray>Spectators: <white><watchers>'
+
+  leaderboards:
+    title: '<dark_gray><bold>Leaderboards'
+    # <category>
+    title-category: '<dark_gray><bold>Leaderboards — <category>'
+    # The category picker shown first (while guis.yml categories.enabled is
+    # on): one tile per category, each opening that category's own boards.
+    categories:
+      title: '<dark_gray><bold>Leaderboards'
+      # <category>
+      entry-name: '<gold><bold><category>'
+      # <category> <count>
+      entry-lore:
+        - '<gray>Arenas with boards: <white><count>'
+    empty:
+      name: '<gray><bold>No leaderboards yet'
+      lore:
+        - '<gray>Boards appear once an arena'
+        - '<gray>has been finished.'
+    # <arena>
+    entry-name: '<gold><bold><arena>'
+    # <players> <record> <record-holder> <rank>
+    entry-lore:
+      - '<gray>Players: <white><players>'
+      - '<gray>Record: <white><record>'
+      - '<gray>Held by: <white><record-holder>'
+      - ''
+      - '<gray>Your rank: <white><rank>'
+    record-line:
+      - '<gold>You hold the record'
+
+  board:
+    # <arena>
+    title: '<dark_gray><bold>Top Times — <arena>'
+    # Boards scored in rounds rather than times (bed repair). <arena>
+    title-score: '<dark_gray><bold>Top Scores — <arena>'
+    empty:
+      name: '<gray><bold>No times yet'
+      lore:
+        - '<gray>Be the first to finish this arena.'
+    # Rows are information, not buttons: no bold (R32).
+    # <rank> <player>
+    entry-name: '<white>#<rank> <player>'
+    entry-name-first: '<gold>#<rank> <player>'
+    entry-name-self: '<aqua>#<rank> <player>'
+    # <time> <behind>
+    entry-lore:
+      - '<gray>Time: <white><time>'
+      - '<gray>Behind #1 by: <white><behind>'
+    # The same on a board scored in rounds; <time> then carries the score.
+    entry-lore-score:
+      - '<gray>Score: <white><time>'
+      - '<gray>Behind #1 by: <white><behind>'
+    entry-lore-self-suffix:
+      - ''
+      - '<aqua>That''s you.'
+    standing:
+      name: '<aqua>Your Standing'
+      # <rank> <players> <best> <next> <gap>
+      lore:
+        - '<gray>Rank: <white><rank> <dark_gray>of <players>'
+        - '<gray>Best: <white><best>'
+        - ''
+        - '<gray>Next up: <white><next>'
+        - '<gray>Gap: <white><gap>'
+      # The same on a board scored in rounds. <rank> <players> <best> <next> <gap>
+      lore-score:
+        - '<gray>Rank: <white><rank> <dark_gray>of <players>'
+        - '<gray>Best: <white><best>'
+        - ''
+        - '<gray>Next up: <white><next>'
+        - '<gray>Gap: <white><gap>'
+      lore-none:
+        - '<gray>You have not finished this arena yet.'
+    # <arena>
+    play-name: '<green><bold>Play <arena>'
+    play-lore:
+      - '<gray>Join this arena now.'
+
+  stats:
+    # <player>
+    title: '<dark_gray><bold>Stats — <player>'
+    empty-self:
+      name: '<gray><bold>No times yet'
+      lore:
+        - '<gray>Finish a run and it shows up here.'
+    empty-other:
+      name: '<gray><bold>No times yet'
+      lore:
+        - '<gray>This player has not finished a run.'
+    # <arena>
+    entry-name: '<white><bold><arena>'
+    # <best> <last> <finishes> <rank> <players> <behind>
+    entry-lore:
+      - '<gray>Best: <white><best>'
+      - '<gray>Last: <white><last>'
+      - '<gray>Runs: <white><finishes>'
+      - '<gray>Rank: <white><rank> <dark_gray>of <players>'
+      - '<gray>Behind record: <white><behind>'
+    record-line:
+      - '<gold>You hold the record'
+    summary:
+      # <player> <arenas> <finishes> <records>
+      name: '<aqua><player>'
+      lore:
+        - '<gray>Arenas completed: <white><arenas>'
+        - '<gray>Runs: <white><finishes>'
+        - '<gray>Records held: <white><records>'
+
+  rush:
+    # <arena>
+    title: '<dark_gray><bold>Rush — <arena>'
+    # Lore keys hold description and state only; the click hints are appended
+    # from gui.hint.* (style guide R30/R32).
+    team:
+      name: '<white><bold>Team Base'
+      # <team> <count>
+      lore:
+        - '<gray>Where your run starts.'
+        - ''
+        - '<gray>Base: <white><team> <dark_gray>(<count> available)'
+    blocks:
+      name: '<white><bold>Starter Blocks'
+      # <amount>
+      lore:
+        - '<gray>Free wool in your starter kit.'
+        - '<gray>Practice runs only.'
+        - ''
+        - '<gray>Amount: <white><amount>'
+    currency:
+      name: '<white><bold>Starting Resources'
+      # <iron> <gold>
+      lore:
+        - '<gray>Iron and gold to spend at'
+        - '<gray>the shop right away.'
+        - '<gray>Practice runs only.'
+        - ''
+        - '<gray>Iron: <white><iron> <dark_gray>• <gray>Gold: <white><gold>'
+    pickaxe:
+      name: '<white><bold>Pickaxe'
+      # <tier>
+      lore:
+        - '<gray>The pickaxe in your starter kit.'
+        - '<gray>Practice runs only.'
+        - ''
+        - '<gray>Tier: <white><tier>'
+      option:
+        none: 'none'
+        wooden: 'wooden'
+        iron: 'iron'
+        diamond: 'diamond'
+    defense:
+      name: '<white><bold>Bed Defenses'
+      # <preset> <layers>
+      lore:
+        - '<gray>The pyramid built over every'
+        - '<gray>enemy bed before the run.'
+        - ''
+        - '<gray>Preset: <white><preset>'
+        - '<gray>Layers: <white><layers>'
+      # Labels for the presets in config.yml's rush.defense-presets. A preset
+      # you invent has no key here and falls back to its own `name`.
+      option:
+        none: 'None'
+        wool: 'Wool'
+        wood: 'Wood'
+        clay: 'Terracotta'
+        endstone: 'Wool + End Stone'
+        glass: 'Wool + Glass'
+        ceramic: 'Wool + Terracotta'
+        obsidian: 'Obsidian + End Stone'
+        ironclad: 'Obsidian + Wool'
+        fortress: 'Fortress'
+        bunker: 'Bunker'
+        keep: 'The Keep'
+    # The bed-defense gallery the button above opens.
+    defenses:
+      # <arena>
+      title: '<dark_gray><bold>Bed Defenses — <arena>'
+      # <preset>
+      tile-name: '<white><bold><preset>'
+      # <layers> — how many materials thick the pyramid is
+      tile-lore:
+        - '<gray>A <white><layers><gray>-layer pyramid over'
+        - '<gray>every enemy bed.'
+        - ''
+      # One line per layer, outermost first — the order a rusher digs through
+      # them. <depth> counts from the outside in, <material> is the block.
+      layer-line: '<dark_gray> <depth>. <gray><material>'
+      # The state line under the chosen preset's layers.
+      selected: '<gray>Currently: <green>selected'
+    # Values the Start button's summary is built from.
+    summary:
+      # <amount>
+      tnt: '<white><amount> TNT'
+      # <amount>
+      blocks: '<white><amount> wool'
+      # <iron> <gold>
+      currency: '<white><iron> iron<gray>, <white><gold> gold'
+      # <preset> <layers>
+      defense: '<white><preset> <dark_gray>(<layers>)'
+      # <count> <difficulty> <armor> <sword>
+      defenders: '<white><count>/team <dark_gray>(<difficulty><dark_gray>, <armor><dark_gray>, <sword><dark_gray>)'
+    tnt:
+      name: '<white><bold>Starter TNT'
+      # <amount>
+      lore:
+        - '<gray>TNT in your starter kit. It'
+        - '<gray>auto-ignites on place — demolition'
+        - '<gray>fuel for bed defenses.'
+        - '<gray>Practice runs only.'
+        - ''
+        - '<gray>Amount: <white><amount>'
+    generators:
+      name: '<white><bold>Base Generators'
+      # <state> — label.state.on / label.state.off
+      lore:
+        - '<gray>The iron and gold generators'
+        - '<gray>at every team base.'
+        - ''
+        - '<gray>Currently: <state>'
+    bots:
+      name: '<white><bold>Defender Bots'
+      # <count>
+      lore:
+        - '<gray>Bots guarding every enemy base.'
+        - '<gray>With defenders, the goal becomes'
+        - '<gray>the <white>team wipe<gray>: break a bed,'
+        - '<gray>then take out every defender.'
+        - ''
+        - '<gray>Per team: <white><count>'
+    bot-difficulty:
+      name: '<white><bold>Defender Difficulty'
+      default: 'Default'
+      # <level>
+      lore:
+        - '<gray>How hard the defenders fight —'
+        - '<gray>the PvP bot difficulty presets.'
+        - ''
+        - '<gray>Difficulty: <level>'
+    bot-armor:
+      name: '<white><bold>Defender Armor'
+      # <tier>
+      lore:
+        - '<gray>What the defenders wear.'
+        - '<gray>Leather is dyed team colors.'
+        - ''
+        - '<gray>Tier: <white><tier>'
+      option:
+        leather: 'leather'
+        chainmail: 'chainmail'
+        iron: 'iron'
+        diamond: 'diamond'
+    bot-sword:
+      name: '<white><bold>Defender Sword'
+      # <tier>
+      lore:
+        - '<gray>What the defenders swing.'
+        - ''
+        - '<gray>Tier: <white><tier>'
+      option:
+        wooden: 'wooden'
+        stone: 'stone'
+        iron: 'iron'
+        diamond: 'diamond'
+    start:
+      name: '<green><bold>Start Practice'
+      # The whole match summarized, so nobody has to hover five buttons to
+      # find out what they are about to play.
+      # <arena> <team> <blocks> <currency> <pickaxe> <tnt> <defense> <generators>
+      lore:
+        - '<gray>Map: <white><arena>'
+        - ''
+        - '<gray>Base: <white><team>'
+        - '<gray>Starter blocks: <blocks>'
+        - '<gray>Starting resources: <currency>'
+        - '<gray>Pickaxe: <white><pickaxe>'
+        - '<gray>TNT: <tnt>'
+        - '<gray>Bed defenses: <defense>'
+        - '<gray>Base generators: <generators>'
+        - '<gray>Defenders: <defenders>'
+        - ''
+        - '<gray>Break a bed or grab an emerald'
+        - '<gray>or diamond — whichever you'
+        - '<gray>reach first ends the run.'
+        - ''
+        - '<dark_gray>Not ranked — play competitive'
+    competitive:
+      name: '<gold><bold>Start Competitive'
+      # <arena>
+      lore:
+        - '<gray>Map: <white><arena>'
+        - ''
+        - '<gray>The ranked loadout, same for'
+        - '<gray>everyone: <white>no starting items<gray>,'
+        - '<white>bed defenses on<gray>, <white>generators on<gray>.'
+        - '<gray>Bots off is the ranked race; bots'
+        - '<gray>on is the ranked <white>team wipe<gray>, at'
+        - '<gray>the server''s fixed defender lineup.'
+        - ''
+        - '<gold>Ranked — times are recorded'
+    # The one-click preset strip along the menu's bottom row. Each tile
+    # applies its loadout over your dials and starts the run immediately.
+    # Ranked presets are gold, practice presets white (style guide R27).
+    presets:
+      competitive:
+        name: '<gold><bold>Competitive Race'
+        # <arena>
+        lore:
+          - '<gray>The ranked race, one click:'
+          - '<gray>starter sword only, defenses on,'
+          - '<gray>generators on, shop open, no bots.'
+          - ''
+          - '<gold>Ranked — times are recorded'
+      competitive-wipe:
+        name: '<gold><bold>Competitive Team Wipe'
+        # <arena>
+        lore:
+          - '<gray>The ranked team wipe: starter'
+          - '<gray>sword, generators on, shop open,'
+          - '<gray>the fixed defender lineup at'
+          - '<gray>every enemy base.'
+          - ''
+          - '<gold>Ranked — times are recorded'
+      bridge:
+        name: '<white><bold>Bridge Optimization'
+        # <arena>
+        lore:
+          - '<gray>Route practice: <white>64 wool<gray> in'
+          - '<gray>hand, generators on, shop open,'
+          - '<gray>nothing in your way.'
+          - ''
+          - '<dark_gray>Not ranked — play competitive'
+      bed-break:
+        name: '<white><bold>Bed Break'
+        # <arena>
+        lore:
+          - '<gray>Cracking a defended bed: iron'
+          - '<gray>pickaxe, <white>TNT<gray>, wool, generators'
+          - '<gray>on, the standard defense up.'
+          - ''
+          - '<dark_gray>Not ranked — play competitive'
+      warmup:
+        name: '<white><bold>Warmup'
+        # <arena>
+        lore:
+          - '<gray>The exact competitive conditions'
+          - '<gray>— no starting items, defenses on'
+          - '<gray>— without the run going on the'
+          - '<gray>books.'
+          - ''
+          - '<dark_gray>Not ranked — play competitive'
+      skirmish:
+        name: '<white><bold>Bot Skirmish'
+        # <arena>
+        lore:
+          - '<gray>Combat practice: two defenders'
+          - '<gray>at every enemy base, wool, iron'
+          - '<gray>pickaxe and iron to spend.'
+          - ''
+          - '<dark_gray>Not ranked — play competitive'
+      sandbox:
+        name: '<white><bold>Sandbox'
+        # <arena>
+        lore:
+          - '<gray>Everything on: full wool, full'
+          - '<gray>purse, diamond pickaxe, TNT,'
+          - '<gray>generators running. Mess around.'
+          - ''
+          - '<dark_gray>Not ranked — play competitive'
+
+  # The PvP bot settings, opened by the in-arena settings item. The bot
+  # freezes while this menu is open and re-reads everything on close.
+  pvpbot:
+    # <arena>
+    title: '<dark_gray><bold>Bot Settings — <arena>'
+    kit:
+      name: '<white><bold>Kit'
+      # <kit>
+      lore:
+        - '<gray>Your loadout. The bot mirrors'
+        - '<gray>it unless gear says otherwise.'
+        - ''
+        - '<gray>Kit: <white><kit>'
+      option:
+        sword: 'Sword'
+        nodebuff: 'NoDebuff'
+        boxing: 'Boxing'
+        builduhc: 'BuildUHC'
+        combo: 'Combo'
+        gapple: 'Gapple'
+        iron: 'Iron'
+        diamond: 'Diamond'
+        classic: 'Classic'
+        soup: 'Soup'
+        archer: 'Archer'
+        axe: 'Axe'
+        bedwars: 'Bedwars'
+        skywars: 'Skywars'
+    # Named difficulty presets — one click sets every AI knob below.
+    # The labels themselves live under label.difficulty.
+    preset:
+      name: '<white><bold>Difficulty'
+      # <level>
+      lore:
+        - '<gray>One click sets every knob:'
+        - '<gray>speed, aim, combos, reach.'
+        - ''
+        - '<gray>Difficulty: <level>'
+    # The kit gallery.
+    kits:
+      title: '<dark_gray><bold>Kits'
+      # <kit>
+      entry-name: '<white><bold><kit>'
+      # <armor>
+      armor-line: '<gray>Armor: <white><armor>'
+      # <amount> <item>
+      item-line: '<dark_gray> • <gray><amount>× <white><item>'
+      # <count> — how many more item types the tile had no room for
+      more-line: '<dark_gray> • <gray>… and <count> more'
+      blocks-note:
+        - '<gray>Comes with blocks to place.'
+      # State line on the tile that is currently chosen (R61).
+      selected:
+        - '<gray>Currently: <green>selected'
+    # The full-inventory kit preview.
+    preview:
+      # <kit>
+      title: '<dark_gray><bold>Preview — <kit>'
+      # <kit>
+      banner-name: '<white><kit>'
+      icon-lore:
+        - '<gray>Laid out exactly as it lands:'
+        - '<gray>armor up top, hotbar at the bottom.'
+      no-armor: '<dark_gray>no armor'
+    gear:
+      name: '<white><bold>Bot Gear'
+      # <tier>
+      lore:
+        - '<gray>What the bot wears and swings.'
+        - ''
+        - '<gray>Gear: <white><tier>'
+      option:
+        mirror: 'mirror your kit'
+        none: 'none (wooden sword)'
+        leather: 'leather + stone sword'
+        iron: 'iron'
+        diamond: 'diamond'
+    evasiveness:
+      name: '<white><bold>Evasiveness'
+      # <level>
+      lore:
+        - '<gray>How fast the bot strafes'
+        - '<gray>out of your crosshair.'
+        - ''
+        - '<gray>Level: <white><level>'
+      option:
+        low: 'low'
+        medium: 'medium'
+        high: 'high'
+        extreme: 'extreme'
+        unfair: 'unfair'
+        suffer: 'suffer'
+    cps:
+      name: '<white><bold>CPS'
+      # <cps>
+      lore:
+        - '<gray>How fast the bot swings,'
+        - '<gray>in clicks per second.'
+        - ''
+        - '<gray>CPS: <white><cps>'
+    accuracy:
+      name: '<white><bold>Accuracy'
+      # <level>
+      lore:
+        - '<gray>The chance each swing'
+        - '<gray>in range actually lands.'
+        - ''
+        - '<gray>Level: <white><level>'
+      option:
+        low: 'low'
+        medium: 'medium'
+        high: 'high'
+        perfect: 'perfect'
+        unfair: 'unfair'
+        suffer: 'suffer'
+    combos:
+      name: '<white><bold>Crits & W-Taps'
+      # <level>
+      lore:
+        - '<gray>How often the bot jump-crits'
+        - '<gray>and sprint-resets its hits.'
+        - ''
+        - '<gray>Level: <white><level>'
+      option:
+        'off': 'off'
+        some: 'some'
+        full: 'full'
+        unfair: 'unfair'
+        suffer: 'suffer'
+    reach:
+      name: '<white><bold>Reach'
+      # <level>
+      lore:
+        - '<gray>The bot''s attack range.'
+        - ''
+        - '<gray>Reach: <white><level>'
+      option:
+        short: 'short (2.6)'
+        normal: 'normal (3.0)'
+        long: 'long (3.4)'
+    aggression:
+      name: '<white><bold>Aggression'
+      # <level>
+      lore:
+        - '<gray>How hard the bot closes in'
+        - '<gray>and how tight it spaces.'
+        - ''
+        - '<gray>Level: <white><level>'
+      option:
+        passive: 'passive'
+        balanced: 'balanced'
+        relentless: 'relentless'
+        frenzied: 'frenzied'
+        unfair: 'unfair'
+        suffer: 'suffer'
+    rod:
+      name: '<white><bold>Fishing Rod'
+      # <state>
+      lore:
+        - '<gray>The bot hooks you at range'
+        - '<gray>to reset your combos. Kits'
+        - '<gray>with a rod always use it.'
+        - ''
+        - '<gray>Currently: <state>'
+    bow:
+      name: '<white><bold>Bow'
+      # <state>
+      lore:
+        - '<gray>The bot takes potshots before'
+        - '<gray>closing in. Kits with a bow'
+        - '<gray>always use it.'
+        - ''
+        - '<gray>Currently: <state>'
+    block:
+      name: '<white><bold>Sword Blocking'
+      # <state>
+      lore:
+        - '<gray>The bot blocks with its sword'
+        - '<gray>when comboed, halving what lands.'
+        - ''
+        - '<gray>Currently: <state>'
+    build:
+      name: '<white><bold>Building'
+      # <state>
+      lore:
+        - '<gray>The bot towers after you and'
+        - '<gray>bridges gaps it cannot walk.'
+        - '<gray>You can break what it builds;'
+        - '<gray>every stock reset clears it.'
+        - ''
+        - '<gray>Currently: <state>'
+
+  rushshop:
+    title: '<dark_gray><bold>Item Shop'
+    # Appended under the open tab's own MBedwars lore.
+    tab-selected: '<gray>Currently: <green>selected'
+    # <amount> <currency>
+    price-line: '<gray>Cost: <white><amount> <currency>'
+    # The Quick Buy tab: your MBedwars quick-buy pins, shared with real games.
+    quickbuy:
+      name: '<white><bold>Quick Buy'
+      empty-name: '<gray><bold>Empty Slot'
+      empty-lore:
+        - '<gray>Shift-click any shop item'
+        - '<gray>to pin it here.'
+      # The state line on a pinned item outside the Quick Buy tab.
+      pinned: '<gray>Quick Buy: <green>pinned'
+
+  rushboards:
+    # <arena>
+    title: '<dark_gray><bold>Boards — <arena>'
+    # <objective>
+    entry-name: '<gold><bold><objective>'
+    # <players> <record> <record-holder> <rank>
+    entry-lore:
+      - '<gray>Players: <white><players>'
+      - '<gray>Record: <white><record>'
+      - '<gray>Held by: <white><record-holder>'
+      - ''
+      - '<gray>Your rank: <white><rank>'
+    # Added under the lore when the viewer holds the record (R35).
+    record-line: '<gold>You hold the record'
+
+  # Bed defense practice — every menu of the mode.
+  beddefense:
+    # The team base button, shared by the round setup and session menus.
+    team:
+      name: '<white><bold>Team Base'
+      # <team> <count>
+      lore:
+        - '<gray>Where your round starts.'
+        - ''
+        - '<gray>Base: <white><team> <dark_gray>(<count> available)'
+    # The map picker (the mode's category tile opens it).
+    arenas:
+      title: '<dark_gray><bold>Bed Defense Maps'
+      empty:
+        name: '<gray><bold>No maps yet'
+        lore:
+          - '<gray>No admin has added a bed defense map.'
+          - '<gray>Admins: <white>/practice beddefense import <map>'
+      # <arena>
+      entry-name: '<white><bold><arena>'
+      # <arena> <team> <bases>
+      entry-lore:
+        - '<gray>Mode: <white>Bed Defense'
+        - '<gray>Your base: <white><team> <dark_gray>(<bases> available)'
+      # The flat arena list's button (categories off).
+      flat-button:
+        name: '<white><bold>Bed Defense'
+        lore:
+          - '<gray>Build saved bed defenses'
+          - '<gray>against the clock.'
+    # The round setup menu. <arena>
+    title: '<dark_gray><bold>Bed Defense — <arena>'
+    defense:
+      name: '<white><bold>Choose Defense'
+      # <name> <author> <blocks> <available>
+      lore:
+        - '<gray>The defense you build this round.'
+        - ''
+        - '<gray>Chosen: <white><name> <dark_gray>by <author>'
+        - '<gray>Blocks: <white><blocks>'
+        - '<gray>Available: <white><available>'
+      # Nothing chosen yet, but there are defenses to pick. <available>
+      lore-none:
+        - '<gray>The defense you build this round.'
+        - ''
+        - '<gray>Chosen: <white>the first available'
+        - '<gray>Available: <white><available>'
+      lore-none-exist:
+        - '<gray>The defense you build this round.'
+        - ''
+        - '<gray>Nobody has saved one yet.'
+        - '<gray>Design the first one below.'
+    mode:
+      name: '<white><bold>Mode'
+      # <mode>
+      lore:
+        - '<gray>Competitive is a real match start:'
+        - '<gray>sword, armor, generators and shop.'
+        - '<gray>Practice hands you the exact blocks.'
+        - ''
+        - '<gray>Mode: <mode>'
+        - '<gold>Competitive, obsidian and bed repair are ranked.'
+      # While obsidian practice is on the mode is set aside. <mode>
+      lore-obsidian:
+        - '<gray>Competitive is a real match start:'
+        - '<gray>sword, armor, generators and shop.'
+        - '<gray>Practice hands you the exact blocks.'
+        - ''
+        - '<gray>Mode: <mode> <dark_gray>(set aside)'
+        - '<light_purple>Obsidian practice is on.'
+      # While bed repair is on the mode is set aside. <mode>
+      lore-repair:
+        - '<gray>Competitive is a real match start:'
+        - '<gray>sword, armor, generators and shop.'
+        - '<gray>Practice hands you the exact blocks.'
+        - ''
+        - '<gray>Mode: <mode> <dark_gray>(set aside)'
+        - '<red>Bed repair is on.'
+      option:
+        competitive: '<gold>Competitive'
+        practice: '<white>Practice'
+        obsidian: '<light_purple>Obsidian'
+        repair: '<red>Bed Repair'
+    obsidian:
+      name: '<white><bold>Obsidian'
+      # <state> <eligible> <available>
+      lore:
+        - '<gray>The defense stands built. Break in,'
+        - '<gray>seal the bed with 8 obsidian, build'
+        - '<gray>it back. Tools and obsidian, no shop.'
+        - ''
+        - '<gray>Obsidian practice: <state>'
+        - '<gray>Defenses without obsidian: <white><eligible><dark_gray>/<white><available>'
+        - '<gold>Always ranked, on its own board.'
+    repair:
+      name: '<white><bold>Bed Repair'
+      # <state> <eligible> <available> <limit> <min>
+      lore:
+        - '<gray>The defense stands. Lit TNT or a'
+        - '<gray>fireball keeps wrecking it, and you'
+        - '<gray>rebuild with exactly the blocks it'
+        - '<gray>took. Never leave the bed exposed for'
+        - '<gray><white><limit>s<gray> — shrinking to <white><min>s<gray> — or the'
+        - '<gray>run is over.'
+        - ''
+        - '<gray>Bed repair: <state>'
+        - '<gray>Defenses that qualify: <white><eligible><dark_gray>/<white><available>'
+        - '<dark_gray>No glass or water; bed sealed solid.'
+        - '<gold>Always ranked, in rounds survived.'
+    shuffle:
+      name: '<white><bold>Shuffle'
+      # <pool>
+      lore:
+        - '<gray>Draws a different defense from'
+        - '<gray>a pool every round. Practice only.'
+        - ''
+        - '<gray>Pool: <white><pool>'
+      lore-competitive:
+        - '<gray>Draws a different defense from'
+        - '<gray>a pool every round. Practice only.'
+        - ''
+        - '<gray>Pool: <white>off'
+      option:
+        'off': 'off'
+        favorites: 'your favorites'
+        public: 'every public defense'
+    timer:
+      name: '<white><bold>Timer Start'
+      # <start>
+      lore:
+        - '<gray>When the clock starts.'
+        - ''
+        - '<gray>Starts on: <white><start>'
+      lore-competitive:
+        - '<gray>When the clock starts. Competitive'
+        - '<gray>always times from the first move.'
+        - ''
+        - '<gray>Starts on: <white><start>'
+      lore-obsidian:
+        - '<gray>When the clock starts. Obsidian'
+        - '<gray>practice always times from the'
+        - '<gray>first move.'
+        - ''
+        - '<gray>Starts on: <white><start>'
+      lore-repair:
+        - '<gray>When the clock starts. Bed repair'
+        - '<gray>is scored in rounds, not time; the'
+        - '<gray>clock runs from the first drop.'
+        - ''
+        - '<gray>Starts on: <white><start>'
+      option:
+        move: 'first movement'
+        first_block: 'first block placed'
+    new:
+      name: '<white><bold>New Defense'
+      # <radius>
+      lore:
+        - '<gray>Opens the editor with an empty bed.'
+        - '<gray>Build within <white><radius><gray> blocks,'
+        - '<gray>name it, save it.'
+    edit:
+      name: '<white><bold>Edit Defense'
+      # <count>
+      lore:
+        - '<gray>Loads one of your saved defenses'
+        - '<gray>into the editor.'
+        - ''
+        - '<gray>Saved: <white><count>'
+      lore-none:
+        - '<gray>Loads one of your saved defenses'
+        - '<gray>into the editor.'
+        - ''
+        - '<gray>Saved: <white>0'
+    start:
+      name: '<green><bold>Start Practice'
+      name-competitive: '<gold><bold>Start Competitive'
+      name-obsidian: '<light_purple><bold>Start Obsidian'
+      name-repair: '<red><bold>Start Bed Repair'
+      name-apply: '<green><bold>Apply and Restart'
+      # <arena> <defense> <mode> <shuffle> <timer> <ranked>
+      lore:
+        - '<gray>Map: <white><arena>'
+        - '<gray>Defense: <white><defense>'
+        - ''
+        - '<gray>Mode: <mode>'
+        - '<gray>Shuffle: <white><shuffle>'
+        - '<gray>Timer starts on: <white><timer>'
+        - ''
+        - '<ranked>'
+      ranked: '<gold>Times are recorded and ranked.'
+      unranked: '<gray>Practice rounds are not ranked.'
+      # Obsidian practice is on but every defense has obsidian on the bed.
+      lore-obsidian-none:
+        - '<gray>Every defense you can play already'
+        - '<gray>has obsidian on the bed. Switch'
+        - '<gray>obsidian practice off, or design one.'
+      # Bed repair is on but no defense qualifies (glass or water, or an unsealed bed).
+      lore-repair-none:
+        - '<gray>No defense you can play qualifies:'
+        - '<gray>no glass or water, and the bed sealed'
+        - '<gray>with solid, non-obsidian blocks.'
+        - '<gray>Switch bed repair off, or design one.'
+      # With no defense anywhere to build, Start becomes this.
+      name-design: '<white><bold>New Defense'
+      lore-design:
+        - '<gray>Nobody has saved a bed defense yet.'
+        - '<gray>Build one around your bed, save it,'
+        - '<gray>and practice it.'
+    # The gallery. <tab>
+    gallery:
+      title: '<dark_gray><bold>Defenses — <tab>'
+      tab:
+        public: 'Public'
+        mine: 'Mine'
+        favorites: 'Favorites'
+        # Moderators only: reported first, then every defense.
+        review: 'Review'
+      # <tab>
+      tab-name: '<white><bold><tab>'
+      # <count>
+      tab-lore:
+        - '<gray>Defenses: <white><count>'
+      tab-lore-current:
+        - '<gray>Defenses: <white><count>'
+        - ''
+        - '<gray>Currently: <green>selected'
+      empty:
+        public:
+          name: '<gray><bold>No defenses yet'
+          lore:
+            - '<gray>Nobody has published one.'
+            - '<gray>Design one and publish it.'
+        mine:
+          name: '<gray><bold>No defenses yet'
+          lore:
+            - '<gray>You have not saved one.'
+            - '<gray>Design one in the editor.'
+        favorites:
+          name: '<gray><bold>No favorites yet'
+          lore:
+            - '<gray>Right-click a defense and'
+            - '<gray>choose Favorite.'
+        review:
+          name: '<gray><bold>No defenses yet'
+          lore:
+            - '<gray>Nobody has saved one.'
+      # <name>
+      tile-name: '<white><bold><name>'
+      tile-name-own: '<aqua><bold><name>'
+      # <name> <author> <blocks> <reach> <likes> <players> <completions>
+      # <best> <record> <record-holder> <visibility> <liked> <favorite>
+      tile-lore:
+        - '<gray>Author: <white><author> <dark_gray>— <visibility>'
+        - '<gray>Blocks: <white><blocks> <dark_gray>— <gray>Reach: <white><reach>'
+        - '<gray>Likes: <white><likes> <dark_gray>— <gray>Players: <white><players>'
+        - '<gray>Runs: <white><completions>'
+        - '<gray>Your best: <white><best>'
+        - '<gray>Record: <white><record> <dark_gray>— <gray>Held by: <white><record-holder>'
+        - ''
+        - '<liked> <dark_gray>— <favorite>'
+      liked-yes: '<gold>Liked'
+      liked-no: '<dark_gray>Not liked'
+      favorite-yes: '<gold>Favorite'
+      favorite-no: '<dark_gray>Not a favorite'
+      # Obsidian practice on this defense. <best> <record> <record-holder>
+      obsidian-line: '<gray>Obsidian best: <white><best> <dark_gray>— <gray>Record: <white><record>'
+      # Obsidian already on the bed: not for obsidian practice.
+      obsidian-ineligible-line: '<dark_gray>Has obsidian on the bed — no obsidian practice'
+      # Bed repair on this defense. <best> <record> <record-holder>
+      repair-line: '<gray>Repair best: <white><best> <dark_gray>— <gray>Record: <white><record>'
+      # Glass or water in the shape, or the bed not sealed with solid, non-obsidian blocks: not for bed repair.
+      repair-ineligible-line: '<dark_gray>Glass, water or an unsealed bed — no bed repair'
+      # Shown on the chosen defense.
+      selected-line: '<gray>Currently: <green>selected'
+      # Moderators see this on a reported defense. <count>
+      reports-line: '<gray>Reports: <white><count>'
+      # <count> <material>
+      kind-line: '<dark_gray> • <gray><count>× <material>'
+    # One defense's actions. <name>
+    actions:
+      title: '<dark_gray><bold><name>'
+      play:
+        name: '<green><bold>Build It'
+        # <name>
+        lore:
+          - '<gray>Makes <white><name><gray> the defense'
+          - '<gray>for your next rounds.'
+      like:
+        name: '<gold><bold>Like'
+        # <state> <likes>
+        lore:
+          - '<gray>Likes rank the public gallery.'
+          - ''
+          - '<gray>Likes: <white><likes>'
+          - '<gray>You: <state>'
+      favorite:
+        name: '<white><bold>Favorite'
+        # <state>
+        lore:
+          - '<gray>A private bookmark. Shuffle can'
+          - '<gray>draw from your favorites.'
+          - ''
+          - '<gray>You: <state>'
+      board:
+        name: '<gold><bold>Leaderboard'
+        # <players> <record> <record-holder> <rank>
+        lore:
+          - '<gray>Players: <white><players>'
+          - '<gray>Record: <white><record>'
+          - '<gray>Held by: <white><record-holder>'
+          - '<gray>Your rank: <white><rank>'
+      edit:
+        name: '<white><bold>Edit Defense'
+        lore:
+          - '<gray>Loads it into the editor.'
+      visibility:
+        name: '<white><bold>Visibility'
+        # <state> <cleared>
+        lore:
+          - '<gray>Public defenses appear in the'
+          - '<gray>gallery for everyone. Publishing'
+          - '<gray>needs your own competitive run.'
+          - ''
+          - '<gray>Currently: <state>'
+          - '<gray>Cleared by you: <cleared>'
+        # A moderator on someone else's defense. <state> <cleared> <author>
+        lore-moderator:
+          - '<gray>Show or hide this defense for'
+          - '<gray>everyone. The author is told.'
+          - ''
+          - '<gray>Author: <white><author>'
+          - '<gray>Currently: <state>'
+          - '<gray>Cleared by author: <cleared>'
+      cleared-yes: '<green>yes'
+      cleared-no: '<red>no'
+      # Under the Visibility button while reports have it hidden.
+      auto-hidden-line: '<red>Hidden by player reports'
+      delete:
+        name: '<red><bold>Delete'
+        lore:
+          - '<gray>Removes this defense and every'
+          - '<gray>time recorded on it.'
+        name-armed: '<red><bold>Confirm Delete'
+        lore-armed:
+          - '<red>This cannot be undone.'
+        # The second hint line while armed.
+        cancel-line: '<yellow>Any other click cancels'
+      report:
+        name: '<white><bold>Report'
+        # <state>
+        lore:
+          - '<gray>Flags this defense for a moderator.'
+          - '<gray>You are asked for a reason.'
+          - ''
+          - '<gray>Your report: <state>'
+      # The anvil that asks for it. <name> <max> — the shorter of
+      # beddefense.reports.reason-max-length and the 50 an anvil allows.
+      report-prompt:
+        title: '<dark_gray><bold>Report Reason'
+        lore:
+          - '<gray>Why are you reporting'
+          - '<white><name><gray>?'
+          - '<dark_gray>Up to <max> characters.'
+      reported-yes: '<gold>sent'
+      reported-no: '<dark_gray>none'
+      # Moderators only. <count>
+      reports:
+        name: '<white><bold>Reports'
+        lore:
+          - '<gray>What players flagged this'
+          - '<gray>defense for.'
+          - ''
+          - '<gray>Reports: <white><count>'
+    # The moderation list: reported defenses first, then everything. <count>
+    moderation:
+      title: '<dark_gray><bold>Defenses — Moderation'
+      title-reported: '<dark_gray><bold>Defenses — Reported'
+      empty:
+        name: '<gray><bold>No defenses yet'
+        lore:
+          - '<gray>Nobody has saved one.'
+      empty-reported:
+        name: '<gray><bold>No reports'
+        lore:
+          - '<gray>Nothing has been flagged.'
+      # <name>
+      entry-name: '<white><bold><name>'
+      # <name> <author> <visibility> <cleared> <reports> <blocks> <likes> <players>
+      entry-lore:
+        - '<gray>Author: <white><author>'
+        - '<gray>Visibility: <visibility>'
+        - '<gray>Cleared by author: <cleared>'
+        - '<gray>Reports: <white><reports>'
+        - '<gray>Blocks: <white><blocks> <dark_gray>— <gray>Likes: <white><likes> <dark_gray>— <gray>Players: <white><players>'
+      # The latest report, under the lines above. <reporter> <reason>
+      latest-line: '<gray>Latest: <white><reporter><gray>: <reason>'
+      # Reports no moderator has looked at yet. <count>
+      unseen-line: '<gold>New reports: <white><count>'
+      auto-hidden-line: '<red>Hidden automatically by reports'
+      # The footer toggle between every defense and reported ones. <state>
+      reported:
+        name: '<white><bold>Reported Only'
+        lore:
+          - '<gray>Lists only defenses with'
+          - '<gray>open reports.'
+          - ''
+          - '<gray>Currently: <state>'
+    # One defense's reports. <name>
+    reports:
+      title: '<dark_gray><bold>Reports — <name>'
+      empty:
+        name: '<gray><bold>No reports'
+        lore:
+          - '<gray>Nothing has been flagged.'
+      # <reporter>
+      entry-name: '<white><bold><reporter>'
+      # <reporter> <reason> <when>
+      entry-lore:
+        - '<gray>Reason: <white><reason>'
+        - '<gray>Filed: <white><when>'
+      entry-name-armed: '<red><bold>Confirm Dismiss'
+      entry-lore-armed:
+        - '<red>This report is dropped.'
+      # <count>
+      dismiss:
+        name: '<red><bold>Dismiss All'
+        lore:
+          - '<gray>Closes every report on this'
+          - '<gray>defense. The defense stays.'
+          - ''
+          - '<gray>Reports: <white><count>'
+        name-armed: '<red><bold>Confirm Dismiss'
+        lore-armed:
+          - '<red>Every report is dropped.'
+    # The leaderboards. <name>
+    boards:
+      title: '<dark_gray><bold>Boards — Bed Defense'
+      title-one: '<dark_gray><bold>Boards — <name>'
+      # The flat leaderboard list's button (categories off).
+      flat-button:
+        name: '<white><bold>Bed Defense'
+        lore:
+          - '<gray>Competitive, obsidian and bed'
+          - '<gray>repair boards, per defense.'
+      empty:
+        name: '<gray><bold>No results yet'
+        lore:
+          - '<gray>Competitive, obsidian and bed'
+          - '<gray>repair rounds put results here.'
+      # <board>
+      entry-name: '<gold><bold><board>'
+      # <name> <author> <players> <record> <record-holder> <rank>
+      entry-lore:
+        - '<gray>Author: <white><author>'
+        - '<gray>Players: <white><players>'
+        - '<gray>Record: <white><record>'
+        - '<gray>Held by: <white><record-holder>'
+        - '<gray>Your rank: <white><rank>'
+    # The in-arena menu behind the bed defense item. <arena>
+    session:
+      title: '<dark_gray><bold>Bed Defense — <arena>'
+      preview:
+        name: '<white><bold>Preview'
+        lore:
+          - '<gray>Watches the defense build itself'
+          - '<gray>block by block. Mid-attempt this'
+          - '<gray>becomes guided building instead.'
+          - ''
+          - '<dark_gray>Dropping any item does the same.'
+      guided:
+        name: '<white><bold>Guided Building'
+        # <state>
+        lore:
+          - '<gray>The next block glows where it'
+          - '<gray>belongs until you place it. Untimed.'
+          - ''
+          - '<gray>Currently: <state>'
+      defense:
+        name: '<white><bold>Choose Defense'
+        # <name>
+        lore:
+          - '<gray>Building: <white><name>'
+      settings:
+        name: '<white><bold>Round Settings'
+        lore:
+          - '<gray>Mode, shuffle, timer start'
+          - '<gray>and your base.'
+      restart:
+        name: '<yellow><bold>Restart'
+        lore:
+          - '<gray>Resets the arena and the clock.'
+      edit:
+        name: '<white><bold>Edit Defense'
+        # <name>
+        lore:
+          - '<gray>Opens <white><name><gray> in the editor.'
+      new:
+        name: '<white><bold>New Defense'
+        # <radius>
+        lore:
+          - '<gray>Opens the editor with an empty bed.'
+      maps:
+        name: '<white><bold>Other Maps'
+        lore:
+          - '<gray>Practice on a different map.'
+    # The editor's menu behind the same item.
+    editor:
+      title: '<dark_gray><bold>Defense Editor'
+      unnamed: '<dark_gray>(unnamed)'
+      name:
+        name: '<white><bold>Name'
+        # <name>
+        lore:
+          - '<gray>Asks for a name.'
+          - ''
+          - '<gray>Currently: <white><name>'
+      # The anvil that asks for it. <max> is the shorter of
+      # beddefense.name-max-length and the 50 an anvil allows.
+      name-prompt:
+        title: '<dark_gray><bold>Defense Name'
+        lore:
+          - '<gray>Type a name in the box, then'
+          - '<gray>take the result.'
+          - '<dark_gray>Up to <max> characters.'
+      save:
+        name: '<green><bold>Save and Play'
+        # <name> <blocks> <visibility>
+        lore:
+          - '<gray>Saves the build, then plays it.'
+          - ''
+          - '<gray>Name: <white><name>'
+          - '<gray>Blocks: <white><blocks>'
+          - '<gray>Saves as: <visibility>'
+        lore-update:
+          - '<gray>Saves the changes, then plays it.'
+          - ''
+          - '<gray>Name: <white><name>'
+          - '<gray>Blocks: <white><blocks>'
+          - '<gray>Saves as: <visibility>'
+      load:
+        name: '<white><bold>Load'
+        # <count>
+        lore:
+          - '<gray>Replaces the build with one of'
+          - '<gray>your saved defenses.'
+          - ''
+          - '<gray>Saved: <white><count>'
+        lore-none:
+          - '<gray>Replaces the build with one of'
+          - '<gray>your saved defenses.'
+          - ''
+          - '<gray>Saved: <white>0'
+      reset:
+        name: '<red><bold>Clear Build'
+        # <blocks>
+        lore:
+          - '<gray>Removes every placed block.'
+          - ''
+          - '<gray>Placed: <white><blocks>'
+        name-armed: '<red><bold>Confirm Clear'
+        lore-armed:
+          - '<red>Unsaved blocks are lost.'
+      visibility:
+        name: '<white><bold>Visibility'
+        # <state>
+        lore:
+          - '<gray>Public defenses appear in the'
+          - '<gray>gallery for everyone. Changing'
+          - '<gray>the blocks makes it private again.'
+          - ''
+          - '<gray>Saves as: <state>'
+      delete:
+        name: '<red><bold>Delete'
+        lore:
+          - '<gray>Removes the saved defense and'
+          - '<gray>every time recorded on it.'
+        name-armed: '<red><bold>Confirm Delete'
+        lore-armed:
+          - '<red>This cannot be undone.'
+      exit:
+        name: '<red><bold>Leave Editor'
+        lore:
+          - '<gray>Back to building the chosen'
+          - '<gray>defense. Unsaved work is lost.'
+    # The mode's hotbar items (style guide R66).
+    items:
+      menu:
+        name: '<white><bold>Bed Defense'
+        lore:
+          - '<gray>Preview, guided building, round'
+          - '<gray>settings and the editor.'
+          - ''
+          - '<yellow>Right-click to open'
+      previous:
+        name: '<white><bold>Previous Block'
+        lore:
+          - '<gray>Steps the preview back one block.'
+          - ''
+          - '<yellow>Right-click to step back'
+      play:
+        name: '<white><bold>Play Preview'
+        lore:
+          - '<gray>Builds the rest of the defense'
+          - '<gray>block by block.'
+          - ''
+          - '<yellow>Right-click to play'
+      pause:
+        name: '<white><bold>Pause Preview'
+        lore:
+          - '<gray>Holds the preview where it is.'
+          - ''
+          - '<yellow>Right-click to pause'
+      next:
+        name: '<white><bold>Next Block'
+        lore:
+          - '<gray>Steps the preview forward one block.'
+          - ''
+          - '<yellow>Right-click to step forward'
+      guided:
+        name: '<white><bold>Guided Building'
+        lore:
+          - '<gray>Build it yourself with the next'
+          - '<gray>block pointed out.'
+          - ''
+          - '<yellow>Right-click to start'
+      exit:
+        name: '<red><bold>Leave Preview'
+        lore:
+          - '<gray>Back to building on your own.'
+          - ''
+          - '<yellow>Right-click to leave'

@@ -303,7 +303,9 @@ your wool-color setting and shop purchases all count. Only water **source**
 blocks count (flowing water never does), and a waterlogged ladder is a
 ladder.
 
-Two ways to play, chosen in the setup menu, and two drills on top:
+Four ways to play, each behind its own start button in the setup menu (and
+in the in-arena menu, where the button switches the mode and restarts the
+round; the mode you are set to glows):
 
 - **Competitive**: a real match opening: sword, team-dyed leather, the
   base's iron and gold generators and the mirrored MBedwars shop; blocks are
@@ -320,7 +322,7 @@ Two ways to play, chosen in the setup menu, and two drills on top:
   with competitive ones. Extras: **shuffle** (a different defense every
   round from your favorites or the public gallery) and **timer start** (first
   movement or first block).
-- **Obsidian** (the Obsidian toggle; it sets the mode aside while on): the
+- **Obsidian** (Start Obsidian): the
   defense stands already built when the round starts, and the goal is to
   break into it, put the eight obsidian in your kit on the bed — the six
   blocks touching its sides at bed height and the two on top — and build
@@ -333,11 +335,10 @@ Two ways to play, chosen in the setup menu, and two drills on top:
   starts it too); shuffle still works. Broken blocks come straight back to
   your inventory, as in practice. A defense that already has obsidian on any
   of those eight spots cannot be used for it — the gallery says so on its
-  tile, and the toggle counts how many defenses qualify. The preview shows
+  tile, and the start button counts how many defenses qualify. The preview shows
   the eight obsidian going onto the bed instead of the defense going up, and
   there is no guided building.
-- **Bed repair** (the Bed Repair toggle; it sets the mode aside while on,
-  and switches obsidian off — the two cannot run together): the defense
+- **Bed repair** (Start Bed Repair): the defense
   stands already built, and as long as it stands complete the sky attacks
   it: a volley is either one or two lit TNT (`beddefense.repair.tnt`)
   dropping from above random defense blocks, or a single fireball from the
@@ -363,7 +364,7 @@ Two ways to play, chosen in the setup menu, and two drills on top:
   mid-run. A defense qualifies only if it seals the bed with solid,
   non-obsidian blocks on all eight cover spots — obsidian never breaks, and
   a bed that cannot be exposed would survive forever — and has no glass
-  (panes included) or water anywhere in it; the gallery tile, the toggle's
+  (panes included) or water anywhere in it; the gallery tile, the start button's
   count and the pick refusal all say so. No preview or guided
   building; the sidebar shows rounds, your best, the blocks standing and
   what the sky is up to.
@@ -403,7 +404,8 @@ out bricks; without it, the `beddefense.blocks` list in `config.yml`. Water
 comes as buckets either way. You may place only
 within the radius, and break only your own blocks, instantly. The bed
 defense item opens the editor menu: **name** (asked in an anvil), **save** (and
-go play it), **load** one of yours, **clear** (two clicks), **visibility**
+go play it competitively — the round that clears it for publishing), **load**
+one of yours, **clear** (two clicks), **visibility**
 (disabled, "complete it in competitive first", until the defense is cleared,
 see below) and **leave**. Saving refuses a defense that already exists, any
 published one or one of your own with the exact same blocks (order
@@ -949,8 +951,9 @@ genuinely fills all 36 slots wins, and the menu stays reachable via
 `/practice`. Right-clicking it opens:
 
 - **Play**: a category picker (one tile per arena category, each with its
-  own menu), then the arena picker: filtered by the same permission check the
-  join command uses, showing your best, your rank and the arena record per
+  own menu), then the arena picker — skipped when the category holds exactly
+  one map you can play, which opens straight away: filtered by the same
+  permission check the join command uses, showing your best, your rank and the arena record per
   entry. An arena's category is **the folder its folder sits in**:
   `templates/<category>/<arena>/` is listed under `<category>`, and an arena
   straight in `templates/` is listed under its mode id. Re-categorizing is a
@@ -977,7 +980,9 @@ genuinely fills all 36 slots wins, and the menu stays reachable via
   hub's own copy of that button is off by default, `main.buttons.sidebar`).
   Changes apply immediately mid-session and are undone when you leave.
 - **Help** and **Leave**
-- **Bot Settings**, on the bottom row, only while sparring the PvP bot
+- **Mode Settings**, on the bottom row, only during a session in a mode with
+  settings of its own: the PvP bot's knobs, the rush modifiers or the bed
+  defense round settings, wearing that mode's icon
 
 Every one of these menus can also be opened directly from chat:
 `/practice menu <main|arenas|categories|leaderboards|stats|settings|beddefense>`
